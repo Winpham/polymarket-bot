@@ -35,6 +35,9 @@ market close, and we compare hit-rate / edge per strategy over time.
 | 2026-06-28 | [05 — Kalshi + cross-venue reality](entries/2026-06-28-05-kalshi-crossvenue-reality.md) | Live probes: Kalshi public orderbook/trades free; positions private; liquidity = crypto-short/tennis/CS2 not soccer; cross-venue divergence viable on crypto+CS2 |
 | 2026-06-28 | [06 — Catalog + quick-wins](entries/2026-06-28-06-catalog-and-quickwins.md) | strategy-foundry workflow: 42 strategies→37 survived; infra-first (blind-band benchmark, promotion gate); 3 param-only quick-wins shipped (portfolio 10→13) |
 
+## Weekly regeneration
+The **strategy-foundry** workflow re-runs in a local session to keep generating strategies — see `REGENERATION.md` (one-command re-run + avoid-list). A lighter **`polymarket-strategy-scout`** cloud routine runs Mondays 9am Pacific (self-contained web scouting), feeding the local heavy re-run.
+
 ## Live strategy portfolio
 See `strategies/` once the multi-strategy engine ships. Each strategy's live scoreboard
 is updated from `/consensus` + Prometheus `consensus_resolved_total{strategy,...}`.
