@@ -599,6 +599,28 @@ pub fn default_portfolio(base: &ConsensusParams) -> Vec<StrategyDef> {
             },
             alerting: false,
         },
+        // --- blind-band benchmark (catalog #1): permissive capture-all arm ---
+        // Records EVERY observed (market,outcome) with >=1 one-sided backer — the
+        // full population, independent of any consensus gate — so the scoreboard
+        // can compute surplus-over-blind per price band and neutralize the
+        // favorite-longshot bias that games raw AVG(won - entry). Never alerts.
+        StrategyDef {
+            name: "_blind",
+            params: ConsensusParams {
+                min_backers: 1,
+                max_opposers: usize::MAX,
+                max_price_std: 1.0,
+                max_age_mins: i64::MAX,
+                strong_net: i64::MAX,
+                elite_net: i64::MAX,
+                require_elite: false,
+                price_band: None,
+                sports_mode: SportsMode::Include,
+                weight_mode: WeightMode::Count,
+                ..base.clone()
+            },
+            alerting: false,
+        },
         // --- strategy-foundry quick-wins (2026-06-28 catalog, pre-registered) ---
         // Denser, tighter-agreeing sharp cluster than `strict` tolerates.
         StrategyDef {

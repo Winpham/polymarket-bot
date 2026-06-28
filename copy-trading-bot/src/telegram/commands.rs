@@ -66,21 +66,26 @@ pub async fn handle_command(
             // Per-strategy forward-tracking scoreboard (the portfolio ranking).
             match portfolio.consensus_scoreboard_by_strategy().await {
                 Ok(rows) if rows.iter().any(|r| r.resolved > 0) => {
-                    let mut board =
-                        String::from("\n\n📊 *Strategy scoreboard* (resolved · edge vs entry)\n");
+                    let mut board = String::from(
+                        "\n\n📊 *Strategy scoreboard* (sorted by surplus-over-blind)\n",
+                    );
                     for r in rows.iter().filter(|r| r.resolved > 0) {
                         let hr = r.won as f64 / r.resolved as f64 * 100.0;
-                        let edge = r
-                            .edge
-                            .map(|e| format!("{:+.1}%", e * 100.0))
-                            .unwrap_or_else(|| "—".into());
+                        let fmt_pct = |x: Option<f64>| {
+                            x.map(|e| format!("{:+.1}%", e * 100.0))
+                                .unwrap_or_else(|| "—".into())
+                        };
                         board.push_str(&format!(
-                            "`{:<12}` {}/{} ({:.0}%) · {} ev · edge {}\n",
-                            r.strategy, r.won, r.resolved, r.distinct_events, hr, edge,
+                            "`{:<12}` {} ev ({:.0}%) · surplus {} · edge {}\n",
+                            r.strategy,
+                            r.distinct_events,
+                            hr,
+                            fmt_pct(r.surplus),
+                            fmt_pct(r.edge),
                         ));
                     }
                     board.push_str(
-                        "\n_Edge>0 = consensus beat its entry price. 'ev' = distinct events (the honest N); small ev = indeterminate._",
+                        "\n_*surplus* = edge over the band-matched blind baseline (favorite-longshot-neutralized) — the real signal. 'ev' = distinct events (honest N); small ev = indeterminate. Never promote on edge alone._",
                     );
                     format!("{summary}{board}")
                 }

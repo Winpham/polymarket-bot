@@ -346,19 +346,36 @@ impl PgPortfolio {
     /// instrument that ranks the portfolio: `edge = AVG(outcome_won − mean_price)`
     /// is the leak-free realized edge vs the price each signal entered at.
     pub async fn consensus_scoreboard_by_strategy(&self) -> Result<Vec<StrategyScore>> {
-        // `distinct_events` is the honest sample size: outcomes of the same event
-        // (event_slug) are correlated, so raw `resolved` overstates independent N
-        // (the within-match leak). The promotion gate keys off distinct_events.
+        // The denominator (catalog #1). For each resolved signal, advantage
+        // `a = outcome_won - mean_price`. The `_blind` arm captures EVERY observed
+        // outcome, so its per-price-band average `a` is the blind baseline that
+        // favorite-longshot bias would already earn. A strategy's SURPLUS =
+        // AVG(a - blind_edge[band]) is what it adds beyond blindly betting that
+        // band — the only edge number that isn't gamed by loading favorites.
+        // `distinct_events` is the honest (de-correlated) sample size — outcomes
+        // of one event_slug are correlated (the within-match leak); the promotion
+        // gate keys off distinct_events, not raw resolved count.
         let rows: Vec<StrategyScore> = sqlx::query_as(
-            "SELECT strategy, \
-                    COUNT(*) FILTER (WHERE resolved)                  AS resolved, \
-                    COUNT(DISTINCT event_slug) FILTER (WHERE resolved) AS distinct_events, \
-                    COUNT(*) FILTER (WHERE resolved AND outcome_won)  AS won, \
-                    AVG((outcome_won::int)::double precision - mean_price) \
-                        FILTER (WHERE resolved)                       AS edge \
-             FROM consensus_signals \
-             GROUP BY strategy \
-             ORDER BY edge DESC NULLS LAST",
+            "WITH adv AS ( \
+                 SELECT strategy, event_slug, resolved, outcome_won, \
+                        width_bucket(mean_price, 0.0, 1.0, 5) AS band, \
+                        (outcome_won::int)::double precision - mean_price AS a \
+                 FROM consensus_signals \
+             ), \
+             blind AS ( \
+                 SELECT band, AVG(a) AS blind_edge \
+                 FROM adv WHERE strategy = '_blind' AND resolved GROUP BY band \
+             ) \
+             SELECT v.strategy, \
+                    COUNT(*) FILTER (WHERE v.resolved)                    AS resolved, \
+                    COUNT(DISTINCT v.event_slug) FILTER (WHERE v.resolved) AS distinct_events, \
+                    COUNT(*) FILTER (WHERE v.resolved AND v.outcome_won)  AS won, \
+                    AVG(v.a) FILTER (WHERE v.resolved)                    AS edge, \
+                    AVG(v.a - COALESCE(b.blind_edge, 0)) FILTER (WHERE v.resolved) AS surplus \
+             FROM adv v LEFT JOIN blind b USING (band) \
+             WHERE v.strategy <> '_blind' \
+             GROUP BY v.strategy \
+             ORDER BY surplus DESC NULLS LAST",
         )
         .fetch_all(&self.pool)
         .await
@@ -380,6 +397,9 @@ pub struct StrategyScore {
     /// Mean realized edge vs entry: `AVG(outcome_won::int - mean_price)`.
     /// `None` when nothing has resolved yet.
     pub edge: Option<f64>,
+    /// Surplus over the band-matched `_blind` baseline — the favorite-longshot-
+    /// neutralized edge. This (not `edge`) is what a promotion gate should judge.
+    pub surplus: Option<f64>,
 }
 
 /// Local truncate helper (avoids a cross-crate format dependency).
