@@ -1,0 +1,19 @@
+# Builds the copy-trading-bot (consensus engine) from source inside Docker, so
+# deploying needs only Docker — no local Rust toolchain. Multi-stage: a Rust
+# builder compiles the release binary, then a tiny Debian runtime runs it.
+# TLS is rustls (no system OpenSSL needed); migrations are embedded at compile.
+FROM rust:1-slim AS builder
+WORKDIR /src
+# mimalloc (global allocator) compiles C; pkg-config for build hygiene.
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends build-essential pkg-config \
+ && rm -rf /var/lib/apt/lists/*
+COPY . .
+RUN cargo build --release -p copy-trading-bot
+
+FROM debian:bookworm-slim
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends ca-certificates \
+ && rm -rf /var/lib/apt/lists/*
+COPY --from=builder /src/target/release/copy-trading-bot /usr/local/bin/copy-trading-bot
+ENTRYPOINT ["copy-trading-bot"]

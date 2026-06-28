@@ -8,3 +8,7 @@ __pycache__/
 CHANGELOG.gen
 .envrc
 tmp/
+
+# consensus deploy secrets
+.env.consensus
+.env.consensus.smoke
