@@ -416,9 +416,13 @@ impl PgPortfolio {
         // `distinct_events` is the honest (de-correlated) sample size — outcomes
         // of one event_slug are correlated (the within-match leak); the promotion
         // gate keys off distinct_events, not raw resolved count.
+        // Surplus is computed CLUSTER-ROBUST: per-signal surplus is first averaged
+        // to the EVENT level (event_slug), then across events — so correlated
+        // outcomes of one event count once (the within-match leak fix). `surplus`
+        // and `surplus_sd` are over events; `distinct_events` is the gate's N.
         let rows: Vec<StrategyScore> = sqlx::query_as(
             "WITH adv AS ( \
-                 SELECT strategy, event_slug, resolved, outcome_won, \
+                 SELECT strategy, COALESCE(event_slug, condition_id) AS ev, resolved, outcome_won, \
                         width_bucket(mean_price, 0.0, 1.0, 5) AS band, \
                         (outcome_won::int)::double precision - mean_price AS a \
                  FROM consensus_signals \
@@ -426,17 +430,30 @@ impl PgPortfolio {
              blind AS ( \
                  SELECT band, AVG(a) AS blind_edge \
                  FROM adv WHERE strategy = '_blind' AND resolved GROUP BY band \
+             ), \
+             sig AS ( \
+                 SELECT v.strategy, v.ev, v.resolved, v.outcome_won, v.a, \
+                        v.a - COALESCE(b.blind_edge, 0) AS surplus \
+                 FROM adv v LEFT JOIN blind b USING (band) WHERE v.strategy <> '_blind' \
+             ), \
+             evt AS ( \
+                 SELECT strategy, ev, AVG(surplus) AS ev_surplus \
+                 FROM sig WHERE resolved GROUP BY strategy, ev \
+             ), \
+             es AS ( \
+                 SELECT strategy, COUNT(*) AS n_events, AVG(ev_surplus) AS surplus, \
+                        STDDEV_SAMP(ev_surplus) AS surplus_sd FROM evt GROUP BY strategy \
              ) \
-             SELECT v.strategy, \
-                    COUNT(*) FILTER (WHERE v.resolved)                    AS resolved, \
-                    COUNT(DISTINCT v.event_slug) FILTER (WHERE v.resolved) AS distinct_events, \
-                    COUNT(*) FILTER (WHERE v.resolved AND v.outcome_won)  AS won, \
-                    AVG(v.a) FILTER (WHERE v.resolved)                    AS edge, \
-                    AVG(v.a - COALESCE(b.blind_edge, 0)) FILTER (WHERE v.resolved) AS surplus \
-             FROM adv v LEFT JOIN blind b USING (band) \
-             WHERE v.strategy <> '_blind' \
-             GROUP BY v.strategy \
-             ORDER BY surplus DESC NULLS LAST",
+             SELECT s.strategy, \
+                    COUNT(*) FILTER (WHERE s.resolved)                   AS resolved, \
+                    COALESCE(es.n_events, 0)                             AS distinct_events, \
+                    COUNT(*) FILTER (WHERE s.resolved AND s.outcome_won) AS won, \
+                    AVG(s.a) FILTER (WHERE s.resolved)                   AS edge, \
+                    es.surplus                                          AS surplus, \
+                    es.surplus_sd                                       AS surplus_sd \
+             FROM sig s LEFT JOIN es ON es.strategy = s.strategy \
+             GROUP BY s.strategy, es.n_events, es.surplus, es.surplus_sd \
+             ORDER BY es.surplus DESC NULLS LAST",
         )
         .fetch_all(&self.pool)
         .await
@@ -471,6 +488,8 @@ pub struct StrategyScore {
     /// Surplus over the band-matched `_blind` baseline — the favorite-longshot-
     /// neutralized edge. This (not `edge`) is what a promotion gate should judge.
     pub surplus: Option<f64>,
+    /// Std-dev of per-EVENT surplus — feeds the promotion gate's confidence bound.
+    pub surplus_sd: Option<f64>,
 }
 
 /// Local truncate helper (avoids a cross-crate format dependency).
