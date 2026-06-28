@@ -141,3 +141,32 @@ pub fn record_model_status(age_secs: Option<f64>) {
 pub fn record_duration(name: &'static str, duration: std::time::Duration) {
     histogram!(name).record(duration.as_secs_f64());
 }
+
+// ---------------------------------------------------------------------------
+// Consensus engine metrics
+// ---------------------------------------------------------------------------
+
+/// Update the count of actively tracked leaderboard traders.
+pub fn record_tracked_traders(count: u64) {
+    gauge!("consensus_tracked_traders").set(count as f64);
+}
+
+/// Record a completed consensus cycle: markets scored and signals found.
+pub fn record_consensus_cycle(markets: u64, signals: u64) {
+    counter!("consensus_cycles_total").increment(1);
+    gauge!("consensus_markets_scored").set(markets as f64);
+    gauge!("consensus_signals_active").set(signals as f64);
+}
+
+/// Record a pushed consensus alert by tier (STRONG / ELITE).
+pub fn record_consensus_alert(tier: &str) {
+    counter!("consensus_alerts_total", "tier" => tier.to_string()).increment(1);
+}
+
+/// Record a resolved consensus signal and whether the consensus outcome won.
+pub fn record_consensus_resolution(won: bool, is_sports: bool) {
+    let outcome = if won { "win" } else { "loss" };
+    let segment = if is_sports { "sports" } else { "nonsports" };
+    counter!("consensus_resolved_total", "outcome" => outcome.to_string(), "segment" => segment.to_string())
+        .increment(1);
+}

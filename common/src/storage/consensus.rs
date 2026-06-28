@@ -60,6 +60,7 @@ pub struct UnresolvedConsensus {
     pub slug: String,
     pub outcome_index: i32,
     pub mean_price: f64,
+    pub is_sports: bool,
 }
 
 impl PgPortfolio {
@@ -272,7 +273,7 @@ impl PgPortfolio {
     /// Signals that have not yet been resolved, for housekeeping to settle.
     pub async fn unresolved_consensus_signals(&self) -> Result<Vec<UnresolvedConsensus>> {
         let rows: Vec<UnresolvedConsensus> = sqlx::query_as(
-            "SELECT id, COALESCE(slug, '') AS slug, outcome_index, mean_price \
+            "SELECT id, COALESCE(slug, '') AS slug, outcome_index, mean_price, is_sports \
              FROM consensus_signals WHERE resolved = FALSE",
         )
         .fetch_all(&self.pool)

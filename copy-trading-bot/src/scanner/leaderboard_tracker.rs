@@ -96,6 +96,10 @@ pub async fn refresh_universe(
         .await
         .unwrap_or(0);
 
+    if let Ok(active) = portfolio.count_tracked_traders().await {
+        crate::metrics::record_tracked_traders(active as u64);
+    }
+
     tracing::info!(
         tracked = upserted,
         deactivated,

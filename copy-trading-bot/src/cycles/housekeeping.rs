@@ -91,7 +91,10 @@ pub async fn housekeeping_cycle(
                 .resolve_consensus_signal(sig.id, won, &market.market_id)
                 .await
             {
-                Ok(()) => consensus_resolved += 1,
+                Ok(()) => {
+                    consensus_resolved += 1;
+                    crate::metrics::record_consensus_resolution(won, sig.is_sports);
+                }
                 Err(e) => {
                     tracing::warn!(err = %e, signal_id = sig.id, "resolve_consensus_signal failed")
                 }

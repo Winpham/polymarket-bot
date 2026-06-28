@@ -184,8 +184,11 @@ pub async fn consensus_cycle(
         {
             tracing::warn!(err = %e, "record_consensus_alert failed");
         }
+        crate::metrics::record_consensus_alert(sig.tier.as_str());
         alerts_sent += 1;
     }
+
+    crate::metrics::record_consensus_cycle(book_vec.len() as u64, signals.len() as u64);
 
     tracing::info!(
         traders_polled = polled_ok,
