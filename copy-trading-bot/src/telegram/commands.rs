@@ -75,12 +75,12 @@ pub async fn handle_command(
                             .map(|e| format!("{:+.1}%", e * 100.0))
                             .unwrap_or_else(|| "—".into());
                         board.push_str(&format!(
-                            "`{:<12}` {}/{} ({:.0}%) · edge {}\n",
-                            r.strategy, r.won, r.resolved, hr, edge,
+                            "`{:<12}` {}/{} ({:.0}%) · {} ev · edge {}\n",
+                            r.strategy, r.won, r.resolved, r.distinct_events, hr, edge,
                         ));
                     }
                     board.push_str(
-                        "\n_Edge>0 = consensus beat its entry price. Small N = indeterminate._",
+                        "\n_Edge>0 = consensus beat its entry price. 'ev' = distinct events (the honest N); small ev = indeterminate._",
                     );
                     format!("{summary}{board}")
                 }

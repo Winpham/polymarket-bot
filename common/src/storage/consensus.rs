@@ -346,9 +346,13 @@ impl PgPortfolio {
     /// instrument that ranks the portfolio: `edge = AVG(outcome_won − mean_price)`
     /// is the leak-free realized edge vs the price each signal entered at.
     pub async fn consensus_scoreboard_by_strategy(&self) -> Result<Vec<StrategyScore>> {
+        // `distinct_events` is the honest sample size: outcomes of the same event
+        // (event_slug) are correlated, so raw `resolved` overstates independent N
+        // (the within-match leak). The promotion gate keys off distinct_events.
         let rows: Vec<StrategyScore> = sqlx::query_as(
             "SELECT strategy, \
                     COUNT(*) FILTER (WHERE resolved)                  AS resolved, \
+                    COUNT(DISTINCT event_slug) FILTER (WHERE resolved) AS distinct_events, \
                     COUNT(*) FILTER (WHERE resolved AND outcome_won)  AS won, \
                     AVG((outcome_won::int)::double precision - mean_price) \
                         FILTER (WHERE resolved)                       AS edge \
@@ -369,6 +373,8 @@ pub struct StrategyScore {
     pub strategy: String,
     /// Resolved signals for this strategy.
     pub resolved: i64,
+    /// Distinct resolved EVENTS — the honest (de-correlated) sample size.
+    pub distinct_events: i64,
     /// Resolved signals whose consensus outcome won.
     pub won: i64,
     /// Mean realized edge vs entry: `AVG(outcome_won::int - mean_price)`.
