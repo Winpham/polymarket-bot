@@ -139,6 +139,12 @@ Output tiers (configurable thresholds):
 - **D** Productize — config, commands, metrics, docs, docker, fmt/clippy/test green.
 
 ## Progress log
+- 2026-06-28 (run 2): **Strategy PORTFOLIO shipped** (Forge-validated, `FORGE_PLAN.md`). 10 variants
+  forward-tested simultaneously (one fetch, scored N ways), per-strategy DB rows + scoreboard
+  (edge vs entry), **raw vote atoms logged** for retroactive replay, only `strict` alerts. Verified
+  live: same (market,outcome) under 7 strategies, 366 markets→10 strategies→25 signals. CI green.
+  Reports: `reports/entries/` 01-04. See below for original phase log.
+
 - 2026-06-28 (run 1): Mapped repo; validated APIs live; baseline `cargo check` green; ran live
   consensus probes → established the net-directional/price-coherent design pivot; wrote this plan;
   created branch `feat/consensus-engine`.
