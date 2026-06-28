@@ -239,6 +239,63 @@ pub async fn fetch_yes_prices(http: &reqwest::Client, market_ids: &[&str]) -> Ve
     futures_util::future::join_all(futs).await
 }
 
+const CLOB_API: &str = "https://clob.polymarket.com";
+
+/// One outcome token from the CLOB `/markets/{condition_id}` response.
+#[derive(Debug, Clone, Deserialize)]
+pub struct ClobToken {
+    #[serde(default)]
+    pub outcome: String,
+    /// Live mid price of this outcome in [0,1] — the "stock price" of the outcome.
+    #[serde(default)]
+    pub price: f64,
+    /// True once the market resolves and this outcome won.
+    #[serde(default)]
+    pub winner: bool,
+}
+
+/// CLOB market view keyed by `condition_id`. This is the canonical resolution +
+/// live-price source: it works for EVERY market (including sports markets whose
+/// slug is absent from Gamma), and gives both `winner` (resolution) and per-token
+/// `price` (the live trajectory) in one call.
+#[derive(Debug, Clone, Deserialize)]
+pub struct ClobMarket {
+    #[serde(default)]
+    pub closed: bool,
+    #[serde(default)]
+    pub condition_id: String,
+    #[serde(default)]
+    pub tokens: Vec<ClobToken>,
+}
+
+impl ClobMarket {
+    /// Per-outcome resolution: `Some(true/false)` once `closed`, else `None`.
+    pub fn outcome_won(&self, outcome_index: i32) -> Option<bool> {
+        if !self.closed || outcome_index < 0 {
+            return None;
+        }
+        self.tokens.get(outcome_index as usize).map(|t| t.winner)
+    }
+
+    /// Live price of an outcome (the trajectory data point), if present.
+    pub fn outcome_price(&self, outcome_index: i32) -> Option<f64> {
+        if outcome_index < 0 {
+            return None;
+        }
+        self.tokens.get(outcome_index as usize).map(|t| t.price)
+    }
+}
+
+/// Fetch the CLOB market for a `condition_id`. Robust resolution + live price.
+pub async fn fetch_clob_market(http: &reqwest::Client, condition_id: &str) -> Result<ClobMarket> {
+    let url = format!("{CLOB_API}/markets/{condition_id}");
+    let resp = http.get(&url).send().await?;
+    let text = resp.text().await?;
+    let market: ClobMarket = serde_json::from_str(&text)
+        .with_context(|| format!("failed to parse CLOB market cond={condition_id}"))?;
+    Ok(market)
+}
+
 /// Fetch a single market by its slug from the Gamma API.
 pub async fn fetch_market_by_slug(http: &reqwest::Client, slug: &str) -> Result<GammaMarket> {
     let url = format!("{GAMMA_API}/markets?slug={slug}");
@@ -285,6 +342,40 @@ mod consensus_resolution_tests {
         let m = market(Some(r#"["0","0","1","0"]"#));
         assert_eq!(m.resolved_outcome_won(2), Some(true));
         assert_eq!(m.resolved_outcome_won(0), Some(false));
+    }
+
+    #[test]
+    fn clob_resolution_and_price() {
+        use super::{ClobMarket, ClobToken};
+        let tok = |o: &str, p: f64, w: bool| ClobToken {
+            outcome: o.into(),
+            price: p,
+            winner: w,
+        };
+        // Resolved binary: outcome 1 (No) won.
+        let m = ClobMarket {
+            closed: true,
+            condition_id: "0xabc".into(),
+            tokens: vec![tok("Yes", 0.0, false), tok("No", 1.0, true)],
+        };
+        assert_eq!(m.outcome_won(0), Some(false));
+        assert_eq!(m.outcome_won(1), Some(true));
+        assert_eq!(m.outcome_price(1), Some(1.0));
+        assert_eq!(m.outcome_won(5), None, "oob index");
+        assert_eq!(m.outcome_won(-1), None);
+
+        // Open market: live prices present, no winner yet.
+        let open = ClobMarket {
+            closed: false,
+            condition_id: "0xdef".into(),
+            tokens: vec![tok("Yes", 0.62, false), tok("No", 0.38, false)],
+        };
+        assert_eq!(open.outcome_won(0), None, "open => no resolution");
+        assert_eq!(
+            open.outcome_price(0),
+            Some(0.62),
+            "live price still available"
+        );
     }
 
     #[test]

@@ -68,37 +68,38 @@ pub async fn housekeeping_cycle(
         }
     }
 
-    // --- Consensus forward edge tracking ---
-    // Resolve consensus signals whose markets have closed so /consensus can
-    // report an honest, accruing hit-rate. Sports slugs absent from Gamma simply
-    // stay unresolved (the non-sports subset is where this validates).
+    // --- Consensus forward edge tracking + trajectory ("works like a stock") ---
+    // Resolve via the CLOB by condition_id — the canonical path that works for
+    // EVERY market (incl. sports markets whose slug is absent from Gamma), and
+    // gives the live per-outcome price for the trajectory in the SAME call. We
+    // dedupe by condition_id so each market is fetched once per cycle.
     let unresolved = portfolio
         .unresolved_consensus_signals()
         .await
         .unwrap_or_default();
 
-    // Group unresolved signals by market slug so we fetch each market from Gamma
-    // ONCE, even when many strategies claim the same (market, outcome).
-    let mut by_slug: std::collections::HashMap<&str, Vec<&_>> = std::collections::HashMap::new();
+    let mut by_cond: std::collections::HashMap<&str, Vec<&_>> = std::collections::HashMap::new();
     for sig in &unresolved {
-        if !sig.slug.is_empty() {
-            by_slug.entry(sig.slug.as_str()).or_default().push(sig);
+        if !sig.condition_id.is_empty() {
+            by_cond
+                .entry(sig.condition_id.as_str())
+                .or_default()
+                .push(sig);
         }
     }
 
     let mut consensus_resolved = 0usize;
-    for (slug, sigs) in &by_slug {
-        tokio::time::sleep(Duration::from_millis(150)).await;
-        let market = match crate::data::models::fetch_market_by_slug(http, slug).await {
+    let mut snapshots = 0usize;
+    for (cond, sigs) in &by_cond {
+        tokio::time::sleep(Duration::from_millis(120)).await;
+        let market = match crate::data::models::fetch_clob_market(http, cond).await {
             Ok(m) => m,
-            Err(_) => continue, // not in Gamma (e.g. many sports markets) — try later
+            Err(_) => continue, // transient — try next cycle
         };
         for sig in sigs {
-            if let Some(won) = market.resolved_outcome_won(sig.outcome_index) {
-                match portfolio
-                    .resolve_consensus_signal(sig.id, won, &market.market_id)
-                    .await
-                {
+            let price = market.outcome_price(sig.outcome_index);
+            match market.outcome_won(sig.outcome_index) {
+                Some(won) => match portfolio.resolve_consensus_signal(sig.id, won, cond).await {
                     Ok(()) => {
                         consensus_resolved += 1;
                         crate::metrics::record_consensus_resolution(
@@ -110,9 +111,32 @@ pub async fn housekeeping_cycle(
                     Err(e) => {
                         tracing::warn!(err = %e, signal_id = sig.id, "resolve_consensus_signal failed")
                     }
+                },
+                // Still open → record a trajectory snapshot (the price chart).
+                // Skip the `_blind` benchmark population (we only need its
+                // resolution, not a per-signal chart) to bound snapshot volume.
+                None if sig.strategy != "_blind" => {
+                    if let Err(e) = portfolio
+                        .snapshot_consensus_signal(
+                            sig.id,
+                            sig.net_count,
+                            sig.n_backers,
+                            sig.mean_price,
+                            price,
+                        )
+                        .await
+                    {
+                        tracing::warn!(err = %e, signal_id = sig.id, "snapshot failed");
+                    } else {
+                        snapshots += 1;
+                    }
                 }
+                None => {}
             }
         }
+    }
+    if snapshots > 0 {
+        tracing::info!(snapshots, "Consensus trajectory snapshots recorded");
     }
     if consensus_resolved > 0
         && let Ok((res, won, _, _)) = portfolio.consensus_scoreboard().await

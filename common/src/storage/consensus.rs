@@ -57,14 +57,17 @@ pub struct ConsensusAlertState {
     pub last_alert_net: Option<i32>,
 }
 
-/// A signal awaiting market resolution (forward edge tracking).
+/// A signal awaiting market resolution (forward edge tracking + trajectory).
 #[derive(Debug, Clone, sqlx::FromRow)]
 pub struct UnresolvedConsensus {
     pub id: i32,
     pub strategy: String,
+    pub condition_id: String,
     pub slug: String,
     pub outcome_index: i32,
     pub mean_price: f64,
+    pub net_count: i32,
+    pub n_backers: i32,
     pub is_sports: bool,
 }
 
@@ -141,8 +144,9 @@ impl PgPortfolio {
                (strategy, condition_id, outcome_index, outcome_label, title, slug, event_slug, \
                 is_sports, observed_votes, n_backers, n_opposers, net_count, net_quality, \
                 mean_price, price_std, recency_mins, total_usd, best_backer_rank, score, tier, \
-                backers, last_updated_at) \
-             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,NOW()) \
+                backers, initial_n_backers, initial_net_count, initial_mean_price, last_updated_at) \
+             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21, \
+                     $10,$12,$14,NOW()) \
              ON CONFLICT (strategy, condition_id, outcome_index) DO UPDATE SET \
                outcome_label    = EXCLUDED.outcome_label, \
                title            = EXCLUDED.title, \
@@ -285,7 +289,8 @@ impl PgPortfolio {
     /// Signals that have not yet been resolved, for housekeeping to settle.
     pub async fn unresolved_consensus_signals(&self) -> Result<Vec<UnresolvedConsensus>> {
         let rows: Vec<UnresolvedConsensus> = sqlx::query_as(
-            "SELECT id, strategy, COALESCE(slug, '') AS slug, outcome_index, mean_price, is_sports \
+            "SELECT id, strategy, condition_id, COALESCE(slug, '') AS slug, outcome_index, \
+                    mean_price, net_count, n_backers, is_sports \
              FROM consensus_signals WHERE resolved = FALSE",
         )
         .fetch_all(&self.pool)
@@ -313,6 +318,62 @@ impl PgPortfolio {
         .await
         .context("resolve_consensus_signal")?;
         Ok(())
+    }
+
+    /// Append a trajectory snapshot (the signal's "stock chart" point) and update
+    /// the signal's latest + initial live price. `market_price` is the live CLOB
+    /// price of the consensus outcome; `None` when it couldn't be fetched.
+    pub async fn snapshot_consensus_signal(
+        &self,
+        signal_id: i32,
+        net_count: i32,
+        n_backers: i32,
+        mean_entry: f64,
+        market_price: Option<f64>,
+    ) -> Result<()> {
+        sqlx::query(
+            "INSERT INTO consensus_snapshots \
+               (signal_id, net_count, n_backers, mean_entry, market_price) \
+             VALUES ($1, $2, $3, $4, $5)",
+        )
+        .bind(signal_id)
+        .bind(net_count)
+        .bind(n_backers)
+        .bind(mean_entry)
+        .bind(market_price)
+        .execute(&self.pool)
+        .await
+        .context("snapshot_consensus_signal (insert)")?;
+
+        // Latest price always; initial price only the first time we see one.
+        if let Some(price) = market_price {
+            sqlx::query(
+                "UPDATE consensus_signals \
+                 SET last_market_price = $2, \
+                     initial_market_price = COALESCE(initial_market_price, $2) \
+                 WHERE id = $1",
+            )
+            .bind(signal_id)
+            .bind(price)
+            .execute(&self.pool)
+            .await
+            .context("snapshot_consensus_signal (price)")?;
+        }
+        Ok(())
+    }
+
+    /// The full trajectory of a signal — its "stock chart": consensus state +
+    /// live price over time. Used by `/signal` and CLV/drift analysis.
+    pub async fn consensus_trajectory(&self, signal_id: i32) -> Result<Vec<ConsensusSnapshot>> {
+        let rows: Vec<ConsensusSnapshot> = sqlx::query_as(
+            "SELECT ts, net_count, n_backers, mean_entry, market_price \
+             FROM consensus_snapshots WHERE signal_id = $1 ORDER BY ts",
+        )
+        .bind(signal_id)
+        .fetch_all(&self.pool)
+        .await
+        .context("consensus_trajectory")?;
+        Ok(rows)
     }
 
     /// Aggregate forward-tracking scoreboard: (resolved, won, hit_rate) overall
@@ -382,6 +443,16 @@ impl PgPortfolio {
         .context("consensus_scoreboard_by_strategy")?;
         Ok(rows)
     }
+}
+
+/// One point on a signal's trajectory ("stock chart").
+#[derive(Debug, Clone, sqlx::FromRow)]
+pub struct ConsensusSnapshot {
+    pub ts: DateTime<Utc>,
+    pub net_count: i32,
+    pub n_backers: i32,
+    pub mean_entry: f64,
+    pub market_price: Option<f64>,
 }
 
 /// One strategy's forward-tracking scoreboard row.
