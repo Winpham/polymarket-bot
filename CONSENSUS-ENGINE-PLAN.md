@@ -155,9 +155,21 @@ Output tiers (configurable thresholds):
     cycle polled 62, built **353 market books**, found 1 signal (WATCH: "Austria win → No",
     net 2, σ 0.074) → correctly *no* alert (below STRONG). Persistence confirmed in DB.
   - Docs: README consensus section + commands; `.env.example` knobs.
-- **NEXT (Phase C — validation, the make-or-break):** does the consensus signal beat the price it
-  enters at? (a) forward tracking — deploy with real creds + persistent PG, resolve signals as
-  markets close (`unresolved_consensus_signals`/`resolve_consensus_signal` already stubbed; wire
-  into housekeeping). (b) historical backtest on NON-sports resolved markets (Gamma slug coverage
-  ~50%, sports excluded by slug gap). Slice by sports/tier/net/price. Honest verdict.
-  Open questions: is sports-consensus profitable or just the favorite? does net size predict hit?
+- 2026-06-28 (run 1, cont.): **Phase C foundation — forward self-validation wired.**
+  - **Honest finding: a same-day historical backtest is NOT feasible.** The tracked traders'
+    available recent activity is ~entirely on *live, unresolved* markets (World Cup period →
+    sports-heavy; of 150 recent top-trader slugs, 78 in Gamma, **0 closed**). `startTs/endTs/
+    offset` on the activity API are effectively ignored (always newest-first), and hyperactive
+    whales bury older trades. So edge can only be measured **forward**.
+  - Built `GammaMarket::resolved_outcome_won(idx)` (multi-outcome resolution via
+    `outcomePrices[idx]`, +2 unit tests) and wired consensus resolution into the housekeeping
+    loop → every signal auto-resolves as its market closes; `/consensus` shows accruing hit-rate
+    (overall + non-sports). Validated all forward-tracking SQL against a live Docker Postgres.
+  - CI gate GREEN (fmt/clippy-Dwarnings/test). Backtest harness kept at
+    `scratchpad/backtest.py` (mirrors Rust gates; ready to re-run once resolved data exists).
+- **NEXT (finish Phase C + Phase D):** (a) **deploy** with real Telegram creds + persistent PG
+  and let signals accrue → read the forward hit-rate after markets resolve (the real edge test);
+  (b) re-run `backtest.py` in ~1-2 weeks when current World-Cup markets have closed; (c) Prometheus
+  consensus metrics + Grafana panel; (d) tune thresholds from forward data; (e) optional WATCH
+  digest. Open questions still: is sports-consensus profitable or just the favorite the line
+  already prices? does net size / price band predict hit-rate?

@@ -68,8 +68,50 @@ pub async fn housekeeping_cycle(
         }
     }
 
+    // --- Consensus forward edge tracking ---
+    // Resolve consensus signals whose markets have closed so /consensus can
+    // report an honest, accruing hit-rate. Sports slugs absent from Gamma simply
+    // stay unresolved (the non-sports subset is where this validates).
+    let unresolved = portfolio
+        .unresolved_consensus_signals()
+        .await
+        .unwrap_or_default();
+    let mut consensus_resolved = 0usize;
+    for sig in &unresolved {
+        if sig.slug.is_empty() {
+            continue;
+        }
+        tokio::time::sleep(Duration::from_millis(150)).await;
+        let market = match crate::data::models::fetch_market_by_slug(http, &sig.slug).await {
+            Ok(m) => m,
+            Err(_) => continue, // not in Gamma (e.g. many sports markets) — try later
+        };
+        if let Some(won) = market.resolved_outcome_won(sig.outcome_index) {
+            match portfolio
+                .resolve_consensus_signal(sig.id, won, &market.market_id)
+                .await
+            {
+                Ok(()) => consensus_resolved += 1,
+                Err(e) => {
+                    tracing::warn!(err = %e, signal_id = sig.id, "resolve_consensus_signal failed")
+                }
+            }
+        }
+    }
+    if consensus_resolved > 0
+        && let Ok((res, won, _, _)) = portfolio.consensus_scoreboard().await
+    {
+        tracing::info!(
+            newly_resolved = consensus_resolved,
+            total_resolved = res,
+            total_won = won,
+            "Consensus signals resolved"
+        );
+    }
+
     tracing::info!(
         open_copy_bets = open_ids.len(),
+        consensus_unresolved = unresolved.len(),
         "Copy housekeeping cycle complete"
     );
     Ok(())

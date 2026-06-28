@@ -100,6 +100,26 @@ impl GammaMarket {
         }
     }
 
+    /// Per-outcome resolution for consensus forward-tracking. Returns whether the
+    /// outcome at `outcome_index` won (`Some(true)`), lost (`Some(false)`), or the
+    /// market is not yet resolved / index out of range (`None`). Generalises
+    /// [`resolved_yes`] to multi-outcome markets via `outcomePrices[idx]`.
+    pub fn resolved_outcome_won(&self, outcome_index: i32) -> Option<bool> {
+        if outcome_index < 0 {
+            return None;
+        }
+        let prices_str = self.outcome_prices.as_ref()?;
+        let prices: Vec<String> = serde_json::from_str(prices_str).ok()?;
+        let p: f64 = prices.get(outcome_index as usize)?.parse().ok()?;
+        if p >= 0.99 {
+            Some(true)
+        } else if p <= 0.01 {
+            Some(false)
+        } else {
+            None
+        }
+    }
+
     pub fn yes_token_id(&self) -> Option<String> {
         let ids_str = self.clob_token_ids.as_ref()?;
         let ids: Vec<String> = serde_json::from_str(ids_str).ok()?;
@@ -230,4 +250,52 @@ pub async fn fetch_market_by_slug(http: &reqwest::Client, slug: &str) -> Result<
         .into_iter()
         .next()
         .with_context(|| format!("market slug={slug} not found"))
+}
+
+#[cfg(test)]
+mod consensus_resolution_tests {
+    use super::GammaMarket;
+
+    fn market(outcome_prices: Option<&str>) -> GammaMarket {
+        GammaMarket {
+            market_id: "1".into(),
+            question: "q".into(),
+            clob_token_ids: None,
+            end_date: None,
+            outcome_prices: outcome_prices.map(String::from),
+            outcomes: None,
+            slug: None,
+            category: None,
+            volume_num: 0.0,
+            liquidity_num: 0.0,
+            one_day_price_change: None,
+            one_week_price_change: None,
+            created_at: None,
+            events: vec![],
+        }
+    }
+
+    #[test]
+    fn outcome_won_binary_and_multi() {
+        // Binary: outcome 0 won.
+        let m = market(Some(r#"["1","0"]"#));
+        assert_eq!(m.resolved_outcome_won(0), Some(true));
+        assert_eq!(m.resolved_outcome_won(1), Some(false));
+        // Multi-outcome: index 2 won.
+        let m = market(Some(r#"["0","0","1","0"]"#));
+        assert_eq!(m.resolved_outcome_won(2), Some(true));
+        assert_eq!(m.resolved_outcome_won(0), Some(false));
+    }
+
+    #[test]
+    fn outcome_unresolved_or_oob() {
+        // Not yet resolved (prices not 0/1).
+        let m = market(Some(r#"["0.55","0.45"]"#));
+        assert_eq!(m.resolved_outcome_won(0), None);
+        // Out of range / negative / missing prices.
+        let m = market(Some(r#"["1","0"]"#));
+        assert_eq!(m.resolved_outcome_won(5), None);
+        assert_eq!(m.resolved_outcome_won(-1), None);
+        assert_eq!(market(None).resolved_outcome_won(0), None);
+    }
 }
