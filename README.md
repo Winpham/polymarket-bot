@@ -154,6 +154,34 @@ flowchart LR
 
 Polls top traders on the Polymarket leaderboard every minute. When a followed trader opens a new position, the bot mirrors it after filtering for staleness and price drift.
 
+### Consensus Engine (auto-track + alerts)
+
+On top of per-trader copying, the copy-trading-bot runs a **consensus alert engine**: it
+auto-tracks the **top-N** leaderboard traders and alerts when many of them **converge** on the
+same directional position.
+
+```mermaid
+flowchart LR
+    A[Leaderboard top-N<br/>auto-tracked] --> B[Poll recent BUYs<br/>rolling window]
+    B --> C[Per-market book<br/>by conditionId × outcome]
+    C --> D[Net-directional score<br/>drop two-sided MMs]
+    D --> E{Gates:<br/>net, opposition,<br/>price σ, freshness}
+    E -->|Strong / Elite| F[Tiered Telegram alert<br/>+ forward tracking]
+```
+
+**Why net-directional, not raw count?** Top traders sit on *both* sides of popular markets
+(market-makers), and "same outcome" entries span a wide price range. Raw "≥2 traders bought the
+same outcome" is mostly noise. The engine instead requires **net** agreement among *distinct,
+one-sided* wallets (`backers − opposers`), drops wallets seen on both sides of a market, and
+demands **price coherence** (tight entry σ) and **freshness**. The scoring is a pure,
+unit-tested function (`scanner/consensus.rs`). Every signal is recorded to `consensus_signals`
+for forward edge tracking (did the consensus outcome resolve as the winner?), surfaced via
+`/consensus`.
+
+Tiers: **WATCH** (forming, digest only) · **STRONG** (push) · **ELITE** (priority push). All
+config knobs are env vars (see `.env.example`, `TRACK_*` / `CONSENSUS_*`). Paper/alert only — no
+real-money orders are placed.
+
 ### WebSocket Alerts
 
 A parallel WebSocket connection monitors real-time price movements. Significant moves (3%+) trigger instant reassessment through XGBoost. Open bet price alerts use a higher threshold (5%+ with 1h cooldown) to reduce noise.
@@ -207,6 +235,8 @@ Three strategies run simultaneously with independent bankrolls (default €300 e
 | Command | Description |
 |---|---|
 | `/stats` | Copy trading results |
+| `/consensus` | Live consensus signals (24h) + resolved hit-rate |
+| `/tracked` | Count of auto-tracked leaderboard traders |
 | `/copy` | Open copy-trade positions |
 | `/traders` | Followed traders list |
 | `/leaderboard` | Top Polymarket traders (day / month / all-time) |

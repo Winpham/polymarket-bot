@@ -141,6 +141,65 @@ pub async fn run_live(cfg: Arc<CopyTradingConfig>) -> Result<()> {
         }
     });
 
+    // Leaderboard auto-tracker: keep the followed universe synced to the top-N.
+    let tr_portfolio = Arc::clone(&portfolio);
+    let tr_notifier = Arc::clone(&notifier);
+    let tr_cfg = Arc::clone(&cfg);
+    let tr_http = reqwest::Client::builder()
+        .timeout(Duration::from_secs(15))
+        .build()
+        .expect("failed to build tracker HTTP client");
+    let tracker_loop = tokio::spawn(async move {
+        if !tr_cfg.track_enabled {
+            tracing::info!("Auto-tracking disabled (TRACK_ENABLED=false)");
+            return;
+        }
+        loop {
+            match crate::scanner::leaderboard_tracker::refresh_universe(
+                &tr_http,
+                &tr_portfolio,
+                &tr_cfg,
+            )
+            .await
+            {
+                Ok((up, deact)) => {
+                    if up > 0 {
+                        let _ = tr_notifier
+                            .send(&format!(
+                                "🛰 Tracking *{up}* top traders (top {} × {})",
+                                tr_cfg.track_top_n, tr_cfg.track_periods
+                            ))
+                            .await;
+                        let _ = deact;
+                    }
+                }
+                Err(e) => tracing::error!(err = %e, "Leaderboard refresh failed"),
+            }
+            tokio::time::sleep(Duration::from_secs(tr_cfg.track_refresh_mins * 60)).await;
+        }
+    });
+
+    // Consensus detection loop.
+    let co_portfolio = Arc::clone(&portfolio);
+    let co_notifier = Arc::clone(&notifier);
+    let co_monitor = Arc::clone(&monitor);
+    let co_cfg = Arc::clone(&cfg);
+    let consensus_loop = tokio::spawn(async move {
+        if !co_cfg.track_enabled {
+            return;
+        }
+        // Give the first leaderboard refresh a moment to populate the universe.
+        tokio::time::sleep(Duration::from_secs(20)).await;
+        loop {
+            if let Err(e) =
+                cycles::consensus_cycle(&co_portfolio, &co_notifier, &co_monitor, &co_cfg).await
+            {
+                tracing::error!(err = %e, "Consensus cycle failed");
+            }
+            tokio::time::sleep(Duration::from_secs(co_cfg.consensus_interval_mins * 60)).await;
+        }
+    });
+
     tokio::select! {
         _ = shutdown_signal() => {
             tracing::info!("Shutdown signal received, stopping gracefully...");
@@ -153,6 +212,12 @@ pub async fn run_live(cfg: Arc<CopyTradingConfig>) -> Result<()> {
         }
         r = housekeeping_loop => {
             tracing::error!("Housekeeping loop exited: {:?}", r);
+        }
+        r = tracker_loop => {
+            tracing::error!("Tracker loop exited: {:?}", r);
+        }
+        r = consensus_loop => {
+            tracing::error!("Consensus loop exited: {:?}", r);
         }
     }
 

@@ -141,4 +141,23 @@ Output tiers (configurable thresholds):
 ## Progress log
 - 2026-06-28 (run 1): Mapped repo; validated APIs live; baseline `cargo check` green; ran live
   consensus probes → established the net-directional/price-coherent design pivot; wrote this plan;
-  created branch `feat/consensus-engine`. Next: Phase B scaffolding (migration + config + tracker).
+  created branch `feat/consensus-engine`.
+- 2026-06-28 (run 1, cont.): **Phase B COMPLETE & verified working end-to-end.**
+  - Built `scanner/consensus.rs` (pure scorer, 9 unit tests), `scanner/leaderboard_tracker.rs`
+    (auto-track top-N), `cycles/consensus_cycle.rs` (poll→book→score→alert), migration
+    `021_consensus.sql`, `storage/consensus.rs` (DB), config knobs, `/consensus` + `/tracked`
+    commands, wired both new loops into `live.rs`. Extended activity parsing with
+    `outcome_index/outcome/title/event_slug`.
+  - **CI gate GREEN**: `cargo fmt --check`, `clippy --workspace --all-targets -Dwarnings`,
+    `cargo test --workspace` (all pass).
+  - **Live integration test** (Docker Postgres + live Polymarket API, dummy Telegram):
+    migrations applied; tracker auto-followed **62 traders** (top-40 × WEEK,MONTH); consensus
+    cycle polled 62, built **353 market books**, found 1 signal (WATCH: "Austria win → No",
+    net 2, σ 0.074) → correctly *no* alert (below STRONG). Persistence confirmed in DB.
+  - Docs: README consensus section + commands; `.env.example` knobs.
+- **NEXT (Phase C — validation, the make-or-break):** does the consensus signal beat the price it
+  enters at? (a) forward tracking — deploy with real creds + persistent PG, resolve signals as
+  markets close (`unresolved_consensus_signals`/`resolve_consensus_signal` already stubbed; wire
+  into housekeeping). (b) historical backtest on NON-sports resolved markets (Gamma slug coverage
+  ~50%, sports excluded by slug gap). Slice by sports/tier/net/price. Honest verdict.
+  Open questions: is sports-consensus profitable or just the favorite? does net size predict hit?

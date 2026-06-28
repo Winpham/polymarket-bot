@@ -145,6 +145,33 @@ impl Tier {
             Tier::Elite => "🔥",
         }
     }
+
+    /// Ascending conviction level (Watch=0, Strong=1, Elite=2).
+    pub fn level(&self) -> u8 {
+        match self {
+            Tier::Watch => 0,
+            Tier::Strong => 1,
+            Tier::Elite => 2,
+        }
+    }
+
+    /// Parse a stored tier string back into a [`Tier`] for dedup comparisons.
+    pub fn from_str(s: &str) -> Option<Tier> {
+        match s {
+            "WATCH" => Some(Tier::Watch),
+            "STRONG" => Some(Tier::Strong),
+            "ELITE" => Some(Tier::Elite),
+            _ => None,
+        }
+    }
+}
+
+/// One distinct backer of a consensus signal.
+#[derive(Debug, Clone)]
+pub struct BackerInfo {
+    pub wallet: String,
+    pub name: String,
+    pub rank: Option<i32>,
 }
 
 /// A scored consensus signal for one `(market, outcome)`.
@@ -157,10 +184,8 @@ pub struct ConsensusSignal {
     pub slug: String,
     pub event_slug: Option<String>,
     pub is_sports: bool,
-    /// Distinct one-sided backer display names, sorted.
-    pub backer_names: Vec<String>,
-    /// Distinct one-sided backer wallets (lower-cased), sorted.
-    pub backer_wallets: Vec<String>,
+    /// Distinct one-sided backers, sorted best-rank-first then by name.
+    pub backers: Vec<BackerInfo>,
     pub n_backers: usize,
     pub n_opposers: usize,
     /// `n_backers - n_opposers` — the interpretable headline number.
@@ -293,8 +318,7 @@ pub fn score_market(
 
         // --- Composite score (ranking only) ---
         let coherence = 1.0 - (price_std / params.max_price_std).clamp(0.0, 1.0); // [0,1]
-        let freshness =
-            1.0 - (recency_mins as f64 / params.max_age_mins as f64).clamp(0.0, 1.0); // [0,1]
+        let freshness = 1.0 - (recency_mins as f64 / params.max_age_mins as f64).clamp(0.0, 1.0); // [0,1]
         // Money factor: log-scaled, lightly weighted, capped.
         let money = (1.0 + total_usd.max(0.0)).ln();
         let score = net_quality.max(0.0)
@@ -316,11 +340,21 @@ pub fn score_market(
             Tier::Watch
         };
 
-        let mut backer_names: Vec<String> = backers.values().map(|v| v.name.clone()).collect();
-        backer_names.sort();
-        backer_names.dedup();
-        let mut backer_wallets: Vec<String> = backers.keys().map(|w| w.to_string()).collect();
-        backer_wallets.sort();
+        let mut backer_infos: Vec<BackerInfo> = backers
+            .iter()
+            .map(|(w, v)| BackerInfo {
+                wallet: w.to_string(),
+                name: v.name.clone(),
+                rank: v.rank,
+            })
+            .collect();
+        // Best (lowest) rank first; unranked last; tie-break by name.
+        backer_infos.sort_by(|a, b| {
+            a.rank
+                .unwrap_or(i32::MAX)
+                .cmp(&b.rank.unwrap_or(i32::MAX))
+                .then_with(|| a.name.cmp(&b.name))
+        });
 
         signals.push(ConsensusSignal {
             condition_id: book.condition_id.clone(),
@@ -334,8 +368,7 @@ pub fn score_market(
             slug: book.slug.clone(),
             event_slug: book.event_slug.clone(),
             is_sports: book.is_sports,
-            backer_names,
-            backer_wallets,
+            backers: backer_infos,
             n_backers,
             n_opposers,
             net_count,
@@ -364,7 +397,11 @@ pub fn score_all(
         .iter()
         .flat_map(|b| score_market(b, now, params))
         .collect();
-    all.sort_by(|a, b| b.score.partial_cmp(&a.score).unwrap_or(std::cmp::Ordering::Equal));
+    all.sort_by(|a, b| {
+        b.score
+            .partial_cmp(&a.score)
+            .unwrap_or(std::cmp::Ordering::Equal)
+    });
     all
 }
 
@@ -373,7 +410,13 @@ mod tests {
     use super::*;
     use chrono::Duration;
 
-    fn vote(wallet: &str, rank: Option<i32>, price: f64, age_mins: i64, now: DateTime<Utc>) -> TraderVote {
+    fn vote(
+        wallet: &str,
+        rank: Option<i32>,
+        price: f64,
+        age_mins: i64,
+        now: DateTime<Utc>,
+    ) -> TraderVote {
         TraderVote {
             wallet: wallet.to_string(),
             name: wallet.to_string(),
@@ -386,7 +429,13 @@ mod tests {
     }
 
     fn book_with(now: DateTime<Utc>, votes: Vec<(i32, &str, Option<i32>, f64, i64)>) -> MarketBook {
-        let mut b = MarketBook::new("0xcond", "Will X happen?", "x-slug", Some("x-event".into()), false);
+        let mut b = MarketBook::new(
+            "0xcond",
+            "Will X happen?",
+            "x-slug",
+            Some("x-event".into()),
+            false,
+        );
         for (oidx, w, rank, price, age) in votes {
             let label = if oidx == 0 { "Yes" } else { "No" };
             b.add_vote(oidx, label, vote(w, rank, price, age, now));
@@ -421,7 +470,10 @@ mod tests {
     #[test]
     fn below_min_backers_is_rejected() {
         let now = Utc::now();
-        let b = book_with(now, vec![(0, "wa", Some(5), 0.5, 10), (0, "wb", Some(6), 0.5, 10)]);
+        let b = book_with(
+            now,
+            vec![(0, "wa", Some(5), 0.5, 10), (0, "wb", Some(6), 0.5, 10)],
+        );
         let sigs = score_market(&b, now, &ConsensusParams::default());
         assert!(sigs.is_empty(), "2 backers < min_backers(3) must reject");
     }

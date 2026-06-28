@@ -57,6 +57,33 @@ pub async fn handle_command(
                 "⚠️ Failed to load traders".to_string()
             }
         },
+        "consensus" => {
+            let summary = portfolio
+                .consensus_summary(10)
+                .await
+                .unwrap_or_else(|e| format!("⚠️ Failed to load consensus: {e}"));
+            match portfolio.consensus_scoreboard().await {
+                Ok((res, won, res_ns, won_ns)) if res > 0 => {
+                    let hr = won as f64 / res as f64 * 100.0;
+                    let ns = if res_ns > 0 {
+                        format!(
+                            " | non-sports {won_ns}/{res_ns} ({:.0}%)",
+                            won_ns as f64 / res_ns as f64 * 100.0
+                        )
+                    } else {
+                        String::new()
+                    };
+                    format!("{summary}\n\n📊 Resolved hit-rate: {won}/{res} ({hr:.0}%){ns}")
+                }
+                _ => summary,
+            }
+        }
+        "tracked" => match portfolio.count_tracked_traders().await {
+            Ok(n) => format!(
+                "🛰 Auto-tracking *{n}* leaderboard traders.\nUse /traders for the full list, /consensus for live signals."
+            ),
+            Err(e) => format!("⚠️ Failed to count tracked traders: {e}"),
+        },
         "leaderboard" => {
             let (day_res, month_res, all_res) = tokio::join!(
                 fetch_leaderboard(http, "DAY"),
@@ -154,6 +181,8 @@ pub async fn handle_command(
         }
         "help" => "📖 *Commands*\n\n\
                  /stats — copy trading results\n\
+                 /consensus — live consensus signals + hit-rate\n\
+                 /tracked — auto-tracked trader count\n\
                  /copy — open copy-trade positions\n\
                  /traders — followed traders\n\
                  /leaderboard — top Polymarket traders\n\

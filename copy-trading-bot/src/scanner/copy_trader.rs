@@ -76,6 +76,18 @@ struct ActivityEvent {
     #[serde(rename = "transactionHash")]
     tx_hash: Option<String>,
     timestamp: Option<i64>,
+    /// Index of the outcome bought (0 = first outcome / "Yes"). Critical for
+    /// consensus keying — buying a different outcome is the opposite bet.
+    #[serde(default, rename = "outcomeIndex")]
+    outcome_index: Option<i32>,
+    /// Human label of the outcome ("Yes"/"No"/team name).
+    #[serde(default)]
+    outcome: Option<String>,
+    /// Market title (display).
+    #[serde(default)]
+    title: Option<String>,
+    #[serde(default, rename = "eventSlug")]
+    event_slug: Option<String>,
 }
 
 // ---------------------------------------------------------------------------
@@ -97,6 +109,13 @@ pub struct TraderTrade {
     pub size_usd: f64,
     pub tx_hash: Option<String>,
     pub timestamp: DateTime<Utc>,
+    /// Index of the outcome bought (0 = first). `None` if the API omitted it.
+    pub outcome_index: Option<i32>,
+    /// Human outcome label ("Yes"/"No"/team).
+    pub outcome: Option<String>,
+    /// Market title (display).
+    pub title: Option<String>,
+    pub event_slug: Option<String>,
 }
 
 /// A trade detected from a followed trader, ready for downstream filtering.
@@ -200,6 +219,60 @@ pub async fn fetch_leaderboard(
         .collect();
 
     Ok(display)
+}
+
+/// A raw leaderboard entry for the auto-tracker (keeps the real username and
+/// the API rank, unlike [`LeaderboardDisplay`] which substitutes a wallet
+/// prefix and caps at the display limit).
+#[derive(Debug, Clone)]
+pub struct LeaderboardRaw {
+    pub wallet: String,
+    pub username: Option<String>,
+    pub rank: i32,
+    pub pnl: f64,
+    pub volume: f64,
+}
+
+/// Fetch the top `limit` leaderboard traders for a period (cap 50), preserving
+/// real usernames and PnL-descending rank. Read-only.
+pub async fn fetch_leaderboard_n(
+    http: &Client,
+    time_period: &str,
+    limit: usize,
+) -> Result<Vec<LeaderboardRaw>> {
+    let n = limit.clamp(1, 50);
+    let url = format!("{DATA_API}/v1/leaderboard?timePeriod={time_period}&limit={n}");
+    let entries: Vec<LeaderboardEntry> = http
+        .get(&url)
+        .timeout(REQUEST_TIMEOUT)
+        .send()
+        .await
+        .context("leaderboard request failed")?
+        .error_for_status()
+        .context("leaderboard returned non-2xx")?
+        .json()
+        .await
+        .context("leaderboard JSON parse failed")?;
+
+    let mut sorted = entries;
+    sorted.sort_by(|a, b| {
+        b.pnl_f64()
+            .partial_cmp(&a.pnl_f64())
+            .unwrap_or(std::cmp::Ordering::Equal)
+    });
+
+    Ok(sorted
+        .into_iter()
+        .take(n)
+        .enumerate()
+        .map(|(i, e)| LeaderboardRaw {
+            pnl: e.pnl_f64(),
+            volume: e.volume_f64(),
+            username: e.name.filter(|s| !s.is_empty()),
+            wallet: e.proxy_wallet,
+            rank: (i + 1) as i32,
+        })
+        .collect())
 }
 
 /// Format a slice of [`LeaderboardDisplay`] entries as a single period section
@@ -306,6 +379,10 @@ fn parse_activity_events(events: Vec<ActivityEvent>) -> Vec<TraderTrade> {
                 size_usd,
                 tx_hash: e.tx_hash,
                 timestamp,
+                outcome_index: e.outcome_index,
+                outcome: e.outcome,
+                title: e.title,
+                event_slug: e.event_slug,
             })
         })
         .collect()
