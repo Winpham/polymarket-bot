@@ -2,7 +2,9 @@
 # deploying needs only Docker — no local Rust toolchain. Multi-stage: a Rust
 # builder compiles the release binary, then a tiny Debian runtime runs it.
 # TLS is rustls (no system OpenSSL needed); migrations are embedded at compile.
-FROM rust:1-slim AS builder
+# Builder and runtime are BOTH Debian bookworm so glibc versions match (a
+# `rust:1-slim` trixie builder + bookworm runtime fails with GLIBC_2.38 not found).
+FROM rust:1-bookworm AS builder
 WORKDIR /src
 # mimalloc (global allocator) compiles C; pkg-config for build hygiene.
 RUN apt-get update \
