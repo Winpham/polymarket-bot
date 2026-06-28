@@ -599,6 +599,42 @@ pub fn default_portfolio(base: &ConsensusParams) -> Vec<StrategyDef> {
             },
             alerting: false,
         },
+        // --- strategy-foundry quick-wins (2026-06-28 catalog, pre-registered) ---
+        // Denser, tighter-agreeing sharp cluster than `strict` tolerates.
+        StrategyDef {
+            name: "tight_cluster",
+            params: ConsensusParams {
+                min_backers: 4,
+                max_opposers: 0,
+                max_price_std: 0.04,
+                max_age_mins: 720,
+                ..base.clone()
+            },
+            alerting: false,
+        },
+        // Fresh elite-sharp entry in the favorite tail (the one FLB region with
+        // documented positive net returns). Decisive control = beat blind-favorite-band.
+        StrategyDef {
+            name: "elite_fresh_fav",
+            params: ConsensusParams {
+                require_elite: true,
+                price_band: Some((0.80, 0.97)),
+                max_age_mins: 180,
+                ..base.clone()
+            },
+            alerting: false,
+        },
+        // Favorite-tail FLB MEASUREMENT probe (non-sports). Expected to collapse to
+        // blind-by-band — kept as an instrument, NOT a promotable edge.
+        StrategyDef {
+            name: "favorite_tail",
+            params: ConsensusParams {
+                price_band: Some((0.85, 0.96)),
+                sports_mode: SportsMode::Exclude,
+                ..base.clone()
+            },
+            alerting: false,
+        },
     ]
 }
 
