@@ -24,6 +24,8 @@ pub struct LeaderboardTraderUpsert {
 /// Data needed to upsert one consensus signal.
 #[derive(Debug, Clone)]
 pub struct NewConsensusSignal {
+    /// Owning strategy name (portfolio tag); part of the dedup key.
+    pub strategy: String,
     pub condition_id: String,
     pub outcome_index: i32,
     pub outcome_label: String,
@@ -31,6 +33,8 @@ pub struct NewConsensusSignal {
     pub slug: String,
     pub event_slug: Option<String>,
     pub is_sports: bool,
+    /// Raw vote atoms for retroactive strategy replay (the no-backtest superpower).
+    pub observed_votes: serde_json::Value,
     pub n_backers: i32,
     pub n_opposers: i32,
     pub net_count: i32,
@@ -57,6 +61,7 @@ pub struct ConsensusAlertState {
 #[derive(Debug, Clone, sqlx::FromRow)]
 pub struct UnresolvedConsensus {
     pub id: i32,
+    pub strategy: String,
     pub slug: String,
     pub outcome_index: i32,
     pub mean_price: f64,
@@ -133,17 +138,18 @@ impl PgPortfolio {
     ) -> Result<ConsensusAlertState> {
         let state: ConsensusAlertState = sqlx::query_as(
             "INSERT INTO consensus_signals \
-               (condition_id, outcome_index, outcome_label, title, slug, event_slug, \
-                is_sports, n_backers, n_opposers, net_count, net_quality, mean_price, \
-                price_std, recency_mins, total_usd, best_backer_rank, score, tier, \
+               (strategy, condition_id, outcome_index, outcome_label, title, slug, event_slug, \
+                is_sports, observed_votes, n_backers, n_opposers, net_count, net_quality, \
+                mean_price, price_std, recency_mins, total_usd, best_backer_rank, score, tier, \
                 backers, last_updated_at) \
-             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,NOW()) \
-             ON CONFLICT (condition_id, outcome_index) DO UPDATE SET \
+             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,NOW()) \
+             ON CONFLICT (strategy, condition_id, outcome_index) DO UPDATE SET \
                outcome_label    = EXCLUDED.outcome_label, \
                title            = EXCLUDED.title, \
                slug             = EXCLUDED.slug, \
                event_slug       = EXCLUDED.event_slug, \
                is_sports        = EXCLUDED.is_sports, \
+               observed_votes   = EXCLUDED.observed_votes, \
                n_backers        = EXCLUDED.n_backers, \
                n_opposers       = EXCLUDED.n_opposers, \
                net_count        = EXCLUDED.net_count, \
@@ -159,6 +165,7 @@ impl PgPortfolio {
                last_updated_at  = NOW() \
              RETURNING id, last_alert_tier, last_alert_net",
         )
+        .bind(&s.strategy)
         .bind(&s.condition_id)
         .bind(s.outcome_index)
         .bind(&s.outcome_label)
@@ -166,6 +173,7 @@ impl PgPortfolio {
         .bind(&s.slug)
         .bind(&s.event_slug)
         .bind(s.is_sports)
+        .bind(&s.observed_votes)
         .bind(s.n_backers)
         .bind(s.n_opposers)
         .bind(s.net_count)
@@ -189,6 +197,7 @@ impl PgPortfolio {
     pub async fn record_consensus_alert(
         &self,
         signal_id: i32,
+        strategy: &str,
         tier: &str,
         net_count: i32,
         score: f64,
@@ -206,10 +215,11 @@ impl PgPortfolio {
         .context("record_consensus_alert (update signal)")?;
 
         sqlx::query(
-            "INSERT INTO consensus_alerts (signal_id, tier, net_count, score) \
-             VALUES ($1, $2, $3, $4)",
+            "INSERT INTO consensus_alerts (signal_id, strategy, tier, net_count, score) \
+             VALUES ($1, $2, $3, $4, $5)",
         )
         .bind(signal_id)
+        .bind(strategy)
         .bind(tier)
         .bind(net_count)
         .bind(score)
@@ -219,8 +229,9 @@ impl PgPortfolio {
         Ok(())
     }
 
-    /// Build a `/consensus` summary of the most recent strong/elite signals.
-    pub async fn consensus_summary(&self, limit: i64) -> Result<String> {
+    /// Build a `/consensus` summary of the most recent strong/elite signals for
+    /// one strategy (default the alerting `strict`, so the list reflects pushes).
+    pub async fn consensus_summary(&self, strategy: &str, limit: i64) -> Result<String> {
         #[derive(sqlx::FromRow)]
         struct Row {
             title: String,
@@ -237,10 +248,11 @@ impl PgPortfolio {
             "SELECT title, outcome_label, tier, net_count, n_backers, n_opposers, \
                     mean_price, is_sports, total_usd \
              FROM consensus_signals \
-             WHERE tier IN ('STRONG','ELITE') \
+             WHERE strategy = $1 AND tier IN ('STRONG','ELITE') \
                AND last_updated_at > NOW() - INTERVAL '24 hours' \
-             ORDER BY score DESC LIMIT $1",
+             ORDER BY score DESC LIMIT $2",
         )
+        .bind(strategy)
         .bind(limit)
         .fetch_all(&self.pool)
         .await
@@ -273,7 +285,7 @@ impl PgPortfolio {
     /// Signals that have not yet been resolved, for housekeeping to settle.
     pub async fn unresolved_consensus_signals(&self) -> Result<Vec<UnresolvedConsensus>> {
         let rows: Vec<UnresolvedConsensus> = sqlx::query_as(
-            "SELECT id, COALESCE(slug, '') AS slug, outcome_index, mean_price, is_sports \
+            "SELECT id, strategy, COALESCE(slug, '') AS slug, outcome_index, mean_price, is_sports \
              FROM consensus_signals WHERE resolved = FALSE",
         )
         .fetch_all(&self.pool)
@@ -329,6 +341,39 @@ impl PgPortfolio {
             won_ns.unwrap_or(0),
         ))
     }
+
+    /// Per-strategy forward-tracking scoreboard, best edge first. This is the
+    /// instrument that ranks the portfolio: `edge = AVG(outcome_won − mean_price)`
+    /// is the leak-free realized edge vs the price each signal entered at.
+    pub async fn consensus_scoreboard_by_strategy(&self) -> Result<Vec<StrategyScore>> {
+        let rows: Vec<StrategyScore> = sqlx::query_as(
+            "SELECT strategy, \
+                    COUNT(*) FILTER (WHERE resolved)                  AS resolved, \
+                    COUNT(*) FILTER (WHERE resolved AND outcome_won)  AS won, \
+                    AVG((outcome_won::int)::double precision - mean_price) \
+                        FILTER (WHERE resolved)                       AS edge \
+             FROM consensus_signals \
+             GROUP BY strategy \
+             ORDER BY edge DESC NULLS LAST",
+        )
+        .fetch_all(&self.pool)
+        .await
+        .context("consensus_scoreboard_by_strategy")?;
+        Ok(rows)
+    }
+}
+
+/// One strategy's forward-tracking scoreboard row.
+#[derive(Debug, Clone, sqlx::FromRow)]
+pub struct StrategyScore {
+    pub strategy: String,
+    /// Resolved signals for this strategy.
+    pub resolved: i64,
+    /// Resolved signals whose consensus outcome won.
+    pub won: i64,
+    /// Mean realized edge vs entry: `AVG(outcome_won::int - mean_price)`.
+    /// `None` when nothing has resolved yet.
+    pub edge: Option<f64>,
 }
 
 /// Local truncate helper (avoids a cross-crate format dependency).

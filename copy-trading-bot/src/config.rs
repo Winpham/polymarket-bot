@@ -84,6 +84,11 @@ pub struct CopyTradingConfig {
     #[config(env = "CONSENSUS_REALERT_NET_DELTA", default = 2)]
     pub consensus_realert_net_delta: i64,
 
+    /// Comma-separated strategy names to activate from the portfolio (empty = all).
+    /// e.g. "strict,whales,nonsports". See scanner::consensus::default_portfolio.
+    #[config(env = "CONSENSUS_STRATEGIES", default = "")]
+    pub consensus_strategies: String,
+
     // --- Betting ---
     /// Slippage assumption as a fraction (0.01 = 1%).
     #[config(env = "SLIPPAGE_PCT", default = 0.01)]

@@ -34,6 +34,8 @@ pub struct TraderVote {
     pub name: String,
     /// Leaderboard rank (1 = best), or `None` if unranked. Used for the elite check.
     pub rank: Option<i32>,
+    /// Realized leaderboard PnL (USD), if known. Reserved for smart-money weighting.
+    pub pnl: Option<f64>,
     /// Quality weight `w_q` derived from leaderboard standing (see [`quality_weight`]).
     pub quality: f64,
     /// Entry price the trader paid for this outcome, in (0,1).
@@ -85,7 +87,33 @@ impl MarketBook {
     }
 }
 
+/// How a strategy treats sports/esports markets.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SportsMode {
+    /// Score both sports and non-sports (incumbent behavior).
+    Include,
+    /// Only sports/esports markets.
+    Only,
+    /// Drop sports/esports markets.
+    Exclude,
+}
+
+/// Which aggregate drives the composite ranking `score`. Tiering stays
+/// `net_count`-based for ALL modes so STRONG/ELITE remain comparable across the
+/// portfolio — only the *ranking* basis changes.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum WeightMode {
+    /// Rank by plain net trader count.
+    Count,
+    /// Rank by rank-derived `net_quality` (incumbent).
+    Quality,
+    /// Rank by log-$ committed (whale-weighted).
+    Dollars,
+}
+
 /// Tunable thresholds for the scorer. Defaults mirror `CONSENSUS-ENGINE-PLAN.md`.
+/// The last four fields are additive portfolio knobs whose defaults are no-ops,
+/// so `ConsensusParams::default()` is behaviorally identical to the original.
 #[derive(Debug, Clone)]
 pub struct ConsensusParams {
     /// Minimum number of distinct one-sided backers required.
@@ -102,6 +130,16 @@ pub struct ConsensusParams {
     pub elite_net: i64,
     /// A backer with leaderboard rank ≤ this counts as "elite" for tiering.
     pub elite_rank: i32,
+
+    // --- additive portfolio knobs (all default to no-op) ---
+    /// Require ≥1 backer with rank ≤ `elite_rank`, else drop the signal.
+    pub require_elite: bool,
+    /// Keep only signals whose mean entry price ∈ [lo, hi]. `None` = no band.
+    pub price_band: Option<(f64, f64)>,
+    /// Sports/esports treatment for this strategy.
+    pub sports_mode: SportsMode,
+    /// Ranking basis for the composite `score`.
+    pub weight_mode: WeightMode,
 }
 
 impl Default for ConsensusParams {
@@ -114,8 +152,24 @@ impl Default for ConsensusParams {
             strong_net: 4,
             elite_net: 6,
             elite_rank: 10,
+            // no-op defaults → Default() is behaviorally unchanged
+            require_elite: false,
+            price_band: None,
+            sports_mode: SportsMode::Include,
+            weight_mode: WeightMode::Quality,
         }
     }
+}
+
+/// A named strategy: a parameter-set scored against the shared per-cycle books.
+#[derive(Debug, Clone)]
+pub struct StrategyDef {
+    /// Stable identifier — also the DB `strategy` value and Prometheus label.
+    pub name: &'static str,
+    pub params: ConsensusParams,
+    /// If true, STRONG/ELITE signals push Telegram. Keep exactly one strategy
+    /// (the incumbent `strict`) alerting to preserve the current alert UX.
+    pub alerting: bool,
 }
 
 /// Alert tier, ascending in conviction.
@@ -177,6 +231,9 @@ pub struct BackerInfo {
 /// A scored consensus signal for one `(market, outcome)`.
 #[derive(Debug, Clone)]
 pub struct ConsensusSignal {
+    /// Owning strategy name. Set by [`score_all_strategies`]; [`score_market`]
+    /// leaves it empty (single-definition callers / tests don't care).
+    pub strategy: String,
     pub condition_id: String,
     pub outcome_index: i32,
     pub outcome_label: String,
@@ -233,6 +290,21 @@ pub fn score_market(
     now: DateTime<Utc>,
     params: &ConsensusParams,
 ) -> Vec<ConsensusSignal> {
+    // Market-level sports gate (cheap early-out) — replaces the old cycle-level filter.
+    match params.sports_mode {
+        SportsMode::Include => {}
+        SportsMode::Only => {
+            if !book.is_sports {
+                return Vec::new();
+            }
+        }
+        SportsMode::Exclude => {
+            if book.is_sports {
+                return Vec::new();
+            }
+        }
+    }
+
     // Identify two-sided wallets (present on >1 outcome) — dropped as MMs.
     let mut wallet_outcomes: HashMap<&str, HashSet<i32>> = HashMap::new();
     for (oidx, votes) in &book.votes {
@@ -316,21 +388,36 @@ pub fn score_market(
             continue;
         }
 
+        // Price-band predicate (longshot / favorite variants).
+        if let Some((lo, hi)) = params.price_band
+            && (mean_price < lo || mean_price > hi)
+        {
+            continue;
+        }
+
+        // Elite-required gate (elite_gated variant).
+        let has_elite = backers
+            .values()
+            .filter_map(|v| v.rank)
+            .any(|r| r <= params.elite_rank);
+        if params.require_elite && !has_elite {
+            continue;
+        }
+
         // --- Composite score (ranking only) ---
         let coherence = 1.0 - (price_std / params.max_price_std).clamp(0.0, 1.0); // [0,1]
         let freshness = 1.0 - (recency_mins as f64 / params.max_age_mins as f64).clamp(0.0, 1.0); // [0,1]
         // Money factor: log-scaled, lightly weighted, capped.
         let money = (1.0 + total_usd.max(0.0)).ln();
-        let score = net_quality.max(0.0)
-            * (0.5 + 0.5 * coherence)
-            * (0.6 + 0.4 * freshness)
-            * (1.0 + 0.02 * money);
+        // Ranking base term — selectable per strategy; tiering stays net_count-based.
+        let base = match params.weight_mode {
+            WeightMode::Count => net_count.max(0) as f64,
+            WeightMode::Quality => net_quality.max(0.0),
+            WeightMode::Dollars => money,
+        };
+        let score = base * (0.5 + 0.5 * coherence) * (0.6 + 0.4 * freshness) * (1.0 + 0.02 * money);
 
         // --- Tier ---
-        let has_elite = backers
-            .values()
-            .filter_map(|v| v.rank)
-            .any(|r| r <= params.elite_rank);
         let tier = if net_count >= params.elite_net || (net_count >= params.strong_net && has_elite)
         {
             Tier::Elite
@@ -357,6 +444,7 @@ pub fn score_market(
         });
 
         signals.push(ConsensusSignal {
+            strategy: String::new(),
             condition_id: book.condition_id.clone(),
             outcome_index: oidx,
             outcome_label: book
@@ -405,6 +493,115 @@ pub fn score_all(
     all
 }
 
+/// Score the SAME books under every strategy in the portfolio, tagging each
+/// emitted signal with its owning strategy name. The expensive per-cycle fetch
+/// and book assembly happen once upstream; this is a pure pass per strategy.
+pub fn score_all_strategies(
+    books: &[MarketBook],
+    now: DateTime<Utc>,
+    portfolio: &[StrategyDef],
+) -> Vec<ConsensusSignal> {
+    let mut out = Vec::new();
+    for def in portfolio {
+        let mut sigs = score_all(books, now, &def.params);
+        for s in &mut sigs {
+            s.strategy = def.name.to_string();
+        }
+        out.extend(sigs);
+    }
+    out
+}
+
+/// The recommended initial portfolio — a factorial probe where each variant
+/// isolates ONE lever. Every variant derives from `base` (the incumbent
+/// `strict` params from config) so global env tuning moves the whole portfolio
+/// coherently. Only `strict` alerts; the rest forward-track silently.
+pub fn default_portfolio(base: &ConsensusParams) -> Vec<StrategyDef> {
+    vec![
+        StrategyDef {
+            name: "strict",
+            params: base.clone(),
+            alerting: true,
+        },
+        StrategyDef {
+            name: "loose",
+            params: ConsensusParams {
+                min_backers: 2,
+                max_opposers: 2,
+                max_price_std: 0.15,
+                strong_net: 3,
+                elite_net: 5,
+                ..base.clone()
+            },
+            alerting: false,
+        },
+        StrategyDef {
+            name: "fresh2h",
+            params: ConsensusParams {
+                max_age_mins: 120,
+                ..base.clone()
+            },
+            alerting: false,
+        },
+        StrategyDef {
+            name: "longshot",
+            params: ConsensusParams {
+                price_band: Some((0.02, 0.35)),
+                ..base.clone()
+            },
+            alerting: false,
+        },
+        StrategyDef {
+            name: "favorite",
+            params: ConsensusParams {
+                price_band: Some((0.65, 0.98)),
+                ..base.clone()
+            },
+            alerting: false,
+        },
+        StrategyDef {
+            name: "sports_only",
+            params: ConsensusParams {
+                sports_mode: SportsMode::Only,
+                ..base.clone()
+            },
+            alerting: false,
+        },
+        StrategyDef {
+            name: "nonsports",
+            params: ConsensusParams {
+                sports_mode: SportsMode::Exclude,
+                ..base.clone()
+            },
+            alerting: false,
+        },
+        StrategyDef {
+            name: "elite_gated",
+            params: ConsensusParams {
+                require_elite: true,
+                ..base.clone()
+            },
+            alerting: false,
+        },
+        StrategyDef {
+            name: "whales",
+            params: ConsensusParams {
+                weight_mode: WeightMode::Dollars,
+                ..base.clone()
+            },
+            alerting: false,
+        },
+        StrategyDef {
+            name: "count",
+            params: ConsensusParams {
+                weight_mode: WeightMode::Count,
+                ..base.clone()
+            },
+            alerting: false,
+        },
+    ]
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -421,6 +618,7 @@ mod tests {
             wallet: wallet.to_string(),
             name: wallet.to_string(),
             rank,
+            pnl: None,
             quality: quality_weight(rank),
             price,
             size_usd: 1000.0,
@@ -607,5 +805,149 @@ mod tests {
         );
         let sigs2 = score_market(&b2, now, &ConsensusParams::default());
         assert_eq!(sigs2[0].tier, Tier::Elite);
+    }
+
+    // --- strategy-portfolio knobs ---
+
+    #[test]
+    fn price_band_gates_on_mean_price() {
+        let now = Utc::now();
+        // 3 backers at ~0.80 → favorite-band passes, longshot-band rejects.
+        let b = book_with(
+            now,
+            vec![
+                (0, "wa", None, 0.80, 5),
+                (0, "wb", None, 0.81, 5),
+                (0, "wc", None, 0.79, 5),
+            ],
+        );
+        let favorite = ConsensusParams {
+            price_band: Some((0.65, 0.98)),
+            ..ConsensusParams::default()
+        };
+        let longshot = ConsensusParams {
+            price_band: Some((0.02, 0.35)),
+            ..ConsensusParams::default()
+        };
+        assert_eq!(
+            score_market(&b, now, &favorite).len(),
+            1,
+            "0.80 ∈ favorite band"
+        );
+        assert!(
+            score_market(&b, now, &longshot).is_empty(),
+            "0.80 ∉ longshot band"
+        );
+    }
+
+    #[test]
+    fn require_elite_gate() {
+        let now = Utc::now();
+        // 3 unranked backers — fine for default, rejected when require_elite.
+        let b = book_with(
+            now,
+            vec![
+                (0, "wa", None, 0.50, 5),
+                (0, "wb", None, 0.50, 5),
+                (0, "wc", None, 0.50, 5),
+            ],
+        );
+        assert_eq!(score_market(&b, now, &ConsensusParams::default()).len(), 1);
+        let elite = ConsensusParams {
+            require_elite: true,
+            ..ConsensusParams::default()
+        };
+        assert!(score_market(&b, now, &elite).is_empty());
+        // Add a top-10 ranked backer → passes require_elite.
+        let b2 = book_with(
+            now,
+            vec![
+                (0, "wa", Some(3), 0.50, 5),
+                (0, "wb", None, 0.50, 5),
+                (0, "wc", None, 0.50, 5),
+            ],
+        );
+        assert_eq!(score_market(&b2, now, &elite).len(), 1);
+    }
+
+    #[test]
+    fn sports_mode_filters_market() {
+        let now = Utc::now();
+        let mut sportsbook = book_with(
+            now,
+            vec![
+                (0, "wa", None, 0.50, 5),
+                (0, "wb", None, 0.50, 5),
+                (0, "wc", None, 0.50, 5),
+            ],
+        );
+        sportsbook.is_sports = true;
+        let only = ConsensusParams {
+            sports_mode: SportsMode::Only,
+            ..ConsensusParams::default()
+        };
+        let exclude = ConsensusParams {
+            sports_mode: SportsMode::Exclude,
+            ..ConsensusParams::default()
+        };
+        assert_eq!(
+            score_market(&sportsbook, now, &only).len(),
+            1,
+            "sports market kept by Only"
+        );
+        assert!(
+            score_market(&sportsbook, now, &exclude).is_empty(),
+            "sports market dropped by Exclude"
+        );
+    }
+
+    #[test]
+    fn score_all_strategies_tags_and_runs_portfolio() {
+        let now = Utc::now();
+        let b = book_with(
+            now,
+            vec![
+                (0, "wa", Some(5), 0.50, 5),
+                (0, "wb", Some(20), 0.51, 5),
+                (0, "wc", Some(30), 0.49, 5),
+                (0, "wd", Some(40), 0.50, 5),
+            ],
+        );
+        let portfolio = default_portfolio(&ConsensusParams::default());
+        let sigs = score_all_strategies(&[b], now, &portfolio);
+        // strict + loose + fresh2h + favorite(0.50∉) ... at least strict & loose fire.
+        assert!(sigs.iter().any(|s| s.strategy == "strict"));
+        assert!(
+            sigs.iter().all(|s| !s.strategy.is_empty()),
+            "every signal tagged"
+        );
+        // longshot (band 0.02-0.35) must NOT fire on a 0.50 market.
+        assert!(!sigs.iter().any(|s| s.strategy == "longshot"));
+    }
+
+    #[test]
+    fn default_strict_is_non_regressive() {
+        // The portfolio's `strict` params must equal ConsensusParams::default-derived base,
+        // i.e. score identically to the pre-portfolio scorer on a representative book.
+        let now = Utc::now();
+        let b = book_with(
+            now,
+            vec![
+                (0, "wa", Some(5), 0.50, 10),
+                (0, "wb", Some(20), 0.51, 20),
+                (0, "wc", Some(30), 0.49, 30),
+                (0, "wd", Some(40), 0.52, 40),
+            ],
+        );
+        let base = ConsensusParams::default();
+        let strict = &default_portfolio(&base)[0];
+        assert_eq!(strict.name, "strict");
+        assert!(strict.alerting, "strict is the sole alerter");
+        let a = score_market(&b, now, &base);
+        let c = score_market(&b, now, &strict.params);
+        assert_eq!(a.len(), c.len());
+        assert_eq!(a[0].tier, c[0].tier);
+        assert_eq!(a[0].net_count, c[0].net_count);
+        assert!((a[0].score - c[0].score).abs() < 1e-12);
     }
 }

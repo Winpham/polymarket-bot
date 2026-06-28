@@ -76,27 +76,40 @@ pub async fn housekeeping_cycle(
         .unresolved_consensus_signals()
         .await
         .unwrap_or_default();
-    let mut consensus_resolved = 0usize;
+
+    // Group unresolved signals by market slug so we fetch each market from Gamma
+    // ONCE, even when many strategies claim the same (market, outcome).
+    let mut by_slug: std::collections::HashMap<&str, Vec<&_>> = std::collections::HashMap::new();
     for sig in &unresolved {
-        if sig.slug.is_empty() {
-            continue;
+        if !sig.slug.is_empty() {
+            by_slug.entry(sig.slug.as_str()).or_default().push(sig);
         }
+    }
+
+    let mut consensus_resolved = 0usize;
+    for (slug, sigs) in &by_slug {
         tokio::time::sleep(Duration::from_millis(150)).await;
-        let market = match crate::data::models::fetch_market_by_slug(http, &sig.slug).await {
+        let market = match crate::data::models::fetch_market_by_slug(http, slug).await {
             Ok(m) => m,
             Err(_) => continue, // not in Gamma (e.g. many sports markets) — try later
         };
-        if let Some(won) = market.resolved_outcome_won(sig.outcome_index) {
-            match portfolio
-                .resolve_consensus_signal(sig.id, won, &market.market_id)
-                .await
-            {
-                Ok(()) => {
-                    consensus_resolved += 1;
-                    crate::metrics::record_consensus_resolution(won, sig.is_sports);
-                }
-                Err(e) => {
-                    tracing::warn!(err = %e, signal_id = sig.id, "resolve_consensus_signal failed")
+        for sig in sigs {
+            if let Some(won) = market.resolved_outcome_won(sig.outcome_index) {
+                match portfolio
+                    .resolve_consensus_signal(sig.id, won, &market.market_id)
+                    .await
+                {
+                    Ok(()) => {
+                        consensus_resolved += 1;
+                        crate::metrics::record_consensus_resolution(
+                            &sig.strategy,
+                            won,
+                            sig.is_sports,
+                        );
+                    }
+                    Err(e) => {
+                        tracing::warn!(err = %e, signal_id = sig.id, "resolve_consensus_signal failed")
+                    }
                 }
             }
         }

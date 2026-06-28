@@ -158,15 +158,28 @@ pub fn record_consensus_cycle(markets: u64, signals: u64) {
     gauge!("consensus_signals_active").set(signals as f64);
 }
 
-/// Record a pushed consensus alert by tier (STRONG / ELITE).
-pub fn record_consensus_alert(tier: &str) {
-    counter!("consensus_alerts_total", "tier" => tier.to_string()).increment(1);
+/// Record a pushed consensus alert by strategy + tier.
+pub fn record_consensus_alert(strategy: &str, tier: &str) {
+    counter!("consensus_alerts_total",
+        "strategy" => strategy.to_string(),
+        "tier" => tier.to_string())
+    .increment(1);
 }
 
-/// Record a resolved consensus signal and whether the consensus outcome won.
-pub fn record_consensus_resolution(won: bool, is_sports: bool) {
+/// Record a resolved consensus signal by strategy, outcome, and segment.
+pub fn record_consensus_resolution(strategy: &str, won: bool, is_sports: bool) {
     let outcome = if won { "win" } else { "loss" };
     let segment = if is_sports { "sports" } else { "nonsports" };
-    counter!("consensus_resolved_total", "outcome" => outcome.to_string(), "segment" => segment.to_string())
-        .increment(1);
+    counter!("consensus_resolved_total",
+        "strategy" => strategy.to_string(),
+        "outcome" => outcome.to_string(),
+        "segment" => segment.to_string())
+    .increment(1);
+}
+
+/// Publish a strategy's live forward-tracking scoreboard as gauges.
+pub fn record_consensus_strategy_score(strategy: &str, resolved: i64, hit_rate: f64, edge: f64) {
+    gauge!("consensus_strategy_resolved", "strategy" => strategy.to_string()).set(resolved as f64);
+    gauge!("consensus_strategy_hit_rate", "strategy" => strategy.to_string()).set(hit_rate);
+    gauge!("consensus_strategy_edge", "strategy" => strategy.to_string()).set(edge);
 }

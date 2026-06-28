@@ -182,6 +182,21 @@ Tiers: **WATCH** (forming, digest only) · **STRONG** (push) · **ELITE** (prior
 config knobs are env vars (see `.env.example`, `TRACK_*` / `CONSENSUS_*`). Paper/alert only — no
 real-money orders are placed.
 
+#### Strategy portfolio (forward A/B/n test)
+
+Because Polymarket activity can't be backtested (tracked traders' history is all live/unresolved
+markets), the engine runs a **portfolio of 10 strategy variants simultaneously and forward**, each
+scoring the *same* per-cycle data with different logic, each forward-tracked separately. Only
+`strict` pushes Telegram; the rest accrue silent resolved-outcome evidence. `/consensus` shows a
+per-strategy scoreboard with **edge = AVG(outcome_won − entry_price)** — the leak-free measure of
+whether a strategy's consensus beat the price it entered at.
+
+Variants (each isolates one lever): `strict` (incumbent), `loose`, `fresh2h`, `longshot`,
+`favorite`, `sports_only`, `nonsports`, `elite_gated`, `whales`, `count`. Set `CONSENSUS_STRATEGIES`
+to run a subset. Every signal also stores its **raw vote atoms** (`observed_votes`), so a strategy
+invented later can be replayed over data already collected (`FORGE_PLAN.md` Phase 2). Discipline:
+small resolved-N is indeterminate — never auto-promote a variant to alerting; that's a gated human call.
+
 ### WebSocket Alerts
 
 A parallel WebSocket connection monitors real-time price movements. Significant moves (3%+) trigger instant reassessment through XGBoost. Open bet price alerts use a higher threshold (5%+ with 1h cooldown) to reduce noise.

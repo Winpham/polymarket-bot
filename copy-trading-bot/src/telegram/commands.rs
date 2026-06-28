@@ -58,22 +58,31 @@ pub async fn handle_command(
             }
         },
         "consensus" => {
+            // Headline = the alerting `strict` strategy's live signals.
             let summary = portfolio
-                .consensus_summary(10)
+                .consensus_summary("strict", 10)
                 .await
                 .unwrap_or_else(|e| format!("⚠️ Failed to load consensus: {e}"));
-            match portfolio.consensus_scoreboard().await {
-                Ok((res, won, res_ns, won_ns)) if res > 0 => {
-                    let hr = won as f64 / res as f64 * 100.0;
-                    let ns = if res_ns > 0 {
-                        format!(
-                            " | non-sports {won_ns}/{res_ns} ({:.0}%)",
-                            won_ns as f64 / res_ns as f64 * 100.0
-                        )
-                    } else {
-                        String::new()
-                    };
-                    format!("{summary}\n\n📊 Resolved hit-rate: {won}/{res} ({hr:.0}%){ns}")
+            // Per-strategy forward-tracking scoreboard (the portfolio ranking).
+            match portfolio.consensus_scoreboard_by_strategy().await {
+                Ok(rows) if rows.iter().any(|r| r.resolved > 0) => {
+                    let mut board =
+                        String::from("\n\n📊 *Strategy scoreboard* (resolved · edge vs entry)\n");
+                    for r in rows.iter().filter(|r| r.resolved > 0) {
+                        let hr = r.won as f64 / r.resolved as f64 * 100.0;
+                        let edge = r
+                            .edge
+                            .map(|e| format!("{:+.1}%", e * 100.0))
+                            .unwrap_or_else(|| "—".into());
+                        board.push_str(&format!(
+                            "`{:<12}` {}/{} ({:.0}%) · edge {}\n",
+                            r.strategy, r.won, r.resolved, hr, edge,
+                        ));
+                    }
+                    board.push_str(
+                        "\n_Edge>0 = consensus beat its entry price. Small N = indeterminate._",
+                    );
+                    format!("{summary}{board}")
                 }
                 _ => summary,
             }

@@ -14,8 +14,8 @@ use futures_util::future::join_all;
 use crate::config::CopyTradingConfig;
 use crate::live::broadcast;
 use crate::scanner::consensus::{
-    BackerInfo, ConsensusParams, ConsensusSignal, MarketBook, Tier, TraderVote, quality_weight,
-    score_all,
+    BackerInfo, ConsensusParams, ConsensusSignal, MarketBook, StrategyDef, Tier, TraderVote,
+    default_portfolio, quality_weight, score_all_strategies,
 };
 use crate::scanner::copy_trader::CopyTraderMonitor;
 use crate::storage::consensus::NewConsensusSignal;
@@ -32,6 +32,16 @@ fn params_from_cfg(cfg: &CopyTradingConfig) -> ConsensusParams {
         strong_net: cfg.strong_net,
         elite_net: cfg.elite_net,
         elite_rank: cfg.elite_rank,
+        // Incumbent `strict` knobs: sports treatment mirrors the legacy global flag;
+        // the other portfolio knobs are no-ops for strict.
+        require_elite: false,
+        price_band: None,
+        sports_mode: if cfg.consensus_include_sports {
+            crate::scanner::consensus::SportsMode::Include
+        } else {
+            crate::scanner::consensus::SportsMode::Exclude
+        },
+        weight_mode: crate::scanner::consensus::WeightMode::Quality,
     }
 }
 
@@ -129,6 +139,7 @@ pub async fn consensus_cycle(
                     wallet: trader.proxy_wallet.to_lowercase(),
                     name: name.clone(),
                     rank: trader.rank,
+                    pnl: trader.pnl,
                     quality,
                     price: tr.price,
                     size_usd: tr.size_usd,
@@ -139,27 +150,33 @@ pub async fn consensus_cycle(
     }
 
     let book_vec: Vec<MarketBook> = books.into_values().collect();
-    let params = params_from_cfg(cfg);
-    let signals = score_all(&book_vec, Utc::now(), &params);
+
+    // Serialize the raw vote atoms ONCE per (market, outcome) — strategy-agnostic.
+    // Stored on every signal so a strategy invented later can be replayed over it.
+    let atoms = atom_log(&book_vec);
+
+    let strategies = active_portfolio(cfg);
+    let alerting: std::collections::HashSet<&str> = strategies
+        .iter()
+        .filter(|d| d.alerting)
+        .map(|d| d.name)
+        .collect();
+    let signals = score_all_strategies(&book_vec, Utc::now(), &strategies);
 
     let mut alerts_sent = 0usize;
     for sig in &signals {
-        if sig.is_sports && !cfg.consensus_include_sports {
-            continue;
-        }
-
-        // Persist / upsert the signal, capturing prior alert state for dedup.
-        let new = to_new_signal(sig);
+        // Upsert EVERY strategy's signal for forward edge tracking.
+        let new = to_new_signal(sig, &atoms);
         let state = match portfolio.upsert_consensus_signal(&new).await {
             Ok(s) => s,
             Err(e) => {
-                tracing::warn!(err = %e, cond = %sig.condition_id, "upsert_consensus_signal failed");
+                tracing::warn!(err = %e, cond = %sig.condition_id, strat = %sig.strategy, "upsert_consensus_signal failed");
                 continue;
             }
         };
 
-        // Only alert STRONG / ELITE.
-        if sig.tier == Tier::Watch {
+        // Only the alerting strategy(ies) push Telegram; only STRONG / ELITE.
+        if !alerting.contains(sig.strategy.as_str()) || sig.tier == Tier::Watch {
             continue;
         }
 
@@ -179,12 +196,18 @@ pub async fn consensus_cycle(
         let msg = format_consensus_alert(sig);
         broadcast(notifier, portfolio, &msg).await;
         if let Err(e) = portfolio
-            .record_consensus_alert(state.id, sig.tier.as_str(), sig.net_count as i32, sig.score)
+            .record_consensus_alert(
+                state.id,
+                &sig.strategy,
+                sig.tier.as_str(),
+                sig.net_count as i32,
+                sig.score,
+            )
             .await
         {
             tracing::warn!(err = %e, "record_consensus_alert failed");
         }
-        crate::metrics::record_consensus_alert(sig.tier.as_str());
+        crate::metrics::record_consensus_alert(&sig.strategy, sig.tier.as_str());
         alerts_sent += 1;
     }
 
@@ -193,6 +216,7 @@ pub async fn consensus_cycle(
     tracing::info!(
         traders_polled = polled_ok,
         markets = book_vec.len(),
+        strategies = strategies.len(),
         signals = signals.len(),
         alerts_sent,
         "Consensus cycle complete"
@@ -200,8 +224,56 @@ pub async fn consensus_cycle(
     Ok(())
 }
 
-/// Convert a scored signal into its DB upsert payload.
-fn to_new_signal(sig: &ConsensusSignal) -> NewConsensusSignal {
+/// The active strategy portfolio: the full default set, optionally narrowed by
+/// the `CONSENSUS_STRATEGIES` allowlist (empty = all).
+fn active_portfolio(cfg: &CopyTradingConfig) -> Vec<StrategyDef> {
+    let base = params_from_cfg(cfg);
+    let all = default_portfolio(&base);
+    let filter = cfg.consensus_strategies.trim();
+    if filter.is_empty() {
+        return all;
+    }
+    let allow: std::collections::HashSet<&str> = filter
+        .split(',')
+        .map(|s| s.trim())
+        .filter(|s| !s.is_empty())
+        .collect();
+    all.into_iter().filter(|d| allow.contains(d.name)).collect()
+}
+
+/// Serialize the raw vote atoms for every observed `(condition_id, outcome_index)`.
+/// Strategy-agnostic, computed once per cycle, reused across all strategies.
+fn atom_log(books: &[MarketBook]) -> std::collections::HashMap<(String, i32), serde_json::Value> {
+    let mut map = std::collections::HashMap::new();
+    for book in books {
+        for (&oidx, votes) in &book.votes {
+            let arr = serde_json::Value::Array(
+                votes
+                    .iter()
+                    .map(|v| {
+                        serde_json::json!({
+                            "wallet": v.wallet,
+                            "name": v.name,
+                            "rank": v.rank,
+                            "pnl": v.pnl,
+                            "price": v.price,
+                            "size_usd": v.size_usd,
+                            "ts": v.ts.timestamp(),
+                        })
+                    })
+                    .collect(),
+            );
+            map.insert((book.condition_id.clone(), oidx), arr);
+        }
+    }
+    map
+}
+
+/// Convert a scored signal into its DB upsert payload (atoms attached).
+fn to_new_signal(
+    sig: &ConsensusSignal,
+    atoms: &std::collections::HashMap<(String, i32), serde_json::Value>,
+) -> NewConsensusSignal {
     let backers_json = serde_json::Value::Array(
         sig.backers
             .iter()
@@ -210,7 +282,13 @@ fn to_new_signal(sig: &ConsensusSignal) -> NewConsensusSignal {
             })
             .collect(),
     );
+    let observed_votes = atoms
+        .get(&(sig.condition_id.clone(), sig.outcome_index))
+        .cloned()
+        .unwrap_or(serde_json::Value::Null);
     NewConsensusSignal {
+        strategy: sig.strategy.clone(),
+        observed_votes,
         condition_id: sig.condition_id.clone(),
         outcome_index: sig.outcome_index,
         outcome_label: sig.outcome_label.clone(),
