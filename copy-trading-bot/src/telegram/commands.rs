@@ -66,8 +66,15 @@ pub async fn handle_command(
             // Per-strategy forward-tracking scoreboard (the portfolio ranking).
             match portfolio.consensus_scoreboard_by_strategy().await {
                 Ok(rows) if rows.iter().any(|r| r.resolved > 0) => {
+                    use crate::scanner::enrich::family;
                     use crate::scanner::promotion::{PromotionParams, promotion_verdict};
-                    let n_strats = rows.len();
+                    // Bonferroni denominator PER FAMILY: experimental arms are
+                    // corrected among themselves, never tightening core's bar.
+                    let mut fam_n: std::collections::HashMap<&str, usize> =
+                        std::collections::HashMap::new();
+                    for r in &rows {
+                        *fam_n.entry(family(&r.strategy)).or_default() += 1;
+                    }
                     let pp = PromotionParams::default();
                     let mut board = String::from(
                         "\n\n📊 *Strategy scoreboard* (sorted by surplus-over-blind)\n",
@@ -78,31 +85,35 @@ pub async fn handle_command(
                             x.map(|e| format!("{:+.1}%", e * 100.0))
                                 .unwrap_or_else(|| "—".into())
                         };
+                        let n_fam = fam_n.get(family(&r.strategy)).copied().unwrap_or(1);
                         let v = promotion_verdict(
                             r.distinct_events,
                             r.surplus,
                             r.surplus_sd,
-                            n_strats,
+                            n_fam,
                             &pp,
                         );
                         let flag = if v.promotable { "✅" } else { "⏳" };
                         let lb = fmt_pct(v.lower_bound);
                         board.push_str(&format!(
-                            "{} `{:<12}` {} ev ({:.0}%) · surplus {} (lb {}) · edge {}\n",
+                            "{} `{:<12}` [{}] {} ev ({:.0}%) · surplus {} (lb {}) · edge {} · clv {} lag {}\n",
                             flag,
                             r.strategy,
+                            family(&r.strategy),
                             r.distinct_events,
                             hr,
                             fmt_pct(r.surplus),
                             lb,
                             fmt_pct(r.edge),
+                            fmt_pct(r.our_clv),
+                            fmt_pct(r.capture_lag),
                         ));
                         if v.promotable {
                             board.push_str(&format!("   └ {}\n", v.reason));
                         }
                     }
                     board.push_str(
-                        "\n_✅ = passes the belief-blind promotion gate (Bonferroni-corrected surplus lower-bound > 0 over ≥30 distinct events); ⏳ = not yet. *surplus* = favorite-longshot-neutralized edge. Promotion to alerting is a gated human call — never automatic._",
+                        "\n_✅ = passes the belief-blind promotion gate (Bonferroni-corrected surplus lower-bound > 0 over ≥30 distinct events); ⏳ = not yet. *surplus* = favorite-longshot-neutralized edge. *clv* = edge vs the first captured mid; *lag* < 0 means faster polling has value. Promotion to alerting is a gated human call — never automatic._",
                     );
                     format!("{summary}{board}")
                 }

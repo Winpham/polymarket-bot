@@ -5,22 +5,26 @@
 //! `followed_traders` but never places bets; it only alerts and records signals
 //! for forward edge tracking.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
+use std::time::Duration;
 
 use anyhow::Result;
-use chrono::Utc;
+use chrono::{DateTime, Utc};
 use futures_util::future::join_all;
 
 use crate::config::CopyTradingConfig;
+use crate::data::models::{fetch_clob_market, fetch_market_by_slug, fetch_price_history};
 use crate::live::broadcast;
 use crate::scanner::consensus::{
     BackerInfo, ConsensusParams, ConsensusSignal, MarketBook, StrategyDef, Tier, TraderVote,
     default_portfolio, quality_weight, score_all_strategies,
 };
-use crate::scanner::copy_trader::CopyTraderMonitor;
-use crate::storage::consensus::NewConsensusSignal;
-use crate::storage::postgres::PgPortfolio;
+use crate::scanner::copy_trader::{CopyTraderMonitor, TraderTrade};
+use crate::scanner::enrich::{EnrichCtx, EnrichMargins, EnrichModels, MarketCtx, enrich_all};
+use crate::storage::consensus::{NewConsensusSignal, WindowVote};
+use crate::storage::postgres::{FollowedTrader, PgPortfolio};
 use crate::telegram::notifier::TelegramNotifier;
+use polymarket_common::model::features::MarketFeatures;
 use polymarket_common::ntfy::Ntfy;
 
 /// Build [`ConsensusParams`] from runtime config.
@@ -68,12 +72,15 @@ fn is_sports(title: &str, slug: &str) -> bool {
     SLUG_PATS.iter().any(|p| s.contains(p)) || TITLE_PATS.iter().any(|p| t.contains(p))
 }
 
+#[allow(clippy::too_many_arguments)]
 pub async fn consensus_cycle(
     portfolio: &PgPortfolio,
     notifier: &TelegramNotifier,
     monitor: &CopyTraderMonitor,
     cfg: &CopyTradingConfig,
     ntfy: Option<&Ntfy>,
+    http: &reqwest::Client,
+    models: &EnrichModels,
 ) -> Result<()> {
     let traders = portfolio.get_active_traders().await?;
     if traders.is_empty() {
@@ -81,77 +88,17 @@ pub async fn consensus_cycle(
         return Ok(());
     }
 
-    let since = Utc::now() - chrono::Duration::hours(cfg.consensus_window_hours);
+    let now = Utc::now();
+    let window_start = now - chrono::Duration::hours(cfg.consensus_window_hours);
 
-    // Poll all tracked traders' recent activity concurrently.
-    let polls = traders.iter().map(|t| {
-        let wallet = t.proxy_wallet.clone();
-        async move {
-            let trades = monitor.poll_trader_activity(&wallet, since).await;
-            (t, trades)
-        }
-    });
-    let results = join_all(polls).await;
-
-    // Assemble per-market books.
-    let mut books: HashMap<String, MarketBook> = HashMap::new();
-    let mut polled_ok = 0usize;
-    for (trader, trades) in results {
-        let trades = match trades {
-            Ok(t) => {
-                polled_ok += 1;
-                t
-            }
-            Err(e) => {
-                tracing::debug!(wallet = %trader.proxy_wallet, err = %e, "Consensus poll failed");
-                continue;
-            }
-        };
-        let name = trader
-            .username
-            .clone()
-            .unwrap_or_else(|| trader.proxy_wallet[..8.min(trader.proxy_wallet.len())].to_string());
-        let quality = quality_weight(trader.rank);
-
-        for tr in trades {
-            if tr.side != "BUY" {
-                continue;
-            }
-            let Some(oidx) = tr.outcome_index else {
-                continue;
-            };
-            if !(tr.price > 0.0 && tr.price < 1.0) {
-                continue;
-            }
-            let title = tr.title.clone().unwrap_or_else(|| tr.slug.clone());
-            let sport = is_sports(&title, &tr.slug);
-            let book = books.entry(tr.condition_id.clone()).or_insert_with(|| {
-                MarketBook::new(
-                    tr.condition_id.clone(),
-                    title.clone(),
-                    tr.slug.clone(),
-                    tr.event_slug.clone(),
-                    sport,
-                )
-            });
-            book.add_vote(
-                oidx,
-                tr.outcome.clone().unwrap_or_else(|| oidx.to_string()),
-                TraderVote {
-                    wallet: trader.proxy_wallet.to_lowercase(),
-                    name: name.clone(),
-                    rank: trader.rank,
-                    pnl: trader.pnl,
-                    quality,
-                    price: tr.price,
-                    size_usd: tr.size_usd,
-                    ts: tr.timestamp,
-                },
-            );
-        }
-    }
-
-    let book_vec: Vec<MarketBook> = books.into_values().collect();
+    // L1: incremental delta ingestion + off-network book assembly (default), or
+    // the legacy poll-the-whole-window path. Both assemble identical books via
+    // `books_from_window_votes`, so the live `strict` behavior is non-regressive.
+    let (book_vec, polled_ok) = if cfg.consensus_incremental {
+        ingest_incremental(portfolio, monitor, &traders, now, window_start).await?
+    } else {
+        ingest_legacy(monitor, &traders, window_start).await
+    };
 
     // Serialize the raw vote atoms ONCE per (market, outcome) — strategy-agnostic.
     // Stored on every signal so a strategy invented later can be replayed over it.
@@ -163,7 +110,29 @@ pub async fn consensus_cycle(
         .filter(|d| d.alerting)
         .map(|d| d.name)
         .collect();
-    let signals = score_all_strategies(&book_vec, Utc::now(), &strategies);
+    let signals = score_all_strategies(&book_vec, now, &strategies);
+
+    // Enricher seam: silent cross-check arms re-emit `strict` picks under new
+    // strategy names; the originals pass through untouched, so `strict` alerting
+    // is non-regressive. Market-dependent arms need per-market data fetched once
+    // for the strict-fired markets (bounded + throttled), only when enabled.
+    let markets = if models.needs_market_data() {
+        prefetch_markets(http, &signals, models.needs_market_features()).await
+    } else {
+        HashMap::new()
+    };
+    let signals = enrich_all(
+        signals,
+        &EnrichCtx {
+            now,
+            models,
+            margins: EnrichMargins {
+                ml: cfg.consensus_ml_margin,
+                bayes: cfg.consensus_bayes_margin,
+            },
+            markets: &markets,
+        },
+    );
 
     let mut alerts_sent = 0usize;
     for sig in &signals {
@@ -238,6 +207,273 @@ pub async fn consensus_cycle(
         "Consensus cycle complete"
     );
     Ok(())
+}
+
+/// Display name for a trader (username, else short wallet) — matches the legacy
+/// book-assembly naming exactly.
+fn trader_name(t: &FollowedTrader) -> String {
+    t.username
+        .clone()
+        .unwrap_or_else(|| t.proxy_wallet[..8.min(t.proxy_wallet.len())].to_string())
+}
+
+/// Convert one polled trade into a window fill atom, applying the same BUY /
+/// outcome-index / price-validity filters the legacy book assembly used. `None`
+/// drops the trade. `is_sports` is computed once here from the title + slug.
+fn trade_to_window_vote(
+    trader: &FollowedTrader,
+    name: &str,
+    quality: f64,
+    tr: &TraderTrade,
+) -> Option<WindowVote> {
+    if tr.side != "BUY" {
+        return None;
+    }
+    let oidx = tr.outcome_index?;
+    if !(tr.price > 0.0 && tr.price < 1.0) {
+        return None;
+    }
+    let title = tr.title.clone().unwrap_or_else(|| tr.slug.clone());
+    let is_sports = is_sports(&title, &tr.slug);
+    Some(WindowVote {
+        trader_wallet: trader.proxy_wallet.to_lowercase(),
+        name: name.to_string(),
+        rank: trader.rank,
+        pnl: trader.pnl,
+        quality,
+        condition_id: tr.condition_id.clone(),
+        outcome_index: oidx,
+        outcome: tr.outcome.clone().unwrap_or_else(|| oidx.to_string()),
+        title,
+        slug: tr.slug.clone(),
+        event_slug: tr.event_slug.clone(),
+        is_sports,
+        price: tr.price,
+        size_usd: tr.size_usd,
+        ts: tr.timestamp,
+    })
+}
+
+/// Assemble per-market books from window fill atoms. The SINGLE book builder,
+/// shared by both ingestion paths so they produce identical books. Mirrors the
+/// legacy assembly: wallet lower-cased for distinctness, label/title/sport set by
+/// the first atom seen for a `(condition, outcome)`.
+fn books_from_window_votes(votes: &[WindowVote]) -> Vec<MarketBook> {
+    let mut books: HashMap<String, MarketBook> = HashMap::new();
+    for v in votes {
+        let book = books.entry(v.condition_id.clone()).or_insert_with(|| {
+            MarketBook::new(
+                v.condition_id.clone(),
+                v.title.clone(),
+                v.slug.clone(),
+                v.event_slug.clone(),
+                v.is_sports,
+            )
+        });
+        book.add_vote(
+            v.outcome_index,
+            v.outcome.clone(),
+            TraderVote {
+                wallet: v.trader_wallet.clone(),
+                name: v.name.clone(),
+                rank: v.rank,
+                pnl: v.pnl,
+                quality: v.quality,
+                price: v.price,
+                size_usd: v.size_usd,
+                ts: v.ts,
+            },
+        );
+    }
+    books.into_values().collect()
+}
+
+/// Legacy ingestion: poll each trader's whole `window_start..now` activity and
+/// assemble books straight from the poll (no DB window). Kept as a fallback when
+/// `CONSENSUS_INCREMENTAL=false`. Returns `(books, traders_polled_ok)`.
+async fn ingest_legacy(
+    monitor: &CopyTraderMonitor,
+    traders: &[FollowedTrader],
+    window_start: DateTime<Utc>,
+) -> (Vec<MarketBook>, usize) {
+    let polls = traders.iter().map(|t| {
+        let wallet = t.proxy_wallet.clone();
+        async move { (t, monitor.poll_trader_activity(&wallet, window_start).await) }
+    });
+    let results = join_all(polls).await;
+
+    let mut votes = Vec::new();
+    let mut polled_ok = 0usize;
+    for (trader, trades) in results {
+        let trades = match trades {
+            Ok(t) => {
+                polled_ok += 1;
+                t
+            }
+            Err(e) => {
+                tracing::debug!(wallet = %trader.proxy_wallet, err = %e, "Consensus poll failed");
+                continue;
+            }
+        };
+        let name = trader_name(trader);
+        let quality = quality_weight(trader.rank);
+        for tr in &trades {
+            if let Some(v) = trade_to_window_vote(trader, &name, quality, tr) {
+                votes.push(v);
+            }
+        }
+    }
+    (books_from_window_votes(&votes), polled_ok)
+}
+
+/// L1 incremental ingestion: poll only the delta since each trader's cursor
+/// (`max(cursor, window_start)`, backfilling the whole window on first run),
+/// append it to the rolling window store (dedup), stamp the cursor, prune older
+/// than the window, then rebuild books from the stored trailing window — book
+/// assembly off the network onto an indexed DB read. Self-healing: a failed poll
+/// or insert simply leaves the cursor where it was, so the gap is re-fetched next
+/// cycle. Returns `(books, traders_polled_ok)`.
+async fn ingest_incremental(
+    portfolio: &PgPortfolio,
+    monitor: &CopyTraderMonitor,
+    traders: &[FollowedTrader],
+    now: DateTime<Utc>,
+    window_start: DateTime<Utc>,
+) -> Result<(Vec<MarketBook>, usize)> {
+    let cursors = portfolio.consensus_cursors().await.unwrap_or_default();
+
+    let polls = traders.iter().map(|t| {
+        let wallet = t.proxy_wallet.clone();
+        let since = cursors
+            .get(&t.proxy_wallet)
+            .copied()
+            .map(|c| c.max(window_start))
+            .unwrap_or(window_start);
+        async move { (t, monitor.poll_trader_activity(&wallet, since).await) }
+    });
+    let results = join_all(polls).await;
+
+    let mut delta = Vec::new();
+    let mut polled_ok_wallets: Vec<String> = Vec::new();
+    for (trader, trades) in results {
+        let trades = match trades {
+            Ok(t) => t,
+            Err(e) => {
+                tracing::debug!(wallet = %trader.proxy_wallet, err = %e, "Consensus poll failed");
+                continue;
+            }
+        };
+        polled_ok_wallets.push(trader.proxy_wallet.clone());
+        let name = trader_name(trader);
+        let quality = quality_weight(trader.rank);
+        for tr in &trades {
+            if let Some(v) = trade_to_window_vote(trader, &name, quality, tr) {
+                delta.push(v);
+            }
+        }
+    }
+
+    // Append the delta, and only advance cursors if it persisted (self-healing).
+    match portfolio.insert_window_votes(&delta).await {
+        Ok(inserted) => {
+            portfolio
+                .set_consensus_cursors(&polled_ok_wallets, now)
+                .await
+                .ok();
+            tracing::debug!(
+                delta = delta.len(),
+                inserted,
+                "Consensus window delta appended"
+            );
+        }
+        Err(e) => {
+            tracing::warn!(err = %e, "insert_window_votes failed; cursors not advanced");
+        }
+    }
+    let pruned = portfolio
+        .prune_window_votes(window_start)
+        .await
+        .unwrap_or(0);
+    let window = portfolio
+        .load_window_votes(window_start)
+        .await
+        .unwrap_or_default();
+
+    tracing::info!(
+        delta = delta.len(),
+        pruned,
+        window = window.len(),
+        "Consensus incremental ingest"
+    );
+    Ok((books_from_window_votes(&window), polled_ok_wallets.len()))
+}
+
+/// Pre-fetch per-market data for the market-dependent arms (`market_ml`,
+/// `bayes_anchor`). Bounded to the strict-fired markets, deduped by condition_id,
+/// throttled like housekeeping. Always grabs the live CLOB mid (1 call); fetches
+/// the Gamma market + price history for full [`MarketFeatures`] only when needed.
+/// All fetches are free; a failed fetch just omits that market (arm no-ops for it).
+async fn prefetch_markets(
+    http: &reqwest::Client,
+    signals: &[ConsensusSignal],
+    need_features: bool,
+) -> HashMap<String, MarketCtx> {
+    let mut seen: HashSet<&str> = HashSet::new();
+    let mut map = HashMap::new();
+    for s in signals.iter().filter(|s| s.strategy == "strict") {
+        if !seen.insert(s.condition_id.as_str()) {
+            continue;
+        }
+        tokio::time::sleep(Duration::from_millis(150)).await;
+        let clob = match fetch_clob_market(http, &s.condition_id).await {
+            Ok(m) => m,
+            Err(e) => {
+                tracing::debug!(cond = %s.condition_id, err = %e, "prefetch CLOB failed");
+                continue;
+            }
+        };
+        let Some(mid) = clob.outcome_price(s.outcome_index) else {
+            continue;
+        };
+        let features = if need_features {
+            build_market_features(http, s, mid).await
+        } else {
+            None
+        };
+        map.insert(
+            s.condition_id.clone(),
+            MarketCtx {
+                clob_mid: mid,
+                features,
+            },
+        );
+    }
+    tracing::debug!(
+        markets = map.len(),
+        need_features,
+        "Prefetched market data for arms"
+    );
+    map
+}
+
+/// Build the [`MarketFeatures`] vector for one strict-fired market's consensus
+/// outcome: 1 Gamma fetch (question/dates/category) + 1 price-history fetch for
+/// the outcome's CLOB token. `None` if any fetch / token lookup fails.
+async fn build_market_features(
+    http: &reqwest::Client,
+    s: &ConsensusSignal,
+    mid: f64,
+) -> Option<MarketFeatures> {
+    let gamma = fetch_market_by_slug(http, &s.slug).await.ok()?;
+    let token_ids: Vec<String> = gamma
+        .clob_token_ids
+        .as_ref()
+        .and_then(|j| serde_json::from_str(j).ok())?;
+    let token = token_ids.get(s.outcome_index as usize)?;
+    let history = fetch_price_history(http, token).await.unwrap_or_default();
+    Some(MarketFeatures::from_market_and_history(
+        &gamma, mid, &history,
+    ))
 }
 
 /// The active strategy portfolio: the full default set, optionally narrowed by

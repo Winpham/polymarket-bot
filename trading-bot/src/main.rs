@@ -14,7 +14,8 @@ mod telegram;
 
 mod backtest;
 mod backtest_runner;
-mod bayesian;
+// bayesian now lives in polymarket-common; re-export so `crate::bayesian` is unchanged.
+pub use polymarket_common::model::bayesian;
 mod calibration;
 mod config;
 mod cycles;

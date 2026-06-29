@@ -2,7 +2,11 @@
 .env
 .venv
 portfolio_state.json
-/model/
+# Trained model artifacts are local/baked-at-build, not committed — but keep the
+# dir (placeholder + README) tracked so a fresh clone builds (Dockerfile bakes it).
+/model/*
+!/model/.gitkeep
+!/model/README.md
 __pycache__/
 *.pyc
 CHANGELOG.gen

@@ -296,6 +296,20 @@ pub async fn fetch_clob_market(http: &reqwest::Client, condition_id: &str) -> Re
     Ok(market)
 }
 
+/// Fetch a token's full CLOB price history (the `prices-history` endpoint).
+/// Free-function sibling of [`fetch_clob_market`] for callers without a crawler.
+pub async fn fetch_price_history(http: &reqwest::Client, token_id: &str) -> Result<Vec<PriceTick>> {
+    let url = format!("{CLOB_API}/prices-history?market={token_id}&interval=max");
+    let resp: PriceHistoryResponse = http
+        .get(&url)
+        .send()
+        .await?
+        .json()
+        .await
+        .context("failed to parse price history")?;
+    Ok(resp.history)
+}
+
 /// Fetch a single market by its slug from the Gamma API.
 pub async fn fetch_market_by_slug(http: &reqwest::Client, slug: &str) -> Result<GammaMarket> {
     let url = format!("{GAMMA_API}/markets?slug={slug}");

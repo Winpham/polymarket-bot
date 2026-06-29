@@ -14,8 +14,13 @@ COPY . .
 RUN cargo build --release -p copy-trading-bot
 
 FROM debian:bookworm-slim
+WORKDIR /app
 RUN apt-get update \
  && apt-get install -y --no-install-recommends ca-certificates \
  && rm -rf /var/lib/apt/lists/*
 COPY --from=builder /src/target/release/copy-trading-bot /usr/local/bin/copy-trading-bot
+# Bake the model/ dir so the cross-check arms can load their artifacts at the
+# config-default `model/...` paths (CWD = /app). Empty unless models were trained
+# into model/ before the build — arms are default-OFF and no-op without a file.
+COPY --from=builder /src/model /app/model
 ENTRYPOINT ["copy-trading-bot"]

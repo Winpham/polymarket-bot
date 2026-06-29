@@ -108,6 +108,51 @@ pub struct CopyTradingConfig {
     #[config(env = "CONSENSUS_STRATEGIES", default = "")]
     pub consensus_strategies: String,
 
+    /// L1: use incremental vote-window ingestion — poll only the delta since each
+    /// trader's cursor and rebuild books from the stored trailing window, instead
+    /// of re-polling the full window every cycle. Verified-equivalent to the legacy
+    /// path; makes minute-cadence polling cheap. Set false to use the legacy path.
+    #[config(env = "CONSENSUS_INCREMENTAL", default = true)]
+    pub consensus_incremental: bool,
+
+    // --- Silent cross-check arms (Phase 4). All default OFF: an arm runs only
+    //     when its flag is ON *and* its model file loads; emitted rows are silent
+    //     (never alert) and judged by the belief-blind gate in the experimental
+    //     family. With everything off, the consensus path is byte-identical. ---
+    /// Enable the consensus-native logistic arm (`consensus_logit`).
+    #[config(env = "CONSENSUS_ARM_LOGIT", default = false)]
+    pub consensus_arm_logit: bool,
+    /// Enable the consensus-native ensemble arm (`consensus_ens`).
+    #[config(env = "CONSENSUS_ARM_ENS", default = false)]
+    pub consensus_arm_ens: bool,
+    /// Enable the imported market-model arms (`market_ml` / `market_veto`).
+    #[config(env = "CONSENSUS_ARM_MARKET", default = false)]
+    pub consensus_arm_market: bool,
+    /// Enable the Bayesian-anchor arm (`bayes_anchor`).
+    #[config(env = "CONSENSUS_ARM_BAYES", default = false)]
+    pub consensus_arm_bayes: bool,
+
+    /// Path to the consensus logistic model JSON (consensus_train.py output).
+    #[config(env = "CONSENSUS_WIN_MODEL_PATH", default = "model/consensus_win.json")]
+    pub consensus_win_model_path: String,
+    /// Path to the consensus ensemble model JSON (XGBoost export).
+    #[config(env = "CONSENSUS_ENS_MODEL_PATH", default = "model/consensus_ens.json")]
+    pub consensus_ens_model_path: String,
+    /// Path to the imported market-outcome XGBoost model JSON.
+    #[config(env = "MARKET_MODEL_PATH", default = "model/xgb_model.json")]
+    pub market_model_path: String,
+    /// Training-data resolution cutoff for the imported market model (RFC3339);
+    /// empty = no forward-only guard (rely on live forwardness).
+    #[config(env = "MARKET_ML_TRAINED_THROUGH", default = "")]
+    pub market_ml_trained_through: String,
+
+    /// Edge margin the ML arms must clear (`p_win − price > margin`).
+    #[config(env = "CONSENSUS_ML_MARGIN", default = 0.0)]
+    pub consensus_ml_margin: f64,
+    /// Edge margin the Bayesian-anchor arm must clear (`posterior − mid > margin`).
+    #[config(env = "CONSENSUS_BAYES_MARGIN", default = 0.0)]
+    pub consensus_bayes_margin: f64,
+
     // --- Betting ---
     /// Slippage assumption as a fraction (0.01 = 1%).
     #[config(env = "SLIPPAGE_PCT", default = 0.01)]

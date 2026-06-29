@@ -57,6 +57,29 @@ pub struct ConsensusAlertState {
     pub last_alert_net: Option<i32>,
 }
 
+/// One fill atom in the rolling consensus vote window (migration 025). Used both
+/// as the insert payload (`insert_window_votes`) and the load result
+/// (`load_window_votes`) — the in-memory legacy path builds these directly so the
+/// incremental and legacy book-assembly produce identical books.
+#[derive(Debug, Clone, sqlx::FromRow)]
+pub struct WindowVote {
+    pub trader_wallet: String,
+    pub name: String,
+    pub rank: Option<i32>,
+    pub pnl: Option<f64>,
+    pub quality: f64,
+    pub condition_id: String,
+    pub outcome_index: i32,
+    pub outcome: String,
+    pub title: String,
+    pub slug: String,
+    pub event_slug: Option<String>,
+    pub is_sports: bool,
+    pub price: f64,
+    pub size_usd: f64,
+    pub ts: DateTime<Utc>,
+}
+
 /// A signal awaiting market resolution (forward edge tracking + trajectory).
 #[derive(Debug, Clone, sqlx::FromRow)]
 pub struct UnresolvedConsensus {
@@ -432,6 +455,12 @@ impl PgPortfolio {
         // to the EVENT level (event_slug), then across events — so correlated
         // outcomes of one event count once (the within-match leak fix). `surplus`
         // and `surplus_sd` are over events; `distinct_events` is the gate's N.
+        // CLV instrumentation (same EVENT clustering, over resolved rows with a
+        // captured `initial_market_price`): `our_clv = AVG_event(outcome_won −
+        // initial_market_price)` is the edge if we'd entered at the first live mid
+        // we saw; `capture_lag = AVG_event(initial_market_price − mean_price)` is
+        // the gap between the mid when we *noticed* and the price the sharps paid.
+        // A materially negative `capture_lag` means faster polling has real value.
         let rows: Vec<StrategyScore> = sqlx::query_as(
             "WITH adv AS ( \
                  SELECT strategy, COALESCE(event_slug, condition_id) AS ev, resolved, outcome_won, \
@@ -455,6 +484,18 @@ impl PgPortfolio {
              es AS ( \
                  SELECT strategy, COUNT(*) AS n_events, AVG(ev_surplus) AS surplus, \
                         STDDEV_SAMP(ev_surplus) AS surplus_sd FROM evt GROUP BY strategy \
+             ), \
+             clv_evt AS ( \
+                 SELECT strategy, COALESCE(event_slug, condition_id) AS ev, \
+                        AVG((outcome_won::int)::double precision - initial_market_price) AS ev_clv, \
+                        AVG(initial_market_price - mean_price) AS ev_lag \
+                 FROM consensus_signals \
+                 WHERE resolved AND initial_market_price IS NOT NULL AND strategy <> '_blind' \
+                 GROUP BY strategy, ev \
+             ), \
+             clv AS ( \
+                 SELECT strategy, AVG(ev_clv) AS our_clv, AVG(ev_lag) AS capture_lag \
+                 FROM clv_evt GROUP BY strategy \
              ) \
              SELECT s.strategy, \
                     COUNT(*) FILTER (WHERE s.resolved)                   AS resolved, \
@@ -462,15 +503,133 @@ impl PgPortfolio {
                     COUNT(*) FILTER (WHERE s.resolved AND s.outcome_won) AS won, \
                     AVG(s.a) FILTER (WHERE s.resolved)                   AS edge, \
                     es.surplus                                          AS surplus, \
-                    es.surplus_sd                                       AS surplus_sd \
+                    es.surplus_sd                                       AS surplus_sd, \
+                    clv.our_clv                                         AS our_clv, \
+                    clv.capture_lag                                     AS capture_lag \
              FROM sig s LEFT JOIN es ON es.strategy = s.strategy \
-             GROUP BY s.strategy, es.n_events, es.surplus, es.surplus_sd \
+                        LEFT JOIN clv ON clv.strategy = s.strategy \
+             GROUP BY s.strategy, es.n_events, es.surplus, es.surplus_sd, clv.our_clv, clv.capture_lag \
              ORDER BY es.surplus DESC NULLS LAST",
         )
         .fetch_all(&self.pool)
         .await
         .context("consensus_scoreboard_by_strategy")?;
         Ok(rows)
+    }
+
+    // --- L1: incremental polling vote-window store (migration 025) ---
+
+    /// Per-trader consensus cursors (`followed_traders.consensus_polled_at`) for
+    /// the active universe, as a `wallet -> last-polled` map. Traders never polled
+    /// for consensus are absent (the caller backfills from the window start).
+    pub async fn consensus_cursors(
+        &self,
+    ) -> Result<std::collections::HashMap<String, DateTime<Utc>>> {
+        let rows: Vec<(String, DateTime<Utc>)> = sqlx::query_as(
+            "SELECT proxy_wallet, consensus_polled_at FROM followed_traders \
+             WHERE active = TRUE AND consensus_polled_at IS NOT NULL",
+        )
+        .fetch_all(&self.pool)
+        .await
+        .context("consensus_cursors")?;
+        Ok(rows.into_iter().collect())
+    }
+
+    /// Stamp the consensus cursor for the given wallets to `at` (one batch UPDATE).
+    /// Called every cycle for traders that polled OK, so a transient poll failure
+    /// just leaves the cursor where it was and the next cycle re-fetches the gap.
+    pub async fn set_consensus_cursors(&self, wallets: &[String], at: DateTime<Utc>) -> Result<()> {
+        if wallets.is_empty() {
+            return Ok(());
+        }
+        sqlx::query(
+            "UPDATE followed_traders SET consensus_polled_at = $2 \
+             WHERE proxy_wallet = ANY($1)",
+        )
+        .bind(wallets)
+        .bind(at)
+        .execute(&self.pool)
+        .await
+        .context("set_consensus_cursors")?;
+        Ok(())
+    }
+
+    /// Append a batch of fill atoms to the rolling window (UNNEST batch insert).
+    /// Re-seen atoms (same trader+market+outcome+ts+price) are dropped.
+    pub async fn insert_window_votes(&self, votes: &[WindowVote]) -> Result<u64> {
+        if votes.is_empty() {
+            return Ok(0);
+        }
+        let trader_wallet: Vec<&str> = votes.iter().map(|v| v.trader_wallet.as_str()).collect();
+        let name: Vec<&str> = votes.iter().map(|v| v.name.as_str()).collect();
+        let rank: Vec<Option<i32>> = votes.iter().map(|v| v.rank).collect();
+        let pnl: Vec<Option<f64>> = votes.iter().map(|v| v.pnl).collect();
+        let quality: Vec<f64> = votes.iter().map(|v| v.quality).collect();
+        let condition_id: Vec<&str> = votes.iter().map(|v| v.condition_id.as_str()).collect();
+        let outcome_index: Vec<i32> = votes.iter().map(|v| v.outcome_index).collect();
+        let outcome: Vec<&str> = votes.iter().map(|v| v.outcome.as_str()).collect();
+        let title: Vec<&str> = votes.iter().map(|v| v.title.as_str()).collect();
+        let slug: Vec<&str> = votes.iter().map(|v| v.slug.as_str()).collect();
+        let event_slug: Vec<Option<&str>> = votes.iter().map(|v| v.event_slug.as_deref()).collect();
+        let is_sports: Vec<bool> = votes.iter().map(|v| v.is_sports).collect();
+        let price: Vec<f64> = votes.iter().map(|v| v.price).collect();
+        let size_usd: Vec<f64> = votes.iter().map(|v| v.size_usd).collect();
+        let ts: Vec<DateTime<Utc>> = votes.iter().map(|v| v.ts).collect();
+
+        let res = sqlx::query(
+            "INSERT INTO consensus_vote_window \
+               (trader_wallet, name, rank, pnl, quality, condition_id, outcome_index, \
+                outcome, title, slug, event_slug, is_sports, price, size_usd, ts) \
+             SELECT * FROM UNNEST( \
+               $1::text[], $2::text[], $3::int4[], $4::float8[], $5::float8[], \
+               $6::text[], $7::int4[], $8::text[], $9::text[], $10::text[], \
+               $11::text[], $12::bool[], $13::float8[], $14::float8[], $15::timestamptz[]) \
+             ON CONFLICT (trader_wallet, condition_id, outcome_index, ts, price) DO NOTHING",
+        )
+        .bind(&trader_wallet)
+        .bind(&name)
+        .bind(&rank)
+        .bind(&pnl)
+        .bind(&quality)
+        .bind(&condition_id)
+        .bind(&outcome_index)
+        .bind(&outcome)
+        .bind(&title)
+        .bind(&slug)
+        .bind(&event_slug)
+        .bind(&is_sports)
+        .bind(&price)
+        .bind(&size_usd)
+        .bind(&ts)
+        .execute(&self.pool)
+        .await
+        .context("insert_window_votes")?;
+        Ok(res.rows_affected())
+    }
+
+    /// Load all window fill atoms at or after `since` (the trailing window) for
+    /// rebuilding MarketBooks off the indexed DB read instead of the network.
+    pub async fn load_window_votes(&self, since: DateTime<Utc>) -> Result<Vec<WindowVote>> {
+        let rows: Vec<WindowVote> = sqlx::query_as(
+            "SELECT trader_wallet, name, rank, pnl, quality, condition_id, outcome_index, \
+                    outcome, title, slug, event_slug, is_sports, price, size_usd, ts \
+             FROM consensus_vote_window WHERE ts >= $1",
+        )
+        .bind(since)
+        .fetch_all(&self.pool)
+        .await
+        .context("load_window_votes")?;
+        Ok(rows)
+    }
+
+    /// Drop window atoms older than `cutoff`. Returns the number pruned.
+    pub async fn prune_window_votes(&self, cutoff: DateTime<Utc>) -> Result<u64> {
+        let res = sqlx::query("DELETE FROM consensus_vote_window WHERE ts < $1")
+            .bind(cutoff)
+            .execute(&self.pool)
+            .await
+            .context("prune_window_votes")?;
+        Ok(res.rows_affected())
     }
 }
 
@@ -502,6 +661,14 @@ pub struct StrategyScore {
     pub surplus: Option<f64>,
     /// Std-dev of per-EVENT surplus — feeds the promotion gate's confidence bound.
     pub surplus_sd: Option<f64>,
+    /// Event-clustered CLV vs the first live mid we captured:
+    /// `AVG_event(outcome_won::int − initial_market_price)`. `None` until some
+    /// resolved row has a captured `initial_market_price`.
+    pub our_clv: Option<f64>,
+    /// Event-clustered capture lag `AVG_event(initial_market_price − mean_price)`:
+    /// the gap between the mid when we noticed and the sharps' entry price.
+    /// Materially negative → faster polling has real value.
+    pub capture_lag: Option<f64>,
 }
 
 /// Local truncate helper (avoids a cross-crate format dependency).
@@ -511,5 +678,145 @@ fn truncate(s: &str, max: usize) -> String {
     } else {
         let t: String = s.chars().take(max.saturating_sub(1)).collect();
         format!("{t}…")
+    }
+}
+
+#[cfg(test)]
+mod window_store_it {
+    //! Live-DB integration test for the L1 vote-window store + cursors. `#[ignore]`d
+    //! so the normal gate stays DB-free; run it against a throwaway Postgres (schema
+    //! migrated) with:
+    //!
+    //! ```text
+    //! DATABASE_URL=postgres://bot:bot@localhost:55432/polymarket \
+    //!   cargo test -p polymarket-common window_store_it -- --ignored --nocapture
+    //! ```
+    use super::*;
+
+    fn vote(wallet: &str, cond: &str, oidx: i32, price: f64, ts: DateTime<Utc>) -> WindowVote {
+        WindowVote {
+            trader_wallet: wallet.into(),
+            name: wallet.into(),
+            rank: Some(7),
+            pnl: None, // exercises a NULL element in the float8[] UNNEST array
+            quality: 1.5,
+            condition_id: cond.into(),
+            outcome_index: oidx,
+            outcome: "Yes".into(),
+            title: "t".into(),
+            slug: "s".into(),
+            event_slug: None, // exercises a NULL element in the text[] UNNEST array
+            is_sports: false,
+            price,
+            size_usd: 1000.0,
+            ts,
+        }
+    }
+
+    #[tokio::test]
+    #[ignore = "requires a live Postgres at $DATABASE_URL with migrations applied"]
+    async fn insert_dedup_load_prune_cursors() {
+        let url = std::env::var("DATABASE_URL").expect("DATABASE_URL must be set");
+        let pool = sqlx::PgPool::connect(&url).await.expect("connect");
+        let pf = PgPortfolio::new(pool).await.expect("portfolio");
+
+        let w = "0xtestwallet_window";
+        // Clean any prior run.
+        sqlx::query("DELETE FROM consensus_vote_window WHERE trader_wallet = $1")
+            .bind(w)
+            .execute(&pf.pool)
+            .await
+            .unwrap();
+        sqlx::query("DELETE FROM followed_traders WHERE proxy_wallet = $1")
+            .bind(w)
+            .execute(&pf.pool)
+            .await
+            .unwrap();
+
+        let t0 = Utc::now() - chrono::Duration::hours(10);
+        let t1 = Utc::now() - chrono::Duration::hours(1);
+        let a = vote(w, "0xc1", 0, 0.50, t0);
+        let b = vote(w, "0xc2", 1, 0.30, t1);
+        let dup = a.clone(); // same (wallet,cond,outcome,ts,price) → must dedup
+
+        // First insert: 2 distinct atoms land, the dup is dropped.
+        let n = pf.insert_window_votes(&[a, b, dup]).await.unwrap();
+        assert_eq!(n, 2, "dup atom must be dropped by ON CONFLICT");
+        // Re-insert the same set: everything already present → 0 new rows.
+        let again = pf
+            .insert_window_votes(&[vote(w, "0xc1", 0, 0.50, t0), vote(w, "0xc2", 1, 0.30, t1)])
+            .await
+            .unwrap();
+        assert_eq!(again, 0, "re-seen atoms append nothing (self-healing safe)");
+
+        // Load the trailing window: both atoms present; NULLs round-trip.
+        let win = pf
+            .load_window_votes(Utc::now() - chrono::Duration::hours(48))
+            .await
+            .unwrap();
+        let mine: Vec<_> = win.iter().filter(|v| v.trader_wallet == w).collect();
+        assert_eq!(mine.len(), 2);
+        assert!(
+            mine.iter()
+                .all(|v| v.pnl.is_none() && v.event_slug.is_none())
+        );
+
+        // `since` cutoff excludes older atoms.
+        let recent = pf
+            .load_window_votes(Utc::now() - chrono::Duration::hours(2))
+            .await
+            .unwrap();
+        assert_eq!(
+            recent.iter().filter(|v| v.trader_wallet == w).count(),
+            1,
+            "only the 1h-old atom is within a 2h window"
+        );
+
+        // Prune older than 5h: drops the 10h-old atom, keeps the 1h-old one.
+        let pruned = pf
+            .prune_window_votes(Utc::now() - chrono::Duration::hours(5))
+            .await
+            .unwrap();
+        assert!(pruned >= 1, "the 10h-old atom should be pruned");
+        let after = pf
+            .load_window_votes(Utc::now() - chrono::Duration::hours(48))
+            .await
+            .unwrap();
+        assert_eq!(after.iter().filter(|v| v.trader_wallet == w).count(), 1);
+
+        // Cursors: create the trader, stamp + read back the consensus cursor.
+        pf.upsert_tracked_trader(&LeaderboardTraderUpsert {
+            wallet: w.into(),
+            username: Some("wtest".into()),
+            rank: Some(7),
+            pnl: None,
+            volume: None,
+            periods: "WEEK".into(),
+        })
+        .await
+        .unwrap();
+        let stamp = Utc::now();
+        pf.set_consensus_cursors(&[w.to_string()], stamp)
+            .await
+            .unwrap();
+        let cursors = pf.consensus_cursors().await.unwrap();
+        let got = cursors.get(w).expect("cursor present after stamp");
+        assert!(
+            (*got - stamp).num_seconds().abs() <= 1,
+            "cursor round-trips"
+        );
+
+        // Cleanup.
+        sqlx::query("DELETE FROM consensus_vote_window WHERE trader_wallet = $1")
+            .bind(w)
+            .execute(&pf.pool)
+            .await
+            .unwrap();
+        sqlx::query("DELETE FROM followed_traders WHERE proxy_wallet = $1")
+            .bind(w)
+            .execute(&pf.pool)
+            .await
+            .unwrap();
+        println!("window_store_it: insert/dedup/load/prune/cursors all OK");
     }
 }
