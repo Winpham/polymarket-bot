@@ -323,6 +323,11 @@ impl PgPortfolio {
     /// Append a trajectory snapshot (the signal's "stock chart" point) and update
     /// the signal's latest + initial live price. `market_price` is the live CLOB
     /// price of the consensus outcome; `None` when it couldn't be fetched.
+    ///
+    /// **Change-only:** a new row is written only when the chart actually moves —
+    /// the consensus state (net/backers) changed or the price moved ≥0.5¢ since
+    /// the last snapshot. Stable markets don't accumulate identical rows, so the
+    /// time-series stays compact while preserving every real move.
     pub async fn snapshot_consensus_signal(
         &self,
         signal_id: i32,
@@ -334,7 +339,14 @@ impl PgPortfolio {
         sqlx::query(
             "INSERT INTO consensus_snapshots \
                (signal_id, net_count, n_backers, mean_entry, market_price) \
-             VALUES ($1, $2, $3, $4, $5)",
+             SELECT $1, $2, $3, $4, $5 \
+             WHERE NOT EXISTS ( \
+               SELECT 1 FROM consensus_snapshots s \
+               WHERE s.signal_id = $1 \
+                 AND s.ts = (SELECT MAX(ts) FROM consensus_snapshots WHERE signal_id = $1) \
+                 AND s.net_count = $2 AND s.n_backers = $3 \
+                 AND ABS(COALESCE(s.market_price, -1) - COALESCE($5, -1)) < 0.005 \
+             )",
         )
         .bind(signal_id)
         .bind(net_count)

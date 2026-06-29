@@ -18,3 +18,7 @@ tmp/
 .autoupdate.log
 .autoupdate.out
 .autoupdate.err
+
+# backups + backup log (local-only)
+backups/
+.backup.log
