@@ -21,6 +21,7 @@ use crate::scanner::copy_trader::CopyTraderMonitor;
 use crate::storage::consensus::NewConsensusSignal;
 use crate::storage::postgres::PgPortfolio;
 use crate::telegram::notifier::TelegramNotifier;
+use polymarket_common::ntfy::Ntfy;
 
 /// Build [`ConsensusParams`] from runtime config.
 fn params_from_cfg(cfg: &CopyTradingConfig) -> ConsensusParams {
@@ -72,6 +73,7 @@ pub async fn consensus_cycle(
     notifier: &TelegramNotifier,
     monitor: &CopyTraderMonitor,
     cfg: &CopyTradingConfig,
+    ntfy: Option<&Ntfy>,
 ) -> Result<()> {
     let traders = portfolio.get_active_traders().await?;
     if traders.is_empty() {
@@ -195,6 +197,20 @@ pub async fn consensus_cycle(
 
         let msg = format_consensus_alert(sig);
         broadcast(notifier, portfolio, &msg).await;
+        // Phone push via the user's brainstem ntfy channel.
+        if let Some(n) = ntfy {
+            let (priority, tag) = match sig.tier {
+                Tier::Elite => (5u8, "fire"),
+                _ => (4u8, "green_circle"),
+            };
+            let title = format!(
+                "{} {} consensus — BUY {}",
+                sig.tier.emoji(),
+                sig.tier.as_str(),
+                sig.outcome_label
+            );
+            n.push(&title, &msg, priority, &[tag]).await;
+        }
         if let Err(e) = portfolio
             .record_consensus_alert(
                 state.id,

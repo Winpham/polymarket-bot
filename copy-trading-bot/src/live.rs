@@ -10,6 +10,7 @@ use crate::metrics;
 use crate::scanner::copy_trader::CopyTraderMonitor;
 use crate::storage::postgres::PgPortfolio;
 use crate::telegram::notifier::TelegramNotifier;
+use polymarket_common::ntfy::Ntfy;
 
 /// Broadcast a message to the owner and all subscribers.
 pub async fn broadcast(notifier: &TelegramNotifier, portfolio: &PgPortfolio, message: &str) {
@@ -50,6 +51,16 @@ pub async fn run_live(cfg: Arc<CopyTradingConfig>) -> Result<()> {
         &cfg.telegram_bot_token,
         &cfg.telegram_chat_id,
     ));
+    let telegram_on = !cfg.telegram_bot_token.trim().is_empty();
+
+    // ntfy phone push (reuses the brainstem channel). None when no topic set.
+    let ntfy: Option<Arc<Ntfy>> = Ntfy::new(&cfg.ntfy_server, &cfg.ntfy_topic).map(Arc::new);
+    tracing::info!(
+        telegram = telegram_on,
+        ntfy = ntfy.is_some(),
+        board_port = cfg.board_port,
+        "Alert channels"
+    );
 
     let monitor = Arc::new(CopyTraderMonitor::new(
         reqwest::Client::builder()
@@ -58,13 +69,33 @@ pub async fn run_live(cfg: Arc<CopyTradingConfig>) -> Result<()> {
             .expect("failed to build HTTP client"),
     ));
 
-    let _ = notifier
-        .send(&format!(
-            "👥 *Copy Trading Bot* started\n\n\
-             ⏱ Poll interval: every {}min",
-            cfg.copy_trade_interval_mins,
-        ))
+    if telegram_on {
+        let _ = notifier
+            .send(&format!(
+                "👥 *Copy Trading Bot* started\n\n⏱ Poll interval: every {}min",
+                cfg.copy_trade_interval_mins,
+            ))
+            .await;
+    }
+    if let Some(n) = &ntfy {
+        n.push(
+            "🤝 Consensus bot started",
+            &format!(
+                "Tracking the top {} traders. Scoreboard: http://localhost:{}/",
+                cfg.track_top_n, cfg.board_port
+            ),
+            3,
+            &["satellite"],
+        )
         .await;
+    }
+
+    // Read-only web scoreboard (the ntfy-only replacement for /consensus).
+    {
+        let bd_portfolio = Arc::clone(&portfolio);
+        let port = cfg.board_port;
+        tokio::spawn(async move { crate::board::serve(bd_portfolio, port).await });
+    }
 
     // Spawn Telegram command polling loop
     let cmd_portfolio = Arc::clone(&portfolio);
@@ -76,6 +107,10 @@ pub async fn run_live(cfg: Arc<CopyTradingConfig>) -> Result<()> {
         .build()
         .expect("failed to build command HTTP client");
     let command_loop = tokio::spawn(async move {
+        if !telegram_on {
+            // ntfy-only / headless: no Telegram interface to poll.
+            std::future::pending::<()>().await;
+        }
         loop {
             let commands = cmd_notifier.poll_commands().await;
             for (chat_id, cmd, username, first_name, full_text) in &commands {
@@ -145,6 +180,8 @@ pub async fn run_live(cfg: Arc<CopyTradingConfig>) -> Result<()> {
     let tr_portfolio = Arc::clone(&portfolio);
     let tr_notifier = Arc::clone(&notifier);
     let tr_cfg = Arc::clone(&cfg);
+    let tr_ntfy = ntfy.clone();
+    let mut tr_first = true;
     let tr_http = reqwest::Client::builder()
         .timeout(Duration::from_secs(15))
         .build()
@@ -170,6 +207,20 @@ pub async fn run_live(cfg: Arc<CopyTradingConfig>) -> Result<()> {
                                 tr_cfg.track_top_n, tr_cfg.track_periods
                             ))
                             .await;
+                        // Phone confirmation once, on the first successful sync.
+                        if tr_first && let Some(n) = &tr_ntfy {
+                            n.push(
+                                "🛰 Tracking live",
+                                &format!(
+                                    "Now tracking {up} top traders (top {} × {}).",
+                                    tr_cfg.track_top_n, tr_cfg.track_periods
+                                ),
+                                3,
+                                &["satellite"],
+                            )
+                            .await;
+                        }
+                        tr_first = false;
                         let _ = deact;
                     }
                 }
@@ -184,6 +235,7 @@ pub async fn run_live(cfg: Arc<CopyTradingConfig>) -> Result<()> {
     let co_notifier = Arc::clone(&notifier);
     let co_monitor = Arc::clone(&monitor);
     let co_cfg = Arc::clone(&cfg);
+    let co_ntfy = ntfy.clone();
     let consensus_loop = tokio::spawn(async move {
         if !co_cfg.track_enabled {
             return;
@@ -191,8 +243,14 @@ pub async fn run_live(cfg: Arc<CopyTradingConfig>) -> Result<()> {
         // Give the first leaderboard refresh a moment to populate the universe.
         tokio::time::sleep(Duration::from_secs(20)).await;
         loop {
-            if let Err(e) =
-                cycles::consensus_cycle(&co_portfolio, &co_notifier, &co_monitor, &co_cfg).await
+            if let Err(e) = cycles::consensus_cycle(
+                &co_portfolio,
+                &co_notifier,
+                &co_monitor,
+                &co_cfg,
+                co_ntfy.as_deref(),
+            )
+            .await
             {
                 tracing::error!(err = %e, "Consensus cycle failed");
             }
@@ -222,9 +280,11 @@ pub async fn run_live(cfg: Arc<CopyTradingConfig>) -> Result<()> {
     }
 
     tracing::info!("Sending shutdown notification...");
-    let _ = notifier
-        .send("🛑 Copy Trading Bot shutting down gracefully")
-        .await;
+    if telegram_on {
+        let _ = notifier
+            .send("🛑 Copy Trading Bot shutting down gracefully")
+            .await;
+    }
 
     Ok(())
 }

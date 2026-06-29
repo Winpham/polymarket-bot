@@ -6,12 +6,25 @@ pub struct CopyTradingConfig {
     #[config(env = "DATABASE_URL")]
     pub database_url: String,
 
-    // --- Telegram ---
-    #[config(env = "TELEGRAM_BOT_TOKEN")]
+    // --- Telegram (optional: leave empty to run ntfy-only / headless) ---
+    #[config(env = "TELEGRAM_BOT_TOKEN", default = "")]
     pub telegram_bot_token: String,
 
-    #[config(env = "TELEGRAM_CHAT_ID")]
+    #[config(env = "TELEGRAM_CHAT_ID", default = "")]
     pub telegram_chat_id: String,
+
+    // --- ntfy phone push (reuses the brainstem channel) ---
+    /// ntfy server base. Default ntfy.sh (matches brainstem's default).
+    #[config(env = "NTFY_SERVER", default = "https://ntfy.sh")]
+    pub ntfy_server: String,
+
+    /// ntfy topic (your brainstem topic). Empty = ntfy push disabled.
+    #[config(env = "NTFY_TOPIC", default = "")]
+    pub ntfy_topic: String,
+
+    /// Port for the read-only web scoreboard (surplus + promotion gate).
+    #[config(env = "BOARD_PORT", default = 9002)]
+    pub board_port: u16,
 
     // --- Copy trading ---
     /// Copy trading poll interval in minutes.

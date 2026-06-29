@@ -32,16 +32,22 @@ services:
         condition: service_healthy
     environment:
       DATABASE_URL: postgres://bot:bot@postgres:5432/polymarket
-      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:?set TELEGRAM_BOT_TOKEN in .env.consensus}
-      TELEGRAM_CHAT_ID: ${TELEGRAM_CHAT_ID:?set TELEGRAM_CHAT_ID in .env.consensus}
+      # ntfy phone push — reuses your brainstem channel (alerts buzz your phone).
+      NTFY_TOPIC: ${NTFY_TOPIC:?set NTFY_TOPIC in .env.consensus (your brainstem ntfy topic)}
+      NTFY_SERVER: ${NTFY_SERVER:-https://ntfy.sh}
+      BOARD_PORT: "9002"
       METRICS_PORT: "9001"
       RUST_LOG: "copy_trading_bot=info,polymarket_common=warn"
+      # Telegram is OPTIONAL — leave unset for ntfy-only (this deploy).
+      # TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+      # TELEGRAM_CHAT_ID: ${TELEGRAM_CHAT_ID:-}
       # --- optional consensus tuning (sensible defaults baked in) ---
       # TRACK_TOP_N: "40"
       # TRACK_PERIODS: "WEEK,MONTH"
       # CONSENSUS_STRATEGIES: ""   # empty = all 14 strategies run
     ports:
-      - "9001:9001"
+      - "9001:9001"   # Prometheus metrics
+      - "9002:9002"   # read-only web scoreboard
     stop_grace_period: 15s
     restart: unless-stopped
 

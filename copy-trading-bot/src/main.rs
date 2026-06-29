@@ -13,6 +13,7 @@ pub use polymarket_common::storage;
 // telegram is local so that the commands sub-module is accessible via crate::telegram
 mod telegram;
 
+mod board;
 mod config;
 mod cycles;
 mod live;

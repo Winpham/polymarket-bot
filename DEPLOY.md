@@ -1,72 +1,74 @@
-# Deploy the Consensus Engine
+# Deploy the Consensus Engine (ntfy-only)
 
-The consensus bot is **alert/paper-only** — it reads public APIs and sends you Telegram alerts.
-**No wallet, no private key, no funds, nothing at risk.** All you provide is a Telegram bot token.
+The consensus bot is **alert/paper-only** — it reads public APIs and pushes you alerts.
+**No wallet, no private key, no funds, nothing at risk.**
 
-> Deploys the code on the `feat/consensus-engine` branch (NOT the upstream GHCR image). The
-> minimal stack is just Postgres + the bot, both via Docker — you don't need Rust installed.
+This setup reuses your **existing brainstem ntfy phone channel** — consensus alerts buzz the phone
+you already have subscribed, no Telegram bot. The `/consensus` scoreboard (surplus + promotion gate)
+is served as a **read-only web page** at `http://localhost:9002/`.
+
+> Deploys the code on `feat/consensus-engine` (NOT the upstream GHCR image). Stack is just
+> Postgres + the bot via Docker — no Rust install needed.
 
 ## Prerequisites
-- **Docker Desktop** running (you have it).
-- You're on the `feat/consensus-engine` branch: `cd ~/polymarket-bot && git checkout feat/consensus-engine`.
+- **Docker Desktop** running.
+- `cd ~/polymarket-bot && git checkout feat/consensus-engine`.
+- The **ntfy app** on your phone, subscribed to your brainstem topic (you already have this).
 
-## Step 1 — Create a Telegram bot (2 min)
-1. In Telegram, open a chat with **@BotFather**.
-2. Send `/newbot`, pick a name and a username ending in `bot`.
-3. BotFather replies with a **token** like `123456789:AAExxxx...`. Copy it.
+## Step 1 — Get your ntfy topic
+It's the same secret brainstem uses (a 160-bit secret — don't share it):
+```bash
+python3 -c "import json;print(json.load(open('$HOME/.brainstem/notify.config.json'))['ntfy']['topic'])"
+```
+Copy the value.
 
-## Step 2 — Get your chat ID (1 min)
-1. Open a chat with your new bot and send it any message (e.g. `/start`). *(This also lets the bot
-   message you — Telegram blocks bots from messaging users who haven't opened the chat first.)*
-2. Get your numeric chat ID one of two ways:
-   - Easiest: message **@userinfobot** — it replies with your `Id`.
-   - Or: open `https://api.telegram.org/bot<YOUR_TOKEN>/getUpdates` in a browser (after you messaged
-     the bot) and read `message.chat.id`.
-
-## Step 3 — Configure
+## Step 2 — Configure
 ```bash
 cd ~/polymarket-bot
 cp .env.consensus.example .env.consensus
-# edit .env.consensus and paste in TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID
+# edit .env.consensus → paste the topic into NTFY_TOPIC
 ```
 
-## Step 4 — Launch
+## Step 3 — Launch
 ```bash
 docker compose -f docker-compose.consensus.yml --env-file .env.consensus up -d --build
 ```
-First run builds the image (~3–5 min) and starts Postgres + the bot. You should get a Telegram
-message: **"👥 Copy Trading Bot started"** and shortly after **"🛰 Tracking N top traders"**.
+First run builds the image (~3–5 min) then starts Postgres + the bot. Within ~20s your **phone
+gets two ntfy pushes**: "🤝 Consensus bot started" and "🛰 Tracking live".
 
-## Step 5 — Verify it's working
+## Step 4 — Verify
+- **Phone:** you got the two startup pushes above.
+- **Scoreboard:** open **http://localhost:9002/** — a dark page showing the 14 strategies, their
+  distinct-event N, surplus, and the ✅/⏳ promotion gate (auto-refreshes every 30s).
 - **Logs:** `docker compose -f docker-compose.consensus.yml logs -f copy-trading-bot`
-  Look for `Leaderboard universe refreshed tracked=…` and `Consensus cycle complete … strategies=14`.
-- **In Telegram:** send `/tracked` (trader count), `/consensus` (live signals + the strategy
-  scoreboard), `/help`.
-- **Metrics:** `curl localhost:9001/metrics | grep consensus`.
+  → `Alert channels telegram=false ntfy=true` and `Consensus cycle complete … strategies=14`.
 
 ## What to expect over time
-- It runs **14 strategies forward, silently** — only the `strict` strategy pushes Telegram alerts
-  (STRONG/ELITE consensus); the rest accrue evidence without spamming you.
-- `/consensus` shows a per-strategy scoreboard. It's empty of *results* until markets resolve
-  (sports next-day, others over days/weeks). As signals resolve, you'll see **surplus** (the real,
-  favorite-longshot-neutralized edge) and a ✅/⏳ **promotion-gate** flag per strategy.
-- **Nothing gets promoted automatically.** When a strategy goes ✅ (positive surplus lower-bound over
-  ≥30 distinct events), that's your signal to consider promoting it — a deliberate call, not the bot's.
+- 14 strategies run forward **silently**; only the `strict` strategy pushes a phone alert on
+  STRONG/ELITE consensus (🟢/🔥) — no spam.
+- The scoreboard at `:9002` is empty of *results* until markets resolve (sports next-day, others
+  over days). As they do, **surplus** (the favorite-longshot-neutralized edge) and a ✅/⏳ gate
+  appear per strategy.
+- **Nothing auto-promotes.** A strategy turning ✅ (positive surplus lower-bound over ≥30 distinct
+  events) is your cue to consider promoting it — your call.
 
 ## Operations
-- **Stop:** `docker compose -f docker-compose.consensus.yml down` (Postgres data persists in the
-  `pgdata` volume).
-- **Restart:** rerun the Step 4 command (omit `--build` if code unchanged).
-- **Update after pulling new code:** `git pull` then rerun Step 4 *with* `--build`.
+- **Stop** (data persists in the `pgdata` volume): `docker compose -f docker-compose.consensus.yml down`
+- **Restart:** rerun Step 3 (drop `--build` if code unchanged).
+- **Update after `git pull`:** rerun Step 3 *with* `--build`.
 - **Back up the forward record:**
   `docker compose -f docker-compose.consensus.yml exec postgres pg_dump -U bot polymarket > backup.sql`
+- **View the board from your phone too:** it's on your Mac's `:9002`; reach it over your Tailscale
+  IP (same way brainstem's dashboard is reached) — e.g. `http://<tailscale-ip>:9002/`.
 
 ## Running 24/7
-The bot must stay running for the forward record to build. On your Mac, keep Docker Desktop open and
-prevent sleep while plugged in (`caffeinate -s` in a terminal, or System Settings → Battery → keep
-awake on power). For true always-on, run the same compose on a small cloud VPS (any \$5/mo box with
-Docker) — identical commands.
+Keep Docker Desktop open and prevent Mac sleep while plugged in (`caffeinate -s`, or Battery
+settings). For always-on, the same two commands run on any ~$5/mo VPS with Docker.
+
+## Optional: add Telegram too
+If you later want the interactive Telegram commands in addition to ntfy, set `TELEGRAM_BOT_TOKEN`
+and `TELEGRAM_CHAT_ID` in `.env.consensus` (uncomment them in the compose). Both channels then fire.
 
 ## Safety
-Paper/alert-only by design — the consensus path places **no real-money orders** and holds no keys.
-The only outbound actions are reading public Polymarket APIs and sending you Telegram messages.
+Paper/alert-only by design — no real-money orders, no keys. The only outbound actions are reading
+public Polymarket APIs, POSTing alerts to your ntfy topic, and serving the local board page.
