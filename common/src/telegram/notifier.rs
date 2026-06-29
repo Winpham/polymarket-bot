@@ -6,6 +6,9 @@ pub struct TelegramNotifier {
     client: Client,
     bot_token: String,
     chat_id: String,
+    /// False when no bot token is configured (ntfy-only / headless) — all sends
+    /// and polls become silent no-ops, so no 404 noise and no wasted polling.
+    enabled: bool,
     /// Last processed update_id for polling
     last_update_id: AtomicI64,
 }
@@ -14,6 +17,7 @@ impl TelegramNotifier {
     pub fn new(bot_token: &str, chat_id: &str) -> Self {
         Self {
             client: Client::new(),
+            enabled: !bot_token.trim().is_empty(),
             bot_token: bot_token.to_string(),
             chat_id: chat_id.to_string(),
             last_update_id: AtomicI64::new(0),
@@ -57,6 +61,9 @@ impl TelegramNotifier {
         message: &str,
         parse_mode: &str,
     ) -> Result<()> {
+        if !self.enabled {
+            return Ok(()); // ntfy-only / headless: silently skip Telegram.
+        }
         let url = format!("https://api.telegram.org/bot{}/sendMessage", self.bot_token);
 
         let disclaimer = if parse_mode == "HTML" {
@@ -140,6 +147,9 @@ impl TelegramNotifier {
     pub async fn poll_commands(
         &self,
     ) -> Vec<(String, String, Option<String>, Option<String>, String)> {
+        if !self.enabled {
+            return Vec::new();
+        }
         let offset = self.last_update_id.load(Ordering::Relaxed);
         let url = format!("https://api.telegram.org/bot{}/getUpdates", self.bot_token);
 

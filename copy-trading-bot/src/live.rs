@@ -149,6 +149,10 @@ pub async fn run_live(cfg: Arc<CopyTradingConfig>) -> Result<()> {
     let ct_monitor = Arc::clone(&monitor);
     let ct_cfg = Arc::clone(&cfg);
     let copy_trade_loop = tokio::spawn(async move {
+        if !ct_cfg.copy_trade_enabled {
+            tracing::info!("Legacy per-trader copy loop disabled (COPY_TRADE_ENABLED=false)");
+            std::future::pending::<()>().await;
+        }
         loop {
             if let Err(e) =
                 cycles::copy_trade_cycle(&ct_portfolio, &ct_notifier, &ct_monitor, &ct_cfg).await

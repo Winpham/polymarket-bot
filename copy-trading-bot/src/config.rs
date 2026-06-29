@@ -27,6 +27,12 @@ pub struct CopyTradingConfig {
     pub board_port: u16,
 
     // --- Copy trading ---
+    /// Enable the LEGACY per-trader copy loop (places a paper bet per followed
+    /// trader's new BUY). Off by default — the consensus engine is the product;
+    /// with auto-tracking on, this would paper-copy all top-N traders individually.
+    #[config(env = "COPY_TRADE_ENABLED", default = false)]
+    pub copy_trade_enabled: bool,
+
     /// Copy trading poll interval in minutes.
     #[config(env = "COPY_TRADE_INTERVAL_MINS", default = 1)]
     pub copy_trade_interval_mins: u64,
