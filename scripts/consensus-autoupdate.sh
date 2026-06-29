@@ -36,8 +36,27 @@ HEAD="$(git rev-parse HEAD 2>/dev/null)"
 LAST="$(cat .last_built_commit 2>/dev/null)"
 UP="$(compose ps -q copy-trading-bot 2>/dev/null)"
 
-if [ "$HEAD" != "$LAST" ] || [ -z "$UP" ]; then
-  echo "$(ts) (re)deploying — HEAD=$HEAD last_built=${LAST:-none} running=$([ -n "$UP" ] && echo yes || echo no)" >> "$LOG"
+# Paths whose changes actually affect the running image.
+CODE_RE='^(common/|copy-trading-bot/|migrations/|Cargo\.|Dockerfile\.consensus|docker-compose\.consensus\.yml)'
+
+NEED_REBUILD=0
+REASON=""
+if [ -z "$UP" ]; then
+  NEED_REBUILD=1; REASON="stack down"
+elif [ -z "$LAST" ]; then
+  NEED_REBUILD=1; REASON="first run"
+elif [ "$HEAD" != "$LAST" ]; then
+  if git diff --name-only "$LAST" "$HEAD" 2>/dev/null | grep -qE "$CODE_RE"; then
+    NEED_REBUILD=1; REASON="code changed $LAST..$HEAD"
+  else
+    # New commits but no code change (docs/reports) — record HEAD, skip rebuild.
+    echo "$HEAD" > .last_built_commit
+    echo "$(ts) no code change $LAST..$HEAD — skipped rebuild" >> "$LOG"
+  fi
+fi
+
+if [ "$NEED_REBUILD" = "1" ]; then
+  echo "$(ts) (re)deploying — $REASON" >> "$LOG"
   if compose up -d --build >> "$LOG" 2>&1; then
     echo "$HEAD" > .last_built_commit
     echo "$(ts) deploy OK ($HEAD)" >> "$LOG"
