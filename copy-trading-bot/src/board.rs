@@ -71,7 +71,8 @@ async fn render(portfolio: &PgPortfolio) -> String {
         body.push_str(
             "<table><thead><tr><th>gate</th><th>strategy</th><th class=r>events (N)</th>\
              <th class=r>hit-rate</th><th class=r>surplus</th><th class=r>lower bound</th>\
-             <th class=r>raw edge</th></tr></thead><tbody>",
+             <th class=r>raw edge</th><th class=r>our CLV</th><th class=r>capture lag</th>\
+             </tr></thead><tbody>",
         );
         for r in rows.iter().filter(|r| r.resolved > 0) {
             let hr = r.won as f64 / r.resolved as f64 * 100.0;
@@ -82,15 +83,25 @@ async fn render(portfolio: &PgPortfolio) -> String {
                 Some(_) => "neg",
                 None => "muted",
             };
+            // CLV: positive is good (we'd beat the captured mid). capture lag:
+            // negative means the mid had already moved past the sharps' entry.
+            let clvcls = match r.our_clv {
+                Some(c) if c > 0.0 => "pos",
+                Some(_) => "neg",
+                None => "muted",
+            };
             body.push_str(&format!(
                 "<tr><td>{gate}</td><td class=mono>{strat}</td><td class=r>{ev}</td>\
                  <td class=r>{hr:.0}%</td><td class=\"r {scls}\">{surplus}</td>\
-                 <td class=r>{lb}</td><td class=\"r muted\">{edge}</td></tr>",
+                 <td class=r>{lb}</td><td class=\"r muted\">{edge}</td>\
+                 <td class=\"r {clvcls}\">{clv}</td><td class=\"r muted\">{lag}</td></tr>",
                 strat = r.strategy,
                 ev = r.distinct_events,
                 surplus = pct(r.surplus),
                 lb = pct(v.lower_bound),
                 edge = pct(r.edge),
+                clv = pct(r.our_clv),
+                lag = pct(r.capture_lag),
             ));
         }
         body.push_str("</tbody></table>");
@@ -115,7 +126,9 @@ async fn render(portfolio: &PgPortfolio) -> String {
          <p class=note><b>surplus</b> = edge over the band-matched blind baseline (favorite-longshot-neutralized) — \
          the real signal. <b>lower bound</b> = Bonferroni-corrected 1-sided bound. ✅ = passes the belief-blind \
          promotion gate (lower bound &gt; 0 over ≥30 distinct events); ⏳ = not yet. Promotion to alerting is a \
-         deliberate human call — never automatic.</p>\
+         deliberate human call — never automatic. <b>our CLV</b> = edge if we'd entered at the first live mid we \
+         captured (event-clustered). <b>capture lag</b> = first mid − sharps' entry; materially negative means \
+         faster polling has real value.</p>\
          </body></html>",
     )
 }

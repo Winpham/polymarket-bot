@@ -432,6 +432,12 @@ impl PgPortfolio {
         // to the EVENT level (event_slug), then across events — so correlated
         // outcomes of one event count once (the within-match leak fix). `surplus`
         // and `surplus_sd` are over events; `distinct_events` is the gate's N.
+        // CLV instrumentation (same EVENT clustering, over resolved rows with a
+        // captured `initial_market_price`): `our_clv = AVG_event(outcome_won −
+        // initial_market_price)` is the edge if we'd entered at the first live mid
+        // we saw; `capture_lag = AVG_event(initial_market_price − mean_price)` is
+        // the gap between the mid when we *noticed* and the price the sharps paid.
+        // A materially negative `capture_lag` means faster polling has real value.
         let rows: Vec<StrategyScore> = sqlx::query_as(
             "WITH adv AS ( \
                  SELECT strategy, COALESCE(event_slug, condition_id) AS ev, resolved, outcome_won, \
@@ -455,6 +461,18 @@ impl PgPortfolio {
              es AS ( \
                  SELECT strategy, COUNT(*) AS n_events, AVG(ev_surplus) AS surplus, \
                         STDDEV_SAMP(ev_surplus) AS surplus_sd FROM evt GROUP BY strategy \
+             ), \
+             clv_evt AS ( \
+                 SELECT strategy, COALESCE(event_slug, condition_id) AS ev, \
+                        AVG((outcome_won::int)::double precision - initial_market_price) AS ev_clv, \
+                        AVG(initial_market_price - mean_price) AS ev_lag \
+                 FROM consensus_signals \
+                 WHERE resolved AND initial_market_price IS NOT NULL AND strategy <> '_blind' \
+                 GROUP BY strategy, ev \
+             ), \
+             clv AS ( \
+                 SELECT strategy, AVG(ev_clv) AS our_clv, AVG(ev_lag) AS capture_lag \
+                 FROM clv_evt GROUP BY strategy \
              ) \
              SELECT s.strategy, \
                     COUNT(*) FILTER (WHERE s.resolved)                   AS resolved, \
@@ -462,9 +480,12 @@ impl PgPortfolio {
                     COUNT(*) FILTER (WHERE s.resolved AND s.outcome_won) AS won, \
                     AVG(s.a) FILTER (WHERE s.resolved)                   AS edge, \
                     es.surplus                                          AS surplus, \
-                    es.surplus_sd                                       AS surplus_sd \
+                    es.surplus_sd                                       AS surplus_sd, \
+                    clv.our_clv                                         AS our_clv, \
+                    clv.capture_lag                                     AS capture_lag \
              FROM sig s LEFT JOIN es ON es.strategy = s.strategy \
-             GROUP BY s.strategy, es.n_events, es.surplus, es.surplus_sd \
+                        LEFT JOIN clv ON clv.strategy = s.strategy \
+             GROUP BY s.strategy, es.n_events, es.surplus, es.surplus_sd, clv.our_clv, clv.capture_lag \
              ORDER BY es.surplus DESC NULLS LAST",
         )
         .fetch_all(&self.pool)
@@ -502,6 +523,14 @@ pub struct StrategyScore {
     pub surplus: Option<f64>,
     /// Std-dev of per-EVENT surplus — feeds the promotion gate's confidence bound.
     pub surplus_sd: Option<f64>,
+    /// Event-clustered CLV vs the first live mid we captured:
+    /// `AVG_event(outcome_won::int − initial_market_price)`. `None` until some
+    /// resolved row has a captured `initial_market_price`.
+    pub our_clv: Option<f64>,
+    /// Event-clustered capture lag `AVG_event(initial_market_price − mean_price)`:
+    /// the gap between the mid when we noticed and the sharps' entry price.
+    /// Materially negative → faster polling has real value.
+    pub capture_lag: Option<f64>,
 }
 
 /// Local truncate helper (avoids a cross-crate format dependency).

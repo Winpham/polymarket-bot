@@ -88,7 +88,7 @@ pub async fn handle_command(
                         let flag = if v.promotable { "✅" } else { "⏳" };
                         let lb = fmt_pct(v.lower_bound);
                         board.push_str(&format!(
-                            "{} `{:<12}` {} ev ({:.0}%) · surplus {} (lb {}) · edge {}\n",
+                            "{} `{:<12}` {} ev ({:.0}%) · surplus {} (lb {}) · edge {} · clv {} lag {}\n",
                             flag,
                             r.strategy,
                             r.distinct_events,
@@ -96,13 +96,15 @@ pub async fn handle_command(
                             fmt_pct(r.surplus),
                             lb,
                             fmt_pct(r.edge),
+                            fmt_pct(r.our_clv),
+                            fmt_pct(r.capture_lag),
                         ));
                         if v.promotable {
                             board.push_str(&format!("   └ {}\n", v.reason));
                         }
                     }
                     board.push_str(
-                        "\n_✅ = passes the belief-blind promotion gate (Bonferroni-corrected surplus lower-bound > 0 over ≥30 distinct events); ⏳ = not yet. *surplus* = favorite-longshot-neutralized edge. Promotion to alerting is a gated human call — never automatic._",
+                        "\n_✅ = passes the belief-blind promotion gate (Bonferroni-corrected surplus lower-bound > 0 over ≥30 distinct events); ⏳ = not yet. *surplus* = favorite-longshot-neutralized edge. *clv* = edge vs the first captured mid; *lag* < 0 means faster polling has value. Promotion to alerting is a gated human call — never automatic._",
                     );
                     format!("{summary}{board}")
                 }
