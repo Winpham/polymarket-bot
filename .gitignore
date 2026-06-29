@@ -12,3 +12,9 @@ tmp/
 # consensus deploy secrets
 .env.consensus
 .env.consensus.smoke
+
+# consensus autoupdate runtime state
+.last_built_commit
+.autoupdate.log
+.autoupdate.out
+.autoupdate.err
