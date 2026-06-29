@@ -5,23 +5,26 @@
 //! `followed_traders` but never places bets; it only alerts and records signals
 //! for forward edge tracking.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
+use std::time::Duration;
 
 use anyhow::Result;
 use chrono::{DateTime, Utc};
 use futures_util::future::join_all;
 
 use crate::config::CopyTradingConfig;
+use crate::data::models::{fetch_clob_market, fetch_market_by_slug, fetch_price_history};
 use crate::live::broadcast;
 use crate::scanner::consensus::{
     BackerInfo, ConsensusParams, ConsensusSignal, MarketBook, StrategyDef, Tier, TraderVote,
     default_portfolio, quality_weight, score_all_strategies,
 };
 use crate::scanner::copy_trader::{CopyTraderMonitor, TraderTrade};
-use crate::scanner::enrich::{EnrichCtx, EnrichMargins, EnrichModels, enrich_all};
+use crate::scanner::enrich::{EnrichCtx, EnrichMargins, EnrichModels, MarketCtx, enrich_all};
 use crate::storage::consensus::{NewConsensusSignal, WindowVote};
 use crate::storage::postgres::{FollowedTrader, PgPortfolio};
 use crate::telegram::notifier::TelegramNotifier;
+use polymarket_common::model::features::MarketFeatures;
 use polymarket_common::ntfy::Ntfy;
 
 /// Build [`ConsensusParams`] from runtime config.
@@ -69,12 +72,15 @@ fn is_sports(title: &str, slug: &str) -> bool {
     SLUG_PATS.iter().any(|p| s.contains(p)) || TITLE_PATS.iter().any(|p| t.contains(p))
 }
 
+#[allow(clippy::too_many_arguments)]
 pub async fn consensus_cycle(
     portfolio: &PgPortfolio,
     notifier: &TelegramNotifier,
     monitor: &CopyTraderMonitor,
     cfg: &CopyTradingConfig,
     ntfy: Option<&Ntfy>,
+    http: &reqwest::Client,
+    models: &EnrichModels,
 ) -> Result<()> {
     let traders = portfolio.get_active_traders().await?;
     if traders.is_empty() {
@@ -106,16 +112,25 @@ pub async fn consensus_cycle(
         .collect();
     let signals = score_all_strategies(&book_vec, now, &strategies);
 
-    // Enricher seam: silent cross-check arms re-emit picks under new strategy
-    // names (Phase 3 = empty registry → passthrough; Phase 4 registers the arms).
-    // The originals pass through untouched, so `strict` alerting is non-regressive.
-    let models = EnrichModels::default();
+    // Enricher seam: silent cross-check arms re-emit `strict` picks under new
+    // strategy names; the originals pass through untouched, so `strict` alerting
+    // is non-regressive. Market-dependent arms need per-market data fetched once
+    // for the strict-fired markets (bounded + throttled), only when enabled.
+    let markets = if models.needs_market_data() {
+        prefetch_markets(http, &signals, models.needs_market_features()).await
+    } else {
+        HashMap::new()
+    };
     let signals = enrich_all(
         signals,
         &EnrichCtx {
             now,
-            models: &models,
-            margins: EnrichMargins::default(),
+            models,
+            margins: EnrichMargins {
+                ml: cfg.consensus_ml_margin,
+                bayes: cfg.consensus_bayes_margin,
+            },
+            markets: &markets,
         },
     );
 
@@ -391,6 +406,74 @@ async fn ingest_incremental(
         "Consensus incremental ingest"
     );
     Ok((books_from_window_votes(&window), polled_ok_wallets.len()))
+}
+
+/// Pre-fetch per-market data for the market-dependent arms (`market_ml`,
+/// `bayes_anchor`). Bounded to the strict-fired markets, deduped by condition_id,
+/// throttled like housekeeping. Always grabs the live CLOB mid (1 call); fetches
+/// the Gamma market + price history for full [`MarketFeatures`] only when needed.
+/// All fetches are free; a failed fetch just omits that market (arm no-ops for it).
+async fn prefetch_markets(
+    http: &reqwest::Client,
+    signals: &[ConsensusSignal],
+    need_features: bool,
+) -> HashMap<String, MarketCtx> {
+    let mut seen: HashSet<&str> = HashSet::new();
+    let mut map = HashMap::new();
+    for s in signals.iter().filter(|s| s.strategy == "strict") {
+        if !seen.insert(s.condition_id.as_str()) {
+            continue;
+        }
+        tokio::time::sleep(Duration::from_millis(150)).await;
+        let clob = match fetch_clob_market(http, &s.condition_id).await {
+            Ok(m) => m,
+            Err(e) => {
+                tracing::debug!(cond = %s.condition_id, err = %e, "prefetch CLOB failed");
+                continue;
+            }
+        };
+        let Some(mid) = clob.outcome_price(s.outcome_index) else {
+            continue;
+        };
+        let features = if need_features {
+            build_market_features(http, s, mid).await
+        } else {
+            None
+        };
+        map.insert(
+            s.condition_id.clone(),
+            MarketCtx {
+                clob_mid: mid,
+                features,
+            },
+        );
+    }
+    tracing::debug!(
+        markets = map.len(),
+        need_features,
+        "Prefetched market data for arms"
+    );
+    map
+}
+
+/// Build the [`MarketFeatures`] vector for one strict-fired market's consensus
+/// outcome: 1 Gamma fetch (question/dates/category) + 1 price-history fetch for
+/// the outcome's CLOB token. `None` if any fetch / token lookup fails.
+async fn build_market_features(
+    http: &reqwest::Client,
+    s: &ConsensusSignal,
+    mid: f64,
+) -> Option<MarketFeatures> {
+    let gamma = fetch_market_by_slug(http, &s.slug).await.ok()?;
+    let token_ids: Vec<String> = gamma
+        .clob_token_ids
+        .as_ref()
+        .and_then(|j| serde_json::from_str(j).ok())?;
+    let token = token_ids.get(s.outcome_index as usize)?;
+    let history = fetch_price_history(http, token).await.unwrap_or_default();
+    Some(MarketFeatures::from_market_and_history(
+        &gamma, mid, &history,
+    ))
 }
 
 /// The active strategy portfolio: the full default set, optionally narrowed by
