@@ -18,6 +18,7 @@ use crate::scanner::consensus::{
     default_portfolio, quality_weight, score_all_strategies,
 };
 use crate::scanner::copy_trader::{CopyTraderMonitor, TraderTrade};
+use crate::scanner::enrich::{EnrichCtx, EnrichMargins, EnrichModels, enrich_all};
 use crate::storage::consensus::{NewConsensusSignal, WindowVote};
 use crate::storage::postgres::{FollowedTrader, PgPortfolio};
 use crate::telegram::notifier::TelegramNotifier;
@@ -104,6 +105,19 @@ pub async fn consensus_cycle(
         .map(|d| d.name)
         .collect();
     let signals = score_all_strategies(&book_vec, now, &strategies);
+
+    // Enricher seam: silent cross-check arms re-emit picks under new strategy
+    // names (Phase 3 = empty registry → passthrough; Phase 4 registers the arms).
+    // The originals pass through untouched, so `strict` alerting is non-regressive.
+    let models = EnrichModels::default();
+    let signals = enrich_all(
+        signals,
+        &EnrichCtx {
+            now,
+            models: &models,
+            margins: EnrichMargins::default(),
+        },
+    );
 
     let mut alerts_sent = 0usize;
     for sig in &signals {
