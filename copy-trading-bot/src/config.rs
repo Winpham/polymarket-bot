@@ -108,6 +108,13 @@ pub struct CopyTradingConfig {
     #[config(env = "CONSENSUS_STRATEGIES", default = "")]
     pub consensus_strategies: String,
 
+    /// L1: use incremental vote-window ingestion — poll only the delta since each
+    /// trader's cursor and rebuild books from the stored trailing window, instead
+    /// of re-polling the full window every cycle. Verified-equivalent to the legacy
+    /// path; makes minute-cadence polling cheap. Set false to use the legacy path.
+    #[config(env = "CONSENSUS_INCREMENTAL", default = true)]
+    pub consensus_incremental: bool,
+
     // --- Betting ---
     /// Slippage assumption as a fraction (0.01 = 1%).
     #[config(env = "SLIPPAGE_PCT", default = 0.01)]

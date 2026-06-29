@@ -37,6 +37,10 @@ services:
       NTFY_SERVER: ${NTFY_SERVER:-https://ntfy.sh}
       BOARD_PORT: "9002"
       METRICS_PORT: "9001"
+      # L1: every-minute cadence + incremental delta ingestion (poll only the
+      # delta since each trader's cursor; rebuild books from the stored window).
+      CONSENSUS_INTERVAL_MINS: "1"
+      CONSENSUS_INCREMENTAL: "true"
       RUST_LOG: "copy_trading_bot=info,polymarket_common=warn"
       # Telegram is OPTIONAL — leave unset for ntfy-only (this deploy).
       # TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
