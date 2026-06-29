@@ -267,4 +267,192 @@ mod tests {
         assert!(out.is_empty());
         assert!(!models.needs_market_data());
     }
+
+    // --- End-to-end (Phase 5): Python→Rust model compat + arm emit + scoreboard
+    //     + family-split gate. `#[ignore]`d (needs the trained model dir + a live
+    //     Postgres); run after `scripts/consensus_train.py` with:
+    //
+    //   CONSENSUS_MODEL_DIR=/tmp/cm \
+    //   DATABASE_URL=postgres://bot:bot@localhost:55432/polymarket \
+    //     cargo test -p copy-trading-bot arm_pipeline_e2e -- --ignored --nocapture
+    use crate::scanner::consensus::ConsensusSignal;
+
+    fn strict_fixture() -> ConsensusSignal {
+        ConsensusSignal {
+            strategy: "strict".into(),
+            condition_id: "0xfix".into(),
+            outcome_index: 0,
+            outcome_label: "Yes".into(),
+            title: "t".into(),
+            slug: "s".into(),
+            event_slug: Some("evfix".into()),
+            is_sports: false,
+            backers: vec![],
+            n_backers: 6,
+            n_opposers: 0,
+            net_count: 6,
+            net_quality: 9.0,
+            mean_price: 0.55,
+            price_std: 0.02,
+            recency_mins: 10,
+            total_usd: 4000.0,
+            best_backer_rank: Some(4),
+            score: 1.0,
+            tier: crate::scanner::consensus::Tier::Elite,
+        }
+    }
+
+    #[tokio::test]
+    #[ignore = "needs CONSENSUS_MODEL_DIR (consensus_train.py output) + DATABASE_URL"]
+    async fn arm_pipeline_e2e() {
+        use crate::scanner::promotion::{PromotionParams, promotion_verdict};
+        use crate::storage::postgres::PgPortfolio;
+        use std::path::Path;
+
+        // (a) Python→Rust model-format compatibility.
+        let dir = std::env::var("CONSENSUS_MODEL_DIR").expect("CONSENSUS_MODEL_DIR");
+        let win = ConsensusWinModel::load(&Path::new(&dir).join("consensus_win.json"))
+            .expect("consensus_win.json loads in Rust");
+        let p = win.p_win(&super::features::consensus_feature_vec(&strict_fixture()));
+        assert!((0.0..=1.0).contains(&p), "p_win in range: {p}");
+        let ens = XgbModel::load(&Path::new(&dir).join("consensus_ens.json"))
+            .expect("consensus_ens.json loads in Rust");
+        assert!(ens.n_trees() > 0, "ensemble parsed trees");
+
+        // (b) Arm emits a silent tagged row from the real loaded logit model.
+        let models = EnrichModels {
+            consensus_win: Some(win),
+            ..Default::default()
+        };
+        let markets = HashMap::new();
+        // margin -1 ⇒ p − price > −1 always true ⇒ guaranteed emit for the fixture.
+        let ctx = EnrichCtx {
+            now: Utc::now(),
+            models: &models,
+            margins: EnrichMargins {
+                ml: -1.0,
+                bayes: 0.0,
+            },
+            markets: &markets,
+        };
+        let emitted = enrich_all(vec![strict_fixture()], &ctx);
+        assert!(
+            emitted.iter().any(|s| s.strategy == "consensus_logit"),
+            "consensus_logit arm emits"
+        );
+
+        // (c) Arm-tagged rows resolve → scoreboard → family-split gate verdict.
+        let url = std::env::var("DATABASE_URL").unwrap();
+        let pool = sqlx::PgPool::connect(&url).await.unwrap();
+        let pf = PgPortfolio::new(pool.clone()).await.unwrap();
+        // Clean any prior e2e rows.
+        sqlx::query("DELETE FROM consensus_signals WHERE condition_id LIKE 'e2e_%'")
+            .execute(&pool)
+            .await
+            .unwrap();
+
+        async fn ins(
+            pool: &sqlx::PgPool,
+            strat: &str,
+            ev: i32,
+            mean_price: f64,
+            won: bool,
+            mid: f64,
+        ) {
+            sqlx::query(
+                "INSERT INTO consensus_signals \
+                   (strategy, condition_id, outcome_index, outcome_label, title, slug, event_slug, \
+                    is_sports, observed_votes, n_backers, n_opposers, net_count, net_quality, \
+                    mean_price, price_std, recency_mins, total_usd, score, tier, backers, \
+                    resolved, outcome_won, initial_market_price) \
+                 VALUES ($1,$2,0,'Yes','t','s',$3,false,'[]',5,0,5,5.0,$4,0.02,10,2000,1,'WATCH','[]', \
+                         true,$5,$6)",
+            )
+            .bind(strat)
+            .bind(format!("e2e_{strat}_{ev}"))
+            .bind(format!("e2e_ev_{strat}_{ev}"))
+            .bind(mean_price)
+            .bind(won)
+            .bind(mid)
+            .execute(pool)
+            .await
+            .unwrap();
+        }
+
+        // _blind baseline + one core (strict) + two experimental arms, each over
+        // several distinct events with a captured mid (so CLV computes too).
+        for e in 0..6 {
+            let won = e % 2 == 0;
+            ins(&pool, "_blind", e, 0.50, won, 0.48).await;
+            ins(&pool, "strict", e, 0.55, won, 0.52).await;
+            ins(&pool, "consensus_logit", e, 0.55, e % 3 != 0, 0.52).await;
+            ins(&pool, "market_ml", e, 0.55, won, 0.52).await;
+        }
+
+        let rows = pf.consensus_scoreboard_by_strategy().await.unwrap();
+        let names: Vec<&str> = rows.iter().map(|r| r.strategy.as_str()).collect();
+        assert!(names.contains(&"strict"), "core strict present");
+        assert!(
+            names.contains(&"consensus_logit"),
+            "experimental arm present"
+        );
+        assert!(names.contains(&"market_ml"), "experimental arm present");
+        assert!(
+            !names.contains(&"_blind"),
+            "_blind is the baseline, not a row"
+        );
+
+        // CLV instrumentation populated for an arm row (mid was captured).
+        let arm = rows
+            .iter()
+            .find(|r| r.strategy == "consensus_logit")
+            .unwrap();
+        assert!(arm.our_clv.is_some(), "CLV computed for arm rows");
+
+        // Family split: per-family Bonferroni denominator (robust to whatever
+        // other strategies already live in the DB).
+        let mut fam_n: HashMap<&str, usize> = HashMap::new();
+        for r in &rows {
+            *fam_n.entry(family(&r.strategy)).or_default() += 1;
+        }
+        let exp_n = *fam_n.get("experimental").unwrap_or(&0);
+        let core_n = *fam_n.get("core").unwrap_or(&0);
+        assert_eq!(exp_n, 2, "exactly our two experimental arms are present");
+        assert!(core_n >= 1, "at least the core strict strategy is present");
+        assert_eq!(exp_n + core_n, rows.len(), "families partition the rows");
+        // The arms are classified experimental (so they never raise core's bar).
+        assert_eq!(family("consensus_logit"), "experimental");
+        assert_eq!(family("market_ml"), "experimental");
+        assert!(
+            !rows
+                .iter()
+                .any(|r| family(&r.strategy) == "core" && r.strategy == "consensus_logit"),
+            "consensus_logit must not be counted in the core family"
+        );
+
+        // The per-family denominator gives the arm a LOOSER (no-tighter) correction
+        // than pooling all strategies would — the whole point of the family split.
+        let pp = PromotionParams {
+            min_events: 1,
+            ..PromotionParams::default()
+        };
+        let split = promotion_verdict(arm.distinct_events, arm.surplus, arm.surplus_sd, exp_n, &pp);
+        let pooled = promotion_verdict(
+            arm.distinct_events,
+            arm.surplus,
+            arm.surplus_sd,
+            rows.len(),
+            &pp,
+        );
+        if let (Some(a), Some(b)) = (split.lower_bound, pooled.lower_bound) {
+            assert!(a >= b, "per-family correction is no tighter than pooled");
+        }
+
+        // Cleanup.
+        sqlx::query("DELETE FROM consensus_signals WHERE condition_id LIKE 'e2e_%'")
+            .execute(&pool)
+            .await
+            .unwrap();
+        println!("arm_pipeline_e2e: model load + emit + scoreboard + family split all OK");
+    }
 }

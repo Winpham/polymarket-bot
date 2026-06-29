@@ -139,6 +139,18 @@ Output tiers (configurable thresholds):
 - **D** Productize — config, commands, metrics, docs, docker, fmt/clippy/test green.
 
 ## Progress log
+- 2026-06-29 (levers run): **ML cross-check arms + every-minute polling + CLV shipped**
+  (`lever/ml-fastpoll` → `feat/consensus-engine`, 6 gate-green phases). CLV instrumentation
+  (`our_clv`/`capture_lag`, event-clustered) on the scoreboard + board + `/consensus`. `xgb.rs`
+  & `bayesian.rs` moved into `common`. L1 incremental every-minute polling (migration 025:
+  `consensus_polled_at` + `consensus_vote_window`; delta ingest → stored-window book rebuild;
+  legacy path retained, books equivalent). Enricher seam + Bonferroni **family split** (core vs
+  experimental). Four silent forward-tested arms — `consensus_logit`, `consensus_ens`, `market_ml`
+  / `market_veto`, `bayes_anchor` — all default-OFF, no-op without a model, judged by the
+  belief-blind gate in the experimental family. `scripts/consensus_train.py` (GroupKFold-by-event,
+  leak-free, stamps `trained_through`). Verified: window-store + arm-pipeline live-DB integration
+  tests, arm unit tests, Python→Rust model-format compat, full gate green per phase. Nothing
+  pre-judged or tuned; the gate decides as forward data accrues. Report: `reports/entries/08`.
 - 2026-06-28 (run 2): **Strategy PORTFOLIO shipped** (Forge-validated, `FORGE_PLAN.md`). 10 variants
   forward-tested simultaneously (one fetch, scored N ways), per-strategy DB rows + scoreboard
   (edge vs entry), **raw vote atoms logged** for retroactive replay, only `strict` alerts. Verified
