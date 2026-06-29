@@ -11,6 +11,26 @@ model are deferred behind a clean seam.
 > train on the consensus features we already store; make variants post-score annotations the existing gate
 > judges for free. Provenance noted per item.
 
+## REFINEMENT (2026-06-29, de-biased — overrides the pessimism below)
+The first pass let the Foresight CS2-prediction result bias the *generator*: it "killed" the imported-market
+model, made L1 conditional, and pre-declared the ML "expected to collapse." **That was wrong.** This is a
+DIFFERENT domain (Polymarket leaderboard-consensus); prior failure elsewhere is not evidence here. Corrected
+stance, per [[feedback-edge-exists-prior]]: **the generator stays bold — build every path and give it a fair
+forward test; rigor/skepticism lives ONLY at the belief-blind promotion gate.** Concretely this changes the
+plan to:
+- **Build ALL ML arms, none "killed":** consensus-native **ensemble** (XGBoost/LightGBM on our features — the
+  asset, used fully) AND a consensus-native **logistic** baseline AND the **imported-market** model (its own
+  features, with the per-market fetches it needs, trained artifact and all). The gate ranks them; we do not
+  pre-decide which works.
+- **Build L1 unconditionally** (incremental every-minute polling is better engineering on its own; CLV just
+  measures the bonus — it is not a go/no-go gate).
+- **Build the Bayesian-anchor arm** as a real variant, not "deferred."
+- **Build the Bonferroni family split** so experimental arms are judged in their own family and never tighten
+  the live `strict` strategy's promotion bar.
+- Everything still SILENT (alerting=false), default-OFF until enabled, forward-tested, surplus-over-blind,
+  forward-only. The gate — not our prior — decides.
+The single chained execution brief is `run-prompts/RUN-CHAINED.md`.
+
 ## The verdict on "can we do these in parallel?"
 **Partially — and that's the right shape.** The honest decomposition:
 - **Parallel now (2 disjoint worktrees):** [A] CLV instrumentation, [B] consensus-native ML arm + enricher seam.
