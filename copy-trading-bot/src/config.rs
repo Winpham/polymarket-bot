@@ -137,6 +137,12 @@ pub struct CopyTradingConfig {
     #[config(env = "TRADER_FILLS_RESOLVE_PER_CYCLE", default = 200)]
     pub trader_fills_resolve_per_cycle: i64,
 
+    /// Retention (days) for the durable `trader_fills` archive. Default 0 =
+    /// keep-all (the archive is the point); set > 0 to prune older fills. The
+    /// daily pg_dump backup covers durability regardless.
+    #[config(env = "TRADER_FILLS_RETENTION_DAYS", default = 0)]
+    pub trader_fills_retention_days: i64,
+
     // --- Silent cross-check arms (Phase 4). All default OFF: an arm runs only
     //     when its flag is ON *and* its model file loads; emitted rows are silent
     //     (never alert) and judged by the belief-blind gate in the experimental

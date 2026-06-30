@@ -139,6 +139,18 @@ Output tiers (configurable thresholds):
 - **D** Productize — config, commands, metrics, docs, docker, fmt/clippy/test green.
 
 ## Progress log
+- 2026-06-29 (trader-profiles run): **Earned trader-trust profiles shipped**
+  (`feat/trader-profiles` → `feat/consensus-engine`, 5 gate-green phases; spec
+  `run-prompts/RUN-TRADER-PROFILES.md`). Durable never-stop `trader_fills` archive (migration 026,
+  both sides, deduped, gap-aware, Semaphore + 429 metric); leak-free multi-outcome resolution
+  ledger fed by an INDEPENDENT unresolved source (no survivorship bias); earned-trust verdicts =
+  surplus-over-own-band-blind, ≥30 distinct events, Bonferroni across slices, one-sided bound (ZERO
+  new stats — reuses the promotion gate); surfaced via `/trader`, `/trustedtraders`, and a board
+  trust table; silent default-OFF `trust_weighted`/`trusted_only` consensus arms judged in the
+  experimental family. Live-verified on throwaway PG (skilled⇒Trusted, negative⇒Avoid,
+  10-event⇒Indeterminate, FLB favorite-loader neutralized to ~0 surplus). Live `strict`
+  non-regressive (tiering = net_count). Forward-measured + accruing — every profile reads
+  INDETERMINATE until the archive fills. Report: `reports/entries/09`.
 - 2026-06-29 (levers run): **ML cross-check arms + every-minute polling + CLV shipped**
   (`lever/ml-fastpoll` → `feat/consensus-engine`, 6 gate-green phases). CLV instrumentation
   (`our_clv`/`capture_lag`, event-clustered) on the scoreboard + board + `/consensus`. `xgb.rs`

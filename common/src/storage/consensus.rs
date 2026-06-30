@@ -915,6 +915,24 @@ impl PgPortfolio {
         Ok((slices, gap.map(|(g,)| g).unwrap_or(0)))
     }
 
+    /// Prune resolved-or-not trader fills older than `retention_days`. Default
+    /// retention is 0 (keep-all) — the durable archive is the whole point — so
+    /// this only deletes when a positive retention is configured. Durability is
+    /// the existing daily pg_dump (`scripts/consensus-backup.sh`). Returns rows
+    /// pruned.
+    pub async fn prune_trader_fills(&self, retention_days: i64) -> Result<u64> {
+        if retention_days <= 0 {
+            return Ok(0);
+        }
+        let res =
+            sqlx::query("DELETE FROM trader_fills WHERE ts < NOW() - make_interval(days => $1)")
+                .bind(retention_days as i32)
+                .execute(&self.pool)
+                .await
+                .context("prune_trader_fills")?;
+        Ok(res.rows_affected())
+    }
+
     /// Map of lower-cased wallet → `capture_gap_count` for traders that have
     /// captured at least one poll. Used by the board to flag partial capture.
     pub async fn capture_gaps(&self) -> Result<std::collections::HashMap<String, i32>> {

@@ -186,6 +186,17 @@ pub async fn housekeeping_cycle(
     if fills_resolved > 0 {
         tracing::info!(fills_resolved, "Trader fills resolved");
     }
+    // Retention prune (default 0 = keep-all, the durable archive is the point).
+    if cfg.trader_fills_retention_days > 0 {
+        match portfolio
+            .prune_trader_fills(cfg.trader_fills_retention_days)
+            .await
+        {
+            Ok(n) if n > 0 => tracing::info!(pruned = n, "Trader fills pruned (retention)"),
+            Ok(_) => {}
+            Err(e) => tracing::warn!(err = %e, "prune_trader_fills failed"),
+        }
+    }
     if consensus_resolved > 0
         && let Ok((res, won, _, _)) = portfolio.consensus_scoreboard().await
     {

@@ -141,6 +141,7 @@ async fn render(portfolio: &PgPortfolio) -> String {
         .await
         .unwrap_or_default();
     let tracked = portfolio.count_tracked_traders().await.unwrap_or(0);
+    let n429 = polymarket_common::metrics::data_api_429_count();
     let pp = PromotionParams::default();
     let n = rows.len();
     // Bonferroni denominator PER FAMILY: experimental arms are corrected among
@@ -217,7 +218,7 @@ async fn render(portfolio: &PgPortfolio) -> String {
          .note{{color:#8a93a3;font-size:12px;margin-top:18px;border-top:1px solid #1c2128;padding-top:14px}}\
          </style></head><body>\
          <h1>🤝 Consensus scoreboard</h1>\
-         <p class=sub>Tracking {tracked} top traders · {n} strategies forward · auto-refresh 30s</p>\
+         <p class=sub>Tracking {tracked} top traders · {n} strategies forward · data-api 429s: {n429} · auto-refresh 30s</p>\
          {body}\
          <p class=note><b>surplus</b> = edge over the band-matched blind baseline (favorite-longshot-neutralized) — \
          the real signal. <b>lower bound</b> = Bonferroni-corrected 1-sided bound. ✅ = passes the belief-blind \
