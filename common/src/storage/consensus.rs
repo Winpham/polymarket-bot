@@ -835,9 +835,19 @@ impl PgPortfolio {
     /// numbers only; the verdict (gate reuse) lives in the binary
     /// (`scanner::trader_trust`). This mirrors `consensus_scoreboard_by_strategy`
     /// exactly but keyed by wallet/slice with a **trader_fills-native band-blind
-    /// baseline**: the fleet's per-band average advantage neutralizes
+    /// baseline**: the *tracked fleet's* per-band average advantage neutralizes
     /// favorite-longshot loading natively, so `surplus = AVG_event(a − blind[band])`
     /// is the only edge that isn't gamed by loading favorites.
+    ///
+    /// HONEST NOTE on the baseline (audited 2026-06-29): the blind is the average
+    /// over EVERY tracked wallet's fills in that band, INCLUDING the scored
+    /// wallet's own. So `surplus` measures "beats the average tracked sharp in
+    /// that band," not "beats the open market," and a wallet that dominates a
+    /// thinly-populated band partly cancels its own surplus. Both effects are
+    /// CONSERVATIVE (they pull toward INDETERMINATE — never manufacture a false
+    /// `Trusted`) and the self-share of the fleet-wide `overall` blind is tiny, so
+    /// the headline verdict is unaffected in practice. A leave-one-out baseline is
+    /// a candidate refinement if a single wallet ever dominates the fleet.
     ///
     /// Everything is **event-clustered**: per-fill advantage is averaged to the
     /// `COALESCE(event_slug, condition_id)` level first, then across events — so

@@ -140,18 +140,24 @@ pub async fn handle_command(
                     }
                     Ok(_) => format!(
                         "🪪 No resolved fills captured yet for `{}…` — its profile builds forward as its markets close.",
-                        &arg[..8.min(arg.len())]
+                        short_id(arg, 8)
                     ),
                     Err(e) => format!("⚠️ Failed to load trader profile: {e}"),
                 }
             }
         }
-        // Tracked traders ranked by EARNED trust (not leaderboard rank).
+        // Tracked traders ranked by EARNED trust (not leaderboard rank). TTL-cached
+        // (shared with the board) — this is a full-archive aggregation.
         "trustedtraders" | "traders-by-trust" => {
-            match portfolio.trader_slice_scores().await {
-                Ok(scores) if !scores.is_empty() => format_traders_by_trust(scores),
-                Ok(_) => "🏅 No resolved trader fills yet — the earned-trust ranking builds forward as markets close.".to_string(),
-                Err(e) => format!("⚠️ Failed to load earned-trust ranking: {e}"),
+            let scores = crate::scanner::trader_trust::cached_slice_scores(
+                portfolio,
+                std::time::Duration::from_secs(30),
+            )
+            .await;
+            if scores.is_empty() {
+                "🏅 No resolved trader fills yet — the earned-trust ranking builds forward as markets close.".to_string()
+            } else {
+                format_traders_by_trust(scores)
             }
         }
         "leaderboard" => {
@@ -189,7 +195,7 @@ pub async fn handle_command(
                     "Usage: `/follow <wallet_address>`\n\nTip: use /leaderboard to browse top traders — wallet addresses are shown there for easy copy.".to_string()
                 } else {
                     let wallet = arg.to_string();
-                    let short = &wallet[..8.min(wallet.len())];
+                    let short = short_id(&wallet, 8);
                     let strat_key = format!("copy:{short}");
                     if let Err(e) = portfolio
                         .ensure_key(
@@ -210,7 +216,7 @@ pub async fn handle_command(
                         tracing::warn!(err = %e, "Failed to init copy trader starting bankroll");
                     }
                     let username = fetch_trader_username(http, &wallet).await;
-                    let display = username.as_deref().unwrap_or(short);
+                    let display = username.as_deref().unwrap_or(&short);
                     match portfolio
                         .add_followed_trader(
                             &wallet,
@@ -241,7 +247,7 @@ pub async fn handle_command(
                 } else {
                     match portfolio.deactivate_trader(arg).await {
                         Ok(()) => {
-                            let short = &arg[..8.min(arg.len())];
+                            let short = short_id(arg, 8);
                             format!("✅ Unfollowed `{short}...`")
                         }
                         Err(e) => format!("⚠️ Failed to unfollow: {e}"),
@@ -271,7 +277,7 @@ pub async fn handle_command(
 /// (grey/indeterminate is shown as such). Capture gaps are flagged.
 fn format_trader_profile(wallet: &str, slices: &[TraderSliceStat], gap: i32) -> String {
     let t = trust_verdict(slices);
-    let short = &wallet[..10.min(wallet.len())];
+    let short = short_id(wallet, 10);
     let pct = |x: f64| format!("{:+.1}%", x * 100.0);
 
     let mut out = format!(
@@ -363,7 +369,7 @@ fn format_traders_by_trust(scores: Vec<TraderSliceStat>) -> String {
     let pct = |x: f64| format!("{:+.1}%", x * 100.0);
     let mut out = String::from("🏅 *Traders by earned trust* (forward-measured)\n");
     for t in verdicts.iter().take(25) {
-        let short = &t.wallet[..10.min(t.wallet.len())];
+        let short = short_id(&t.wallet, 10);
         let bound = match t.verdict {
             TrustVerdict::Avoid => format!("ub {}", pct(t.upper_bound)),
             TrustVerdict::Trusted => format!("lb {}", pct(t.lower_bound)),
@@ -383,6 +389,13 @@ fn format_traders_by_trust(scores: Vec<TraderSliceStat>) -> String {
     out
 }
 
+/// Char-safe short id: first `n` CHARS, never a byte slice. `&s[..n]` panics on a
+/// non-char-boundary, and `/trader <arg>` (not owner-gated) takes arbitrary user
+/// text — a multibyte arg would otherwise crash the command task and the process.
+fn short_id(s: &str, n: usize) -> String {
+    s.chars().take(n).collect()
+}
+
 /// Friendly display token for a slice (kind, key) in profile output.
 fn slice_tag(kind: &str, key: &str) -> String {
     match kind {
@@ -395,6 +408,15 @@ fn slice_tag(kind: &str, key: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn short_id_is_char_safe_on_multibyte() {
+        // Byte-slicing `&s[..8]` would panic mid-char here; short_id must not.
+        assert_eq!(short_id("你好世界", 8), "你好世界"); // fewer than 8 chars → whole string
+        assert_eq!(short_id("🎰x🎰yz", 3), "🎰x🎰");
+        assert_eq!(short_id("0xabcdef1234", 8), "0xabcdef");
+        assert_eq!(short_id("", 8), "");
+    }
 
     fn slice(
         kind: &str,

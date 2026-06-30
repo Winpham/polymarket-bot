@@ -57,7 +57,13 @@ fn pct(x: Option<f64>) -> String {
 /// trader with resolved fills, ranked by earned trust, with best/worst games,
 /// surplus ± bound, and capture completeness. Empty until fills resolve.
 async fn render_trust(portfolio: &PgPortfolio) -> String {
-    let scores = portfolio.trader_slice_scores().await.unwrap_or_default();
+    // TTL-cached: the board auto-refreshes every 30s, and this is a full-archive
+    // aggregation — recomputing it per render would re-scan the whole table.
+    let scores = crate::scanner::trader_trust::cached_slice_scores(
+        portfolio,
+        std::time::Duration::from_secs(30),
+    )
+    .await;
     if scores.is_empty() {
         return String::new();
     }
@@ -116,7 +122,7 @@ async fn render_trust(portfolio: &PgPortfolio) -> String {
             Some(g) if *g > 0 => format!("⚠ {g} gaps"),
             _ => "✓".to_string(),
         };
-        let short = &t.wallet[..12.min(t.wallet.len())];
+        let short: String = t.wallet.chars().take(12).collect();
         out.push_str(&format!(
             "<tr><td>{marker}</td><td class=mono>{short}…</td><td class=r>{ev}</td>\
              <td class=\"r {scls}\">{surplus}</td><td class=r>{bound}</td>\

@@ -18,6 +18,34 @@
 use polymarket_common::storage::consensus::TraderSliceStat;
 
 use crate::scanner::promotion::{PromotionParams, surplus_bounds};
+use crate::storage::postgres::PgPortfolio;
+
+/// Process-global TTL cache of the fleet's slice scores. `trader_slice_scores` is
+/// a full-table aggregation over the unbounded-growth `trader_fills` archive; the
+/// board re-renders every 30s and `/trustedtraders` lists the whole fleet, so
+/// without a cache each request re-scans the entire archive. The inputs only
+/// change as markets resolve (~daily), so a short TTL is ample. The refresh runs
+/// under the lock so concurrent callers don't stampede the DB.
+type SliceCache = tokio::sync::Mutex<Option<(std::time::Instant, Vec<TraderSliceStat>)>>;
+static SLICE_CACHE: std::sync::OnceLock<SliceCache> = std::sync::OnceLock::new();
+
+/// Fleet slice scores, served from a `ttl`-bounded process cache (refreshed on
+/// miss). Returns a clone; empty on any DB error.
+pub async fn cached_slice_scores(
+    pf: &PgPortfolio,
+    ttl: std::time::Duration,
+) -> Vec<TraderSliceStat> {
+    let cell = SLICE_CACHE.get_or_init(|| tokio::sync::Mutex::new(None));
+    let mut g = cell.lock().await;
+    if let Some((at, v)) = g.as_ref()
+        && at.elapsed() < ttl
+    {
+        return v.clone();
+    }
+    let fresh = pf.trader_slice_scores().await.unwrap_or_default();
+    *g = Some((std::time::Instant::now(), fresh.clone()));
+    fresh
+}
 
 /// The earned-trust verdict for one wallet.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -240,8 +268,22 @@ mod tests {
         let url = std::env::var("DATABASE_URL").expect("DATABASE_URL");
         let pool = sqlx::PgPool::connect(&url).await.unwrap();
         let pf = PgPortfolio::new(pool.clone()).await.unwrap();
-        // Deterministic blind baseline: this test owns the whole table (throwaway DB).
-        sqlx::query("DELETE FROM trader_fills")
+        // SAFETY (code-enforced, not documented): this test seeds a controlled
+        // `tt_*` population and its band-blind baseline assumes trader_fills holds
+        // ONLY that. Refuse to run if ANY non-`tt_` fill exists — that makes it
+        // impossible to wipe a populated / prod archive (which holds `0x…`
+        // wallets). Run only against a throwaway DB, serially.
+        let (foreign,): (i64,) =
+            sqlx::query_as("SELECT COUNT(*) FROM trader_fills WHERE wallet NOT LIKE 'tt\\_%'")
+                .fetch_one(&pool)
+                .await
+                .unwrap();
+        assert_eq!(
+            foreign, 0,
+            "refusing to run: trader_fills has {foreign} non-test rows — run against a throwaway DB"
+        );
+        // Scoped clean (never a bare table wipe).
+        sqlx::query("DELETE FROM trader_fills WHERE wallet LIKE 'tt\\_%'")
             .execute(&pool)
             .await
             .unwrap();
@@ -354,7 +396,7 @@ mod tests {
             "FLB loader is not Trusted"
         );
 
-        sqlx::query("DELETE FROM trader_fills WHERE wallet LIKE 'tt_%'")
+        sqlx::query("DELETE FROM trader_fills WHERE wallet LIKE 'tt\\_%'")
             .execute(&pool)
             .await
             .unwrap();
