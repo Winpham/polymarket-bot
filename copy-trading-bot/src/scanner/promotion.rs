@@ -162,8 +162,6 @@ pub fn promotion_verdict(
 /// the Trusted test uses `lo > margin`; the symmetric Avoid test uses
 /// `hi < -margin`. `n_comparisons` is the Bonferroni denominator (the wallet's
 /// slice count, when used for trader trust).
-// Consumed by `scanner::trader_trust` (Phase 3 surfacing wires the call sites).
-#[allow(dead_code)]
 pub fn surplus_bounds(
     distinct_events: i64,
     surplus: f64,

@@ -14,11 +14,6 @@
 //! blind baseline + one-sided bound + event floor are the rigor; shrinking too
 //! would double-penalize N. (Shrink-toward-0 lives only on the continuous
 //! `earned_quality` weight in Phase 4, where it regularizes a multiplier.)
-//!
-// Surfacing (`/trader`, `/traders-by-trust`, board) wires this in Phase 3 and
-// consensus weighting in Phase 4; until then the public verdict API is exercised
-// only by tests, so the module tolerates dead code.
-#![allow(dead_code)]
 
 use polymarket_common::storage::consensus::TraderSliceStat;
 

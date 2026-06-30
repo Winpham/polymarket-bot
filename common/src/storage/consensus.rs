@@ -892,6 +892,41 @@ impl PgPortfolio {
         .context("trader_slice_scores")?;
         Ok(rows)
     }
+
+    /// One wallet's slice scores (filtered from the fleet query so the band-blind
+    /// baseline stays fleet-wide) plus its `capture_gap_count` (so the surface can
+    /// flag "⚠ partial capture"). `wallet` is matched case-insensitively against
+    /// the lower-cased `trader_fills.wallet`.
+    pub async fn trader_profile(&self, wallet: &str) -> Result<(Vec<TraderSliceStat>, i32)> {
+        let w = wallet.to_lowercase();
+        let slices: Vec<TraderSliceStat> = self
+            .trader_slice_scores()
+            .await?
+            .into_iter()
+            .filter(|s| s.wallet == w)
+            .collect();
+        let gap: Option<(i32,)> = sqlx::query_as(
+            "SELECT capture_gap_count FROM followed_traders WHERE LOWER(proxy_wallet) = $1",
+        )
+        .bind(&w)
+        .fetch_optional(&self.pool)
+        .await
+        .context("trader_profile (gap)")?;
+        Ok((slices, gap.map(|(g,)| g).unwrap_or(0)))
+    }
+
+    /// Map of lower-cased wallet → `capture_gap_count` for traders that have
+    /// captured at least one poll. Used by the board to flag partial capture.
+    pub async fn capture_gaps(&self) -> Result<std::collections::HashMap<String, i32>> {
+        let rows: Vec<(String, i32)> = sqlx::query_as(
+            "SELECT LOWER(proxy_wallet), capture_gap_count FROM followed_traders \
+             WHERE capture_started_at IS NOT NULL",
+        )
+        .fetch_all(&self.pool)
+        .await
+        .context("capture_gaps")?;
+        Ok(rows.into_iter().collect())
+    }
 }
 
 /// One point on a signal's trajectory ("stock chart").
