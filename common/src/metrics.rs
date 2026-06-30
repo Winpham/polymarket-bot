@@ -177,6 +177,12 @@ pub fn record_consensus_resolution(strategy: &str, won: bool, is_sports: bool) {
     .increment(1);
 }
 
+/// Record a data-api HTTP 429 (rate-limited). The scale gate (Phase 5) only
+/// widens the tracked universe / cadence once this rate is ≈ 0.
+pub fn record_data_api_429() {
+    counter!("consensus_data_api_429_total").increment(1);
+}
+
 /// Publish a strategy's live forward-tracking scoreboard as gauges.
 pub fn record_consensus_strategy_score(strategy: &str, resolved: i64, hit_rate: f64, edge: f64) {
     gauge!("consensus_strategy_resolved", "strategy" => strategy.to_string()).set(resolved as f64);

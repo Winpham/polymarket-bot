@@ -115,6 +115,22 @@ pub struct CopyTradingConfig {
     #[config(env = "CONSENSUS_INCREMENTAL", default = true)]
     pub consensus_incremental: bool,
 
+    /// Max concurrent data-api `/activity` polls in the consensus fan-out. The
+    /// poll fan-out is otherwise an unbounded `join_all` burst; this Semaphore
+    /// caps it so widening the tracked universe can't spike the data-api into
+    /// 429s. Raise only after the 429 rate (Phase 5 board metric) stays ≈ 0.
+    #[config(env = "CONSENSUS_MAX_CONCURRENCY", default = 8)]
+    pub consensus_max_concurrency: usize,
+
+    /// Build consensus books from the durable `trader_fills` archive instead of
+    /// the `consensus_vote_window` table. Default false (byte-identical legacy
+    /// path). When true, `quality` is re-derived from each trader's CURRENT rank
+    /// at load — this can shift the *ranking* `score` slightly, but live `strict`
+    /// alerts are unaffected because tiering keys on `net_count`. Both tables are
+    /// dual-written this release for instant rollback.
+    #[config(env = "CONSENSUS_BOOKS_FROM_FILLS", default = false)]
+    pub consensus_books_from_fills: bool,
+
     // --- Silent cross-check arms (Phase 4). All default OFF: an arm runs only
     //     when its flag is ON *and* its model file loads; emitted rows are silent
     //     (never alert) and judged by the belief-blind gate in the experimental

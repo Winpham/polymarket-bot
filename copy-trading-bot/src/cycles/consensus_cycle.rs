@@ -6,11 +6,13 @@
 //! for forward edge tracking.
 
 use std::collections::{HashMap, HashSet};
+use std::sync::Arc;
 use std::time::Duration;
 
 use anyhow::Result;
 use chrono::{DateTime, Utc};
 use futures_util::future::join_all;
+use tokio::sync::Semaphore;
 
 use crate::config::CopyTradingConfig;
 use crate::data::models::{fetch_clob_market, fetch_market_by_slug, fetch_price_history};
@@ -19,9 +21,9 @@ use crate::scanner::consensus::{
     BackerInfo, ConsensusParams, ConsensusSignal, MarketBook, StrategyDef, Tier, TraderVote,
     default_portfolio, quality_weight, score_all_strategies,
 };
-use crate::scanner::copy_trader::{CopyTraderMonitor, TraderTrade};
+use crate::scanner::copy_trader::{CopyTraderMonitor, PollResult, TraderTrade};
 use crate::scanner::enrich::{EnrichCtx, EnrichMargins, EnrichModels, MarketCtx, enrich_all};
-use crate::storage::consensus::{NewConsensusSignal, WindowVote};
+use crate::storage::consensus::{NewConsensusSignal, NewTraderFill, WindowVote};
 use crate::storage::postgres::{FollowedTrader, PgPortfolio};
 use crate::telegram::notifier::TelegramNotifier;
 use polymarket_common::model::features::MarketFeatures;
@@ -72,6 +74,106 @@ fn is_sports(title: &str, slug: &str) -> bool {
     SLUG_PATS.iter().any(|p| s.contains(p)) || TITLE_PATS.iter().any(|p| t.contains(p))
 }
 
+/// FROZEN slug/title-derived sport (or domain) bucket, the single source of
+/// truth for `trader_fills.sport`. Computed once at capture so every query site
+/// shares one classification (no SQL slug-CASE drift). Buckets cover the active
+/// leaderboard universe; anything unrecognized is `other`. A finer Gamma
+/// `category` would require a per-market fetch — deferred (cost-zero).
+fn sport_bucket(title: &str, slug: &str) -> String {
+    let s = slug.to_lowercase();
+    let t = title.to_lowercase();
+    let has = |pats: &[&str]| pats.iter().any(|p| s.contains(p) || t.contains(p));
+    // Specific sports/esports first (slug prefixes are the reliable signal).
+    if has(&["nba-", "nba "]) {
+        "nba"
+    } else if has(&["nfl-", "nfl "]) {
+        "nfl"
+    } else if has(&["mlb-", "mlb "]) {
+        "mlb"
+    } else if has(&["nhl-", "nhl "]) {
+        "nhl"
+    } else if has(&["-cs2-", "cs2", "counter-strike"]) {
+        "cs2"
+    } else if has(&["lol-", "-lol-", "league-of-legends"]) {
+        // NB: keep these slug-scoped — bare league abbreviations like "lec"
+        // collide with common words ("e-lec-tion"), so we don't use them.
+        "lol"
+    } else if has(&["dota", "dota2"]) {
+        "dota"
+    } else if has(&["atp-", "wta-", "tennis"]) {
+        "tennis"
+    } else if has(&["ufc-", "ufc ", "mma"]) {
+        "ufc"
+    } else if has(&[
+        "fifwc",
+        "ucl-",
+        "epl-",
+        "laliga",
+        "soccer",
+        "fifa",
+        "-fc-",
+        " fc ",
+        "bundesliga",
+        "serie-a",
+        "ligue",
+    ]) {
+        "soccer"
+    } else if has(&[
+        "bitcoin", "ethereum", "-btc-", "-eth-", "crypto", "solana", "-sol-", "dogecoin",
+    ]) {
+        "crypto"
+    } else if has(&[
+        "election",
+        "president",
+        "trump",
+        "biden",
+        "senate",
+        "congress",
+        "politic",
+        "governor",
+        "parliament",
+    ]) {
+        "politics"
+    } else {
+        "other"
+    }
+    .to_string()
+}
+
+/// Convert one polled trade into a durable archive fill (BOTH sides). `None`
+/// drops trades we can't key (missing outcome index) or whose price is
+/// degenerate. `wallet_lc` is the lower-cased wallet (matches the window path's
+/// distinctness convention and `load_buy_fills_since`'s join). `sport`/`is_sports`
+/// are frozen here — the single source of truth for the trust slices (P2).
+fn trade_to_fill(wallet_lc: &str, tr: &TraderTrade) -> Option<NewTraderFill> {
+    let oidx = tr.outcome_index?;
+    if !(tr.price > 0.0 && tr.price < 1.0) {
+        return None;
+    }
+    if tr.side != "BUY" && tr.side != "SELL" {
+        return None;
+    }
+    let title = tr.title.clone().unwrap_or_else(|| tr.slug.clone());
+    let is_sports = is_sports(&title, &tr.slug);
+    let sport = sport_bucket(&title, &tr.slug);
+    Some(NewTraderFill {
+        wallet: wallet_lc.to_string(),
+        tx_hash: tr.tx_hash.clone(),
+        condition_id: tr.condition_id.clone(),
+        outcome_index: oidx,
+        outcome: tr.outcome.clone().unwrap_or_else(|| oidx.to_string()),
+        side: tr.side.clone(),
+        price: tr.price,
+        size_usd: tr.size_usd,
+        title,
+        slug: tr.slug.clone(),
+        event_slug: tr.event_slug.clone(),
+        is_sports,
+        sport: Some(sport),
+        ts: tr.timestamp,
+    })
+}
+
 #[allow(clippy::too_many_arguments)]
 pub async fn consensus_cycle(
     portfolio: &PgPortfolio,
@@ -95,9 +197,9 @@ pub async fn consensus_cycle(
     // the legacy poll-the-whole-window path. Both assemble identical books via
     // `books_from_window_votes`, so the live `strict` behavior is non-regressive.
     let (book_vec, polled_ok) = if cfg.consensus_incremental {
-        ingest_incremental(portfolio, monitor, &traders, now, window_start).await?
+        ingest_incremental(portfolio, monitor, &traders, now, window_start, cfg).await?
     } else {
-        ingest_legacy(monitor, &traders, window_start).await
+        ingest_legacy(monitor, &traders, window_start, cfg).await
     };
 
     // Serialize the raw vote atoms ONCE per (market, outcome) — strategy-agnostic.
@@ -295,20 +397,26 @@ async fn ingest_legacy(
     monitor: &CopyTraderMonitor,
     traders: &[FollowedTrader],
     window_start: DateTime<Utc>,
+    cfg: &CopyTradingConfig,
 ) -> (Vec<MarketBook>, usize) {
+    let sem = Arc::new(Semaphore::new(cfg.consensus_max_concurrency.max(1)));
     let polls = traders.iter().map(|t| {
         let wallet = t.proxy_wallet.clone();
-        async move { (t, monitor.poll_trader_activity(&wallet, window_start).await) }
+        let sem = Arc::clone(&sem);
+        async move {
+            let _permit = sem.acquire_owned().await;
+            (t, monitor.poll_trader_activity(&wallet, window_start).await)
+        }
     });
     let results = join_all(polls).await;
 
     let mut votes = Vec::new();
     let mut polled_ok = 0usize;
-    for (trader, trades) in results {
-        let trades = match trades {
-            Ok(t) => {
+    for (trader, poll) in results {
+        let trades = match poll {
+            Ok(r) => {
                 polled_ok += 1;
-                t
+                r.trades
             }
             Err(e) => {
                 tracing::debug!(wallet = %trader.proxy_wallet, err = %e, "Consensus poll failed");
@@ -339,9 +447,13 @@ async fn ingest_incremental(
     traders: &[FollowedTrader],
     now: DateTime<Utc>,
     window_start: DateTime<Utc>,
+    cfg: &CopyTradingConfig,
 ) -> Result<(Vec<MarketBook>, usize)> {
     let cursors = portfolio.consensus_cursors().await.unwrap_or_default();
 
+    // Bounded fan-out: a Semaphore caps concurrent data-api polls so widening
+    // the tracked universe can't burst the API into 429s.
+    let sem = Arc::new(Semaphore::new(cfg.consensus_max_concurrency.max(1)));
     let polls = traders.iter().map(|t| {
         let wallet = t.proxy_wallet.clone();
         let since = cursors
@@ -349,15 +461,22 @@ async fn ingest_incremental(
             .copied()
             .map(|c| c.max(window_start))
             .unwrap_or(window_start);
-        async move { (t, monitor.poll_trader_activity(&wallet, since).await) }
+        let sem = Arc::clone(&sem);
+        async move {
+            let _permit = sem.acquire_owned().await;
+            (t, monitor.poll_trader_activity(&wallet, since).await)
+        }
     });
     let results = join_all(polls).await;
 
     let mut delta = Vec::new();
+    let mut fills = Vec::new();
+    // Per-wallet capture bookkeeping: (proxy_wallet, min_ts, max_ts, raw_count).
+    let mut captures: Vec<(String, DateTime<Utc>, DateTime<Utc>, usize)> = Vec::new();
     let mut polled_ok_wallets: Vec<String> = Vec::new();
-    for (trader, trades) in results {
-        let trades = match trades {
-            Ok(t) => t,
+    for (trader, poll) in results {
+        let PollResult { trades, raw_count } = match poll {
+            Ok(r) => r,
             Err(e) => {
                 tracing::debug!(wallet = %trader.proxy_wallet, err = %e, "Consensus poll failed");
                 continue;
@@ -366,10 +485,38 @@ async fn ingest_incremental(
         polled_ok_wallets.push(trader.proxy_wallet.clone());
         let name = trader_name(trader);
         let quality = quality_weight(trader.rank);
+        let wallet_lc = trader.proxy_wallet.to_lowercase();
+        // Capture once, use twice: the SAME poll feeds the consensus window
+        // (BUY-only votes) and the durable archive (both sides).
+        let mut min_ts: Option<DateTime<Utc>> = None;
+        let mut max_ts: Option<DateTime<Utc>> = None;
         for tr in &trades {
+            min_ts = Some(min_ts.map_or(tr.timestamp, |m| m.min(tr.timestamp)));
+            max_ts = Some(max_ts.map_or(tr.timestamp, |m| m.max(tr.timestamp)));
             if let Some(v) = trade_to_window_vote(trader, &name, quality, tr) {
                 delta.push(v);
             }
+            if let Some(f) = trade_to_fill(&wallet_lc, tr) {
+                fills.push(f);
+            }
+        }
+        if let (Some(mn), Some(mx)) = (min_ts, max_ts) {
+            captures.push((trader.proxy_wallet.clone(), mn, mx, raw_count));
+        }
+    }
+
+    // Durable archive: persist BOTH sides (best-effort; failure never blocks the
+    // consensus window). This is what makes the trader-trust profiles possible.
+    let fills_inserted = match portfolio.insert_trader_fills(&fills).await {
+        Ok(n) => n,
+        Err(e) => {
+            tracing::warn!(err = %e, "insert_trader_fills failed");
+            0
+        }
+    };
+    for (wallet, mn, mx, rc) in &captures {
+        if let Err(e) = portfolio.record_capture(wallet, *mn, *mx, *rc).await {
+            tracing::debug!(wallet = %wallet, err = %e, "record_capture failed");
         }
     }
 
@@ -394,15 +541,31 @@ async fn ingest_incremental(
         .prune_window_votes(window_start)
         .await
         .unwrap_or(0);
-    let window = portfolio
-        .load_window_votes(window_start)
-        .await
-        .unwrap_or_default();
+
+    // Book source (flagged cutover, dual-write above): default = the rolling
+    // `consensus_vote_window`; when CONSENSUS_BOOKS_FROM_FILLS=true, the durable
+    // archive (re-derived quality). Both return the WindowVote shape so the
+    // single book builder is reused — and tiering keys on net_count, so live
+    // `strict` alerts are non-regressive under either source.
+    let window = if cfg.consensus_books_from_fills {
+        portfolio
+            .load_buy_fills_since(window_start)
+            .await
+            .unwrap_or_default()
+    } else {
+        portfolio
+            .load_window_votes(window_start)
+            .await
+            .unwrap_or_default()
+    };
 
     tracing::info!(
         delta = delta.len(),
+        fills = fills.len(),
+        fills_inserted,
         pruned,
         window = window.len(),
+        books_from_fills = cfg.consensus_books_from_fills,
         "Consensus incremental ingest"
     );
     Ok((books_from_window_votes(&window), polled_ok_wallets.len()))
@@ -627,5 +790,62 @@ fn truncate(s: &str, max: usize) -> String {
     } else {
         let t: String = s.chars().take(max.saturating_sub(1)).collect();
         format!("{t}…")
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn sport_bucket_classifies_known_domains() {
+        assert_eq!(
+            sport_bucket("Spread: Bucks (-6.5)", "nba-ind-mil-2026-03-15-spread"),
+            "nba"
+        );
+        assert_eq!(
+            sport_bucket("CS2: NAVI vs FaZe", "esports-cs2-navi-faze"),
+            "cs2"
+        );
+        assert_eq!(
+            sport_bucket("Will Trump win?", "presidential-election-2028"),
+            "politics"
+        );
+        assert_eq!(
+            sport_bucket("Bitcoin above 100k?", "bitcoin-100k-2026"),
+            "crypto"
+        );
+        // Unrecognized → the explicit catch-all, never a silent empty string.
+        assert_eq!(
+            sport_bucket("Random question", "random-market-slug"),
+            "other"
+        );
+    }
+
+    #[test]
+    fn trade_to_fill_keeps_both_sides_and_drops_unkeyable() {
+        let mk = |side: &str, oidx: Option<i32>, price: f64| TraderTrade {
+            slug: "nba-x".into(),
+            condition_id: "0xc".into(),
+            side: side.into(),
+            price,
+            size_usd: 100.0,
+            tx_hash: Some("0xtx".into()),
+            timestamp: Utc::now(),
+            outcome_index: oidx,
+            outcome: Some("Yes".into()),
+            title: Some("Spread: x".into()),
+            event_slug: Some("nba-x".into()),
+        };
+        // BUY and SELL both captured for the durable ledger.
+        assert!(trade_to_fill("0xw", &mk("BUY", Some(0), 0.5)).is_some());
+        let sell = trade_to_fill("0xw", &mk("SELL", Some(1), 0.5)).unwrap();
+        assert_eq!(sell.side, "SELL");
+        assert_eq!(sell.wallet, "0xw");
+        assert_eq!(sell.sport.as_deref(), Some("nba"));
+        // Missing outcome index ⇒ can't key ⇒ dropped.
+        assert!(trade_to_fill("0xw", &mk("BUY", None, 0.5)).is_none());
+        // Degenerate price ⇒ dropped.
+        assert!(trade_to_fill("0xw", &mk("BUY", Some(0), 1.0)).is_none());
     }
 }
