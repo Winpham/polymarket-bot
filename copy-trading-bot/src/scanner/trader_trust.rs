@@ -30,21 +30,24 @@ type SliceCache = tokio::sync::Mutex<Option<(std::time::Instant, Vec<TraderSlice
 static SLICE_CACHE: std::sync::OnceLock<SliceCache> = std::sync::OnceLock::new();
 
 /// Fleet slice scores, served from a `ttl`-bounded process cache (refreshed on
-/// miss). Returns a clone; empty on any DB error.
+/// miss). A DB error is **propagated** (not masked as empty) and does NOT poison
+/// the cache — the prior good value and its timestamp are left intact, so callers
+/// can surface the error honestly and a transient hiccup never silently renders
+/// as "no data". A successful empty result IS cached (genuinely no fills yet).
 pub async fn cached_slice_scores(
     pf: &PgPortfolio,
     ttl: std::time::Duration,
-) -> Vec<TraderSliceStat> {
+) -> anyhow::Result<Vec<TraderSliceStat>> {
     let cell = SLICE_CACHE.get_or_init(|| tokio::sync::Mutex::new(None));
     let mut g = cell.lock().await;
     if let Some((at, v)) = g.as_ref()
         && at.elapsed() < ttl
     {
-        return v.clone();
+        return Ok(v.clone());
     }
-    let fresh = pf.trader_slice_scores().await.unwrap_or_default();
+    let fresh = pf.trader_slice_scores().await?; // error → cache untouched
     *g = Some((std::time::Instant::now(), fresh.clone()));
-    fresh
+    Ok(fresh)
 }
 
 /// The earned-trust verdict for one wallet.

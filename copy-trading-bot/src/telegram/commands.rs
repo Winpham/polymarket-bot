@@ -149,15 +149,15 @@ pub async fn handle_command(
         // Tracked traders ranked by EARNED trust (not leaderboard rank). TTL-cached
         // (shared with the board) — this is a full-archive aggregation.
         "trustedtraders" | "traders-by-trust" => {
-            let scores = crate::scanner::trader_trust::cached_slice_scores(
+            match crate::scanner::trader_trust::cached_slice_scores(
                 portfolio,
                 std::time::Duration::from_secs(30),
             )
-            .await;
-            if scores.is_empty() {
-                "🏅 No resolved trader fills yet — the earned-trust ranking builds forward as markets close.".to_string()
-            } else {
-                format_traders_by_trust(scores)
+            .await
+            {
+                Ok(scores) if !scores.is_empty() => format_traders_by_trust(scores),
+                Ok(_) => "🏅 No resolved trader fills yet — the earned-trust ranking builds forward as markets close.".to_string(),
+                Err(e) => format!("⚠️ Failed to load earned-trust ranking: {e}"),
             }
         }
         "leaderboard" => {

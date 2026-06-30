@@ -58,15 +58,17 @@ fn pct(x: Option<f64>) -> String {
 /// surplus ± bound, and capture completeness. Empty until fills resolve.
 async fn render_trust(portfolio: &PgPortfolio) -> String {
     // TTL-cached: the board auto-refreshes every 30s, and this is a full-archive
-    // aggregation — recomputing it per render would re-scan the whole table.
-    let scores = crate::scanner::trader_trust::cached_slice_scores(
+    // aggregation — recomputing it per render would re-scan the whole table. On a
+    // DB error, render nothing for this section (the rest of the board still shows).
+    let scores = match crate::scanner::trader_trust::cached_slice_scores(
         portfolio,
         std::time::Duration::from_secs(30),
     )
-    .await;
-    if scores.is_empty() {
-        return String::new();
-    }
+    .await
+    {
+        Ok(s) if !s.is_empty() => s,
+        _ => return String::new(),
+    };
     let gaps = portfolio.capture_gaps().await.unwrap_or_default();
 
     let mut by: std::collections::HashMap<String, Vec<_>> = std::collections::HashMap::new();
