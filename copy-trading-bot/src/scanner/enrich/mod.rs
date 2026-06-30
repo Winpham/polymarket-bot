@@ -148,11 +148,16 @@ impl Default for EnrichMargins {
 /// Pre-fetched per-market data for the market-dependent arms (built once per
 /// cycle for the strict-fired markets, bounded + throttled).
 pub struct MarketCtx {
-    /// Live CLOB mid of the consensus outcome.
+    /// Live CLOB mid of the consensus outcome (the comparison anchor for the
+    /// legacy `arm_market` and for CLV — NOT necessarily the YES-token mid).
     pub clob_mid: f64,
-    /// Full market feature vector (Gamma + price history); `None` if a fetch
-    /// failed or features weren't needed this cycle.
+    /// Full market feature vector (Gamma + price history). Always describes the
+    /// **YES (index-0) token** so an arm can convert `p_yes → p_consensus` via
+    /// `outcome_index`. `None` if a fetch failed or features weren't needed.
     pub features: Option<MarketFeatures>,
+    /// Which outcome the consensus picked. `0` means the consensus outcome IS the
+    /// YES token (so `p_consensus == p_yes`); otherwise `p_consensus == 1 - p_yes`.
+    pub outcome_index: i32,
 }
 
 /// Per-cycle context handed to every arm. An arm reads only what it needs.

@@ -653,8 +653,13 @@ async fn prefetch_markets(
         let Some(mid) = clob.outcome_price(s.outcome_index) else {
             continue;
         };
+        // Features are YES-oriented: `yes_price` = the index-0 (YES) mid, so an arm
+        // converts `p_yes → p_consensus` via `outcome_index`. `clob_mid` stays the
+        // consensus-outcome mid (the legacy arm + CLV anchor). For a binary market
+        // and outcome_index==0 the two mids coincide; the unwrap_or is a safe guard.
         let features = if need_features {
-            build_market_features(http, s, mid).await
+            let yes_mid = clob.outcome_price(0).unwrap_or(mid);
+            build_market_features(http, s, yes_mid).await
         } else {
             None
         };
@@ -663,6 +668,7 @@ async fn prefetch_markets(
             MarketCtx {
                 clob_mid: mid,
                 features,
+                outcome_index: s.outcome_index,
             },
         );
     }
@@ -680,17 +686,23 @@ async fn prefetch_markets(
 async fn build_market_features(
     http: &reqwest::Client,
     s: &ConsensusSignal,
-    mid: f64,
+    yes_mid: f64,
 ) -> Option<MarketFeatures> {
     let gamma = fetch_market_by_slug(http, &s.slug).await.ok()?;
     let token_ids: Vec<String> = gamma
         .clob_token_ids
         .as_ref()
         .and_then(|j| serde_json::from_str(j).ok())?;
-    let token = token_ids.get(s.outcome_index as usize)?;
+    // Binary markets only: YES-oriented features describe the index-0 token, and
+    // an arm recovers `p_consensus` from `p_yes` via `outcome_index`. A non-binary
+    // market has no single complementary YES side, so we skip it (arm no-ops).
+    if token_ids.len() != 2 {
+        return None;
+    }
+    let token = token_ids.first()?;
     let history = fetch_price_history(http, token).await.unwrap_or_default();
     Some(MarketFeatures::from_market_and_history(
-        &gamma, mid, &history,
+        &gamma, yes_mid, &history,
     ))
 }
 
