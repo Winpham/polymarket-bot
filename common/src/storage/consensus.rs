@@ -776,6 +776,58 @@ impl PgPortfolio {
         .context("load_buy_fills_since")?;
         Ok(rows)
     }
+
+    // --- Resolution ledger (Phase 1) ---
+
+    /// Distinct `condition_id`s with unresolved BUY fills older than `min_age`,
+    /// oldest-first, capped at `cap`. This is the INDEPENDENT unresolved source:
+    /// it surfaces markets a trader bet that may never have triggered a consensus
+    /// signal, so resolving only consensus conditions would never settle them and
+    /// profiles would be biased toward markets that happened to fire consensus
+    /// (survivorship). Housekeeping UNIONs this into its resolution set.
+    pub async fn trader_fill_unresolved_conditions(
+        &self,
+        min_age: chrono::Duration,
+        cap: i64,
+    ) -> Result<Vec<String>> {
+        let rows: Vec<(String,)> = sqlx::query_as(
+            "SELECT condition_id FROM trader_fills \
+             WHERE resolved = FALSE AND side = 'BUY' \
+               AND ts < NOW() - make_interval(secs => $1) \
+             GROUP BY condition_id ORDER BY MIN(ts) LIMIT $2",
+        )
+        .bind(min_age.num_seconds() as f64)
+        .bind(cap)
+        .fetch_all(&self.pool)
+        .await
+        .context("trader_fill_unresolved_conditions")?;
+        Ok(rows.into_iter().map(|(c,)| c).collect())
+    }
+
+    /// Resolve every unresolved fill on `condition_id` against the winning token
+    /// index. Multi-outcome correct: `outcome_won = (outcome_index = winner)`.
+    /// `advantage = won::int − price` for BUY (mirrors the consensus gate's
+    /// `edge = won − entry_price`); NULL for SELL (round-trip PnL is a v2
+    /// enhancement). Both sides are marked resolved so they stop reappearing in
+    /// the unresolved source. Returns the number of rows resolved.
+    pub async fn resolve_trader_fills(&self, condition_id: &str, winner_index: i32) -> Result<u64> {
+        let res = sqlx::query(
+            "UPDATE trader_fills SET \
+               resolved    = TRUE, \
+               outcome_won = (outcome_index = $2), \
+               advantage   = CASE WHEN side = 'BUY' \
+                                  THEN ((outcome_index = $2)::int)::double precision - price \
+                                  ELSE NULL END, \
+               resolved_at = NOW() \
+             WHERE condition_id = $1 AND resolved = FALSE",
+        )
+        .bind(condition_id)
+        .bind(winner_index)
+        .execute(&self.pool)
+        .await
+        .context("resolve_trader_fills")?;
+        Ok(res.rows_affected())
+    }
 }
 
 /// One point on a signal's trajectory ("stock chart").
@@ -978,7 +1030,14 @@ mod trader_fills_it {
     //! ```
     use super::*;
 
-    fn fill(wallet: &str, tx: Option<&str>, cond: &str, oidx: i32, price: f64, side: &str) -> NewTraderFill {
+    fn fill(
+        wallet: &str,
+        tx: Option<&str>,
+        cond: &str,
+        oidx: i32,
+        price: f64,
+        side: &str,
+    ) -> NewTraderFill {
         NewTraderFill {
             wallet: wallet.into(),
             tx_hash: tx.map(|s| s.into()),
@@ -1008,15 +1067,26 @@ mod trader_fills_it {
         let w_mixed = "0xTFtestWALLET01";
         let w_lc = w_mixed.to_lowercase();
         for t in [&w_lc, &w_mixed.to_string()] {
-            sqlx::query("DELETE FROM trader_fills WHERE wallet = $1").bind(t).execute(&pf.pool).await.unwrap();
+            sqlx::query("DELETE FROM trader_fills WHERE wallet = $1")
+                .bind(t)
+                .execute(&pf.pool)
+                .await
+                .unwrap();
         }
-        sqlx::query("DELETE FROM followed_traders WHERE proxy_wallet = $1").bind(w_mixed).execute(&pf.pool).await.unwrap();
+        sqlx::query("DELETE FROM followed_traders WHERE proxy_wallet = $1")
+            .bind(w_mixed)
+            .execute(&pf.pool)
+            .await
+            .unwrap();
 
         // --- dedup: tx-level + intra-batch + null-tx content ---
         let a = fill(&w_lc, Some("0xtx1"), "0xc1", 0, 0.50, "BUY");
         let b = fill(&w_lc, Some("0xtx2"), "0xc2", 1, 0.30, "SELL");
         let dup_a = a.clone(); // same tx → dropped
-        let n = pf.insert_trader_fills(&[a.clone(), b.clone(), dup_a]).await.unwrap();
+        let n = pf
+            .insert_trader_fills(&[a.clone(), b.clone(), dup_a])
+            .await
+            .unwrap();
         assert_eq!(n, 2, "intra-batch tx dup dropped");
         let again = pf.insert_trader_fills(&[a, b]).await.unwrap();
         assert_eq!(again, 0, "re-seen tx rows append nothing");
@@ -1043,8 +1113,13 @@ mod trader_fills_it {
             let w = w.to_string();
             let pool = pf.pool.clone();
             async move {
-                let (g,): (i32,) = sqlx::query_as("SELECT capture_gap_count FROM followed_traders WHERE proxy_wallet = $1")
-                    .bind(&w).fetch_one(&pool).await.unwrap();
+                let (g,): (i32,) = sqlx::query_as(
+                    "SELECT capture_gap_count FROM followed_traders WHERE proxy_wallet = $1",
+                )
+                .bind(&w)
+                .fetch_one(&pool)
+                .await
+                .unwrap();
                 g
             }
         };
@@ -1076,11 +1151,114 @@ mod trader_fills_it {
             mine.iter().map(|v| v.quality).collect::<Vec<_>>()
         );
         // SELL fill (0xc2) must be excluded from the BUY book source.
-        assert!(!mine.iter().any(|v| v.condition_id == "0xc2"), "SELL excluded");
+        assert!(
+            !mine.iter().any(|v| v.condition_id == "0xc2"),
+            "SELL excluded"
+        );
 
         // Cleanup.
-        sqlx::query("DELETE FROM trader_fills WHERE wallet = $1").bind(&w_lc).execute(&pf.pool).await.unwrap();
-        sqlx::query("DELETE FROM followed_traders WHERE proxy_wallet = $1").bind(w_mixed).execute(&pf.pool).await.unwrap();
+        sqlx::query("DELETE FROM trader_fills WHERE wallet = $1")
+            .bind(&w_lc)
+            .execute(&pf.pool)
+            .await
+            .unwrap();
+        sqlx::query("DELETE FROM followed_traders WHERE proxy_wallet = $1")
+            .bind(w_mixed)
+            .execute(&pf.pool)
+            .await
+            .unwrap();
         println!("trader_fills_it: dedup/gap/capture/load_buy_fills all OK");
+    }
+
+    #[tokio::test]
+    #[ignore = "requires a live Postgres at $DATABASE_URL with migrations applied"]
+    async fn resolve_multi_outcome_and_void() {
+        let url = std::env::var("DATABASE_URL").expect("DATABASE_URL must be set");
+        let pool = sqlx::PgPool::connect(&url).await.expect("connect");
+        let pf = PgPortfolio::new(pool).await.expect("portfolio");
+
+        let w = "0xtfresolve";
+        let (c_win, c_void) = ("0xcond_resolved", "0xcond_void");
+        for c in [c_win, c_void] {
+            sqlx::query("DELETE FROM trader_fills WHERE condition_id = $1")
+                .bind(c)
+                .execute(&pf.pool)
+                .await
+                .unwrap();
+        }
+
+        // Multi-outcome market: BUY on the winner (idx 1), BUY on a loser (idx 0),
+        // SELL on idx 2 — all at price 0.40. A separate (to-be-void) market.
+        let rows = [
+            fill(w, Some("0xr1"), c_win, 1, 0.40, "BUY"),
+            fill(w, Some("0xr2"), c_win, 0, 0.40, "BUY"),
+            fill(w, Some("0xr3"), c_win, 2, 0.40, "SELL"),
+            fill(w, Some("0xv1"), c_void, 0, 0.40, "BUY"),
+        ];
+        pf.insert_trader_fills(&rows).await.unwrap();
+
+        // Both conds appear in the independent unresolved source (min_age 0).
+        let conds = pf
+            .trader_fill_unresolved_conditions(chrono::Duration::zero(), 100)
+            .await
+            .unwrap();
+        assert!(conds.contains(&c_win.to_string()) && conds.contains(&c_void.to_string()));
+
+        // Resolve c_win with winner index 1; c_void is SKIPPED (housekeeping's
+        // void branch) — its fills must stay unresolved.
+        let n = pf.resolve_trader_fills(c_win, 1).await.unwrap();
+        assert_eq!(n, 3, "all 3 fills on the resolved market settle");
+
+        #[derive(sqlx::FromRow)]
+        struct FillRow {
+            #[allow(dead_code)]
+            outcome_index: i32,
+            side: String,
+            outcome_won: Option<bool>,
+            advantage: Option<f64>,
+            resolved: bool,
+        }
+        let got: Vec<FillRow> = sqlx::query_as(
+            "SELECT outcome_index, side, outcome_won, advantage, resolved \
+             FROM trader_fills WHERE condition_id = $1 ORDER BY outcome_index",
+        )
+        .bind(c_win)
+        .fetch_all(&pf.pool)
+        .await
+        .unwrap();
+        // idx 0 (BUY loser): won=false, advantage = 0 - 0.40 = -0.40.
+        assert_eq!(got[0].outcome_won, Some(false));
+        assert!((got[0].advantage.unwrap() + 0.40).abs() < 1e-9);
+        // idx 1 (BUY winner): won=true, advantage = 1 - 0.40 = 0.60.
+        assert_eq!(got[1].outcome_won, Some(true));
+        assert!((got[1].advantage.unwrap() - 0.60).abs() < 1e-9);
+        // idx 2 (SELL): won marked, advantage NULL (round-trip PnL is v2).
+        assert_eq!(got[2].side, "SELL");
+        assert_eq!(got[2].outcome_won, Some(false));
+        assert!(got[2].advantage.is_none(), "SELL advantage is NULL");
+        assert!(got.iter().all(|r| r.resolved), "all marked resolved");
+
+        // Void market: never resolved → still in the unresolved source.
+        let still: Vec<String> = pf
+            .trader_fill_unresolved_conditions(chrono::Duration::zero(), 100)
+            .await
+            .unwrap();
+        assert!(
+            still.contains(&c_void.to_string()),
+            "void market stays unresolved"
+        );
+        assert!(
+            !still.contains(&c_win.to_string()),
+            "resolved market dropped from source"
+        );
+
+        for c in [c_win, c_void] {
+            sqlx::query("DELETE FROM trader_fills WHERE condition_id = $1")
+                .bind(c)
+                .execute(&pf.pool)
+                .await
+                .unwrap();
+        }
+        println!("trader_fills_it: multi-outcome resolve + void-skip all OK");
     }
 }

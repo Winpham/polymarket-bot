@@ -131,6 +131,12 @@ pub struct CopyTradingConfig {
     #[config(env = "CONSENSUS_BOOKS_FROM_FILLS", default = false)]
     pub consensus_books_from_fills: bool,
 
+    /// Max distinct `trader_fills` conditions to resolve per housekeeping cycle
+    /// via the independent unresolved source (bounds the per-cycle CLOB fetch
+    /// load; markets that don't fit settle on later cycles).
+    #[config(env = "TRADER_FILLS_RESOLVE_PER_CYCLE", default = 200)]
+    pub trader_fills_resolve_per_cycle: i64,
+
     // --- Silent cross-check arms (Phase 4). All default OFF: an arm runs only
     //     when its flag is ON *and* its model file loads; emitted rows are silent
     //     (never alert) and judged by the belief-blind gate in the experimental
