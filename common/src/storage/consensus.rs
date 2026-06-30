@@ -49,6 +49,23 @@ pub struct NewConsensusSignal {
     pub backers_json: serde_json::Value,
 }
 
+/// One row for the forward 29-feature log (`market_feature_log`, migration 028).
+/// Captured at strict-fire time, keyed to its `consensus_signals` row, so the
+/// forward `market_resid` model trains on the bot's OWN survivorship-free
+/// population. `features` is the YES-oriented [`MarketFeatures`] vector as JSON.
+#[derive(Debug, Clone)]
+pub struct NewMarketFeatureLog {
+    pub signal_id: i64,
+    pub condition_id: String,
+    pub outcome_index: i32,
+    /// Did the consensus outcome == the YES (index-0) token (`outcome_index == 0`).
+    pub yes_token: bool,
+    /// Consensus-outcome live mid at capture (audit only; NOT a model feature).
+    pub clob_mid: Option<f64>,
+    /// The 29-wide YES-oriented MarketFeatures vector, serialized.
+    pub features: serde_json::Value,
+}
+
 /// Prior alert state of a signal (captured at upsert time, before any new alert).
 #[derive(Debug, Clone, sqlx::FromRow)]
 pub struct ConsensusAlertState {
@@ -626,6 +643,42 @@ impl PgPortfolio {
         .execute(&self.pool)
         .await
         .context("insert_window_votes")?;
+        Ok(res.rows_affected())
+    }
+
+    /// Append a batch of forward 29-feature snapshots (`market_feature_log`,
+    /// migration 028) in one UNNEST insert. Re-logging the same
+    /// (signal, condition, outcome) keeps the freshest snapshot (the cycle may
+    /// re-upsert a strict signal as its consensus strengthens). Best-effort: the
+    /// caller logs a failure and never blocks the cycle on it.
+    pub async fn log_market_features(&self, rows: &[NewMarketFeatureLog]) -> Result<u64> {
+        if rows.is_empty() {
+            return Ok(0);
+        }
+        let signal_id: Vec<i64> = rows.iter().map(|r| r.signal_id).collect();
+        let condition_id: Vec<&str> = rows.iter().map(|r| r.condition_id.as_str()).collect();
+        let outcome_index: Vec<i32> = rows.iter().map(|r| r.outcome_index).collect();
+        let yes_token: Vec<bool> = rows.iter().map(|r| r.yes_token).collect();
+        let clob_mid: Vec<Option<f64>> = rows.iter().map(|r| r.clob_mid).collect();
+        let features: Vec<serde_json::Value> = rows.iter().map(|r| r.features.clone()).collect();
+
+        let res = sqlx::query(
+            "INSERT INTO market_feature_log \
+               (signal_id, condition_id, outcome_index, yes_token, clob_mid, features) \
+             SELECT * FROM UNNEST( \
+               $1::int8[], $2::text[], $3::int4[], $4::bool[], $5::float8[], $6::jsonb[]) \
+             ON CONFLICT (signal_id, condition_id, outcome_index) DO UPDATE SET \
+               features = EXCLUDED.features, clob_mid = EXCLUDED.clob_mid, captured_at = NOW()",
+        )
+        .bind(&signal_id)
+        .bind(&condition_id)
+        .bind(&outcome_index)
+        .bind(&yes_token)
+        .bind(&clob_mid)
+        .bind(&features)
+        .execute(&self.pool)
+        .await
+        .context("log_market_features")?;
         Ok(res.rows_affected())
     }
 
@@ -1413,5 +1466,164 @@ mod trader_fills_it {
                 .unwrap();
         }
         println!("trader_fills_it: multi-outcome resolve + void-skip all OK");
+    }
+}
+
+#[cfg(test)]
+mod market_feature_log_it {
+    //! Live-DB integration test for the forward 29-feature log (Phase 1).
+    //! Self-contained (runs migrations itself). `#[ignore]`d; run against a
+    //! throwaway Postgres:
+    //!
+    //! ```text
+    //! DATABASE_URL=postgres://bot:bot@localhost:55432/polymarket \
+    //!   cargo test -p polymarket-common market_feature_log_it -- --ignored --nocapture
+    //! ```
+    use super::*;
+    use crate::model::features::MarketFeatures;
+
+    fn zero_feat(yes_price: f64) -> MarketFeatures {
+        MarketFeatures {
+            yes_price,
+            momentum_1h: 0.0,
+            momentum_24h: 0.0,
+            volatility_24h: 0.0,
+            rsi: 0.0,
+            log_volume: 0.0,
+            days_to_expiry: 0.0,
+            is_crypto: 0.0,
+            price_change_1d: 0.0,
+            price_change_1w: 0.0,
+            days_since_created: 0.0,
+            created_to_expiry_span: 0.0,
+            is_sports: 0.0,
+            q_length: 0.0,
+            q_word_count: 0.0,
+            q_avg_word_len: 0.0,
+            q_word_diversity: 0.0,
+            q_has_number: 0.0,
+            q_has_year: 0.0,
+            q_has_percent: 0.0,
+            q_has_dollar: 0.0,
+            q_has_date: 0.0,
+            q_starts_will: 0.0,
+            q_has_by: 0.0,
+            q_has_before: 0.0,
+            q_has_above: 0.0,
+            q_sentiment_pos: 0.0,
+            q_sentiment_neg: 0.0,
+            q_certainty: 0.0,
+        }
+    }
+
+    async fn insert_strict_signal(pf: &PgPortfolio, cond: &str) -> i64 {
+        let (id,): (i32,) = sqlx::query_as(
+            "INSERT INTO consensus_signals \
+               (strategy, condition_id, outcome_index, n_backers, n_opposers, net_count, \
+                net_quality, mean_price, price_std, recency_mins, total_usd, score, tier) \
+             VALUES ('strict', $1, 0, 5, 0, 5, 5.0, 0.5, 0.02, 10, 2000, 1.0, 'WATCH') \
+             RETURNING id",
+        )
+        .bind(cond)
+        .fetch_one(&pf.pool)
+        .await
+        .expect("insert strict signal");
+        id as i64
+    }
+
+    #[tokio::test]
+    #[ignore = "requires a live Postgres at $DATABASE_URL"]
+    async fn log_roundtrip_conflict_cascade() {
+        let url = std::env::var("DATABASE_URL").expect("DATABASE_URL must be set");
+        let pool = sqlx::PgPool::connect(&url).await.expect("connect");
+        let pf = PgPortfolio::new(pool).await.expect("portfolio");
+        pf.run_migrations().await.expect("migrations (incl. 028)");
+
+        sqlx::query("DELETE FROM consensus_signals WHERE condition_id LIKE 'mfl_%'")
+            .execute(&pf.pool)
+            .await
+            .unwrap();
+
+        // Empty batch is a no-op.
+        assert_eq!(pf.log_market_features(&[]).await.unwrap(), 0);
+
+        // Insert a strict signal + log its YES-oriented 29-feature vector.
+        let sid = insert_strict_signal(&pf, "mfl_cond1").await;
+        let row = NewMarketFeatureLog {
+            signal_id: sid,
+            condition_id: "mfl_cond1".into(),
+            outcome_index: 0,
+            yes_token: true,
+            clob_mid: Some(0.44),
+            features: serde_json::to_value(zero_feat(0.42)).unwrap(),
+        };
+        assert_eq!(
+            pf.log_market_features(std::slice::from_ref(&row))
+                .await
+                .unwrap(),
+            1
+        );
+
+        // Read back: right signal_id, captured mid, a 29-named-field JSON object.
+        let (got_sid, feats, mid): (i64, serde_json::Value, Option<f64>) = sqlx::query_as(
+            "SELECT signal_id, features, clob_mid FROM market_feature_log \
+             WHERE condition_id = 'mfl_cond1'",
+        )
+        .fetch_one(&pf.pool)
+        .await
+        .unwrap();
+        assert_eq!(got_sid, sid, "feature log keyed to its signal");
+        assert_eq!(mid, Some(0.44));
+        let obj = feats.as_object().expect("features stored as a JSON object");
+        assert_eq!(
+            obj.len(),
+            MarketFeatures::NAMES.len(),
+            "all 29 named features present"
+        );
+        assert!(obj.contains_key("yes_price") && obj.contains_key("q_certainty"));
+        assert_eq!(obj["yes_price"].as_f64().unwrap(), 0.42);
+
+        // Re-log the same (signal, condition, outcome): updates in place, no dup.
+        let row2 = NewMarketFeatureLog {
+            features: serde_json::to_value(zero_feat(0.99)).unwrap(),
+            clob_mid: Some(0.61),
+            ..row.clone()
+        };
+        assert_eq!(
+            pf.log_market_features(std::slice::from_ref(&row2))
+                .await
+                .unwrap(),
+            1
+        );
+        let (cnt, mid2, yp): (i64, Option<f64>, f64) = sqlx::query_as(
+            "SELECT COUNT(*)::int8, MAX(clob_mid), MAX((features->>'yes_price')::float8) \
+             FROM market_feature_log WHERE condition_id = 'mfl_cond1'",
+        )
+        .fetch_one(&pf.pool)
+        .await
+        .unwrap();
+        assert_eq!(cnt, 1, "re-log updates in place (no duplicate row)");
+        assert_eq!(mid2, Some(0.61), "conflict updated clob_mid");
+        assert_eq!(yp, 0.99, "conflict updated the features snapshot");
+
+        // Cascade: deleting the signal removes its feature-log row.
+        sqlx::query("DELETE FROM consensus_signals WHERE id = $1")
+            .bind(sid as i32)
+            .execute(&pf.pool)
+            .await
+            .unwrap();
+        let (after,): (i64,) = sqlx::query_as(
+            "SELECT COUNT(*)::int8 FROM market_feature_log WHERE condition_id = 'mfl_cond1'",
+        )
+        .fetch_one(&pf.pool)
+        .await
+        .unwrap();
+        assert_eq!(after, 0, "ON DELETE CASCADE removed the log row");
+
+        sqlx::query("DELETE FROM consensus_signals WHERE condition_id LIKE 'mfl_%'")
+            .execute(&pf.pool)
+            .await
+            .unwrap();
+        println!("market_feature_log_it: roundtrip + conflict-update + cascade all OK");
     }
 }

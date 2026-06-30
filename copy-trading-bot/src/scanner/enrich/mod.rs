@@ -45,19 +45,22 @@ pub struct EnrichModels {
     pub market_through: Option<DateTime<Utc>>,
     /// Whether the Bayesian-anchor arm is enabled (it needs no model file).
     pub bayes_enabled: bool,
+    /// Whether to log the forward 29-feature vector for every strict-fired market
+    /// (the `market_feature_log` accrual path — no arm, just durable capture).
+    pub feature_log: bool,
 }
 
 impl EnrichModels {
     /// True if any arm needs per-market data pre-fetched (CLOB mid for bayes;
-    /// CLOB mid + Gamma + price history for the market model).
+    /// CLOB mid + Gamma + price history for the market model / the feature log).
     pub fn needs_market_data(&self) -> bool {
-        self.market_xgb.is_some() || self.bayes_enabled
+        self.market_xgb.is_some() || self.bayes_enabled || self.feature_log
     }
 
     /// True if an arm needs the full [`MarketFeatures`] (Gamma + price history),
-    /// not just the CLOB mid.
+    /// not just the CLOB mid. The feature log needs the full vector too.
     pub fn needs_market_features(&self) -> bool {
-        self.market_xgb.is_some()
+        self.market_xgb.is_some() || self.feature_log
     }
 }
 
@@ -123,6 +126,7 @@ pub fn load_models(cfg: &CopyTradingConfig) -> EnrichModels {
     }
 
     m.bayes_enabled = cfg.consensus_arm_bayes;
+    m.feature_log = cfg.market_feature_log;
     m
 }
 

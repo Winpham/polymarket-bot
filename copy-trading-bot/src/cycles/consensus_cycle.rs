@@ -24,7 +24,9 @@ use crate::scanner::consensus::{
 use crate::scanner::copy_trader::{CopyTraderMonitor, PollResult, TraderTrade};
 use crate::scanner::enrich::{EnrichCtx, EnrichMargins, EnrichModels, MarketCtx, enrich_all};
 use crate::scanner::trader_trust::{TraderTrust, TrustVerdict};
-use crate::storage::consensus::{NewConsensusSignal, NewTraderFill, WindowVote};
+use crate::storage::consensus::{
+    NewConsensusSignal, NewMarketFeatureLog, NewTraderFill, WindowVote,
+};
 use crate::storage::postgres::{FollowedTrader, PgPortfolio};
 use crate::telegram::notifier::TelegramNotifier;
 use polymarket_common::model::features::MarketFeatures;
@@ -281,6 +283,9 @@ pub async fn consensus_cycle(
     );
 
     let mut alerts_sent = 0usize;
+    // Forward 29-feature snapshots for every strict-fired market (default-OFF; the
+    // `market_resid` training source). Collected inside the loop, flushed once.
+    let mut feature_logs: Vec<NewMarketFeatureLog> = Vec::new();
     for sig in &signals {
         // Upsert EVERY strategy's signal for forward edge tracking.
         let new = to_new_signal(sig, &atoms);
@@ -291,6 +296,26 @@ pub async fn consensus_cycle(
                 continue;
             }
         };
+
+        // Durable feature capture (forward, survivorship-free) — strict rows only,
+        // when enabled and the YES-oriented features were pre-fetched this cycle.
+        if models.feature_log
+            && sig.strategy == "strict"
+            && let Some(mc) = markets.get(&sig.condition_id)
+            && let Some(feat) = mc.features.as_ref()
+        {
+            match serde_json::to_value(feat) {
+                Ok(features) => feature_logs.push(NewMarketFeatureLog {
+                    signal_id: state.id as i64,
+                    condition_id: sig.condition_id.clone(),
+                    outcome_index: sig.outcome_index,
+                    yes_token: sig.outcome_index == 0,
+                    clob_mid: Some(mc.clob_mid),
+                    features,
+                }),
+                Err(e) => tracing::warn!(err = %e, "serialize MarketFeatures for feature log"),
+            }
+        }
 
         // Only the alerting strategy(ies) push Telegram; only STRONG / ELITE.
         if !alerting.contains(sig.strategy.as_str()) || sig.tier == Tier::Watch {
@@ -340,6 +365,14 @@ pub async fn consensus_cycle(
         }
         crate::metrics::record_consensus_alert(&sig.strategy, sig.tier.as_str());
         alerts_sent += 1;
+    }
+
+    // Best-effort flush of the forward feature log (never blocks the cycle).
+    if !feature_logs.is_empty() {
+        match portfolio.log_market_features(&feature_logs).await {
+            Ok(n) => tracing::debug!(rows = n, "Logged forward market features"),
+            Err(e) => tracing::warn!(err = %e, "log_market_features failed (non-blocking)"),
+        }
     }
 
     crate::metrics::record_consensus_cycle(book_vec.len() as u64, signals.len() as u64);

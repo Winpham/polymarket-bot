@@ -186,6 +186,13 @@ pub struct CopyTradingConfig {
     #[config(env = "MARKET_ML_TRAINED_THROUGH", default = "")]
     pub market_ml_trained_through: String,
 
+    /// Log the forward 29-feature vector for every strict-fired market into
+    /// `market_feature_log` (the survivorship-free training source for the
+    /// `market_resid` arm). Default OFF: when off, no per-market data is fetched
+    /// for it and the cycle path is byte-identical.
+    #[config(env = "MARKET_FEATURE_LOG", default = false)]
+    pub market_feature_log: bool,
+
     /// Edge margin the ML arms must clear (`p_win − price > margin`).
     #[config(env = "CONSENSUS_ML_MARGIN", default = 0.0)]
     pub consensus_ml_margin: f64,
