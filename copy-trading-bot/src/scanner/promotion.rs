@@ -156,9 +156,51 @@ pub fn promotion_verdict(
     }
 }
 
+/// Two-sided Bonferroni-corrected confidence interval on a surplus, reusing the
+/// gate's exact z/SE machinery (so `probit` stays private to this module). The
+/// lower bound equals `promotion_verdict`'s lower bound for the same inputs —
+/// the Trusted test uses `lo > margin`; the symmetric Avoid test uses
+/// `hi < -margin`. `n_comparisons` is the Bonferroni denominator (the wallet's
+/// slice count, when used for trader trust).
+// Consumed by `scanner::trader_trust` (Phase 3 surfacing wires the call sites).
+#[allow(dead_code)]
+pub fn surplus_bounds(
+    distinct_events: i64,
+    surplus: f64,
+    surplus_sd: Option<f64>,
+    n_comparisons: usize,
+    p: &PromotionParams,
+) -> (f64, f64) {
+    let sd = surplus_sd.unwrap_or(0.0).max(1e-9);
+    let alpha_corr = (p.alpha / n_comparisons.max(1) as f64).clamp(1e-6, 0.5);
+    let z = probit(1.0 - alpha_corr);
+    let se = sd / (distinct_events.max(1) as f64).sqrt();
+    (surplus - z * se, surplus + z * se) // (lower, upper)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn surplus_bounds_lo_le_hi_and_tighten_with_events() {
+        let p = PromotionParams::default();
+        let (lo, hi) = surplus_bounds(40, 0.08, Some(0.10), 5, &p);
+        assert!(lo < hi, "interval is ordered");
+        assert!(
+            (((lo + hi) / 2.0) - 0.08).abs() < 1e-9,
+            "centered on surplus"
+        );
+        // More events ⇒ smaller SE ⇒ tighter interval (lo rises).
+        let (lo_more, _) = surplus_bounds(400, 0.08, Some(0.10), 5, &p);
+        assert!(lo_more > lo, "more events tighten the lower bound");
+        // The lower bound matches promotion_verdict's lower bound exactly.
+        let v = promotion_verdict(40, Some(0.08), Some(0.10), 5, &p);
+        assert!(
+            (lo - v.lower_bound.unwrap()).abs() < 1e-12,
+            "lo == gate lower bound"
+        );
+    }
 
     #[test]
     fn probit_known_quantiles() {

@@ -828,6 +828,70 @@ impl PgPortfolio {
         .context("resolve_trader_fills")?;
         Ok(res.rows_affected())
     }
+
+    // --- Earned-trust slice scores (Phase 2) ---
+
+    /// Per-(wallet × slice) earned-trust statistics over resolved BUY fills —
+    /// numbers only; the verdict (gate reuse) lives in the binary
+    /// (`scanner::trader_trust`). This mirrors `consensus_scoreboard_by_strategy`
+    /// exactly but keyed by wallet/slice with a **trader_fills-native band-blind
+    /// baseline**: the fleet's per-band average advantage neutralizes
+    /// favorite-longshot loading natively, so `surplus = AVG_event(a − blind[band])`
+    /// is the only edge that isn't gamed by loading favorites.
+    ///
+    /// Everything is **event-clustered**: per-fill advantage is averaged to the
+    /// `COALESCE(event_slug, condition_id)` level first, then across events — so
+    /// correlated outcomes of one event count once (the within-match leak fix).
+    /// `n_events` is the gate's N; `surplus_sd` is the std-dev over events.
+    /// Slices: `overall`, `sport`, `band` (b1..b5), `recency7d`, `recency30d`.
+    pub async fn trader_slice_scores(&self) -> Result<Vec<TraderSliceStat>> {
+        let rows: Vec<TraderSliceStat> = sqlx::query_as(
+            "WITH adv AS ( \
+                 SELECT wallet, COALESCE(event_slug, condition_id) AS ev, \
+                        width_bucket(price, 0.0, 1.0, 5) AS band, \
+                        (outcome_won::int)::double precision - price AS a, \
+                        (outcome_won::int)::double precision AS won, \
+                        COALESCE(sport, 'other') AS sport, ts \
+                 FROM trader_fills \
+                 WHERE resolved AND side = 'BUY' AND outcome_won IS NOT NULL \
+             ), \
+             blind AS ( SELECT band, AVG(a) AS blind_edge FROM adv GROUP BY band ), \
+             surp AS ( SELECT v.wallet, v.ev, v.band, v.a, v.won, v.sport, v.ts, \
+                              v.a - COALESCE(b.blind_edge, 0) AS s \
+                       FROM adv v LEFT JOIN blind b USING (band) ), \
+             tagged AS ( \
+                 SELECT wallet, 'overall'::text AS slice_kind, ''::text AS slice_key, ev, a, s, won FROM surp \
+                 UNION ALL \
+                 SELECT wallet, 'sport', sport, ev, a, s, won FROM surp \
+                 UNION ALL \
+                 SELECT wallet, 'band', 'b' || band::text, ev, a, s, won FROM surp \
+                 UNION ALL \
+                 SELECT wallet, 'recency7d', '7d', ev, a, s, won FROM surp \
+                   WHERE ts >= NOW() - INTERVAL '7 days' \
+                 UNION ALL \
+                 SELECT wallet, 'recency30d', '30d', ev, a, s, won FROM surp \
+                   WHERE ts >= NOW() - INTERVAL '30 days' \
+             ), \
+             evl AS ( \
+                 SELECT wallet, slice_kind, slice_key, ev, \
+                        AVG(s) AS ev_surplus, AVG(a) AS ev_adv, AVG(won) AS ev_hit, \
+                        COUNT(*) AS ev_rows \
+                 FROM tagged GROUP BY wallet, slice_kind, slice_key, ev \
+             ) \
+             SELECT wallet, slice_kind, slice_key, \
+                    COUNT(DISTINCT ev)        AS n_events, \
+                    SUM(ev_rows)::bigint      AS n_resolved, \
+                    AVG(ev_surplus)           AS surplus, \
+                    STDDEV_SAMP(ev_surplus)   AS surplus_sd, \
+                    AVG(ev_adv)               AS mean_adv, \
+                    AVG(ev_hit)               AS hit_rate \
+             FROM evl GROUP BY wallet, slice_kind, slice_key",
+        )
+        .fetch_all(&self.pool)
+        .await
+        .context("trader_slice_scores")?;
+        Ok(rows)
+    }
 }
 
 /// One point on a signal's trajectory ("stock chart").
@@ -866,6 +930,32 @@ pub struct StrategyScore {
     /// the gap between the mid when we noticed and the sharps' entry price.
     /// Materially negative → faster polling has real value.
     pub capture_lag: Option<f64>,
+}
+
+/// One (wallet × slice) earned-trust statistic over resolved BUY fills. Numbers
+/// only — the verdict (gate reuse) is computed in the binary's
+/// `scanner::trader_trust`. Surplus + sd are EVENT-clustered; `n_events` is the
+/// gate's N. Mirrors [`StrategyScore`]'s shape for the wallet-keyed scoreboard.
+#[derive(Debug, Clone, sqlx::FromRow)]
+pub struct TraderSliceStat {
+    pub wallet: String,
+    /// 'overall' | 'sport' | 'band' | 'recency7d' | 'recency30d'.
+    pub slice_kind: String,
+    /// '' | 'nba' | 'b3' | '7d' …
+    pub slice_key: String,
+    /// Distinct `COALESCE(event_slug, condition_id)` — the gate's de-correlated N.
+    pub n_events: i64,
+    /// Resolved BUY fills in this slice (rows, not events).
+    pub n_resolved: i64,
+    /// Event-clustered AVG of `(advantage − band_blind)` — the favorite-longshot-
+    /// neutralized edge. `None` if nothing resolved in the slice.
+    pub surplus: Option<f64>,
+    /// Std-dev of per-EVENT surplus (feeds the one-sided bound). `None` with <2 events.
+    pub surplus_sd: Option<f64>,
+    /// Event-clustered mean raw advantage `AVG_event(won::int − price)`.
+    pub mean_adv: Option<f64>,
+    /// Event-clustered hit-rate `AVG_event(won)`.
+    pub hit_rate: Option<f64>,
 }
 
 /// Local truncate helper (avoids a cross-crate format dependency).
