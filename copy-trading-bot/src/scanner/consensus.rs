@@ -38,6 +38,14 @@ pub struct TraderVote {
     pub pnl: Option<f64>,
     /// Quality weight `w_q` derived from leaderboard standing (see [`quality_weight`]).
     pub quality: f64,
+    /// EARNED quality weight (Phase 4): a trust-regularized multiplier from the
+    /// cached trust map, or `quality_weight(rank)` when the trader is untracked /
+    /// INDETERMINATE (never 0). Only `WeightMode::TrustWeighted` reads this, so it
+    /// defaults to `quality` and leaves every other mode byte-identical.
+    pub earned_quality: f64,
+    /// Whether this trader is gate-Trusted (Phase 4). Only `trusted_only`
+    /// strategies read it; defaults to `true` so it drops nothing elsewhere.
+    pub trusted: bool,
     /// Entry price the trader paid for this outcome, in (0,1).
     pub price: f64,
     /// USD size of the fill (`usdcSize`).
@@ -109,6 +117,9 @@ pub enum WeightMode {
     Quality,
     /// Rank by log-$ committed (whale-weighted).
     Dollars,
+    /// Rank by summed EARNED-trust quality of the backers (Phase 4). Tiering
+    /// still keys on `net_count`, so this changes only the composite ranking.
+    TrustWeighted,
 }
 
 /// Tunable thresholds for the scorer. Defaults mirror `CONSENSUS-ENGINE-PLAN.md`.
@@ -140,6 +151,10 @@ pub struct ConsensusParams {
     pub sports_mode: SportsMode,
     /// Ranking basis for the composite `score`.
     pub weight_mode: WeightMode,
+    /// Count only gate-Trusted backers/opposers (Phase 4). Default `false` =
+    /// every vote counts (incumbent). With default `TraderVote.trusted == true`,
+    /// this drops nothing, so it's a no-op until the trust map marks traders.
+    pub trusted_only: bool,
 }
 
 impl Default for ConsensusParams {
@@ -157,6 +172,7 @@ impl Default for ConsensusParams {
             price_band: None,
             sports_mode: SportsMode::Include,
             weight_mode: WeightMode::Quality,
+            trusted_only: false,
         }
     }
 }
@@ -305,10 +321,19 @@ pub fn score_market(
         }
     }
 
+    // `trusted_only` strategies count only gate-Trusted votes. Filter them out up
+    // front so two-sided detection, backers, opposers, and the price/size/recency
+    // aggregation all see a consistent trusted-only view. With default votes
+    // (`trusted == true`) this drops nothing.
+    let keep = |v: &TraderVote| !params.trusted_only || v.trusted;
+
     // Identify two-sided wallets (present on >1 outcome) — dropped as MMs.
     let mut wallet_outcomes: HashMap<&str, HashSet<i32>> = HashMap::new();
     for (oidx, votes) in &book.votes {
         for v in votes {
+            if !keep(v) {
+                continue;
+            }
             wallet_outcomes
                 .entry(v.wallet.as_str())
                 .or_default()
@@ -327,7 +352,7 @@ pub fn score_market(
     for (oidx, votes) in &book.votes {
         let entry = clean.entry(*oidx).or_default();
         for v in votes {
-            if two_sided.contains(v.wallet.as_str()) {
+            if two_sided.contains(v.wallet.as_str()) || !keep(v) {
                 continue;
             }
             // Keep the *latest* fill as the representative for recency/price.
@@ -370,7 +395,7 @@ pub fn score_market(
         // All backer fills (not just representative) for price/size/recency.
         let all_backer_fills: Vec<&TraderVote> = book.votes[&oidx]
             .iter()
-            .filter(|v| !two_sided.contains(v.wallet.as_str()))
+            .filter(|v| !two_sided.contains(v.wallet.as_str()) && keep(v))
             .collect();
         let prices: Vec<f64> = all_backer_fills.iter().map(|v| v.price).collect();
         let (mean_price, price_std) = mean_std(&prices);
@@ -414,6 +439,10 @@ pub fn score_market(
             WeightMode::Count => net_count.max(0) as f64,
             WeightMode::Quality => net_quality.max(0.0),
             WeightMode::Dollars => money,
+            // Summed earned-trust quality of the (one-sided) backers. With default
+            // votes (earned_quality == quality_weight(rank)) this equals the raw
+            // backer quality; tiering still keys on net_count.
+            WeightMode::TrustWeighted => backers.values().map(|v| v.earned_quality).sum(),
         };
         let score = base * (0.5 + 0.5 * coherence) * (0.6 + 0.4 * freshness) * (1.0 + 0.02 * money);
 
@@ -660,6 +689,34 @@ pub fn default_portfolio(base: &ConsensusParams) -> Vec<StrategyDef> {
     ]
 }
 
+/// Phase-4 earned-trust arms — silent (`alerting: false`), judged by the gate in
+/// the EXPERIMENTAL family (see [`crate::scanner::enrich::family`]) so they never
+/// tighten core's Bonferroni bar. Appended to the portfolio ONLY when
+/// `CONSENSUS_TRUST_ARMS` is on; when off they aren't registered, so the live
+/// portfolio is byte-identical. They derive from `base` like every other variant.
+pub fn trust_arms(base: &ConsensusParams) -> Vec<StrategyDef> {
+    vec![
+        // Rank by summed earned-trust quality of the backers.
+        StrategyDef {
+            name: "trust_weighted",
+            params: ConsensusParams {
+                weight_mode: WeightMode::TrustWeighted,
+                ..base.clone()
+            },
+            alerting: false,
+        },
+        // Count only gate-Trusted backers (drops untrusted/Avoid).
+        StrategyDef {
+            name: "trusted_only",
+            params: ConsensusParams {
+                trusted_only: true,
+                ..base.clone()
+            },
+            alerting: false,
+        },
+    ]
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -678,6 +735,8 @@ mod tests {
             rank,
             pnl: None,
             quality: quality_weight(rank),
+            earned_quality: quality_weight(rank),
+            trusted: true,
             price,
             size_usd: 1000.0,
             ts: now - Duration::minutes(age_mins),
@@ -1007,5 +1066,89 @@ mod tests {
         assert_eq!(a[0].tier, c[0].tier);
         assert_eq!(a[0].net_count, c[0].net_count);
         assert!((a[0].score - c[0].score).abs() < 1e-12);
+    }
+
+    // --- Phase 4: earned-trust arms are silent + non-regressive ---
+
+    #[test]
+    fn trust_arms_registered_separately_and_silent() {
+        let base = ConsensusParams::default();
+        // The trust arms are NOT in the default portfolio — they're appended only
+        // when CONSENSUS_TRUST_ARMS is on, so the live portfolio stays identical.
+        let core = default_portfolio(&base);
+        assert!(
+            !core
+                .iter()
+                .any(|d| d.name == "trust_weighted" || d.name == "trusted_only"),
+            "trust arms must NOT be in the default portfolio"
+        );
+        let arms = trust_arms(&base);
+        assert_eq!(arms.len(), 2);
+        assert!(arms.iter().all(|d| !d.alerting), "trust arms never alert");
+        assert!(arms.iter().any(|d| d.name == "trust_weighted"));
+        assert!(arms.iter().any(|d| d.name == "trusted_only"));
+    }
+
+    #[test]
+    fn trust_weighted_tier_matches_quality_with_default_votes() {
+        // With default votes (earned_quality == quality_weight, trusted == true),
+        // TrustWeighted keeps the SAME tier + net_count as Quality — tiering is
+        // net_count-based, so the live `strict` alert tier can't move.
+        let now = Utc::now();
+        let b = book_with(
+            now,
+            vec![
+                (0, "wa", Some(5), 0.50, 10),
+                (0, "wb", Some(20), 0.51, 20),
+                (0, "wc", Some(30), 0.49, 30),
+                (0, "wd", Some(40), 0.52, 40),
+            ],
+        );
+        let q = score_market(&b, now, &ConsensusParams::default());
+        let tw = score_market(
+            &b,
+            now,
+            &ConsensusParams {
+                weight_mode: WeightMode::TrustWeighted,
+                ..ConsensusParams::default()
+            },
+        );
+        assert_eq!(q[0].tier, tw[0].tier);
+        assert_eq!(q[0].net_count, tw[0].net_count);
+    }
+
+    #[test]
+    fn trusted_only_drops_untrusted_but_no_op_when_all_trusted() {
+        let now = Utc::now();
+        let mk = |w: &str, trusted: bool| TraderVote {
+            wallet: w.into(),
+            name: w.into(),
+            rank: None,
+            pnl: None,
+            quality: 1.0,
+            earned_quality: 1.0,
+            trusted,
+            price: 0.50,
+            size_usd: 1000.0,
+            ts: now,
+        };
+        let mut b = MarketBook::new("0xc", "t", "s", Some("e".into()), false);
+        b.add_vote(0, "Yes", mk("wa", true));
+        b.add_vote(0, "Yes", mk("wb", true));
+        b.add_vote(0, "Yes", mk("wc", true));
+        b.add_vote(0, "Yes", mk("wd", false)); // untrusted
+
+        let trusted_only = ConsensusParams {
+            trusted_only: true,
+            ..ConsensusParams::default()
+        };
+        let sigs = score_market(&b, now, &trusted_only);
+        assert_eq!(
+            sigs[0].n_backers, 3,
+            "untrusted backer dropped under trusted_only"
+        );
+        // Default (trusted_only = false) counts every backer — no-op proof.
+        let all = score_market(&b, now, &ConsensusParams::default());
+        assert_eq!(all[0].n_backers, 4, "default counts all backers");
     }
 }

@@ -80,6 +80,28 @@ pub struct WindowVote {
     pub ts: DateTime<Utc>,
 }
 
+/// One durable fill atom for the `trader_fills` archive (Phase 0). Captured for
+/// BOTH sides off the SAME poll the consensus window uses ("capture once, use
+/// twice"). `sport` is the FROZEN slug-derived bucket (single source of truth);
+/// resolution columns are filled later by housekeeping (Phase 1).
+#[derive(Debug, Clone)]
+pub struct NewTraderFill {
+    pub wallet: String,
+    pub tx_hash: Option<String>,
+    pub condition_id: String,
+    pub outcome_index: i32,
+    pub outcome: String,
+    pub side: String,
+    pub price: f64,
+    pub size_usd: f64,
+    pub title: String,
+    pub slug: String,
+    pub event_slug: Option<String>,
+    pub is_sports: bool,
+    pub sport: Option<String>,
+    pub ts: DateTime<Utc>,
+}
+
 /// A signal awaiting market resolution (forward edge tracking + trajectory).
 #[derive(Debug, Clone, sqlx::FromRow)]
 pub struct UnresolvedConsensus {
@@ -631,6 +653,298 @@ impl PgPortfolio {
             .context("prune_window_votes")?;
         Ok(res.rows_affected())
     }
+
+    // --- Durable trader-fill archive (migration 026) ---
+
+    /// Append a batch of trader fills (both sides) to the durable archive. ONE
+    /// UNNEST insert with a **bare `ON CONFLICT DO NOTHING`** (no conflict
+    /// target): Postgres arbitrates each row against whichever partial unique
+    /// index applies (`trader_fills_tx_uniq` when `tx_hash` is present,
+    /// `trader_fills_content_uniq` when it's null) AND dedups intra-batch — so a
+    /// re-seen tx and a content-duplicate null-tx row are both dropped. Returns
+    /// the number of rows actually inserted.
+    pub async fn insert_trader_fills(&self, fills: &[NewTraderFill]) -> Result<u64> {
+        if fills.is_empty() {
+            return Ok(0);
+        }
+        let wallet: Vec<&str> = fills.iter().map(|f| f.wallet.as_str()).collect();
+        let tx_hash: Vec<Option<&str>> = fills.iter().map(|f| f.tx_hash.as_deref()).collect();
+        let condition_id: Vec<&str> = fills.iter().map(|f| f.condition_id.as_str()).collect();
+        let outcome_index: Vec<i32> = fills.iter().map(|f| f.outcome_index).collect();
+        let outcome: Vec<&str> = fills.iter().map(|f| f.outcome.as_str()).collect();
+        let side: Vec<&str> = fills.iter().map(|f| f.side.as_str()).collect();
+        let price: Vec<f64> = fills.iter().map(|f| f.price).collect();
+        let size_usd: Vec<f64> = fills.iter().map(|f| f.size_usd).collect();
+        let title: Vec<&str> = fills.iter().map(|f| f.title.as_str()).collect();
+        let slug: Vec<&str> = fills.iter().map(|f| f.slug.as_str()).collect();
+        let event_slug: Vec<Option<&str>> = fills.iter().map(|f| f.event_slug.as_deref()).collect();
+        let is_sports: Vec<bool> = fills.iter().map(|f| f.is_sports).collect();
+        let sport: Vec<Option<&str>> = fills.iter().map(|f| f.sport.as_deref()).collect();
+        let ts: Vec<DateTime<Utc>> = fills.iter().map(|f| f.ts).collect();
+
+        let res = sqlx::query(
+            "INSERT INTO trader_fills \
+               (wallet, tx_hash, condition_id, outcome_index, outcome, side, price, \
+                size_usd, title, slug, event_slug, is_sports, sport, ts) \
+             SELECT * FROM UNNEST( \
+               $1::text[], $2::text[], $3::text[], $4::int4[], $5::text[], $6::text[], \
+               $7::float8[], $8::float8[], $9::text[], $10::text[], $11::text[], \
+               $12::bool[], $13::text[], $14::timestamptz[]) \
+             ON CONFLICT DO NOTHING",
+        )
+        .bind(&wallet)
+        .bind(&tx_hash)
+        .bind(&condition_id)
+        .bind(&outcome_index)
+        .bind(&outcome)
+        .bind(&side)
+        .bind(&price)
+        .bind(&size_usd)
+        .bind(&title)
+        .bind(&slug)
+        .bind(&event_slug)
+        .bind(&is_sports)
+        .bind(&sport)
+        .bind(&ts)
+        .execute(&self.pool)
+        .await
+        .context("insert_trader_fills")?;
+        Ok(res.rows_affected())
+    }
+
+    /// Stamp capture bookkeeping for one wallet after a poll. `min_ts`/`max_ts`
+    /// are the oldest/newest fill timestamps in this poll; `raw_count` is the
+    /// raw page length. A **gap** is counted iff the page was full (`raw_count
+    /// >= 100`) AND its oldest row is newer than everything we'd seen before
+    /// (`min_ts > last_capture_newest_ts`) — i.e. the trader traded faster than
+    /// our cadence and the in-between trades fell off the newest 100-row page.
+    /// The first poll (`last_capture_newest_ts IS NULL`) never counts a gap.
+    pub async fn record_capture(
+        &self,
+        wallet: &str,
+        min_ts: DateTime<Utc>,
+        max_ts: DateTime<Utc>,
+        raw_count: usize,
+    ) -> Result<()> {
+        sqlx::query(
+            "UPDATE followed_traders SET \
+               capture_gap_count = capture_gap_count \
+                   + CASE WHEN $4 >= 100 AND last_capture_newest_ts IS NOT NULL \
+                               AND $2 > last_capture_newest_ts \
+                          THEN 1 ELSE 0 END, \
+               last_capture_newest_ts = GREATEST(COALESCE(last_capture_newest_ts, $3), $3), \
+               capture_started_at     = COALESCE(capture_started_at, NOW()) \
+             WHERE proxy_wallet = $1",
+        )
+        .bind(wallet)
+        .bind(min_ts)
+        .bind(max_ts)
+        .bind(raw_count as i32)
+        .execute(&self.pool)
+        .await
+        .context("record_capture")?;
+        Ok(())
+    }
+
+    /// Build consensus window votes from the durable `trader_fills` archive
+    /// (the `CONSENSUS_BOOKS_FROM_FILLS=true` source) instead of
+    /// `consensus_vote_window`. Selects BUY fills in-window and re-derives the
+    /// `quality` weight from the trader's CURRENT leaderboard rank at load time
+    /// (vs the window path which freezes `quality` at capture). Returns the same
+    /// [`WindowVote`] shape so `books_from_window_votes` is reused unchanged.
+    ///
+    /// The `quality` SQL mirrors `scanner::consensus::quality_weight` exactly —
+    /// rank 1 ≈ 2.0, rank ≥ 50 / unranked / unknown ≈ 1.0. Kept in sync with
+    /// that function (it is a bounded display/ranking weight, not a statistic).
+    pub async fn load_buy_fills_since(&self, since: DateTime<Utc>) -> Result<Vec<WindowVote>> {
+        let rows: Vec<WindowVote> = sqlx::query_as(
+            "SELECT tf.wallet AS trader_wallet, \
+                    COALESCE(ft.username, LEFT(tf.wallet, 8)) AS name, \
+                    ft.rank AS rank, ft.pnl AS pnl, \
+                    CASE WHEN ft.rank >= 1 \
+                         THEN 1.0 + GREATEST(0, 50 - LEAST(ft.rank, 50))::float8 / 50.0 \
+                         ELSE 1.0 END AS quality, \
+                    tf.condition_id, tf.outcome_index, tf.outcome, tf.title, tf.slug, \
+                    tf.event_slug, tf.is_sports, tf.price, tf.size_usd, tf.ts \
+             FROM trader_fills tf \
+             LEFT JOIN followed_traders ft ON LOWER(ft.proxy_wallet) = tf.wallet \
+             WHERE tf.side = 'BUY' AND tf.ts >= $1",
+        )
+        .bind(since)
+        .fetch_all(&self.pool)
+        .await
+        .context("load_buy_fills_since")?;
+        Ok(rows)
+    }
+
+    // --- Resolution ledger (Phase 1) ---
+
+    /// Distinct `condition_id`s with unresolved BUY fills older than `min_age`,
+    /// oldest-first, capped at `cap`. This is the INDEPENDENT unresolved source:
+    /// it surfaces markets a trader bet that may never have triggered a consensus
+    /// signal, so resolving only consensus conditions would never settle them and
+    /// profiles would be biased toward markets that happened to fire consensus
+    /// (survivorship). Housekeeping UNIONs this into its resolution set.
+    pub async fn trader_fill_unresolved_conditions(
+        &self,
+        min_age: chrono::Duration,
+        cap: i64,
+    ) -> Result<Vec<String>> {
+        let rows: Vec<(String,)> = sqlx::query_as(
+            "SELECT condition_id FROM trader_fills \
+             WHERE resolved = FALSE AND side = 'BUY' \
+               AND ts < NOW() - make_interval(secs => $1) \
+             GROUP BY condition_id ORDER BY MIN(ts) LIMIT $2",
+        )
+        .bind(min_age.num_seconds() as f64)
+        .bind(cap)
+        .fetch_all(&self.pool)
+        .await
+        .context("trader_fill_unresolved_conditions")?;
+        Ok(rows.into_iter().map(|(c,)| c).collect())
+    }
+
+    /// Resolve every unresolved fill on `condition_id` against the winning token
+    /// index. Multi-outcome correct: `outcome_won = (outcome_index = winner)`.
+    /// `advantage = won::int − price` for BUY (mirrors the consensus gate's
+    /// `edge = won − entry_price`); NULL for SELL (round-trip PnL is a v2
+    /// enhancement). Both sides are marked resolved so they stop reappearing in
+    /// the unresolved source. Returns the number of rows resolved.
+    pub async fn resolve_trader_fills(&self, condition_id: &str, winner_index: i32) -> Result<u64> {
+        let res = sqlx::query(
+            "UPDATE trader_fills SET \
+               resolved    = TRUE, \
+               outcome_won = (outcome_index = $2), \
+               advantage   = CASE WHEN side = 'BUY' \
+                                  THEN ((outcome_index = $2)::int)::double precision - price \
+                                  ELSE NULL END, \
+               resolved_at = NOW() \
+             WHERE condition_id = $1 AND resolved = FALSE",
+        )
+        .bind(condition_id)
+        .bind(winner_index)
+        .execute(&self.pool)
+        .await
+        .context("resolve_trader_fills")?;
+        Ok(res.rows_affected())
+    }
+
+    // --- Earned-trust slice scores (Phase 2) ---
+
+    /// Per-(wallet × slice) earned-trust statistics over resolved BUY fills —
+    /// numbers only; the verdict (gate reuse) lives in the binary
+    /// (`scanner::trader_trust`). This mirrors `consensus_scoreboard_by_strategy`
+    /// exactly but keyed by wallet/slice with a **trader_fills-native band-blind
+    /// baseline**: the fleet's per-band average advantage neutralizes
+    /// favorite-longshot loading natively, so `surplus = AVG_event(a − blind[band])`
+    /// is the only edge that isn't gamed by loading favorites.
+    ///
+    /// Everything is **event-clustered**: per-fill advantage is averaged to the
+    /// `COALESCE(event_slug, condition_id)` level first, then across events — so
+    /// correlated outcomes of one event count once (the within-match leak fix).
+    /// `n_events` is the gate's N; `surplus_sd` is the std-dev over events.
+    /// Slices: `overall`, `sport`, `band` (b1..b5), `recency7d`, `recency30d`.
+    pub async fn trader_slice_scores(&self) -> Result<Vec<TraderSliceStat>> {
+        let rows: Vec<TraderSliceStat> = sqlx::query_as(
+            "WITH adv AS ( \
+                 SELECT wallet, COALESCE(event_slug, condition_id) AS ev, \
+                        width_bucket(price, 0.0, 1.0, 5) AS band, \
+                        (outcome_won::int)::double precision - price AS a, \
+                        (outcome_won::int)::double precision AS won, \
+                        COALESCE(sport, 'other') AS sport, ts \
+                 FROM trader_fills \
+                 WHERE resolved AND side = 'BUY' AND outcome_won IS NOT NULL \
+             ), \
+             blind AS ( SELECT band, AVG(a) AS blind_edge FROM adv GROUP BY band ), \
+             surp AS ( SELECT v.wallet, v.ev, v.band, v.a, v.won, v.sport, v.ts, \
+                              v.a - COALESCE(b.blind_edge, 0) AS s \
+                       FROM adv v LEFT JOIN blind b USING (band) ), \
+             tagged AS ( \
+                 SELECT wallet, 'overall'::text AS slice_kind, ''::text AS slice_key, ev, a, s, won FROM surp \
+                 UNION ALL \
+                 SELECT wallet, 'sport', sport, ev, a, s, won FROM surp \
+                 UNION ALL \
+                 SELECT wallet, 'band', 'b' || band::text, ev, a, s, won FROM surp \
+                 UNION ALL \
+                 SELECT wallet, 'recency7d', '7d', ev, a, s, won FROM surp \
+                   WHERE ts >= NOW() - INTERVAL '7 days' \
+                 UNION ALL \
+                 SELECT wallet, 'recency30d', '30d', ev, a, s, won FROM surp \
+                   WHERE ts >= NOW() - INTERVAL '30 days' \
+             ), \
+             evl AS ( \
+                 SELECT wallet, slice_kind, slice_key, ev, \
+                        AVG(s) AS ev_surplus, AVG(a) AS ev_adv, AVG(won) AS ev_hit, \
+                        COUNT(*) AS ev_rows \
+                 FROM tagged GROUP BY wallet, slice_kind, slice_key, ev \
+             ) \
+             SELECT wallet, slice_kind, slice_key, \
+                    COUNT(DISTINCT ev)        AS n_events, \
+                    SUM(ev_rows)::bigint      AS n_resolved, \
+                    AVG(ev_surplus)           AS surplus, \
+                    STDDEV_SAMP(ev_surplus)   AS surplus_sd, \
+                    AVG(ev_adv)               AS mean_adv, \
+                    AVG(ev_hit)               AS hit_rate \
+             FROM evl GROUP BY wallet, slice_kind, slice_key",
+        )
+        .fetch_all(&self.pool)
+        .await
+        .context("trader_slice_scores")?;
+        Ok(rows)
+    }
+
+    /// One wallet's slice scores (filtered from the fleet query so the band-blind
+    /// baseline stays fleet-wide) plus its `capture_gap_count` (so the surface can
+    /// flag "⚠ partial capture"). `wallet` is matched case-insensitively against
+    /// the lower-cased `trader_fills.wallet`.
+    pub async fn trader_profile(&self, wallet: &str) -> Result<(Vec<TraderSliceStat>, i32)> {
+        let w = wallet.to_lowercase();
+        let slices: Vec<TraderSliceStat> = self
+            .trader_slice_scores()
+            .await?
+            .into_iter()
+            .filter(|s| s.wallet == w)
+            .collect();
+        let gap: Option<(i32,)> = sqlx::query_as(
+            "SELECT capture_gap_count FROM followed_traders WHERE LOWER(proxy_wallet) = $1",
+        )
+        .bind(&w)
+        .fetch_optional(&self.pool)
+        .await
+        .context("trader_profile (gap)")?;
+        Ok((slices, gap.map(|(g,)| g).unwrap_or(0)))
+    }
+
+    /// Prune resolved-or-not trader fills older than `retention_days`. Default
+    /// retention is 0 (keep-all) — the durable archive is the whole point — so
+    /// this only deletes when a positive retention is configured. Durability is
+    /// the existing daily pg_dump (`scripts/consensus-backup.sh`). Returns rows
+    /// pruned.
+    pub async fn prune_trader_fills(&self, retention_days: i64) -> Result<u64> {
+        if retention_days <= 0 {
+            return Ok(0);
+        }
+        let res =
+            sqlx::query("DELETE FROM trader_fills WHERE ts < NOW() - make_interval(days => $1)")
+                .bind(retention_days as i32)
+                .execute(&self.pool)
+                .await
+                .context("prune_trader_fills")?;
+        Ok(res.rows_affected())
+    }
+
+    /// Map of lower-cased wallet → `capture_gap_count` for traders that have
+    /// captured at least one poll. Used by the board to flag partial capture.
+    pub async fn capture_gaps(&self) -> Result<std::collections::HashMap<String, i32>> {
+        let rows: Vec<(String, i32)> = sqlx::query_as(
+            "SELECT LOWER(proxy_wallet), capture_gap_count FROM followed_traders \
+             WHERE capture_started_at IS NOT NULL",
+        )
+        .fetch_all(&self.pool)
+        .await
+        .context("capture_gaps")?;
+        Ok(rows.into_iter().collect())
+    }
 }
 
 /// One point on a signal's trajectory ("stock chart").
@@ -669,6 +983,32 @@ pub struct StrategyScore {
     /// the gap between the mid when we noticed and the sharps' entry price.
     /// Materially negative → faster polling has real value.
     pub capture_lag: Option<f64>,
+}
+
+/// One (wallet × slice) earned-trust statistic over resolved BUY fills. Numbers
+/// only — the verdict (gate reuse) is computed in the binary's
+/// `scanner::trader_trust`. Surplus + sd are EVENT-clustered; `n_events` is the
+/// gate's N. Mirrors [`StrategyScore`]'s shape for the wallet-keyed scoreboard.
+#[derive(Debug, Clone, sqlx::FromRow)]
+pub struct TraderSliceStat {
+    pub wallet: String,
+    /// 'overall' | 'sport' | 'band' | 'recency7d' | 'recency30d'.
+    pub slice_kind: String,
+    /// '' | 'nba' | 'b3' | '7d' …
+    pub slice_key: String,
+    /// Distinct `COALESCE(event_slug, condition_id)` — the gate's de-correlated N.
+    pub n_events: i64,
+    /// Resolved BUY fills in this slice (rows, not events).
+    pub n_resolved: i64,
+    /// Event-clustered AVG of `(advantage − band_blind)` — the favorite-longshot-
+    /// neutralized edge. `None` if nothing resolved in the slice.
+    pub surplus: Option<f64>,
+    /// Std-dev of per-EVENT surplus (feeds the one-sided bound). `None` with <2 events.
+    pub surplus_sd: Option<f64>,
+    /// Event-clustered mean raw advantage `AVG_event(won::int − price)`.
+    pub mean_adv: Option<f64>,
+    /// Event-clustered hit-rate `AVG_event(won)`.
+    pub hit_rate: Option<f64>,
 }
 
 /// Local truncate helper (avoids a cross-crate format dependency).
@@ -818,5 +1158,250 @@ mod window_store_it {
             .await
             .unwrap();
         println!("window_store_it: insert/dedup/load/prune/cursors all OK");
+    }
+}
+
+#[cfg(test)]
+mod trader_fills_it {
+    //! Live-DB integration test for the durable trader-fill archive (Phase 0):
+    //! dedup (tx + null-tx content), gap detection, and re-derived-quality book
+    //! source. `#[ignore]`d like its sibling; run against a throwaway Postgres:
+    //!
+    //! ```text
+    //! DATABASE_URL=postgres://bot:bot@localhost:55432/polymarket \
+    //!   cargo test -p polymarket-common trader_fills_it -- --ignored --nocapture
+    //! ```
+    use super::*;
+
+    fn fill(
+        wallet: &str,
+        tx: Option<&str>,
+        cond: &str,
+        oidx: i32,
+        price: f64,
+        side: &str,
+    ) -> NewTraderFill {
+        NewTraderFill {
+            wallet: wallet.into(),
+            tx_hash: tx.map(|s| s.into()),
+            condition_id: cond.into(),
+            outcome_index: oidx,
+            outcome: "Yes".into(),
+            side: side.into(),
+            price,
+            size_usd: 1000.0,
+            title: "t".into(),
+            slug: "nba-x".into(),
+            event_slug: Some("nba-x".into()),
+            is_sports: true,
+            sport: Some("nba".into()),
+            ts: Utc::now() - chrono::Duration::hours(1),
+        }
+    }
+
+    #[tokio::test]
+    #[ignore = "requires a live Postgres at $DATABASE_URL with migrations applied"]
+    async fn insert_dedup_capture_loadfills() {
+        let url = std::env::var("DATABASE_URL").expect("DATABASE_URL must be set");
+        let pool = sqlx::PgPool::connect(&url).await.expect("connect");
+        let pf = PgPortfolio::new(pool).await.expect("portfolio");
+
+        // followed_traders row is mixed-case to prove the case-robust join.
+        let w_mixed = "0xTFtestWALLET01";
+        let w_lc = w_mixed.to_lowercase();
+        for t in [&w_lc, &w_mixed.to_string()] {
+            sqlx::query("DELETE FROM trader_fills WHERE wallet = $1")
+                .bind(t)
+                .execute(&pf.pool)
+                .await
+                .unwrap();
+        }
+        sqlx::query("DELETE FROM followed_traders WHERE proxy_wallet = $1")
+            .bind(w_mixed)
+            .execute(&pf.pool)
+            .await
+            .unwrap();
+
+        // --- dedup: tx-level + intra-batch + null-tx content ---
+        let a = fill(&w_lc, Some("0xtx1"), "0xc1", 0, 0.50, "BUY");
+        let b = fill(&w_lc, Some("0xtx2"), "0xc2", 1, 0.30, "SELL");
+        let dup_a = a.clone(); // same tx → dropped
+        let n = pf
+            .insert_trader_fills(&[a.clone(), b.clone(), dup_a])
+            .await
+            .unwrap();
+        assert_eq!(n, 2, "intra-batch tx dup dropped");
+        let again = pf.insert_trader_fills(&[a, b]).await.unwrap();
+        assert_eq!(again, 0, "re-seen tx rows append nothing");
+
+        // null-tx content dedup: identical content → 1; different price → 2.
+        let n0 = fill(&w_lc, None, "0xc3", 0, 0.40, "BUY");
+        let n0b = n0.clone();
+        let n1 = fill(&w_lc, None, "0xc3", 0, 0.41, "BUY");
+        let nn = pf.insert_trader_fills(&[n0, n0b, n1]).await.unwrap();
+        assert_eq!(nn, 2, "null-tx content dup collapses; distinct price kept");
+
+        // --- gap detection via record_capture ---
+        pf.upsert_tracked_trader(&LeaderboardTraderUpsert {
+            wallet: w_mixed.into(),
+            username: Some("tfwtest".into()),
+            rank: Some(1), // rank 1 → quality ≈ 2.0
+            pnl: None,
+            volume: None,
+            periods: "WEEK".into(),
+        })
+        .await
+        .unwrap();
+        let gap = |pf: &PgPortfolio, w: &str| {
+            let w = w.to_string();
+            let pool = pf.pool.clone();
+            async move {
+                let (g,): (i32,) = sqlx::query_as(
+                    "SELECT capture_gap_count FROM followed_traders WHERE proxy_wallet = $1",
+                )
+                .bind(&w)
+                .fetch_one(&pool)
+                .await
+                .unwrap();
+                g
+            }
+        };
+        let t0 = Utc::now() - chrono::Duration::hours(3);
+        let t1 = Utc::now() - chrono::Duration::hours(2);
+        // First poll: full page but last_newest was NULL → never a gap.
+        pf.record_capture(w_mixed, t0, t1, 100).await.unwrap();
+        assert_eq!(gap(&pf, w_mixed).await, 0, "first poll never counts a gap");
+        // Next poll: full page whose oldest row is newer than last_newest(=t1) → gap.
+        let t2 = Utc::now() - chrono::Duration::minutes(30);
+        let t3 = Utc::now() - chrono::Duration::minutes(10);
+        pf.record_capture(w_mixed, t2, t3, 100).await.unwrap();
+        assert_eq!(gap(&pf, w_mixed).await, 1, "full page + no overlap = gap");
+        // Partial page: never a gap regardless of timing.
+        let t4 = Utc::now();
+        pf.record_capture(w_mixed, t4, t4, 50).await.unwrap();
+        assert_eq!(gap(&pf, w_mixed).await, 1, "partial page never adds a gap");
+
+        // --- load_buy_fills_since: BUY only, re-derived quality via case-robust join ---
+        let since = Utc::now() - chrono::Duration::hours(48);
+        let votes = pf.load_buy_fills_since(since).await.unwrap();
+        let mine: Vec<_> = votes.iter().filter(|v| v.trader_wallet == w_lc).collect();
+        assert!(mine.iter().all(|v| v.price > 0.0), "loaded BUY fills");
+        // quality_weight(Some(1)) = 1.0 + (50-1)/50 = 1.98 — the SQL must match
+        // the Rust formula exactly (this asserts they stay in sync).
+        assert!(
+            mine.iter().all(|v| (v.quality - 1.98).abs() < 1e-9),
+            "rank-1 trader's quality re-derived to 1.98 via the LOWER() join (got {:?})",
+            mine.iter().map(|v| v.quality).collect::<Vec<_>>()
+        );
+        // SELL fill (0xc2) must be excluded from the BUY book source.
+        assert!(
+            !mine.iter().any(|v| v.condition_id == "0xc2"),
+            "SELL excluded"
+        );
+
+        // Cleanup.
+        sqlx::query("DELETE FROM trader_fills WHERE wallet = $1")
+            .bind(&w_lc)
+            .execute(&pf.pool)
+            .await
+            .unwrap();
+        sqlx::query("DELETE FROM followed_traders WHERE proxy_wallet = $1")
+            .bind(w_mixed)
+            .execute(&pf.pool)
+            .await
+            .unwrap();
+        println!("trader_fills_it: dedup/gap/capture/load_buy_fills all OK");
+    }
+
+    #[tokio::test]
+    #[ignore = "requires a live Postgres at $DATABASE_URL with migrations applied"]
+    async fn resolve_multi_outcome_and_void() {
+        let url = std::env::var("DATABASE_URL").expect("DATABASE_URL must be set");
+        let pool = sqlx::PgPool::connect(&url).await.expect("connect");
+        let pf = PgPortfolio::new(pool).await.expect("portfolio");
+
+        let w = "0xtfresolve";
+        let (c_win, c_void) = ("0xcond_resolved", "0xcond_void");
+        for c in [c_win, c_void] {
+            sqlx::query("DELETE FROM trader_fills WHERE condition_id = $1")
+                .bind(c)
+                .execute(&pf.pool)
+                .await
+                .unwrap();
+        }
+
+        // Multi-outcome market: BUY on the winner (idx 1), BUY on a loser (idx 0),
+        // SELL on idx 2 — all at price 0.40. A separate (to-be-void) market.
+        let rows = [
+            fill(w, Some("0xr1"), c_win, 1, 0.40, "BUY"),
+            fill(w, Some("0xr2"), c_win, 0, 0.40, "BUY"),
+            fill(w, Some("0xr3"), c_win, 2, 0.40, "SELL"),
+            fill(w, Some("0xv1"), c_void, 0, 0.40, "BUY"),
+        ];
+        pf.insert_trader_fills(&rows).await.unwrap();
+
+        // Both conds appear in the independent unresolved source (min_age 0).
+        let conds = pf
+            .trader_fill_unresolved_conditions(chrono::Duration::zero(), 100)
+            .await
+            .unwrap();
+        assert!(conds.contains(&c_win.to_string()) && conds.contains(&c_void.to_string()));
+
+        // Resolve c_win with winner index 1; c_void is SKIPPED (housekeeping's
+        // void branch) — its fills must stay unresolved.
+        let n = pf.resolve_trader_fills(c_win, 1).await.unwrap();
+        assert_eq!(n, 3, "all 3 fills on the resolved market settle");
+
+        #[derive(sqlx::FromRow)]
+        struct FillRow {
+            #[allow(dead_code)]
+            outcome_index: i32,
+            side: String,
+            outcome_won: Option<bool>,
+            advantage: Option<f64>,
+            resolved: bool,
+        }
+        let got: Vec<FillRow> = sqlx::query_as(
+            "SELECT outcome_index, side, outcome_won, advantage, resolved \
+             FROM trader_fills WHERE condition_id = $1 ORDER BY outcome_index",
+        )
+        .bind(c_win)
+        .fetch_all(&pf.pool)
+        .await
+        .unwrap();
+        // idx 0 (BUY loser): won=false, advantage = 0 - 0.40 = -0.40.
+        assert_eq!(got[0].outcome_won, Some(false));
+        assert!((got[0].advantage.unwrap() + 0.40).abs() < 1e-9);
+        // idx 1 (BUY winner): won=true, advantage = 1 - 0.40 = 0.60.
+        assert_eq!(got[1].outcome_won, Some(true));
+        assert!((got[1].advantage.unwrap() - 0.60).abs() < 1e-9);
+        // idx 2 (SELL): won marked, advantage NULL (round-trip PnL is v2).
+        assert_eq!(got[2].side, "SELL");
+        assert_eq!(got[2].outcome_won, Some(false));
+        assert!(got[2].advantage.is_none(), "SELL advantage is NULL");
+        assert!(got.iter().all(|r| r.resolved), "all marked resolved");
+
+        // Void market: never resolved → still in the unresolved source.
+        let still: Vec<String> = pf
+            .trader_fill_unresolved_conditions(chrono::Duration::zero(), 100)
+            .await
+            .unwrap();
+        assert!(
+            still.contains(&c_void.to_string()),
+            "void market stays unresolved"
+        );
+        assert!(
+            !still.contains(&c_win.to_string()),
+            "resolved market dropped from source"
+        );
+
+        for c in [c_win, c_void] {
+            sqlx::query("DELETE FROM trader_fills WHERE condition_id = $1")
+                .bind(c)
+                .execute(&pf.pool)
+                .await
+                .unwrap();
+        }
+        println!("trader_fills_it: multi-outcome resolve + void-skip all OK");
     }
 }

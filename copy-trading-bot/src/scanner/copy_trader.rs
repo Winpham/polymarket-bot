@@ -125,6 +125,18 @@ pub struct DetectedTrade {
     pub trade: TraderTrade,
 }
 
+/// Result of one `/activity` poll: the parsed trades plus `raw_count`, the
+/// length of the **raw page** (pre-parse). The gap test keys on the real page
+/// size — a full 100-row page whose oldest row is newer than everything we'd
+/// seen means the trader traded faster than our cadence and we lost the
+/// in-between trades. A 429 is surfaced as `Err` (not carried here) so the
+/// caller does NOT advance the cursor and re-fetches the gap next cycle.
+#[derive(Debug, Clone)]
+pub struct PollResult {
+    pub trades: Vec<TraderTrade>,
+    pub raw_count: usize,
+}
+
 /// Display-ready representation of a single leaderboard entry.
 #[derive(Debug, Clone)]
 pub struct LeaderboardDisplay {
@@ -408,23 +420,41 @@ impl CopyTraderMonitor {
 
     /// Fetch recent trade activity for `wallet` since `since`.
     ///
-    /// Returns only BUY-side trades (we mirror entries, not exits).
+    /// Returns BOTH sides (BUY and SELL) — `parse_activity_events` no longer
+    /// filters by side; downstream consumers (consensus window vs durable
+    /// ledger) decide what they keep. `raw_count` is the raw page length, used
+    /// for gap detection. The data-api ignores `startTs` and returns a hard
+    /// 100-row newest page, so a full page is a gap signal, not history.
+    ///
+    /// A 429 is surfaced as `Err` (after recording the metric) so the caller
+    /// does not advance its cursor and re-fetches the gap next cycle.
     #[tracing::instrument(skip(self), fields(wallet = %wallet))]
     pub async fn poll_trader_activity(
         &self,
         wallet: &str,
         since: DateTime<Utc>,
-    ) -> Result<Vec<TraderTrade>> {
+    ) -> Result<PollResult> {
         let since_ts = since.timestamp();
         let url = format!("{DATA_API}/activity?user={wallet}&type=TRADE&startTs={since_ts}",);
 
-        let events: Vec<ActivityEvent> = self
+        let resp = self
             .http
             .get(&url)
             .timeout(REQUEST_TIMEOUT)
             .send()
             .await
-            .context("activity request failed")?
+            .context("activity request failed")?;
+
+        // Capture the status BEFORE `error_for_status` (which discards it). A
+        // 429 must surface as Err so the cursor is not advanced (data is lost
+        // forever if we skip past a full page), and is counted for the scale gate.
+        let status = resp.status();
+        if status == reqwest::StatusCode::TOO_MANY_REQUESTS {
+            crate::metrics::record_data_api_429();
+            return Err(anyhow::anyhow!("data-api 429 (rate-limited) for {wallet}"));
+        }
+
+        let events: Vec<ActivityEvent> = resp
             .error_for_status()
             .context("activity returned non-2xx")?
             .json()
@@ -442,7 +472,7 @@ impl CopyTraderMonitor {
             "Trader activity fetched"
         );
 
-        Ok(trades)
+        Ok(PollResult { trades, raw_count })
     }
 
     /// Iterate over all active traders, poll their recent activity in parallel,
@@ -488,7 +518,7 @@ impl CopyTraderMonitor {
         // Process results sequentially for DB deduplication.
         for (trader, name, poll_result) in poll_results {
             let trades = match poll_result {
-                Ok(t) => t,
+                Ok(r) => r.trades,
                 Err(e) => {
                     tracing::warn!(
                         trader = %name,
@@ -718,12 +748,16 @@ mod tests {
         // Top leaderboard trader from 2026-03-15
         let wallet = "0x37c1874a60d348903594a96703e0507c518fc53a";
         let since = chrono::Utc::now() - chrono::Duration::hours(24);
-        let trades = monitor.poll_trader_activity(wallet, since).await.unwrap();
+        let result = monitor.poll_trader_activity(wallet, since).await.unwrap();
         assert!(
-            !trades.is_empty(),
+            !result.trades.is_empty(),
             "active trader should have recent trades"
         );
-        for t in &trades {
+        assert!(
+            result.raw_count >= result.trades.len(),
+            "raw_count is the page length"
+        );
+        for t in &result.trades {
             assert!(!t.slug.is_empty(), "slug must be populated");
             assert!(!t.condition_id.is_empty(), "condition_id must be populated");
             assert!(t.price > 0.0 && t.price < 1.0, "price must be in (0,1)");

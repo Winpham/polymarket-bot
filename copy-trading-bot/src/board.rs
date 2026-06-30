@@ -10,6 +10,7 @@ use tokio::net::TcpListener;
 
 use crate::scanner::enrich::family;
 use crate::scanner::promotion::{PromotionParams, promotion_verdict};
+use crate::scanner::trader_trust::{TraderTrust, TrustVerdict, trust_verdict};
 use crate::storage::postgres::PgPortfolio;
 
 /// Serve the board on `0.0.0.0:port` forever. Best-effort; logs and retries binds.
@@ -52,12 +53,95 @@ fn pct(x: Option<f64>) -> String {
         .unwrap_or_else(|| "—".into())
 }
 
+/// Render the earned trader-trust table ("who to actually follow"): each tracked
+/// trader with resolved fills, ranked by earned trust, with best/worst games,
+/// surplus ± bound, and capture completeness. Empty until fills resolve.
+async fn render_trust(portfolio: &PgPortfolio) -> String {
+    let scores = portfolio.trader_slice_scores().await.unwrap_or_default();
+    if scores.is_empty() {
+        return String::new();
+    }
+    let gaps = portfolio.capture_gaps().await.unwrap_or_default();
+
+    let mut by: std::collections::HashMap<String, Vec<_>> = std::collections::HashMap::new();
+    for s in scores {
+        by.entry(s.wallet.clone()).or_default().push(s);
+    }
+    let mut verdicts: Vec<TraderTrust> = by
+        .into_values()
+        .map(|v| trust_verdict(&v))
+        .filter(|t| t.n_events > 0)
+        .collect();
+    if verdicts.is_empty() {
+        return String::new();
+    }
+    let key = |t: &TraderTrust| match t.verdict {
+        TrustVerdict::Trusted => 10.0 + t.lower_bound,
+        TrustVerdict::Indeterminate => t.surplus,
+        TrustVerdict::Avoid => -10.0 + t.surplus,
+    };
+    verdicts.sort_by(|a, b| {
+        key(b)
+            .partial_cmp(&key(a))
+            .unwrap_or(std::cmp::Ordering::Equal)
+    });
+
+    let mut out = String::from(
+        "<h1 style='margin-top:34px'>👥 Trader trust</h1>\
+         <p class=sub>Who to actually follow — earned, not leaderboard rank. Forward-measured.</p>\
+         <table><thead><tr><th>trust</th><th>wallet</th><th class=r>events (N)</th>\
+         <th class=r>surplus</th><th class=r>bound</th><th>best games</th><th>capture</th>\
+         </tr></thead><tbody>",
+    );
+    for t in verdicts.iter().take(50) {
+        let (marker, scls) = match t.verdict {
+            TrustVerdict::Trusted => ("✅", "pos"),
+            TrustVerdict::Avoid => ("⛔", "neg"),
+            TrustVerdict::Indeterminate => ("⏸", "muted"),
+        };
+        let bound = match t.verdict {
+            TrustVerdict::Avoid => pct(Some(t.upper_bound)),
+            TrustVerdict::Trusted => pct(Some(t.lower_bound)),
+            TrustVerdict::Indeterminate => "—".into(),
+        };
+        let best: String = t
+            .best_slices
+            .iter()
+            .filter(|(_, _, s)| *s > 0.0)
+            .take(2)
+            .map(|(k, v, s)| format!("{}:{} {}", k, v, pct(Some(*s))))
+            .collect::<Vec<_>>()
+            .join(", ");
+        let cap = match gaps.get(&t.wallet) {
+            Some(g) if *g > 0 => format!("⚠ {g} gaps"),
+            _ => "✓".to_string(),
+        };
+        let short = &t.wallet[..12.min(t.wallet.len())];
+        out.push_str(&format!(
+            "<tr><td>{marker}</td><td class=mono>{short}…</td><td class=r>{ev}</td>\
+             <td class=\"r {scls}\">{surplus}</td><td class=r>{bound}</td>\
+             <td class=muted>{best}</td><td class=muted>{cap}</td></tr>",
+            ev = t.n_events,
+            surplus = pct(Some(t.surplus)),
+        ));
+    }
+    out.push_str(
+        "</tbody></table>\
+         <p class=note>✅ Trusted (surplus lower bound &gt; 0 over ≥30 distinct events, Bonferroni \
+         across the wallet's slices) · ⏸ indeterminate · ⛔ Avoid (upper bound &lt; 0). \
+         <b>surplus</b> = edge over the trader's-own-band blind baseline (favorite-longshot-neutralized). \
+         <b>capture</b> ⚠ = the data-api dropped trades between polls (partial history).</p>",
+    );
+    out
+}
+
 async fn render(portfolio: &PgPortfolio) -> String {
     let rows = portfolio
         .consensus_scoreboard_by_strategy()
         .await
         .unwrap_or_default();
     let tracked = portfolio.count_tracked_traders().await.unwrap_or(0);
+    let n429 = polymarket_common::metrics::data_api_429_count();
     let pp = PromotionParams::default();
     let n = rows.len();
     // Bonferroni denominator PER FAMILY: experimental arms are corrected among
@@ -117,6 +201,9 @@ async fn render(portfolio: &PgPortfolio) -> String {
         body.push_str("</tbody></table>");
     }
 
+    // --- Second table: earned trader trust ("who to actually follow") ---
+    body.push_str(&render_trust(portfolio).await);
+
     format!(
         "<!doctype html><html><head><meta charset=utf-8>\
          <meta name=viewport content='width=device-width,initial-scale=1'>\
@@ -131,7 +218,7 @@ async fn render(portfolio: &PgPortfolio) -> String {
          .note{{color:#8a93a3;font-size:12px;margin-top:18px;border-top:1px solid #1c2128;padding-top:14px}}\
          </style></head><body>\
          <h1>🤝 Consensus scoreboard</h1>\
-         <p class=sub>Tracking {tracked} top traders · {n} strategies forward · auto-refresh 30s</p>\
+         <p class=sub>Tracking {tracked} top traders · {n} strategies forward · data-api 429s: {n429} · auto-refresh 30s</p>\
          {body}\
          <p class=note><b>surplus</b> = edge over the band-matched blind baseline (favorite-longshot-neutralized) — \
          the real signal. <b>lower bound</b> = Bonferroni-corrected 1-sided bound. ✅ = passes the belief-blind \
@@ -142,4 +229,66 @@ async fn render(portfolio: &PgPortfolio) -> String {
          corrected among themselves, so they never tighten the <i>core</i> portfolio's bar.</p>\
          </body></html>",
     )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // Live: seed a resolved fill population, render the board, assert the trust
+    // table appears with a Trusted trader. `#[ignore]`d (needs $DATABASE_URL):
+    //
+    //   DATABASE_URL=postgres://bot:bot@localhost:55432/polymarket \
+    //     cargo test -p copy-trading-bot board_trust_render -- --ignored --nocapture
+    #[tokio::test]
+    #[ignore = "requires a live Postgres at $DATABASE_URL with migrations applied"]
+    async fn board_trust_render() {
+        let url = std::env::var("DATABASE_URL").expect("DATABASE_URL");
+        let pool = sqlx::PgPool::connect(&url).await.unwrap();
+        let pf = PgPortfolio::new(pool.clone()).await.unwrap();
+        sqlx::query("DELETE FROM trader_fills WHERE wallet LIKE 'bd_%'")
+            .execute(&pool)
+            .await
+            .unwrap();
+
+        // A skilled wallet (b3 @ 0.5, 75% over 60 events) against a balanced
+        // baseline so its surplus clears the gate => Trusted on the board.
+        for (w, wins) in [("bd_base", 100), ("bd_good", 45)] {
+            let n = if w == "bd_base" { 200 } else { 60 };
+            for i in 0..n {
+                let won = i < wins;
+                let adv = (won as i32) as f64 - 0.5;
+                let cond = format!("{w}_c{i}");
+                sqlx::query(
+                    "INSERT INTO trader_fills (wallet, condition_id, outcome_index, outcome, side, \
+                       price, size_usd, title, slug, event_slug, is_sports, sport, ts, resolved, \
+                       outcome_won, advantage, resolved_at) \
+                     VALUES ($1,$2,0,'Yes','BUY',0.5,100,'t','s',$3,false,'other', \
+                       NOW()-INTERVAL '1 hour',true,$4,$5,NOW())",
+                )
+                .bind(w)
+                .bind(&cond)
+                .bind(&cond)
+                .bind(won)
+                .bind(adv)
+                .execute(&pool)
+                .await
+                .unwrap();
+            }
+        }
+
+        let html = render(&pf).await;
+        assert!(html.contains("Trader trust"), "trust table rendered");
+        assert!(html.contains("bd_good"), "skilled trader appears");
+        assert!(
+            html.contains('\u{2705}'),
+            "a Trusted trader shows the check mark"
+        );
+        println!("board_trust_render: trust table renders with a Trusted trader — OK");
+
+        sqlx::query("DELETE FROM trader_fills WHERE wallet LIKE 'bd_%'")
+            .execute(&pool)
+            .await
+            .unwrap();
+    }
 }

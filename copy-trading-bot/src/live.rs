@@ -166,13 +166,15 @@ pub async fn run_live(cfg: Arc<CopyTradingConfig>) -> Result<()> {
     // Housekeeping loop — resolves copy bets independently
     let hk_portfolio = Arc::clone(&portfolio);
     let hk_notifier = Arc::clone(&notifier);
+    let hk_cfg = Arc::clone(&cfg);
     let hk_http = reqwest::Client::builder()
         .timeout(Duration::from_secs(15))
         .build()
         .expect("failed to build housekeeping HTTP client");
     let housekeeping_loop = tokio::spawn(async move {
         loop {
-            if let Err(e) = cycles::housekeeping_cycle(&hk_portfolio, &hk_notifier, &hk_http).await
+            if let Err(e) =
+                cycles::housekeeping_cycle(&hk_portfolio, &hk_notifier, &hk_http, &hk_cfg).await
             {
                 tracing::error!(err = %e, "Copy housekeeping cycle failed");
             }
@@ -238,6 +240,31 @@ pub async fn run_live(cfg: Arc<CopyTradingConfig>) -> Result<()> {
     // All default-OFF — with no flags/models this is an empty no-op set.
     let enrich_models = Arc::new(crate::scanner::enrich::load_models(&cfg));
 
+    // Cached earned-trust map (Phase 4): slow-refreshed (~hourly), read each
+    // consensus cycle. When CONSENSUS_TRUST_ARMS is off the refresh task exits
+    // immediately and the map stays empty ⇒ earned_quality == quality_weight,
+    // trusted == true ⇒ the portfolio is byte-identical.
+    let trust_map: Arc<tokio::sync::RwLock<crate::cycles::consensus_cycle::TrustMap>> =
+        Arc::new(tokio::sync::RwLock::new(Default::default()));
+    {
+        let tm = Arc::clone(&trust_map);
+        let tp = Arc::clone(&portfolio);
+        let tcfg = Arc::clone(&cfg);
+        tokio::spawn(async move {
+            if !tcfg.consensus_trust_arms {
+                tracing::info!("Trust arms off — earned-trust map refresh disabled");
+                return;
+            }
+            loop {
+                let m = crate::cycles::consensus_cycle::compute_trust_map(&tp).await;
+                let n = m.len();
+                *tm.write().await = m;
+                tracing::info!(traders = n, "Earned-trust map refreshed");
+                tokio::time::sleep(Duration::from_secs(tcfg.trust_refresh_mins * 60)).await;
+            }
+        });
+    }
+
     // Consensus detection loop.
     let co_portfolio = Arc::clone(&portfolio);
     let co_notifier = Arc::clone(&notifier);
@@ -245,6 +272,7 @@ pub async fn run_live(cfg: Arc<CopyTradingConfig>) -> Result<()> {
     let co_cfg = Arc::clone(&cfg);
     let co_ntfy = ntfy.clone();
     let co_models = Arc::clone(&enrich_models);
+    let co_trust = Arc::clone(&trust_map);
     let co_http = reqwest::Client::builder()
         .timeout(Duration::from_secs(15))
         .build()
@@ -256,6 +284,9 @@ pub async fn run_live(cfg: Arc<CopyTradingConfig>) -> Result<()> {
         // Give the first leaderboard refresh a moment to populate the universe.
         tokio::time::sleep(Duration::from_secs(20)).await;
         loop {
+            // Cheap snapshot of the slow-refreshed trust map (≤~60 entries); never
+            // hold the lock across the cycle's network I/O.
+            let trust_snapshot = co_trust.read().await.clone();
             if let Err(e) = cycles::consensus_cycle(
                 &co_portfolio,
                 &co_notifier,
@@ -264,6 +295,7 @@ pub async fn run_live(cfg: Arc<CopyTradingConfig>) -> Result<()> {
                 co_ntfy.as_deref(),
                 &co_http,
                 &co_models,
+                &trust_snapshot,
             )
             .await
             {

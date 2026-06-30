@@ -5,8 +5,10 @@ use crate::cycles::copy_trade::COPY_TRADER_STARTING_BANKROLL;
 use crate::scanner::copy_trader::{
     CopyTraderMonitor, fetch_leaderboard, fetch_trader_username, format_multi_leaderboard,
 };
+use crate::scanner::trader_trust::{TraderTrust, TrustVerdict, trust_verdict};
 use crate::storage::postgres::PgPortfolio;
 use crate::telegram::notifier::TelegramNotifier;
+use polymarket_common::storage::consensus::TraderSliceStat;
 
 /// Dispatch a single Telegram command and return the reply string.
 #[allow(clippy::too_many_arguments)]
@@ -122,10 +124,36 @@ pub async fn handle_command(
         }
         "tracked" => match portfolio.count_tracked_traders().await {
             Ok(n) => format!(
-                "🛰 Auto-tracking *{n}* leaderboard traders.\nUse /traders for the full list, /consensus for live signals."
+                "🛰 Auto-tracking *{n}* leaderboard traders.\nUse /traders for the full list, /consensus for live signals, /trustedtraders for earned-trust ranking."
             ),
             Err(e) => format!("⚠️ Failed to count tracked traders: {e}"),
         },
+        // Earned-trust profile for one wallet (who to actually follow).
+        "trader" => {
+            let arg = full_text.split_whitespace().nth(1).unwrap_or("");
+            if arg.is_empty() {
+                "Usage: `/trader <wallet_address>` — earned-trust profile (how profitable, when, with what games).".to_string()
+            } else {
+                match portfolio.trader_profile(arg).await {
+                    Ok((slices, gap)) if !slices.is_empty() => {
+                        format_trader_profile(arg, &slices, gap)
+                    }
+                    Ok(_) => format!(
+                        "🪪 No resolved fills captured yet for `{}…` — its profile builds forward as its markets close.",
+                        &arg[..8.min(arg.len())]
+                    ),
+                    Err(e) => format!("⚠️ Failed to load trader profile: {e}"),
+                }
+            }
+        }
+        // Tracked traders ranked by EARNED trust (not leaderboard rank).
+        "trustedtraders" | "traders-by-trust" => {
+            match portfolio.trader_slice_scores().await {
+                Ok(scores) if !scores.is_empty() => format_traders_by_trust(scores),
+                Ok(_) => "🏅 No resolved trader fills yet — the earned-trust ranking builds forward as markets close.".to_string(),
+                Err(e) => format!("⚠️ Failed to load earned-trust ranking: {e}"),
+            }
+        }
         "leaderboard" => {
             let (day_res, month_res, all_res) = tokio::join!(
                 fetch_leaderboard(http, "DAY"),
@@ -225,6 +253,8 @@ pub async fn handle_command(
                  /stats — copy trading results\n\
                  /consensus — live consensus signals + hit-rate\n\
                  /tracked — auto-tracked trader count\n\
+                 /trader <wallet> — earned-trust profile for one trader\n\
+                 /trustedtraders — traders ranked by earned trust\n\
                  /copy — open copy-trade positions\n\
                  /traders — followed traders\n\
                  /leaderboard — top Polymarket traders\n\
@@ -233,5 +263,218 @@ pub async fn handle_command(
                  /help — this message"
             .to_string(),
         _ => format!("❓ Unknown command: /{cmd}\nTry /help"),
+    }
+}
+
+/// Plain-English, honesty-first earned-trust profile for one wallet. Always
+/// prints the event count and the bound; never presents a thin slice as fact
+/// (grey/indeterminate is shown as such). Capture gaps are flagged.
+fn format_trader_profile(wallet: &str, slices: &[TraderSliceStat], gap: i32) -> String {
+    let t = trust_verdict(slices);
+    let short = &wallet[..10.min(wallet.len())];
+    let pct = |x: f64| format!("{:+.1}%", x * 100.0);
+
+    let mut out = format!(
+        "👤 *Trader* `{short}…`\n{} *{}*",
+        t.verdict.marker(),
+        t.verdict.as_str()
+    );
+    if t.n_events > 0 {
+        // Show the bound that decided the verdict (lower for Trusted, upper for
+        // Avoid) so the headline number is the one that matters.
+        let bound = match t.verdict {
+            TrustVerdict::Avoid => format!("upper bound {}", pct(t.upper_bound)),
+            _ => format!("lower bound {}", pct(t.lower_bound)),
+        };
+        out.push_str(&format!(
+            "\n📈 Surplus {} ({bound}) over {} events",
+            pct(t.surplus),
+            t.n_events
+        ));
+    } else {
+        out.push_str("\n_No resolved events yet._");
+    }
+
+    let best: Vec<String> = t
+        .best_slices
+        .iter()
+        .filter(|(_, _, s)| *s > 0.0)
+        .map(|(k, v, s)| format!("{} {}", slice_tag(k, v), pct(*s)))
+        .collect();
+    if !best.is_empty() {
+        out.push_str(&format!("\n✅ Best: {}", best.join(", ")));
+    }
+    let worst: Vec<String> = t
+        .worst_slices
+        .iter()
+        .filter(|(_, _, s)| *s < 0.0)
+        .map(|(k, v, s)| format!("{} {}", slice_tag(k, v), pct(*s)))
+        .collect();
+    if !worst.is_empty() {
+        out.push_str(&format!("\n🔻 Worst: {}", worst.join(", ")));
+    }
+
+    for (kind, label) in [("recency7d", "7d"), ("recency30d", "30d")] {
+        if let Some(s) = slices.iter().find(|s| s.slice_kind == kind)
+            && let Some(su) = s.surplus
+        {
+            out.push_str(&format!("\n⏱ {label}: {} ({} ev)", pct(su), s.n_events));
+        }
+    }
+
+    if gap > 0 {
+        out.push_str(&format!("\n⚠ partial capture ({gap} gaps)"));
+    } else {
+        out.push_str("\n✓ capture complete");
+    }
+    out.push_str(
+        "\n\n_Trust is the gate's call: surplus over the trader's-own-band blind baseline, ≥30 distinct events, Bonferroni across slices, one-sided bound. Forward-measured (accrues); grey = indeterminate._",
+    );
+    out
+}
+
+/// Tracked traders ranked by EARNED trust (not leaderboard rank): Trusted first
+/// (by lower bound), then Indeterminate (by surplus), then Avoid.
+fn format_traders_by_trust(scores: Vec<TraderSliceStat>) -> String {
+    use std::collections::HashMap;
+    let mut by: HashMap<String, Vec<TraderSliceStat>> = HashMap::new();
+    for s in scores {
+        by.entry(s.wallet.clone()).or_default().push(s);
+    }
+    let mut verdicts: Vec<TraderTrust> = by
+        .into_values()
+        .map(|v| trust_verdict(&v))
+        .filter(|t| t.n_events > 0)
+        .collect();
+    if verdicts.is_empty() {
+        return "🏅 No traders with resolved fills yet — the ranking builds forward.".to_string();
+    }
+    let key = |t: &TraderTrust| match t.verdict {
+        TrustVerdict::Trusted => 10.0 + t.lower_bound,
+        TrustVerdict::Indeterminate => t.surplus,
+        TrustVerdict::Avoid => -10.0 + t.surplus,
+    };
+    verdicts.sort_by(|a, b| {
+        key(b)
+            .partial_cmp(&key(a))
+            .unwrap_or(std::cmp::Ordering::Equal)
+    });
+
+    let pct = |x: f64| format!("{:+.1}%", x * 100.0);
+    let mut out = String::from("🏅 *Traders by earned trust* (forward-measured)\n");
+    for t in verdicts.iter().take(25) {
+        let short = &t.wallet[..10.min(t.wallet.len())];
+        let bound = match t.verdict {
+            TrustVerdict::Avoid => format!("ub {}", pct(t.upper_bound)),
+            TrustVerdict::Trusted => format!("lb {}", pct(t.lower_bound)),
+            TrustVerdict::Indeterminate => "—".to_string(),
+        };
+        out.push_str(&format!(
+            "\n{} `{short}…` {} ({} · {} ev)",
+            t.verdict.marker(),
+            pct(t.surplus),
+            bound,
+            t.n_events
+        ));
+    }
+    out.push_str(
+        "\n\n_✅ Trusted · ⏸ indeterminate (not enough events / straddles 0) · ⛔ Avoid. Earned, not leaderboard rank. Surplus = favorite-longshot-neutralized edge._",
+    );
+    out
+}
+
+/// Friendly display token for a slice (kind, key) in profile output.
+fn slice_tag(kind: &str, key: &str) -> String {
+    match kind {
+        "sport" => key.to_string(),
+        "band" => format!("price {key}"),
+        _ => key.to_string(),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn slice(
+        kind: &str,
+        key: &str,
+        n: i64,
+        surplus: Option<f64>,
+        sd: Option<f64>,
+    ) -> TraderSliceStat {
+        TraderSliceStat {
+            wallet: "0xprofiletest".into(),
+            slice_kind: kind.into(),
+            slice_key: key.into(),
+            n_events: n,
+            n_resolved: n,
+            surplus,
+            surplus_sd: sd,
+            mean_adv: surplus,
+            hit_rate: Some(0.55),
+        }
+    }
+
+    #[test]
+    fn trader_profile_text_is_honest_and_complete() {
+        let slices = vec![
+            slice("overall", "", 60, Some(0.12), Some(0.10)),
+            slice("sport", "nba", 40, Some(0.18), Some(0.10)),
+            slice("sport", "soccer", 30, Some(-0.10), Some(0.10)),
+            slice("recency7d", "7d", 12, Some(0.09), Some(0.10)),
+        ];
+        let out = format_trader_profile("0xprofiletestWALLET", &slices, 0);
+        assert!(out.contains("TRUSTED"), "verdict shown: {out}");
+        assert!(out.contains("over 60 events"), "N always printed");
+        assert!(out.contains("lower bound"), "decisive bound shown");
+        assert!(out.contains("nba"), "best game surfaced");
+        assert!(out.contains("soccer"), "worst game surfaced");
+        assert!(out.contains("7d"), "recency surfaced");
+        assert!(out.contains("capture complete"));
+    }
+
+    #[test]
+    fn trader_profile_flags_partial_capture() {
+        let slices = vec![slice("overall", "", 10, Some(0.3), Some(0.05))];
+        let out = format_trader_profile("0xpartialwallet", &slices, 4);
+        // 10 events < floor ⇒ INDETERMINATE regardless of the point estimate.
+        assert!(out.contains("INDETERMINATE"));
+        assert!(out.contains("partial capture (4 gaps)"));
+    }
+
+    #[test]
+    fn traders_by_trust_ranks_trusted_first() {
+        let scores = vec![
+            // trusted wallet
+            TraderSliceStat {
+                wallet: "0xgood".into(),
+                slice_kind: "overall".into(),
+                slice_key: "".into(),
+                n_events: 60,
+                n_resolved: 60,
+                surplus: Some(0.15),
+                surplus_sd: Some(0.08),
+                mean_adv: Some(0.15),
+                hit_rate: Some(0.6),
+            },
+            // indeterminate wallet
+            TraderSliceStat {
+                wallet: "0xmeh".into(),
+                slice_kind: "overall".into(),
+                slice_key: "".into(),
+                n_events: 10,
+                n_resolved: 10,
+                surplus: Some(0.05),
+                surplus_sd: Some(0.2),
+                mean_adv: Some(0.05),
+                hit_rate: Some(0.5),
+            },
+        ];
+        let out = format_traders_by_trust(scores);
+        let good = out.find("0xgood").unwrap();
+        let meh = out.find("0xmeh").unwrap();
+        assert!(good < meh, "trusted trader ranked above indeterminate");
+        assert!(out.contains("✅") && out.contains("⏸"));
     }
 }

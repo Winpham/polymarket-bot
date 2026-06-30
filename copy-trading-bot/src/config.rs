@@ -115,6 +115,34 @@ pub struct CopyTradingConfig {
     #[config(env = "CONSENSUS_INCREMENTAL", default = true)]
     pub consensus_incremental: bool,
 
+    /// Max concurrent data-api `/activity` polls in the consensus fan-out. The
+    /// poll fan-out is otherwise an unbounded `join_all` burst; this Semaphore
+    /// caps it so widening the tracked universe can't spike the data-api into
+    /// 429s. Raise only after the 429 rate (Phase 5 board metric) stays ≈ 0.
+    #[config(env = "CONSENSUS_MAX_CONCURRENCY", default = 8)]
+    pub consensus_max_concurrency: usize,
+
+    /// Build consensus books from the durable `trader_fills` archive instead of
+    /// the `consensus_vote_window` table. Default false (byte-identical legacy
+    /// path). When true, `quality` is re-derived from each trader's CURRENT rank
+    /// at load — this can shift the *ranking* `score` slightly, but live `strict`
+    /// alerts are unaffected because tiering keys on `net_count`. Both tables are
+    /// dual-written this release for instant rollback.
+    #[config(env = "CONSENSUS_BOOKS_FROM_FILLS", default = false)]
+    pub consensus_books_from_fills: bool,
+
+    /// Max distinct `trader_fills` conditions to resolve per housekeeping cycle
+    /// via the independent unresolved source (bounds the per-cycle CLOB fetch
+    /// load; markets that don't fit settle on later cycles).
+    #[config(env = "TRADER_FILLS_RESOLVE_PER_CYCLE", default = 200)]
+    pub trader_fills_resolve_per_cycle: i64,
+
+    /// Retention (days) for the durable `trader_fills` archive. Default 0 =
+    /// keep-all (the archive is the point); set > 0 to prune older fills. The
+    /// daily pg_dump backup covers durability regardless.
+    #[config(env = "TRADER_FILLS_RETENTION_DAYS", default = 0)]
+    pub trader_fills_retention_days: i64,
+
     // --- Silent cross-check arms (Phase 4). All default OFF: an arm runs only
     //     when its flag is ON *and* its model file loads; emitted rows are silent
     //     (never alert) and judged by the belief-blind gate in the experimental
@@ -131,6 +159,18 @@ pub struct CopyTradingConfig {
     /// Enable the Bayesian-anchor arm (`bayes_anchor`).
     #[config(env = "CONSENSUS_ARM_BAYES", default = false)]
     pub consensus_arm_bayes: bool,
+
+    /// Enable the earned-trust consensus arms (`trust_weighted`, `trusted_only`).
+    /// Default OFF: when off they aren't registered (portfolio byte-identical) and
+    /// the trust-map refresh task is skipped. They're silent + judged in the
+    /// experimental family; live `strict` is non-regressive (tiering = net_count).
+    #[config(env = "CONSENSUS_TRUST_ARMS", default = false)]
+    pub consensus_trust_arms: bool,
+
+    /// How often (minutes) to refresh the cached earned-trust map. Trust inputs
+    /// change ~daily as markets resolve, so this is slow — NOT per 1-min cycle.
+    #[config(env = "TRUST_REFRESH_MINS", default = 60)]
+    pub trust_refresh_mins: u64,
 
     /// Path to the consensus logistic model JSON (consensus_train.py output).
     #[config(env = "CONSENSUS_WIN_MODEL_PATH", default = "model/consensus_win.json")]

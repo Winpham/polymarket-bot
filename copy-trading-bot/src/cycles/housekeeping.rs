@@ -1,6 +1,7 @@
 use anyhow::{Context, Result};
 use std::time::Duration;
 
+use crate::config::CopyTradingConfig;
 use crate::data::models::GammaMarket;
 use crate::live::broadcast;
 use crate::storage::portfolio::BetSide;
@@ -13,6 +14,7 @@ pub async fn housekeeping_cycle(
     portfolio: &PgPortfolio,
     notifier: &TelegramNotifier,
     http: &reqwest::Client,
+    cfg: &CopyTradingConfig,
 ) -> Result<()> {
     let open_ids = portfolio.open_copy_bet_market_ids().await?;
 
@@ -88,55 +90,112 @@ pub async fn housekeeping_cycle(
         }
     }
 
+    // INDEPENDENT unresolved source (the survivorship fix): trader_fills on
+    // markets that may never have triggered a consensus signal. Resolving only
+    // consensus conditions would leave those fills perpetually unresolved and
+    // bias every trust profile toward markets that happened to fire consensus.
+    // UNION it into the cond set (deduped against the consensus conds), bounded
+    // by a per-cycle cap and a min-age so very fresh markets aren't probed.
+    let tf_conds = portfolio
+        .trader_fill_unresolved_conditions(
+            chrono::Duration::hours(6),
+            cfg.trader_fills_resolve_per_cycle,
+        )
+        .await
+        .unwrap_or_default();
+    let mut all_conds: Vec<String> = by_cond.keys().map(|c| c.to_string()).collect();
+    {
+        let known: std::collections::HashSet<&str> = by_cond.keys().copied().collect();
+        for c in &tf_conds {
+            if !known.contains(c.as_str()) {
+                all_conds.push(c.clone());
+            }
+        }
+    }
+
     let mut consensus_resolved = 0usize;
     let mut snapshots = 0usize;
-    for (cond, sigs) in &by_cond {
+    let mut fills_resolved = 0u64;
+    for cond in &all_conds {
         tokio::time::sleep(Duration::from_millis(120)).await;
         let market = match crate::data::models::fetch_clob_market(http, cond).await {
             Ok(m) => m,
             Err(_) => continue, // transient — try next cycle
         };
-        for sig in sigs {
-            let price = market.outcome_price(sig.outcome_index);
-            match market.outcome_won(sig.outcome_index) {
-                Some(won) => match portfolio.resolve_consensus_signal(sig.id, won, cond).await {
-                    Ok(()) => {
-                        consensus_resolved += 1;
-                        crate::metrics::record_consensus_resolution(
-                            &sig.strategy,
-                            won,
-                            sig.is_sports,
-                        );
+        // 1. Consensus signals for this cond (if any) — existing behavior.
+        if let Some(sigs) = by_cond.get(cond.as_str()) {
+            for sig in sigs {
+                let price = market.outcome_price(sig.outcome_index);
+                match market.outcome_won(sig.outcome_index) {
+                    Some(won) => {
+                        match portfolio.resolve_consensus_signal(sig.id, won, cond).await {
+                            Ok(()) => {
+                                consensus_resolved += 1;
+                                crate::metrics::record_consensus_resolution(
+                                    &sig.strategy,
+                                    won,
+                                    sig.is_sports,
+                                );
+                            }
+                            Err(e) => {
+                                tracing::warn!(err = %e, signal_id = sig.id, "resolve_consensus_signal failed")
+                            }
+                        }
                     }
-                    Err(e) => {
-                        tracing::warn!(err = %e, signal_id = sig.id, "resolve_consensus_signal failed")
+                    // Still open → record a trajectory snapshot (the price chart).
+                    // Skip the `_blind` benchmark population (we only need its
+                    // resolution, not a per-signal chart) to bound snapshot volume.
+                    None if sig.strategy != "_blind" => {
+                        if let Err(e) = portfolio
+                            .snapshot_consensus_signal(
+                                sig.id,
+                                sig.net_count,
+                                sig.n_backers,
+                                sig.mean_price,
+                                price,
+                            )
+                            .await
+                        {
+                            tracing::warn!(err = %e, signal_id = sig.id, "snapshot failed");
+                        } else {
+                            snapshots += 1;
+                        }
                     }
-                },
-                // Still open → record a trajectory snapshot (the price chart).
-                // Skip the `_blind` benchmark population (we only need its
-                // resolution, not a per-signal chart) to bound snapshot volume.
-                None if sig.strategy != "_blind" => {
-                    if let Err(e) = portfolio
-                        .snapshot_consensus_signal(
-                            sig.id,
-                            sig.net_count,
-                            sig.n_backers,
-                            sig.mean_price,
-                            price,
-                        )
-                        .await
-                    {
-                        tracing::warn!(err = %e, signal_id = sig.id, "snapshot failed");
-                    } else {
-                        snapshots += 1;
-                    }
+                    None => {}
                 }
-                None => {}
+            }
+        }
+        // 2. Durable trader-fill ledger — resolved INDEPENDENTLY of consensus.
+        // `winner_index` is the winning token (multi-outcome correct). A closed
+        // market with NO winner token (void/refund) is SKIPPED — we don't charge
+        // every BUY a loss; those fills settle if/when the market gets a winner.
+        if market.closed
+            && let Some(idx) = market.tokens.iter().position(|t| t.winner)
+        {
+            match portfolio.resolve_trader_fills(cond, idx as i32).await {
+                Ok(n) => fills_resolved += n,
+                Err(e) => {
+                    tracing::warn!(err = %e, cond = %cond, "resolve_trader_fills failed")
+                }
             }
         }
     }
     if snapshots > 0 {
         tracing::info!(snapshots, "Consensus trajectory snapshots recorded");
+    }
+    if fills_resolved > 0 {
+        tracing::info!(fills_resolved, "Trader fills resolved");
+    }
+    // Retention prune (default 0 = keep-all, the durable archive is the point).
+    if cfg.trader_fills_retention_days > 0 {
+        match portfolio
+            .prune_trader_fills(cfg.trader_fills_retention_days)
+            .await
+        {
+            Ok(n) if n > 0 => tracing::info!(pruned = n, "Trader fills pruned (retention)"),
+            Ok(_) => {}
+            Err(e) => tracing::warn!(err = %e, "prune_trader_fills failed"),
+        }
     }
     if consensus_resolved > 0
         && let Ok((res, won, _, _)) = portfolio.consensus_scoreboard().await

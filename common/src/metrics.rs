@@ -177,6 +177,22 @@ pub fn record_consensus_resolution(strategy: &str, won: bool, is_sports: bool) {
     .increment(1);
 }
 
+/// Process-global 429 count, mirrored alongside the Prometheus counter so the
+/// in-process board can read it back (Prometheus counters aren't readable here).
+static DATA_API_429: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+
+/// Record a data-api HTTP 429 (rate-limited). The scale gate (Phase 5) only
+/// widens the tracked universe / cadence once this rate is ≈ 0.
+pub fn record_data_api_429() {
+    counter!("consensus_data_api_429_total").increment(1);
+    DATA_API_429.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+}
+
+/// Total data-api 429s seen since process start (for the board's scale gate).
+pub fn data_api_429_count() -> u64 {
+    DATA_API_429.load(std::sync::atomic::Ordering::Relaxed)
+}
+
 /// Publish a strategy's live forward-tracking scoreboard as gauges.
 pub fn record_consensus_strategy_score(strategy: &str, resolved: i64, hit_rate: f64, edge: f64) {
     gauge!("consensus_strategy_resolved", "strategy" => strategy.to_string()).set(resolved as f64);
