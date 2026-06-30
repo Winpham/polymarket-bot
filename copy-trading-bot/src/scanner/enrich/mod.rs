@@ -232,6 +232,8 @@ pub fn family(strategy: &str) -> &'static str {
         "market_ml",
         "market_veto",
         "bayes_anchor",
+        "trust_weighted",
+        "trusted_only",
     ];
     if EXPERIMENTAL.contains(&strategy) {
         "experimental"

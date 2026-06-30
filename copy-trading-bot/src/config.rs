@@ -154,6 +154,18 @@ pub struct CopyTradingConfig {
     #[config(env = "CONSENSUS_ARM_BAYES", default = false)]
     pub consensus_arm_bayes: bool,
 
+    /// Enable the earned-trust consensus arms (`trust_weighted`, `trusted_only`).
+    /// Default OFF: when off they aren't registered (portfolio byte-identical) and
+    /// the trust-map refresh task is skipped. They're silent + judged in the
+    /// experimental family; live `strict` is non-regressive (tiering = net_count).
+    #[config(env = "CONSENSUS_TRUST_ARMS", default = false)]
+    pub consensus_trust_arms: bool,
+
+    /// How often (minutes) to refresh the cached earned-trust map. Trust inputs
+    /// change ~daily as markets resolve, so this is slow — NOT per 1-min cycle.
+    #[config(env = "TRUST_REFRESH_MINS", default = 60)]
+    pub trust_refresh_mins: u64,
+
     /// Path to the consensus logistic model JSON (consensus_train.py output).
     #[config(env = "CONSENSUS_WIN_MODEL_PATH", default = "model/consensus_win.json")]
     pub consensus_win_model_path: String,

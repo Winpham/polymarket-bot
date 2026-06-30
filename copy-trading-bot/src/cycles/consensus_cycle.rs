@@ -19,10 +19,11 @@ use crate::data::models::{fetch_clob_market, fetch_market_by_slug, fetch_price_h
 use crate::live::broadcast;
 use crate::scanner::consensus::{
     BackerInfo, ConsensusParams, ConsensusSignal, MarketBook, StrategyDef, Tier, TraderVote,
-    default_portfolio, quality_weight, score_all_strategies,
+    default_portfolio, quality_weight, score_all_strategies, trust_arms,
 };
 use crate::scanner::copy_trader::{CopyTraderMonitor, PollResult, TraderTrade};
 use crate::scanner::enrich::{EnrichCtx, EnrichMargins, EnrichModels, MarketCtx, enrich_all};
+use crate::scanner::trader_trust::{TraderTrust, TrustVerdict};
 use crate::storage::consensus::{NewConsensusSignal, NewTraderFill, WindowVote};
 use crate::storage::postgres::{FollowedTrader, PgPortfolio};
 use crate::telegram::notifier::TelegramNotifier;
@@ -49,7 +50,49 @@ fn params_from_cfg(cfg: &CopyTradingConfig) -> ConsensusParams {
             crate::scanner::consensus::SportsMode::Exclude
         },
         weight_mode: crate::scanner::consensus::WeightMode::Quality,
+        trusted_only: false,
     }
+}
+
+/// Per-vote earned quality + trust flag from the cached trust map. Untracked /
+/// INDETERMINATE ⇒ `quality_weight(rank)` fallback (never 0) so trust-weighting
+/// can't silently zero a new trader; `trusted` defaults true when untracked so
+/// `trusted_only` doesn't drop brand-new traders. Shrink-toward-0 lives HERE
+/// (regularizing the continuous multiplier), never at the verdict.
+fn earned_quality(trust: &TrustMap, wallet: &str, rank: Option<i32>) -> (f64, bool) {
+    let qw = quality_weight(rank);
+    match trust.get(wallet) {
+        Some(t) => {
+            let n = t.n_events as f64;
+            let damp = n / (n + 20.0); // shrink toward the prior for low N
+            let earned = match t.verdict {
+                TrustVerdict::Trusted => (1.0 + t.lower_bound * damp).clamp(0.5, 2.0),
+                TrustVerdict::Avoid => (1.0 + t.upper_bound * damp).clamp(0.5, 1.0),
+                TrustVerdict::Indeterminate => qw,
+            };
+            (earned, matches!(t.verdict, TrustVerdict::Trusted))
+        }
+        None => (qw, true),
+    }
+}
+
+/// Cached earned-trust map: lower-cased wallet → its verdict. Refreshed slowly
+/// (markets resolve ~daily), NOT recomputed every 1-min cycle.
+pub type TrustMap = std::collections::HashMap<String, TraderTrust>;
+
+/// Recompute the earned-trust map from the resolved fill archive: one
+/// `trader_slice_scores` query → a `trust_verdict` per wallet. Called by the
+/// slow refresh task in `live.rs`; empty on any DB error (fallback = incumbent
+/// behavior). Cheap relative to its ~hourly cadence.
+pub async fn compute_trust_map(portfolio: &PgPortfolio) -> TrustMap {
+    let scores = portfolio.trader_slice_scores().await.unwrap_or_default();
+    let mut by: HashMap<String, Vec<_>> = HashMap::new();
+    for s in scores {
+        by.entry(s.wallet.clone()).or_default().push(s);
+    }
+    by.into_iter()
+        .map(|(w, slices)| (w, crate::scanner::trader_trust::trust_verdict(&slices)))
+        .collect()
 }
 
 /// Local sports/esports heuristic on the activity title + slug (avoids a Gamma
@@ -183,6 +226,7 @@ pub async fn consensus_cycle(
     ntfy: Option<&Ntfy>,
     http: &reqwest::Client,
     models: &EnrichModels,
+    trust: &TrustMap,
 ) -> Result<()> {
     let traders = portfolio.get_active_traders().await?;
     if traders.is_empty() {
@@ -197,9 +241,9 @@ pub async fn consensus_cycle(
     // the legacy poll-the-whole-window path. Both assemble identical books via
     // `books_from_window_votes`, so the live `strict` behavior is non-regressive.
     let (book_vec, polled_ok) = if cfg.consensus_incremental {
-        ingest_incremental(portfolio, monitor, &traders, now, window_start, cfg).await?
+        ingest_incremental(portfolio, monitor, &traders, now, window_start, cfg, trust).await?
     } else {
-        ingest_legacy(monitor, &traders, window_start, cfg).await
+        ingest_legacy(monitor, &traders, window_start, cfg, trust).await
     };
 
     // Serialize the raw vote atoms ONCE per (market, outcome) — strategy-agnostic.
@@ -360,7 +404,7 @@ fn trade_to_window_vote(
 /// shared by both ingestion paths so they produce identical books. Mirrors the
 /// legacy assembly: wallet lower-cased for distinctness, label/title/sport set by
 /// the first atom seen for a `(condition, outcome)`.
-fn books_from_window_votes(votes: &[WindowVote]) -> Vec<MarketBook> {
+fn books_from_window_votes(votes: &[WindowVote], trust: &TrustMap) -> Vec<MarketBook> {
     let mut books: HashMap<String, MarketBook> = HashMap::new();
     for v in votes {
         let book = books.entry(v.condition_id.clone()).or_insert_with(|| {
@@ -372,6 +416,10 @@ fn books_from_window_votes(votes: &[WindowVote]) -> Vec<MarketBook> {
                 v.is_sports,
             )
         });
+        // Earned trust rides on the vote (cached map). Defaults preserve incumbent
+        // behavior: an empty/absent map ⇒ earned_quality == quality_weight(rank),
+        // trusted == true, so every non-trust strategy is byte-identical.
+        let (eq, trusted) = earned_quality(trust, &v.trader_wallet, v.rank);
         book.add_vote(
             v.outcome_index,
             v.outcome.clone(),
@@ -381,6 +429,8 @@ fn books_from_window_votes(votes: &[WindowVote]) -> Vec<MarketBook> {
                 rank: v.rank,
                 pnl: v.pnl,
                 quality: v.quality,
+                earned_quality: eq,
+                trusted,
                 price: v.price,
                 size_usd: v.size_usd,
                 ts: v.ts,
@@ -398,6 +448,7 @@ async fn ingest_legacy(
     traders: &[FollowedTrader],
     window_start: DateTime<Utc>,
     cfg: &CopyTradingConfig,
+    trust: &TrustMap,
 ) -> (Vec<MarketBook>, usize) {
     let sem = Arc::new(Semaphore::new(cfg.consensus_max_concurrency.max(1)));
     let polls = traders.iter().map(|t| {
@@ -431,7 +482,7 @@ async fn ingest_legacy(
             }
         }
     }
-    (books_from_window_votes(&votes), polled_ok)
+    (books_from_window_votes(&votes, trust), polled_ok)
 }
 
 /// L1 incremental ingestion: poll only the delta since each trader's cursor
@@ -448,6 +499,7 @@ async fn ingest_incremental(
     now: DateTime<Utc>,
     window_start: DateTime<Utc>,
     cfg: &CopyTradingConfig,
+    trust: &TrustMap,
 ) -> Result<(Vec<MarketBook>, usize)> {
     let cursors = portfolio.consensus_cursors().await.unwrap_or_default();
 
@@ -568,7 +620,10 @@ async fn ingest_incremental(
         books_from_fills = cfg.consensus_books_from_fills,
         "Consensus incremental ingest"
     );
-    Ok((books_from_window_votes(&window), polled_ok_wallets.len()))
+    Ok((
+        books_from_window_votes(&window, trust),
+        polled_ok_wallets.len(),
+    ))
 }
 
 /// Pre-fetch per-market data for the market-dependent arms (`market_ml`,
@@ -643,7 +698,12 @@ async fn build_market_features(
 /// the `CONSENSUS_STRATEGIES` allowlist (empty = all).
 fn active_portfolio(cfg: &CopyTradingConfig) -> Vec<StrategyDef> {
     let base = params_from_cfg(cfg);
-    let all = default_portfolio(&base);
+    let mut all = default_portfolio(&base);
+    // Earned-trust arms are registered ONLY when CONSENSUS_TRUST_ARMS is on;
+    // off ⇒ not appended ⇒ the portfolio is byte-identical to today.
+    if cfg.consensus_trust_arms {
+        all.extend(trust_arms(&base));
+    }
     let filter = cfg.consensus_strategies.trim();
     if filter.is_empty() {
         return all;
