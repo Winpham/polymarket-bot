@@ -244,6 +244,36 @@ pub struct CopyTradingConfig {
     #[config(env = "EXEC_HAIRCUT", default = 0.01)]
     pub exec_haircut: f64,
 
+    /// Flat paper stake ($) per bet — the capacity ceiling and ledger default.
+    #[config(env = "FLAT_STAKE", default = 100.0)]
+    pub flat_stake: f64,
+
+    /// Fraction of a market's liquidity proxy (median sharp $) usable as a stake
+    /// before the edge erodes: `suggested_stake = min(FLAT_STAKE, frac × median $)`.
+    #[config(env = "CAPACITY_FRAC", default = 0.05)]
+    pub capacity_frac: f64,
+
+    /// Minimum corrected honest-ROI lower bound a strategy must clear to be
+    /// pilot-ready (execution-aware GO threshold). A false GO risks real money.
+    #[config(env = "MIN_PILOT_ROI", default = 0.02)]
+    pub min_pilot_roi: f64,
+
+    /// Distinct-EVENT floor before a pilot verdict is even considered.
+    #[config(env = "PILOT_MIN_EVENTS", default = 50)]
+    pub pilot_min_events: i64,
+
+    /// Minimum number of distinct positive day-regimes required for a GO.
+    #[config(env = "PILOT_MIN_REGIMES", default = 5)]
+    pub pilot_min_regimes: i64,
+
+    /// Fraction of day-regimes that must be positive for a GO (with the floor above).
+    #[config(env = "REGIME_FRAC", default = 0.7)]
+    pub regime_frac: f64,
+
+    /// Market-liquidity floor (median sharp $) required to place a stake for a GO.
+    #[config(env = "MIN_LIQUIDITY_USD", default = 2000.0)]
+    pub min_liquidity_usd: f64,
+
     /// Port for the Prometheus metrics HTTP endpoint.
     #[config(env = "METRICS_PORT", default = 9001)]
     pub metrics_port: u16,

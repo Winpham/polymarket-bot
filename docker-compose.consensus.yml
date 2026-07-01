@@ -53,6 +53,13 @@ services:
       # --- honest P&L tracker (read-only; CLV − execution haircut, multi-regime).
       #     All read-only analytics knobs; none touch selection/alerting/betting. ---
       EXEC_HAIRCUT: ${EXEC_HAIRCUT:-0.01}                     # buy-side haircut (price units) when no real ask
+      FLAT_STAKE: ${FLAT_STAKE:-100.0}                        # paper stake $/bet (capacity ceiling)
+      CAPACITY_FRAC: ${CAPACITY_FRAC:-0.05}                   # usable fraction of median sharp $
+      MIN_PILOT_ROI: ${MIN_PILOT_ROI:-0.02}                   # corrected honest-ROI LB bar for a GO
+      PILOT_MIN_EVENTS: ${PILOT_MIN_EVENTS:-50}               # distinct-event floor for a GO
+      PILOT_MIN_REGIMES: ${PILOT_MIN_REGIMES:-5}              # min positive day-regimes for a GO
+      REGIME_FRAC: ${REGIME_FRAC:-0.7}                        # fraction of regimes that must be positive
+      MIN_LIQUIDITY_USD: ${MIN_LIQUIDITY_USD:-2000.0}         # liquidity floor (median sharp $) for a GO
       # Telegram is OPTIONAL — leave unset for ntfy-only (this deploy).
       # TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
       # TELEGRAM_CHAT_ID: ${TELEGRAM_CHAT_ID:-}

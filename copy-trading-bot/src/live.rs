@@ -96,10 +96,17 @@ pub async fn run_live(cfg: Arc<CopyTradingConfig>) -> Result<()> {
         let port = cfg.board_port;
         // Phase 0: gate arms at the follower's capture bar (slippage + fees).
         let capture_margin = cfg.slippage_pct + cfg.fee_pct;
-        // Read-only honest-P&L panel params (CLV − execution haircut).
+        // Read-only honest-P&L panel params (CLV − execution haircut + pilot gate).
         let honest = crate::board::HonestBoardParams {
             exec_haircut: cfg.exec_haircut,
             fee_pct: cfg.fee_pct,
+            flat_stake: cfg.flat_stake,
+            capacity_frac: cfg.capacity_frac,
+            min_pilot_roi: cfg.min_pilot_roi,
+            pilot_min_events: cfg.pilot_min_events,
+            pilot_min_regimes: cfg.pilot_min_regimes,
+            regime_frac: cfg.regime_frac,
+            min_liquidity_usd: cfg.min_liquidity_usd,
         };
         tokio::spawn(async move {
             crate::board::serve(bd_portfolio, port, capture_margin, honest).await

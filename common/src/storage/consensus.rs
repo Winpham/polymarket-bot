@@ -2033,6 +2033,22 @@ mod honest_pnl_it {
         // median liquidity proxy over the 3 resolved rows: median(3000,1000,2000).
         approx(a.median_sharp_usd, 2000.0, "median_sharp_usd");
 
+        // Segment breakdown: day / band / horizon cells all render, event-clustered.
+        let segs = pf.honest_pnl_segments(0.01, 0.02).await.unwrap();
+        let a_segs: Vec<_> = segs.iter().filter(|s| s.strategy == "hp_a").collect();
+        assert!(!a_segs.is_empty(), "hp_a has segment cells");
+        // All rows resolved NOW() → exactly ONE day-regime.
+        let days: Vec<_> = a_segs.iter().filter(|s| s.seg_kind == "day").collect();
+        assert_eq!(days.len(), 1, "one day-regime");
+        assert_eq!(days[0].n_events, 2, "both events in the single day-regime");
+        // Horizon: first_detected_at = NOW()-2h → same_day for every row.
+        let hz: Vec<_> = a_segs.iter().filter(|s| s.seg_kind == "horizon").collect();
+        assert_eq!(hz.len(), 1, "one horizon bucket");
+        assert_eq!(hz[0].seg_key, "same_day", "resolved <24h ⇒ same_day");
+        // Bands: p0 0.40 & 0.50 → band 3; 0.60 → band 4 (two distinct bands).
+        let bands: Vec<_> = a_segs.iter().filter(|s| s.seg_kind == "band").collect();
+        assert_eq!(bands.len(), 2, "two price bands");
+
         sqlx::query("DELETE FROM consensus_signals WHERE condition_id LIKE 'hp_%'")
             .execute(&pf.pool)
             .await

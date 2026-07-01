@@ -15,11 +15,32 @@ use crate::storage::postgres::PgPortfolio;
 
 /// Read-only honest-P&L tracker parameters threaded to the board (never touches
 /// the live path). `exec_haircut` + `fee_pct` define the realizable entry price
-/// (`entry = mid + haircut`, minus `fee_pct` on ROI) for the CLV-based panel.
+/// (`entry = mid + haircut`, minus `fee_pct` on ROI); the rest parameterize the
+/// conservative pilot verdict + capacity sizing.
 #[derive(Clone, Copy)]
 pub struct HonestBoardParams {
     pub exec_haircut: f64,
     pub fee_pct: f64,
+    pub flat_stake: f64,
+    pub capacity_frac: f64,
+    pub min_pilot_roi: f64,
+    pub pilot_min_events: i64,
+    pub pilot_min_regimes: i64,
+    pub regime_frac: f64,
+    pub min_liquidity_usd: f64,
+}
+
+impl HonestBoardParams {
+    fn thresholds(&self) -> crate::scanner::honest::PilotThresholds {
+        crate::scanner::honest::PilotThresholds {
+            min_pilot_roi: self.min_pilot_roi,
+            min_events: self.pilot_min_events,
+            min_regimes: self.pilot_min_regimes,
+            regime_frac: self.regime_frac,
+            min_liquidity_usd: self.min_liquidity_usd,
+            alpha: crate::scanner::promotion::PromotionParams::default().alpha,
+        }
+    }
 }
 
 /// Serve the board on `0.0.0.0:port` forever. Best-effort; logs and retries binds.
@@ -65,6 +86,14 @@ pub async fn serve(
 fn pct(x: Option<f64>) -> String {
     x.map(|v| format!("{:+.1}%", v * 100.0))
         .unwrap_or_else(|| "—".into())
+}
+
+/// Minimal HTML-attribute escaping for the pilot-reason tooltip (no deps).
+fn html_escape(s: &str) -> String {
+    s.replace('&', "&amp;")
+        .replace('<', "&lt;")
+        .replace('>', "&gt;")
+        .replace('"', "&quot;")
 }
 
 /// Render the earned trader-trust table ("who to actually follow"): each tracked
@@ -169,54 +198,130 @@ async fn render_honest(portfolio: &PgPortfolio, honest: HonestBoardParams) -> St
         Ok(r) if r.iter().any(|x| x.resolved > 0) => r,
         _ => return String::new(),
     };
+    // Per-strategy day-regime persistence (positive/total) from the segment table.
+    let segs = portfolio
+        .honest_pnl_segments(honest.exec_haircut, honest.fee_pct)
+        .await
+        .unwrap_or_default();
+    let mut regimes: std::collections::HashMap<String, (i64, i64)> =
+        std::collections::HashMap::new();
+    for s in &segs {
+        if s.seg_kind == "day" {
+            let e = regimes.entry(s.strategy.clone()).or_insert((0, 0));
+            e.1 += 1; // total distinct day-regimes
+            if s.honest_roi.unwrap_or(0.0) > 0.0 {
+                e.0 += 1; // positive day-regimes
+            }
+        }
+    }
+    // Bonferroni family sizes over the honest rows (experimental vs core).
+    let mut fam_n: std::collections::HashMap<&str, usize> = std::collections::HashMap::new();
+    for r in &rows {
+        if r.resolved > 0 {
+            *fam_n.entry(family(&r.strategy)).or_default() += 1;
+        }
+    }
+    let th = honest.thresholds();
+
+    // Build (row, verdict, capacity), then sort GO-first, then by corrected LB.
+    let mut items: Vec<_> = rows
+        .iter()
+        .filter(|r| r.resolved > 0)
+        .map(|r| {
+            let (rp, rt) = regimes.get(&r.strategy).copied().unwrap_or((0, 0));
+            let inp = crate::scanner::honest::PilotInputs {
+                honest_roi: r.honest_roi,
+                honest_roi_sd: r.honest_roi_sd,
+                distinct_events: r.distinct_events,
+                regimes_positive: rp,
+                regimes_total: rt,
+                median_sharp_usd: r.median_sharp_usd,
+                n_family: fam_n.get(family(&r.strategy)).copied().unwrap_or(1),
+            };
+            let verdict = crate::scanner::honest::pilot_verdict(&inp, &th);
+            let cap = crate::scanner::honest::capacity(
+                honest.flat_stake,
+                honest.capacity_frac,
+                r.median_sharp_usd,
+                r.bets_per_day,
+                r.avg_hours_to_resolve,
+                r.honest_roi,
+            );
+            (r, verdict, cap, rp, rt)
+        })
+        .collect();
+    // Sort GO-first, then by corrected lower bound descending.
+    items.sort_by(|a, b| {
+        b.1.go.cmp(&a.1.go).then(
+            b.1.corrected_lower_bound
+                .unwrap_or(f64::NEG_INFINITY)
+                .partial_cmp(&a.1.corrected_lower_bound.unwrap_or(f64::NEG_INFINITY))
+                .unwrap_or(std::cmp::Ordering::Equal),
+        )
+    });
+
     let mut out = String::from(
-        "<h1 style='margin-top:34px'>💵 Honest P&amp;L (realizable)</h1>\
+        "<h1 style='margin-top:34px'>💵 Honest P&amp;L (realizable · paper)</h1>\
          <p class=sub>Outcome vs the mid we saw while OPEN (CLV), net of the execution haircut — \
-         the edge we could actually realize. Event-clustered. Paper only, NO real money.</p>\
-         <table><thead><tr><th>strategy</th><th class=r>events (N)</th><th class=r>hit-rate</th>\
-         <th class=r>honest ROI</th><th class=r>CLV</th><th class=r>honest edge</th>\
-         <th class=r>sharp edge</th><th class=r>median $</th><th class=r>bets/day</th>\
-         </tr></thead><tbody>",
+         the edge we could actually realize. Event-clustered, multi-regime. Paper only, NO real money.</p>\
+         <table><thead><tr><th>pilot</th><th>strategy</th><th class=r>events (N)</th>\
+         <th class=r>honest ROI</th><th class=r>corrected LB</th><th class=r>regimes+</th>\
+         <th class=r>CLV</th><th class=r>sharp edge</th><th class=r>median $</th>\
+         <th class=r>stake</th><th class=r>proj $/wk</th></tr></thead><tbody>",
     );
-    for r in rows.iter().filter(|r| r.resolved > 0) {
+    for (r, verdict, cap, rp, rt) in &items {
+        let (marker, mcls) = if verdict.go {
+            ("✅ GO", "pos")
+        } else {
+            ("⏳ HOLD", "muted")
+        };
         let hrcls = match r.honest_roi {
             Some(v) if v > 0.0 => "pos",
             Some(_) => "neg",
             None => "muted",
         };
-        let bpd = r
-            .bets_per_day
-            .map(|v| format!("{v:.1}"))
-            .unwrap_or_else(|| "—".into());
         let med = r
             .median_sharp_usd
             .map(|v| format!("${v:.0}"))
             .unwrap_or_else(|| "—".into());
+        let tip = format!(
+            "{}  ·  working capital ≈ ${:.0}",
+            verdict.reason, cap.working_capital
+        );
         out.push_str(&format!(
-            "<tr><td class=mono>{strat}</td><td class=r>{ev}</td><td class=r>{hr}</td>\
-             <td class=\"r {hrcls}\">{hroi}</td><td class=r>{clv}</td><td class=r>{hedge}</td>\
-             <td class=\"r muted\">{sharp}</td><td class=\"r muted\">{med}</td>\
-             <td class=\"r muted\">{bpd}</td></tr>",
+            "<tr title=\"{reason}\"><td class={mcls}>{marker}</td><td class=mono>{strat}</td>\
+             <td class=r>{ev}</td><td class=\"r {hrcls}\">{hroi}</td><td class=r>{lb}</td>\
+             <td class=r>{rp}/{rt}</td><td class=r>{clv}</td><td class=\"r muted\">{sharp}</td>\
+             <td class=\"r muted\">{med}</td><td class=\"r muted\">${stake:.0}</td>\
+             <td class=\"r muted\">${projwk:.0}</td></tr>",
+            reason = html_escape(&tip),
             strat = r.strategy,
             ev = r.distinct_events,
-            hr = r
-                .hit_rate
-                .map(|v| format!("{:.0}%", v * 100.0))
-                .unwrap_or_else(|| "—".into()),
             hroi = pct(r.honest_roi),
+            lb = pct(verdict.corrected_lower_bound),
             clv = pct(r.clv_share),
-            hedge = pct(r.honest_edge_share),
             sharp = pct(r.sharp_edge),
+            stake = cap.suggested_stake,
+            projwk = cap.projected_weekly,
         ));
     }
     out.push_str(&format!(
         "</tbody></table>\
          <p class=note><b>honest ROI</b> = event-clustered `AVG((outcome − entry)/entry − fee)` where \
          <b>entry = captured mid + {hc:.0}¢ haircut</b> — the realizable per-$ edge (NOT the sharps' fill). \
-         <b>CLV</b> = outcome − captured mid (gross). <b>sharp edge</b> = outcome − sharps' mean price, shown \
-         for reference only — it overstates what we can capture. <b>median $</b> = liquidity proxy (capacity). \
-         Everything here is a PAPER measurement; no real money is ever placed.</p>",
+         <b>corrected LB</b> = Bonferroni-corrected 1-sided lower bound on honest ROI. ✅ GO requires ALL: \
+         LB &gt; {bar:+.0}%, N ≥ {ev} events, ≥{regfrac:.0}% of day-regimes positive (≥{minreg}), and \
+         liquidity ≥ ${liq:.0}. Conservative by design — a false GO risks real money, so the default is HOLD \
+         (hover a row for the binding reason). <b>sharp edge</b> = outcome − sharps' mean price, reference only \
+         (overstates what we can capture). <b>stake</b> = min(flat, {capfrac:.0}% × median $); <b>proj $/wk</b> = \
+         paper. Promotion to real money is a deliberate human call — never automatic. NO real money is placed.</p>",
         hc = honest.exec_haircut * 100.0,
+        bar = honest.min_pilot_roi * 100.0,
+        ev = honest.pilot_min_events,
+        regfrac = honest.regime_frac * 100.0,
+        minreg = honest.pilot_min_regimes,
+        liq = honest.min_liquidity_usd,
+        capfrac = honest.capacity_frac * 100.0,
     ));
     out
 }
@@ -411,6 +516,13 @@ mod tests {
             HonestBoardParams {
                 exec_haircut: 0.01,
                 fee_pct: 0.02,
+                flat_stake: 100.0,
+                capacity_frac: 0.05,
+                min_pilot_roi: 0.02,
+                pilot_min_events: 50,
+                pilot_min_regimes: 5,
+                regime_frac: 0.7,
+                min_liquidity_usd: 2000.0,
             },
         )
         .await;
