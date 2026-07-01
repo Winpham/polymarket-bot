@@ -39,6 +39,33 @@ and `placeholder` (a synthetic bootstrap is refused when the arm is enabled).
    believable if it survives the price-SHAPE ablation (`--price-free-level shape`,
    which also holds {1,2,3,4} constant). See **Believing a surplus** below.
 
+### Believing a surplus — the PRE-REGISTERED price-SHAPE-leakage test
+
+**Registered before any forward verdict.** The live arm is `--price-free-level level`
+(holds only the price-LEVEL indices {0,8,9} constant). Because the price-SHAPE
+features {1,2,3,4} = momentum/volatility/rsi remain, a `level` surplus could be the
+model shadowing price *direction* through momentum rather than finding a genuine
+non-price residual. So:
+
+> **A `market_resid` (level) surplus is believable ONLY IF the `shape` model — which
+> ALSO holds {1,2,3,4} constant, i.e. fully price-blind — retains a materially
+> similar surplus.** If the surplus collapses when {1,2,3,4} are held constant, it
+> was price-SHAPE leakage → **report the null, do NOT promote, do NOT tune.**
+
+Run the ablation on the same forward rows (no artifacts written):
+
+```bash
+DATABASE_URL=... python3 scripts/train_market_resid.py --source forward --compare
+```
+
+It prints, side by side for `level` and `shape`: OOF AUC, Brier, and the would-be
+event-clustered arm surplus (fired where calibrated p − band_rate > 0). This is an
+OFFLINE screen, not the promotion decision — the belief-blind gate (≥30 distinct
+events, Bonferroni-corrected lower bound > `MARKET_RESID_MARGIN`) remains the sole
+judge. The ablation only decides whether a positive gate reading is *believable* or
+a price-shape artifact. The `shape` model is an analysis artifact — do NOT ship it as
+a second live arm (that would raise the experimental family's Bonferroni denominator).
+
 The committed `market_resid.*` is a **`source=synthetic` placeholder**
 (`"placeholder": true`) — a non-predictive bootstrap so the arm can load; it is NOT
 trained on real data. Replace it before enabling:
