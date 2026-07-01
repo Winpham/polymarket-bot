@@ -142,11 +142,25 @@ pub fn load_models(cfg: &CopyTradingConfig) -> EnrichModels {
         if p.exists() && sidecar.exists() {
             match (XgbModel::load(p), ResidExtras::load(&sidecar)) {
                 (Ok(model), Ok(extras)) => {
-                    m.market_resid = Some(model);
-                    m.market_resid_extras = Some(extras);
-                    m.market_resid_through =
-                        resid_trained_through(p, &cfg.market_resid_trained_through);
-                    tracing::info!(path = %p.display(), "Loaded market_resid model + extras");
+                    // A placeholder (synthetic bootstrap) must never be judged by the
+                    // gate — it would burn the arm's experimental Bonferroni slot on
+                    // noise. Refuse it (arm stays OFF) even though it loaded cleanly.
+                    if resid_is_placeholder(p) {
+                        tracing::warn!(path = %p.display(),
+                            "market_resid model is a placeholder (meta.placeholder=true); arm OFF (retrain before enabling)");
+                    } else if let Err(e) = model.assert_no_splits_on(&[0, 8, 9]) {
+                        // HARD price-LEVEL-free guarantee: a booster that splits on a
+                        // price-level index would leak live price at inference (the
+                        // scaler does NOT neutralize it). Refuse it — never go live.
+                        tracing::error!(path = %p.display(), err = %e,
+                            "market_resid booster violates the price-LEVEL-free invariant; arm OFF");
+                    } else {
+                        m.market_resid = Some(model);
+                        m.market_resid_extras = Some(extras);
+                        m.market_resid_through =
+                            resid_trained_through(p, &cfg.market_resid_trained_through);
+                        tracing::info!(path = %p.display(), "Loaded market_resid model + extras (price-LEVEL-free verified)");
+                    }
                 }
                 (model, extras) => {
                     if let Err(e) = model {
@@ -165,6 +179,18 @@ pub fn load_models(cfg: &CopyTradingConfig) -> EnrichModels {
     m.bayes_enabled = cfg.consensus_arm_bayes;
     m.feature_log = cfg.market_feature_log;
     m
+}
+
+/// True if the model's `.meta.json` marks it a `placeholder` (a synthetic
+/// bootstrap). Missing/unreadable meta ⇒ NOT a placeholder (a real trained model
+/// may ship without meta; forwardness/other guards still apply). Only an explicit
+/// `"placeholder": true` blocks the arm — so a synthetic model can't be judged.
+fn resid_is_placeholder(model_path: &Path) -> bool {
+    std::fs::read_to_string(model_path.with_extension("meta.json"))
+        .ok()
+        .and_then(|s| serde_json::from_str::<serde_json::Value>(&s).ok())
+        .and_then(|v| v.get("placeholder").and_then(|b| b.as_bool()))
+        .unwrap_or(false)
 }
 
 /// Resolve the `market_resid` forward cutoff: prefer the model's `.meta.json`
@@ -201,10 +227,16 @@ fn resid_trained_through(model_path: &Path, env_override: &str) -> Option<DateTi
 /// re-emitted. Conservative defaults; wired to config in live.rs.
 #[derive(Debug, Clone, Copy)]
 pub struct EnrichMargins {
-    /// Margin for the ML arms (`p_win − mean_price > ml`).
+    /// Margin for the legacy ML arms (`p_win − mean_price > ml`, unit = surplus
+    /// over the priced-in mid). Shared by `market_ml` / `consensus_*`.
     pub ml: f64,
     /// Margin for the Bayesian-anchor arm (`posterior − mid > bayes`).
     pub bayes: f64,
+    /// Dedicated margin for the `market_resid` arm (`p_cons − band_rate > resid`).
+    /// Its unit is a residual over the band's BLIND base rate — a different unit
+    /// from `ml`'s surplus-over-mid — so it gets its own knob (`MARKET_RESID_MARGIN`)
+    /// instead of overloading `CONSENSUS_ML_MARGIN`.
+    pub resid: f64,
 }
 
 impl Default for EnrichMargins {
@@ -212,6 +244,7 @@ impl Default for EnrichMargins {
         Self {
             ml: 0.0,
             bayes: 0.0,
+            resid: 0.0,
         }
     }
 }
@@ -333,6 +366,25 @@ mod tests {
     }
 
     #[test]
+    fn resid_is_placeholder_reads_meta_flag() {
+        use std::sync::atomic::{AtomicU64, Ordering};
+        static NONCE: AtomicU64 = AtomicU64::new(0);
+        let n = NONCE.fetch_add(1, Ordering::Relaxed);
+        let base = std::env::temp_dir().join(format!("resid_ph_{}_{}", std::process::id(), n));
+        let model = base.with_extension("json");
+        let meta = base.with_extension("meta.json");
+        // placeholder=true ⇒ blocked.
+        std::fs::write(&meta, r#"{"placeholder": true}"#).unwrap();
+        assert!(resid_is_placeholder(&model));
+        // placeholder=false ⇒ allowed.
+        std::fs::write(&meta, r#"{"placeholder": false}"#).unwrap();
+        assert!(!resid_is_placeholder(&model));
+        // Missing meta ⇒ NOT a placeholder (a real model may ship without meta).
+        std::fs::remove_file(&meta).ok();
+        assert!(!resid_is_placeholder(&model));
+    }
+
+    #[test]
     fn enrich_all_is_passthrough_when_nothing_enabled() {
         // Default models → every arm no-ops → signals returned unchanged.
         let models = EnrichModels::default();
@@ -412,6 +464,7 @@ mod tests {
             margins: EnrichMargins {
                 ml: -1.0,
                 bayes: 0.0,
+                resid: -1.0,
             },
             markets: &markets,
         };

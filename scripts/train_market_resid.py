@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Train the PRICE-FREE residual market model for the `market_resid` arm.
+"""Train the PRICE-LEVEL-FREE residual market model for the `market_resid` arm.
 
 The crux this run rests on: the shipped market arm fires on `p_model - clob_mid`,
 which scores ~0 by construction because the scoreboard already subtracts the
@@ -8,12 +8,23 @@ That is a measurement of the price feature, NOT a refutation of the model.
 
 So we give the model a *fair* shot the gate actually rewards:
 
-  * PRICE-FREE: the 3 price-LEVEL features (yes_price, price_change_1d,
-    price_change_1w) are held CONSTANT (0.0) before fitting. XGBoost gains nothing
-    from a constant column, so the booster produces NO split nodes on those
-    indices — the stock pure-Rust XgbModel is then price-free at inference with the
-    full 29-wide positional layout preserved (no inference-time masking). We ASSERT
-    the exported booster has zero splits on the price indices.
+  * PRICE-LEVEL-FREE: the 3 price-LEVEL features (yes_price, price_change_1d,
+    price_change_1w — indices {0,8,9}) are held CONSTANT (0.0) before fitting.
+    XGBoost gains nothing from a constant column, so the booster produces NO split
+    nodes on those indices — the stock pure-Rust XgbModel is then price-level-free at
+    inference with the full 29-wide positional layout preserved (no inference-time
+    masking). We ASSERT the exported booster has zero splits on the price indices.
+    TWO NUANCES this label carries (do not overstate it as "price-free"):
+      (a) The guarantee is TRAIN-time and rests SOLELY on the booster having no split
+          on {0,8,9}. The RobustScaler does NOT neutralize price at inference — a
+          held-constant (zero-IQR) column gets scale=1, so a live price would pass
+          straight through if a split ever referenced it. The Rust side independently
+          re-checks the booster (assert_no_splits_on) before the arm goes live.
+      (b) The price-SHAPE features {1,2,3,4} = momentum_1h / momentum_24h /
+          volatility_24h / rsi are NOT held constant here — they remain by design and
+          are the closest residual proxies for direction (momentum can't rebuild the
+          level, but it can shadow it). See --price-free-level {level,shape} for the
+          fully price-blind ablation that tests whether a surplus leaks through them.
   * YES-ORIENTED: features always describe the index-0 (YES) token, and the label
     is `yes_won` (= outcome_won for a YES-side pick, else 1 - outcome_won). The arm
     converts p_yes -> p_consensus by outcome_index at inference. Training a YES
@@ -92,8 +103,41 @@ FEATURE_NAMES = [
     "q_sentiment_neg",
     "q_certainty",
 ]
-# Indices held constant for price-freeness: yes_price, price_change_1d, price_change_1w.
+# Indices held constant for price-LEVEL-freeness: yes_price, price_change_1d,
+# price_change_1w. This is the LIVE arm's guarantee (also re-checked in Rust).
 PRICE_LEVEL_IDX = [0, 8, 9]
+# Price-SHAPE indices: momentum_1h, momentum_24h, volatility_24h, rsi. All
+# price-derived — the closest residual proxies for direction. The `shape` ablation
+# ALSO holds these constant to test whether a `level` surplus leaks through them.
+PRICE_SHAPE_IDX = [1, 2, 3, 4]
+
+
+def held_indices(price_free_level: str) -> list:
+    """The feature indices held CONSTANT for a given price-free level.
+      * 'level' → {0,8,9}                 (the live arm; price-LEVEL-free)
+      * 'shape' → {0,8,9} ∪ {1,2,3,4}     (fully price-blind ablation)
+    """
+    if price_free_level == "level":
+        return sorted(PRICE_LEVEL_IDX)
+    if price_free_level == "shape":
+        return sorted(set(PRICE_LEVEL_IDX) | set(PRICE_SHAPE_IDX))
+    sys.exit(f"--price-free-level must be level|shape, got {price_free_level!r}")
+
+
+def make_clf():
+    """The one booster spec, shared by train + all ablation/compare paths."""
+    import xgboost as xgb  # noqa: PLC0415
+
+    return xgb.XGBClassifier(
+        n_estimators=120, max_depth=3, learning_rate=0.08,
+        subsample=0.9, colsample_bytree=0.9, eval_metric="logloss",
+    )
+
+
+def band_rate_lookup(p: float, band_rates, global_rate: float) -> float:
+    """Mirror of the Rust `ResidExtras::band_rate` — the band's blind base rate."""
+    b = pg_width_bucket5(float(p))
+    return band_rates[b - 1] if 1 <= b <= 5 else global_rate
 
 
 def pg_width_bucket5(p: float) -> int:
@@ -150,19 +194,31 @@ def load_synthetic(n: int = 600):
         datetime.now(timezone.utc).isoformat()
 
 
-def load_forward(db: str):
+def load_forward(db: str, capture: str = "first"):
     """The bot's OWN strict-fired population. Features are YES-oriented; convert the
     consensus-outcome label to yes_won via yes_token. Band rates come from the
-    resolved `_blind` rows (consensus-outcome space), exactly the gate's baseline."""
+    resolved `_blind` rows (consensus-outcome space), exactly the gate's baseline.
+
+    `capture` selects which snapshot column feeds training (migration 029):
+      * 'first'    → the DECISION-TIME snapshot (first strict-fire), what a real
+                     bettor would have acted on. Falls back to the freshest snapshot
+                     for pre-029 rows whose `first_features` is NULL.
+      * 'freshest' → the last pre-resolution snapshot (`features`).
+    Reports an OOF AUC for BOTH captures when both are populated, so the drift
+    between decision-time and freshest is visible before you pick one."""
     import psycopg2  # noqa: PLC0415
     import psycopg2.extras  # noqa: PLC0415
 
+    if capture not in ("first", "freshest"):
+        sys.exit(f"--capture must be first|freshest, got {capture!r}")
     conn = psycopg2.connect(db)
     try:
         cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        # Pull BOTH snapshots so we can report each capture's AUC; train on `chosen`.
         cur.execute(
             """
-            SELECT mfl.features, mfl.yes_token,
+            SELECT COALESCE(mfl.first_features, mfl.features) AS first_features,
+                   mfl.features AS features, mfl.yes_token,
                    cs.outcome_won::int AS won,
                    COALESCE(cs.event_slug, cs.condition_id) AS ev,
                    cs.mean_price, cs.resolved_at
@@ -183,29 +239,145 @@ def load_forward(db: str):
 
     if not rows:
         sys.exit("No resolved strict-fired feature rows yet — let the log accrue.")
-    X, y_yes, prices, groups, stamps = [], [], [], [], []
+    X_first, X_fresh, y_yes, prices, groups, stamps = [], [], [], [], [], []
     for r in rows:
-        feats = r["features"]
-        if isinstance(feats, str):
-            feats = json.loads(feats)
-        X.append([float(feats[name]) for name in FEATURE_NAMES])
+        X_first.append(_feat_row(r["first_features"]))
+        X_fresh.append(_feat_row(r["features"]))
         # YES-orient the label: yes_won = won if yes_token else 1 - won.
         won = int(r["won"])
         y_yes.append(won if r["yes_token"] else 1 - won)
         prices.append(float(r["mean_price"]))
         groups.append(str(r["ev"]))
         stamps.append(r.get("resolved_at"))
+    y_arr = np.array(y_yes, dtype=int)
+    g_arr = np.array(groups)
+    Xf_arr = np.array(X_first, dtype=float)
+    Xr_arr = np.array(X_fresh, dtype=float)
+    # Report each capture's leak-free OOF AUC so the decision-time vs freshest drift
+    # is visible before training. Best-effort (needs 2 classes + enough events).
+    for name, Xc in (("first(decision-time)", Xf_arr), ("freshest", Xr_arr)):
+        try:
+            a = quick_oof_auc(Xc, y_arr, g_arr)
+            print(f"  capture={name:22s} OOF AUC={a}")
+        except Exception as e:  # noqa: BLE001
+            print(f"  capture={name:22s} OOF AUC unavailable ({e})")
+    chosen = Xf_arr if capture == "first" else Xr_arr
+    print(f"training on capture={capture!r}")
     blind_prices = [float(b["mean_price"]) for b in blind] or prices
     blind_labels = [int(b["won"]) for b in blind] or y_yes
     return (
-        np.array(X, dtype=float),
-        np.array(y_yes, dtype=int),
+        chosen,
+        y_arr,
         np.array(prices, dtype=float),
-        np.array(groups),
+        g_arr,
         blind_prices,
         blind_labels,
         _trained_through(stamps),
     )
+
+
+def _feat_row(feats):
+    """Parse one stored feature JSON object into the canonical positional vector."""
+    if isinstance(feats, str):
+        feats = json.loads(feats)
+    return [float(feats[name]) for name in FEATURE_NAMES]
+
+
+def _oof_calibrated(X, y, groups, held_idx):
+    """Leak-free OOF calibrated predictions via the SAME zeroing + GroupKFold +
+    isotonic pipeline the exported model uses. Returns (cal, mask) where `cal` is the
+    isotonic-calibrated OOF probability (NaN outside `mask`). Not persisted."""
+    from sklearn.isotonic import IsotonicRegression  # noqa: PLC0415
+    from sklearn.model_selection import GroupKFold  # noqa: PLC0415
+    from sklearn.preprocessing import RobustScaler  # noqa: PLC0415
+
+    Xz = X.astype(float).copy()
+    for i in held_idx:
+        Xz[:, i] = 0.0
+    Xs = RobustScaler().fit_transform(Xz)
+    n_events = len(set(groups.tolist()))
+    n_splits = max(2, min(5, n_events))
+    oof = np.full(len(y), np.nan)
+    for tr, te in GroupKFold(n_splits=n_splits).split(Xs, y, groups):
+        if len(set(y[tr].tolist())) < 2:
+            continue
+        oof[te] = make_clf().fit(Xs[tr], y[tr]).predict_proba(Xs[te])[:, 1]
+    mask = ~np.isnan(oof)
+    cal = np.full(len(y), np.nan)
+    if mask.sum() > 0 and len(set(y[mask].tolist())) > 1:
+        iso = IsotonicRegression(out_of_bounds="clip").fit(oof[mask], y[mask])
+        cal[mask] = iso.predict(oof[mask])
+    return cal, mask
+
+
+def quick_oof_auc(X, y, groups):
+    """Leak-free OOF AUC (price-LEVEL-free pipeline) — for reporting capture drift.
+    Returns a rounded float, or 'n/a' when folds are degenerate."""
+    from sklearn.metrics import roc_auc_score  # noqa: PLC0415
+
+    cal, mask = _oof_calibrated(X, y, groups, held_indices("level"))
+    if mask.sum() == 0 or len(set(y[mask].tolist())) < 2:
+        return "n/a"
+    return round(float(roc_auc_score(y[mask], cal[mask])), 3)
+
+
+def _event_surplus(y, band, groups):
+    """Event-clustered would-be arm surplus: per-event mean of (won − band_rate),
+    then averaged across events. Mirrors the gate's within-event clustering."""
+    from collections import defaultdict  # noqa: PLC0415
+
+    ev = defaultdict(list)
+    for yi, bi, gi in zip(y, band, groups):
+        ev[gi].append(float(yi) - float(bi))
+    per = [float(np.mean(v)) for v in ev.values()]
+    if not per:
+        return float("nan"), 0, 0
+    return float(np.mean(per)), int(len(y)), len(per)
+
+
+def _ablation_stats(X, y, prices, groups, held_idx, band_rates, global_rate):
+    """OOF AUC/Brier + the would-be arm surplus for one held-index set. The arm
+    fires where calibrated p − band_rate(price) > 0; surplus is event-clustered over
+    the fired rows (offline proxy of the gate's surplus-over-blind)."""
+    from sklearn.metrics import brier_score_loss, roc_auc_score  # noqa: PLC0415
+
+    cal, mask = _oof_calibrated(X, y, groups, held_idx)
+    if mask.sum() == 0 or len(set(y[mask].tolist())) < 2:
+        return dict(auc=float("nan"), brier=float("nan"),
+                    surplus=float("nan"), n_fired=0, n_events_fired=0)
+    ym = y[mask].astype(float)
+    cm, pm, gm = cal[mask], prices[mask], groups[mask]
+    auc = float(roc_auc_score(y[mask], cm))
+    brier = float(brier_score_loss(y[mask], cm))
+    band = np.array([band_rate_lookup(p, band_rates, global_rate) for p in pm])
+    fired = (cm - band) > 0.0
+    surplus, n_fired, n_ev = _event_surplus(ym[fired], band[fired], gm[fired])
+    return dict(auc=auc, brier=brier, surplus=surplus,
+                n_fired=n_fired, n_events_fired=n_ev)
+
+
+def run_compare(X, y, prices, groups, blind_prices, blind_labels):
+    """Train BOTH price-free levels (level, shape) on the SAME rows and print their
+    OOF AUC/Brier + would-be arm surplus side by side. The pre-registered test: a
+    `level` surplus is believable ONLY IF `shape` keeps a materially similar surplus
+    (see model/README.md 'Believing a surplus'). No artifacts are written."""
+    band_rates, global_rate, _ = band_rates_from(blind_prices, blind_labels)
+    print("price-SHAPE ablation — BOTH levels on the same rows (offline; no artifacts):")
+    print(f"{'level':6s} {'held_idx':24s} {'OOF_AUC':>8s} {'Brier':>7s} "
+          f"{'wouldbe_surplus':>16s} {'fired':>6s} {'ev_fired':>9s}")
+    out = {}
+    for lvl in ("level", "shape"):
+        hi = held_indices(lvl)
+        st = _ablation_stats(X, y, prices, groups, hi, band_rates, global_rate)
+        out[lvl] = st
+        print(f"{lvl:6s} {str(hi):24s} {st['auc']:8.3f} {st['brier']:7.3f} "
+              f"{st['surplus']:16.4f} {st['n_fired']:6d} {st['n_events_fired']:9d}")
+    print("\nPRE-REGISTERED READ (model/README.md 'Believing a surplus'):")
+    print("  A `level` surplus is believable ONLY IF `shape` retains a materially")
+    print("  similar surplus. If it collapses when {1,2,3,4} are ALSO held constant,")
+    print("  the level surplus was price-SHAPE leakage → report the null; do NOT")
+    print("  promote, do NOT tune. The belief-blind gate remains the sole judge.")
+    return out
 
 
 def load_historical(limit: int):
@@ -257,9 +429,12 @@ def _trained_through(stamps) -> str:
 # ----------------------------------------------------------------------------- #
 # Train + export
 # ----------------------------------------------------------------------------- #
-def assert_price_free(booster_json_path: Path):
-    """The load-bearing guarantee: the exported booster has NO split on any price
-    index. (A constant column yields no splits; this proves it actually happened.)"""
+def assert_price_free(booster_json_path: Path, held_idx):
+    """The load-bearing guarantee: the exported booster has NO split on any of the
+    HELD-constant indices. (A constant column yields no splits; this proves it
+    actually happened.) `held_idx` = {0,8,9} for a `level` model, ∪ {1,2,3,4} for a
+    `shape` ablation — mirrors the Rust `assert_no_splits_on` on the live subset."""
+    held = set(int(i) for i in held_idx)
     raw = json.loads(booster_json_path.read_text())
     trees = raw["learner"]["gradient_booster"]["model"]["trees"]
     bad = []
@@ -268,16 +443,15 @@ def assert_price_free(booster_json_path: Path):
             left = t["left_children"][node_i]
             right = t["right_children"][node_i]
             is_split = not (left == -1 and right == -1)
-            if is_split and int(fidx) in PRICE_LEVEL_IDX:
+            if is_split and int(fidx) in held:
                 bad.append(int(fidx))
     if bad:
-        sys.exit(f"PRICE LEAK: booster split on price indices {sorted(set(bad))}")
-    print("price-free OK: zero booster splits on price indices", PRICE_LEVEL_IDX)
+        sys.exit(f"PRICE LEAK: booster split on held indices {sorted(set(bad))}")
+    print("price-free OK: zero booster splits on held indices", sorted(held))
 
 
 def train(X, y, prices, groups, blind_prices, blind_labels, trained_through,
-          source: str, out_dir: Path):
-    import xgboost as xgb  # noqa: PLC0415
+          source: str, out_dir: Path, price_free_level: str = "level"):
     from sklearn.isotonic import IsotonicRegression  # noqa: PLC0415
     from sklearn.metrics import brier_score_loss, roc_auc_score  # noqa: PLC0415
     from sklearn.model_selection import GroupKFold  # noqa: PLC0415
@@ -285,23 +459,19 @@ def train(X, y, prices, groups, blind_prices, blind_labels, trained_through,
 
     n = len(y)
     n_events = len(set(groups.tolist()))
-    print(f"source={source}  rows={n}  events={n_events}  positives={int(y.sum())}")
+    held_idx = held_indices(price_free_level)
+    print(f"source={source}  rows={n}  events={n_events}  positives={int(y.sum())}  "
+          f"price_free_level={price_free_level}  held_idx={held_idx}")
     if n < 20 or len(set(y.tolist())) < 2:
         sys.exit("Too few rows / one class — not enough to train honestly.")
 
-    # PRICE-FREE: hold the price-level columns constant BEFORE scaling/fitting.
+    # PRICE-FREE: hold the chosen price columns constant BEFORE scaling/fitting.
     Xz = X.astype(float).copy()
-    for i in PRICE_LEVEL_IDX:
+    for i in held_idx:
         Xz[:, i] = 0.0
 
     scaler = RobustScaler().fit(Xz)
     Xs = scaler.transform(Xz)
-
-    def make_clf():
-        return xgb.XGBClassifier(
-            n_estimators=120, max_depth=3, learning_rate=0.08,
-            subsample=0.9, colsample_bytree=0.9, eval_metric="logloss",
-        )
 
     # --- Honest OOF (GroupKFold by event) for AUC/Brier + isotonic fit ---
     n_splits = max(2, min(5, n_events))
@@ -346,7 +516,7 @@ def train(X, y, prices, groups, blind_prices, blind_labels, trained_through,
     clf = make_clf().fit(Xs, y)
     model_path = out_dir / "market_resid.json"
     clf.get_booster().save_model(str(model_path))
-    assert_price_free(model_path)
+    assert_price_free(model_path, held_idx)
     print(f"wrote {model_path}")
 
     scaler_path = out_dir / "market_resid.scaler.json"
@@ -382,12 +552,13 @@ def train(X, y, prices, groups, blind_prices, blind_labels, trained_through,
         "oof_auc": auc,
         "oof_brier": brier,
         "suggested_margin": round(rmse, 4),
-        "price_free_idx": PRICE_LEVEL_IDX,
+        "price_free_level": price_free_level,
+        "price_free_idx": held_idx,
         "feature_names": FEATURE_NAMES,
         "exported_at": datetime.now(timezone.utc).isoformat(),
     }, indent=2))
     print(f"wrote {meta_path}  trained_through={trained_through}")
-    print(f"Suggested CONSENSUS_ML_MARGIN (held-out calRMSE cushion) = {rmse:.4f}")
+    print(f"Suggested MARKET_RESID_MARGIN (held-out calRMSE cushion) = {rmse:.4f}")
 
 
 def main():
@@ -399,6 +570,17 @@ def main():
     ap.add_argument("--limit", type=int, default=3000,
                     help="historical fetch cap")
     ap.add_argument("--n", type=int, default=600, help="synthetic row count")
+    ap.add_argument("--capture", choices=["first", "freshest"], default="first",
+                    help="forward source: which market_feature_log snapshot to train "
+                         "on — 'first' (decision-time, default) or 'freshest'")
+    ap.add_argument("--price-free-level", choices=["level", "shape"], default="level",
+                    help="held-constant feature set: 'level' = {0,8,9} (the live arm; "
+                         "price-LEVEL-free), 'shape' = also {1,2,3,4} (fully price-blind "
+                         "ablation)")
+    ap.add_argument("--compare", action="store_true",
+                    help="train BOTH price-free levels on the same rows and print their "
+                         "OOF AUC/Brier + would-be surplus side by side (no artifacts). "
+                         "The pre-registered price-SHAPE-leakage test.")
     args = ap.parse_args()
 
     if args.source == "synthetic":
@@ -407,13 +589,16 @@ def main():
         db = args.db or os.environ.get("DATABASE_URL")
         if not db:
             sys.exit("--source forward needs --db or $DATABASE_URL")
-        data = load_forward(db)
+        data = load_forward(db, args.capture)
     else:
         data = load_historical(args.limit)
 
     X, y, prices, groups, blind_prices, blind_labels, trained_through = data
+    if args.compare:
+        run_compare(X, y, prices, groups, blind_prices, blind_labels)
+        return
     train(X, y, prices, groups, blind_prices, blind_labels, trained_through,
-          args.source, args.out_dir)
+          args.source, args.out_dir, args.price_free_level)
 
 
 if __name__ == "__main__":

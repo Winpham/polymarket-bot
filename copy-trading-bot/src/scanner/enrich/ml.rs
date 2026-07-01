@@ -106,6 +106,7 @@ mod tests {
             margins: EnrichMargins {
                 ml: 0.0,
                 bayes: 0.0,
+                resid: 0.0,
             },
             markets,
         }

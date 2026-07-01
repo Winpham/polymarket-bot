@@ -168,6 +168,36 @@ async fn render(portfolio: &PgPortfolio, capture_margin: f64) -> String {
     }
 
     let mut body = String::new();
+
+    // --- market_resid accrual line: how close the price-LEVEL-free arm is to its
+    //     first honest gate read (≥30 distinct resolved events). ---
+    let (mr_events, mr_rows) = portfolio
+        .market_feature_log_accrual()
+        .await
+        .unwrap_or((0, 0));
+    let mr_skipped = polymarket_common::metrics::market_multi_outcome_skipped_count();
+    // If the arm has emitted resolved rows it is loaded + non-placeholder (a
+    // placeholder is refused at load), so its promotion verdict is meaningful.
+    let mr_gate = rows
+        .iter()
+        .find(|r| r.strategy == "market_resid" && r.resolved > 0)
+        .map(|r| {
+            let fn_exp = fam_n.get("experimental").copied().unwrap_or(1);
+            let v = promotion_verdict(r.distinct_events, r.surplus, r.surplus_sd, fn_exp, &pp);
+            if v.promotable {
+                format!("✅ PROMOTABLE (LB {})", pct(v.lower_bound))
+            } else {
+                format!("⏳ not yet (LB {})", pct(v.lower_bound))
+            }
+        })
+        .unwrap_or_else(|| "— arm silent / not accruing arm rows".into());
+    let mr_floor = if mr_events >= 30 { "✓" } else { "…" };
+    body.push_str(&format!(
+        "<p class=accrual><b>market_resid accrual</b> (price-LEVEL-free residual arm): \
+         <b>{mr_events}/30</b> resolved events {mr_floor} · {mr_rows} feature rows logged · \
+         {mr_skipped} multi-outcome markets skipped · gate: {mr_gate}</p>"
+    ));
+
     let have_results = rows.iter().any(|r| r.resolved > 0);
     if !have_results {
         body.push_str(
@@ -232,6 +262,7 @@ async fn render(portfolio: &PgPortfolio, capture_margin: f64) -> String {
          .r{{text-align:right;font-variant-numeric:tabular-nums}} .mono{{font-family:ui-monospace,Menlo,monospace}}\
          .pos{{color:#3fb950}} .neg{{color:#f85149}} .muted{{color:#8a93a3}}\
          .note{{color:#8a93a3;font-size:12px;margin-top:18px;border-top:1px solid #1c2128;padding-top:14px}}\
+         .accrual{{background:#11151b;border:1px solid #1c2128;border-radius:8px;padding:10px 12px;font-size:13px;color:#c3cad6;margin:0 0 18px}}\
          </style></head><body>\
          <h1>🤝 Consensus scoreboard</h1>\
          <p class=sub>Tracking {tracked} top traders · {n} strategies forward · data-api 429s: {n429} · auto-refresh 30s</p>\
@@ -300,7 +331,13 @@ mod tests {
             html.contains('\u{2705}'),
             "a Trusted trader shows the check mark"
         );
-        println!("board_trust_render: trust table renders with a Trusted trader — OK");
+        // Phase 4: the market_resid accrual line always renders (events/30, rows,
+        // multi-outcome skipped, gate) — even with zero accrual it shows 0/30.
+        assert!(
+            html.contains("market_resid accrual") && html.contains("/30"),
+            "accrual line renders with the ≥30-event floor"
+        );
+        println!("board_trust_render: trust table + market_resid accrual line render — OK");
 
         sqlx::query("DELETE FROM trader_fills WHERE wallet LIKE 'bd_%'")
             .execute(&pool)
