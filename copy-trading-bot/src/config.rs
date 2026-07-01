@@ -274,6 +274,18 @@ pub struct CopyTradingConfig {
     #[config(env = "MIN_LIQUIDITY_USD", default = 2000.0)]
     pub min_liquidity_usd: f64,
 
+    /// Capture the REAL executable best ask (CLOB `/book`) once per open tracked
+    /// signal, so the honest edge uses the market ask instead of the mid+haircut
+    /// heuristic. Default OFF: an extra bounded book fetch per newly-open signal;
+    /// with it off the honest query falls back to the heuristic (byte-identical).
+    #[config(env = "CAPTURE_ENTRY_ASK", default = false)]
+    pub capture_entry_ask: bool,
+
+    /// Max book-ask captures per housekeeping cycle (bounds the extra `/book`
+    /// fetch load; uncaptured signals settle on later cycles).
+    #[config(env = "ENTRY_ASK_MAX_PER_CYCLE", default = 40)]
+    pub entry_ask_max_per_cycle: usize,
+
     /// Port for the Prometheus metrics HTTP endpoint.
     #[config(env = "METRICS_PORT", default = 9001)]
     pub metrics_port: u16,

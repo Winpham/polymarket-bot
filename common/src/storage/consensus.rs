@@ -131,6 +131,9 @@ pub struct UnresolvedConsensus {
     pub net_count: i32,
     pub n_backers: i32,
     pub is_sports: bool,
+    /// Real executable ask already captured while open (Phase 2). `Some` ⇒ skip
+    /// re-fetching the book for this signal.
+    pub entry_ask: Option<f64>,
 }
 
 impl PgPortfolio {
@@ -352,7 +355,7 @@ impl PgPortfolio {
     pub async fn unresolved_consensus_signals(&self) -> Result<Vec<UnresolvedConsensus>> {
         let rows: Vec<UnresolvedConsensus> = sqlx::query_as(
             "SELECT id, strategy, condition_id, COALESCE(slug, '') AS slug, outcome_index, \
-                    mean_price, net_count, n_backers, is_sports \
+                    mean_price, net_count, n_backers, is_sports, entry_ask \
              FROM consensus_signals WHERE resolved = FALSE",
         )
         .fetch_all(&self.pool)
@@ -434,6 +437,24 @@ impl PgPortfolio {
             .context("snapshot_consensus_signal (price)")?;
         }
         Ok(())
+    }
+
+    /// Capture the real executable best ASK for a signal ONCE while it is open
+    /// (Phase 2). COALESCE-once + `resolved = FALSE`: never overwritten and never
+    /// written post-resolution, exactly like `initial_market_price` — so it stays
+    /// a genuinely pre-resolution executable price (leak-free). No-op if already
+    /// set. Returns whether a value was newly written.
+    pub async fn set_entry_ask(&self, signal_id: i32, ask: f64) -> Result<bool> {
+        let res = sqlx::query(
+            "UPDATE consensus_signals SET entry_ask = $2 \
+             WHERE id = $1 AND entry_ask IS NULL AND resolved = FALSE",
+        )
+        .bind(signal_id)
+        .bind(ask)
+        .execute(&self.pool)
+        .await
+        .context("set_entry_ask")?;
+        Ok(res.rows_affected() > 0)
     }
 
     /// The full trajectory of a signal — its "stock chart": consensus state +
@@ -580,7 +601,7 @@ impl PgPortfolio {
             "WITH base AS ( \
                  SELECT strategy, COALESCE(event_slug, condition_id) AS ev, \
                         (outcome_won::int)::double precision AS w, \
-                        initial_market_price + $1 AS entry, \
+                        COALESCE(entry_ask, initial_market_price + $1) AS entry, \
                         initial_market_price AS p0, mean_price, total_usd \
                  FROM consensus_signals \
                  WHERE resolved AND initial_market_price IS NOT NULL AND strategy <> '_blind' \
@@ -609,6 +630,7 @@ impl PgPortfolio {
              ), \
              liq AS ( \
                  SELECT strategy, COUNT(*) AS resolved, \
+                        COUNT(*) FILTER (WHERE entry_ask IS NOT NULL) AS ask_rows, \
                         percentile_cont(0.5) WITHIN GROUP (ORDER BY total_usd) AS median_sharp_usd, \
                         AVG((EXTRACT(EPOCH FROM (resolved_at - first_detected_at)) / 3600.0)::double precision) AS avg_hours_to_resolve, \
                         GREATEST((EXTRACT(EPOCH FROM (MAX(resolved_at) - MIN(resolved_at))) / 86400.0)::double precision, 1.0) AS span_days \
@@ -620,7 +642,8 @@ impl PgPortfolio {
                     a.clv_share, a.clv_roi, a.honest_edge_share, a.honest_roi, a.honest_roi_sd, \
                     l.median_sharp_usd, l.avg_hours_to_resolve, \
                     (a.distinct_events::double precision / l.span_days) AS bets_per_day, \
-                    a.sharp_edge \
+                    a.sharp_edge, \
+                    (l.ask_rows::double precision / NULLIF(l.resolved, 0)) AS ask_coverage \
              FROM agg a JOIN liq l USING (strategy) \
              ORDER BY a.honest_roi DESC NULLS LAST",
         )
@@ -646,7 +669,7 @@ impl PgPortfolio {
             "WITH base AS ( \
                  SELECT strategy, COALESCE(event_slug, condition_id) AS ev, \
                         (outcome_won::int)::double precision AS w, \
-                        initial_market_price + $1 AS entry, \
+                        COALESCE(entry_ask, initial_market_price + $1) AS entry, \
                         initial_market_price AS p0, resolved_at, \
                         EXTRACT(EPOCH FROM (resolved_at - first_detected_at)) / 3600.0 AS hrs \
                  FROM consensus_signals \
@@ -1310,6 +1333,9 @@ pub struct HonestPnl {
     pub bets_per_day: Option<f64>,
     /// The OLD sharp benchmark `AVG_event(w − mean_price)` — shown for reference only.
     pub sharp_edge: Option<f64>,
+    /// Fraction of resolved rows with a REAL captured `entry_ask` (Phase 2). The
+    /// rest fall back to the mid+haircut heuristic; `None`/0 = all heuristic.
+    pub ask_coverage: Option<f64>,
 }
 
 /// One (strategy × segment) honest-ROI cell for the regime/band/horizon breakdown.
@@ -2057,5 +2083,82 @@ mod honest_pnl_it {
             "honest_pnl_it: honest_roi={:?} (want 0.570145), event-clustered, _blind excluded — OK",
             a.honest_roi
         );
+    }
+
+    #[tokio::test]
+    #[ignore = "requires a live Postgres at $DATABASE_URL with migrations applied"]
+    async fn entry_ask_set_once_and_preferred_over_heuristic() {
+        let url = std::env::var("DATABASE_URL").expect("DATABASE_URL must be set");
+        let pool = sqlx::PgPool::connect(&url).await.expect("connect");
+        let pf = PgPortfolio::new(pool).await.expect("portfolio");
+        pf.run_migrations().await.expect("migrations");
+        sqlx::query("DELETE FROM consensus_signals WHERE condition_id LIKE 'hpask_%'")
+            .execute(&pf.pool)
+            .await
+            .unwrap();
+
+        // An OPEN signal (resolved=false) with a captured mid but no ask yet.
+        let (id,): (i32,) = sqlx::query_as(
+            "INSERT INTO consensus_signals \
+               (strategy, condition_id, outcome_index, event_slug, n_backers, n_opposers, \
+                net_count, net_quality, mean_price, price_std, recency_mins, total_usd, \
+                score, tier, initial_market_price, resolved, first_detected_at) \
+             VALUES ('hp_ask','hpask_c1',0,'hpask_ev',5,0,5,5.0,0.50,0.02,10,2000,1.0,'WATCH', \
+                     0.50, FALSE, NOW() - INTERVAL '2 hours') RETURNING id",
+        )
+        .fetch_one(&pf.pool)
+        .await
+        .unwrap();
+
+        // COALESCE-once: the first ask sticks; a later capture is a no-op.
+        assert!(
+            pf.set_entry_ask(id, 0.55).await.unwrap(),
+            "first ask written"
+        );
+        assert!(
+            !pf.set_entry_ask(id, 0.99).await.unwrap(),
+            "second capture never overwrites"
+        );
+        let (ask,): (Option<f64>,) =
+            sqlx::query_as("SELECT entry_ask FROM consensus_signals WHERE id = $1")
+                .bind(id)
+                .fetch_one(&pf.pool)
+                .await
+                .unwrap();
+        assert_eq!(ask, Some(0.55), "entry_ask is the first captured value");
+
+        // Now the signal resolves (won). Post-resolution the ask cannot change.
+        sqlx::query(
+            "UPDATE consensus_signals SET resolved = TRUE, outcome_won = TRUE, resolved_at = NOW() \
+             WHERE id = $1",
+        )
+        .bind(id)
+        .execute(&pf.pool)
+        .await
+        .unwrap();
+        assert!(
+            !pf.set_entry_ask(id, 0.10).await.unwrap(),
+            "resolved rows are never touched (leak-free)"
+        );
+
+        // The honest query PREFERS the real ask: entry = 0.55 (not mid+haircut 0.51).
+        // honest_roi = (1 − 0.55)/0.55 − 0.02 = 0.79818 ; ask_coverage = 100%.
+        let rows = pf.honest_pnl_by_strategy(0.01, 0.02).await.unwrap();
+        let r = rows.iter().find(|r| r.strategy == "hp_ask").unwrap();
+        assert!(
+            (r.honest_roi.unwrap() - 0.798_18).abs() < 1e-3,
+            "entry_ask preferred: honest_roi={:?} (want ~0.79818, NOT the heuristic 0.94078)",
+            r.honest_roi
+        );
+        assert!(
+            (r.ask_coverage.unwrap() - 1.0).abs() < 1e-9,
+            "100% real-ask coverage"
+        );
+
+        sqlx::query("DELETE FROM consensus_signals WHERE condition_id LIKE 'hpask_%'")
+            .execute(&pf.pool)
+            .await
+            .unwrap();
+        println!("entry_ask_it: set-once + resolved-guard + query-prefers-ask — OK");
     }
 }

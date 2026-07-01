@@ -285,8 +285,12 @@ async fn render_honest(portfolio: &PgPortfolio, honest: HonestBoardParams) -> St
             .map(|v| format!("${v:.0}"))
             .unwrap_or_else(|| "—".into());
         let tip = format!(
-            "{}  ·  working capital ≈ ${:.0}",
-            verdict.reason, cap.working_capital
+            "{}  ·  working capital ≈ ${:.0}  ·  real-ask coverage {}",
+            verdict.reason,
+            cap.working_capital,
+            r.ask_coverage
+                .map(|c| format!("{:.0}%", c * 100.0))
+                .unwrap_or_else(|| "0% (heuristic haircut)".into()),
         );
         out.push_str(&format!(
             "<tr title=\"{reason}\"><td class={mcls}>{marker}</td><td class=mono>{strat}</td>\

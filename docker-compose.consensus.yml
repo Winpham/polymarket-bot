@@ -60,6 +60,8 @@ services:
       PILOT_MIN_REGIMES: ${PILOT_MIN_REGIMES:-5}              # min positive day-regimes for a GO
       REGIME_FRAC: ${REGIME_FRAC:-0.7}                        # fraction of regimes that must be positive
       MIN_LIQUIDITY_USD: ${MIN_LIQUIDITY_USD:-2000.0}         # liquidity floor (median sharp $) for a GO
+      CAPTURE_ENTRY_ASK: ${CAPTURE_ENTRY_ASK:-false}          # capture real CLOB best-ask (else mid+haircut)
+      ENTRY_ASK_MAX_PER_CYCLE: ${ENTRY_ASK_MAX_PER_CYCLE:-40} # cap book-ask fetches/cycle
       # Telegram is OPTIONAL — leave unset for ntfy-only (this deploy).
       # TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
       # TELEGRAM_CHAT_ID: ${TELEGRAM_CHAT_ID:-}
