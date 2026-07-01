@@ -193,9 +193,57 @@ pub fn data_api_429_count() -> u64 {
     DATA_API_429.load(std::sync::atomic::Ordering::Relaxed)
 }
 
+/// Forward feature-log rows flushed this cycle (the `market_resid` accrual rate).
+pub fn record_market_feature_log_rows(n: u64) {
+    counter!("market_feature_log_rows_total").increment(n);
+}
+
+/// Silent `market_resid` arm emissions this cycle.
+pub fn record_market_resid_emits(n: u64) {
+    counter!("market_resid_emit_total").increment(n);
+}
+
+/// Time spent in `prefetch_markets` (per cycle) — the accrual/arm data fetch cost.
+pub fn record_consensus_prefetch(duration: std::time::Duration) {
+    histogram!("consensus_prefetch_seconds").record(duration.as_secs_f64());
+}
+
+/// Process-global multi-outcome (non-binary) skip count, mirrored alongside the
+/// Prometheus counter so the in-process board can read it back (Prometheus
+/// counters aren't readable here). These strict markets have no single
+/// complementary YES side, so feature-building skips them and `market_resid`
+/// never fires on them — the board surfaces the running total.
+static MARKET_MULTI_OUTCOME_SKIPPED: std::sync::atomic::AtomicU64 =
+    std::sync::atomic::AtomicU64::new(0);
+
+/// Record `n` multi-outcome markets skipped by feature-building this cycle.
+pub fn record_market_multi_outcome_skipped(n: u64) {
+    counter!("market_multi_outcome_skipped_total").increment(n);
+    MARKET_MULTI_OUTCOME_SKIPPED.fetch_add(n, std::sync::atomic::Ordering::Relaxed);
+}
+
+/// Total multi-outcome markets skipped since process start (for the board line).
+pub fn market_multi_outcome_skipped_count() -> u64 {
+    MARKET_MULTI_OUTCOME_SKIPPED.load(std::sync::atomic::Ordering::Relaxed)
+}
+
 /// Publish a strategy's live forward-tracking scoreboard as gauges.
 pub fn record_consensus_strategy_score(strategy: &str, resolved: i64, hit_rate: f64, edge: f64) {
     gauge!("consensus_strategy_resolved", "strategy" => strategy.to_string()).set(resolved as f64);
     gauge!("consensus_strategy_hit_rate", "strategy" => strategy.to_string()).set(hit_rate);
     gauge!("consensus_strategy_edge", "strategy" => strategy.to_string()).set(edge);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn multi_outcome_skip_mirror_accumulates() {
+        // The in-process mirror (readable by the board) advances by exactly `n`.
+        let before = market_multi_outcome_skipped_count();
+        record_market_multi_outcome_skipped(3);
+        record_market_multi_outcome_skipped(2);
+        assert_eq!(market_multi_outcome_skipped_count(), before + 5);
+    }
 }

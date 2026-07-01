@@ -700,6 +700,26 @@ impl PgPortfolio {
         Ok(res.rows_affected())
     }
 
+    /// Accrual progress for the `market_resid` forward log: `(distinct resolved
+    /// strict events with a logged feature row, total feature rows logged)`. The
+    /// event count mirrors the trainer's `--source forward` population exactly
+    /// (resolved strict signals with a known outcome, joined to their feature row),
+    /// so the board can show how close the arm is to its ≥30-event first gate read.
+    pub async fn market_feature_log_accrual(&self) -> Result<(i64, i64)> {
+        let (events, rows): (i64, i64) = sqlx::query_as(
+            "SELECT \
+               (SELECT COUNT(DISTINCT COALESCE(cs.event_slug, cs.condition_id)) \
+                  FROM market_feature_log mfl \
+                  JOIN consensus_signals cs ON cs.id = mfl.signal_id \
+                 WHERE cs.strategy = 'strict' AND cs.resolved AND cs.outcome_won IS NOT NULL), \
+               (SELECT COUNT(*) FROM market_feature_log)",
+        )
+        .fetch_one(&self.pool)
+        .await
+        .context("market_feature_log_accrual")?;
+        Ok((events, rows))
+    }
+
     /// Load all window fill atoms at or after `since` (the trailing window) for
     /// rebuilding MarketBooks off the indexed DB read instead of the network.
     pub async fn load_window_votes(&self, since: DateTime<Utc>) -> Result<Vec<WindowVote>> {

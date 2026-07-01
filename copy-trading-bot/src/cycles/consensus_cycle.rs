@@ -265,7 +265,16 @@ pub async fn consensus_cycle(
     // is non-regressive. Market-dependent arms need per-market data fetched once
     // for the strict-fired markets (bounded + throttled), only when enabled.
     let markets = if models.needs_market_data() {
-        prefetch_markets(http, &signals, models.needs_market_features()).await
+        let t0 = std::time::Instant::now();
+        let m = prefetch_markets(
+            http,
+            &signals,
+            models.needs_market_features(),
+            cfg.market_prefetch_max,
+        )
+        .await;
+        crate::metrics::record_consensus_prefetch(t0.elapsed());
+        m
     } else {
         HashMap::new()
     };
@@ -282,6 +291,13 @@ pub async fn consensus_cycle(
             markets: &markets,
         },
     );
+
+    // Silent `market_resid` arm emissions this cycle (0 unless the arm is loaded).
+    let resid_emits = signals
+        .iter()
+        .filter(|s| s.strategy == "market_resid")
+        .count() as u64;
+    crate::metrics::record_market_resid_emits(resid_emits);
 
     let mut alerts_sent = 0usize;
     // Forward 29-feature snapshots for every strict-fired market (default-OFF; the
@@ -371,7 +387,10 @@ pub async fn consensus_cycle(
     // Best-effort flush of the forward feature log (never blocks the cycle).
     if !feature_logs.is_empty() {
         match portfolio.log_market_features(&feature_logs).await {
-            Ok(n) => tracing::debug!(rows = n, "Logged forward market features"),
+            Ok(n) => {
+                crate::metrics::record_market_feature_log_rows(n);
+                tracing::debug!(rows = n, "Logged forward market features");
+            }
             Err(e) => tracing::warn!(err = %e, "log_market_features failed (non-blocking)"),
         }
     }
@@ -669,12 +688,36 @@ async fn prefetch_markets(
     http: &reqwest::Client,
     signals: &[ConsensusSignal],
     need_features: bool,
+    max: usize,
 ) -> HashMap<String, MarketCtx> {
+    // Distinct strict markets this cycle (bounded): the sequential 150ms-throttled
+    // fetch could otherwise blow past the cadence as the strict count grows.
+    let distinct: usize = {
+        let mut d: HashSet<&str> = HashSet::new();
+        signals
+            .iter()
+            .filter(|s| s.strategy == "strict")
+            .for_each(|s| {
+                d.insert(s.condition_id.as_str());
+            });
+        d.len()
+    };
+    let cap = max.max(1);
+    if distinct > cap {
+        tracing::warn!(
+            distinct,
+            cap,
+            "prefetch_markets capped; excess strict markets fetched on later cycles"
+        );
+    }
     let mut seen: HashSet<&str> = HashSet::new();
     let mut map = HashMap::new();
     for s in signals.iter().filter(|s| s.strategy == "strict") {
         if !seen.insert(s.condition_id.as_str()) {
             continue;
+        }
+        if seen.len() > cap {
+            break; // bound reached — remaining distinct markets settle next cycle
         }
         tokio::time::sleep(Duration::from_millis(150)).await;
         let clob = match fetch_clob_market(http, &s.condition_id).await {
@@ -729,8 +772,10 @@ async fn build_market_features(
         .and_then(|j| serde_json::from_str(j).ok())?;
     // Binary markets only: YES-oriented features describe the index-0 token, and
     // an arm recovers `p_consensus` from `p_yes` via `outcome_index`. A non-binary
-    // market has no single complementary YES side, so we skip it (arm no-ops).
+    // market has no single complementary YES side, so we skip it (arm no-ops). The
+    // skip is surfaced (metric + board line) so this ~half-population gap is visible.
     if token_ids.len() != 2 {
+        crate::metrics::record_market_multi_outcome_skipped(1);
         return None;
     }
     let token = token_ids.first()?;

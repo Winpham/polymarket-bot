@@ -205,6 +205,14 @@ pub struct CopyTradingConfig {
     #[config(env = "MARKET_FEATURE_LOG", default = false)]
     pub market_feature_log: bool,
 
+    /// Max distinct strict markets `prefetch_markets` fetches per cycle. The
+    /// prefetch is sequential + throttled (150ms each), so as the strict-market
+    /// count grows it could otherwise blow past the cadence; this caps it (excess
+    /// markets are logged + fetched on later cycles). Only matters when a
+    /// market-dependent arm or the feature log is enabled.
+    #[config(env = "MARKET_PREFETCH_MAX", default = 200)]
+    pub market_prefetch_max: usize,
+
     /// Edge margin the legacy ML arms must clear (`p_win − price > margin`).
     #[config(env = "CONSENSUS_ML_MARGIN", default = 0.0)]
     pub consensus_ml_margin: f64,
