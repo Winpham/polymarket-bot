@@ -1,7 +1,8 @@
 #![allow(dead_code)]
 
-use anyhow::{Context, Result};
+use anyhow::{Context, Result, bail};
 use serde::Deserialize;
+use std::collections::BTreeSet;
 use std::path::Path;
 
 /// Pure-Rust XGBoost inference from exported JSON model.
@@ -119,6 +120,41 @@ impl XgbModel {
     pub fn n_trees(&self) -> usize {
         self.trees.len()
     }
+
+    /// The set of feature indices the booster actually splits on (across every
+    /// tree's internal nodes). Leaf nodes carry no feature, so they're excluded.
+    /// This is the ground truth for the price-LEVEL-free guarantee: a feature that
+    /// appears in NO split cannot influence inference, regardless of the scaler.
+    pub fn split_feature_indices(&self) -> BTreeSet<usize> {
+        let mut idx = BTreeSet::new();
+        for tree in &self.trees {
+            for node in &tree.nodes {
+                if let Node::Split { feature_idx, .. } = node {
+                    idx.insert(*feature_idx);
+                }
+            }
+        }
+        idx
+    }
+
+    /// Hard-enforce the price-LEVEL-free (or any no-split) invariant: error if the
+    /// booster splits on any index in `forbidden`. This is the Rust-side guarantee
+    /// the arm relies on — a price-leaking artifact (a swapped model, a dropped
+    /// train-time assert) is refused at load, NOT silently judged by the gate. The
+    /// `RobustScaler` never neutralizes price at inference, so this booster check is
+    /// the ONLY thing standing between a live price value and the model output.
+    pub fn assert_no_splits_on(&self, forbidden: &[usize]) -> Result<()> {
+        let used = self.split_feature_indices();
+        let leaked: Vec<usize> = forbidden
+            .iter()
+            .copied()
+            .filter(|i| used.contains(i))
+            .collect();
+        if !leaked.is_empty() {
+            bail!("booster splits on forbidden feature indices {leaked:?} (price leak)");
+        }
+        Ok(())
+    }
 }
 
 impl Tree {
@@ -156,10 +192,19 @@ fn logit(p: f64) -> f64 {
     (p / (1.0 - p)).ln()
 }
 
-/// Companion calibration + band-baseline extras for the price-free `market_resid`
-/// arm, loaded from a `<model>.resid.json` sidecar. Kept entirely separate from
-/// [`XgbModel`] so the booster artifact stays untouched; the Python trainer bakes
-/// every field and the Rust side only looks up + interpolates.
+/// Companion calibration + band-baseline extras for the price-LEVEL-free
+/// `market_resid` arm, loaded from a `<model>.resid.json` sidecar. Kept entirely
+/// separate from [`XgbModel`] so the booster artifact stays untouched; the Python
+/// trainer bakes every field and the Rust side only looks up + interpolates.
+///
+/// NOTE on "price-LEVEL-free": the guarantee is TRAIN-time and rests SOLELY on the
+/// booster having no split on the price-LEVEL indices {0,8,9}. The [`Scaler`] does
+/// NOT neutralize price at inference — a held-constant (zero-IQR) price column gets
+/// `scale = 1` (see [`Scaler::transform`]), so a live price value would pass through
+/// if the booster ever split on it. [`XgbModel::assert_no_splits_on`] is what turns
+/// this into a hard, Rust-enforced guarantee. Price-SHAPE features {1,2,3,4}
+/// (momentum/volatility/rsi) are NOT held constant — this is price-LEVEL-free, not
+/// price-free.
 #[derive(Debug, Clone, Deserialize)]
 pub struct ResidExtras {
     /// `_blind` base rate `P(won)` per Postgres `width_bucket(p,0,1,5)` band 1..=5.
@@ -222,6 +267,10 @@ impl ResidExtras {
 /// Mirror Postgres `width_bucket(p, 0.0, 1.0, 5)`: `p < 0 → 0`, `p >= 1 → 6`, else
 /// `floor(p*5) + 1`. The consensus scoreboard buckets `mean_price` with exactly
 /// this call, so the arm must too (verified against Postgres in `width_bucket_parity`).
+///
+/// This buckets the price LEVEL only to pick the band's blind base rate — it is NOT
+/// a model feature and does not reintroduce price-level into inference (the
+/// price-LEVEL-free guarantee is about the booster's splits, see [`ResidExtras`]).
 pub fn pg_width_bucket5(p: f64) -> i32 {
     if p < 0.0 {
         0
@@ -374,6 +423,80 @@ mod tests {
         );
 
         println!("Model: {} trees, prob={prob:.4}", model.n_trees());
+    }
+
+    /// Build an in-memory model from a single tree. Each `(feat, thr)` triple is a
+    /// root split on `feat`; passing an empty split list yields a pure-leaf tree
+    /// (no splits — the price-free shape). `splits` become internal nodes, followed
+    /// by two leaves each so the traversal is well-formed.
+    fn model_from_tree(
+        split_indices: Vec<usize>,
+        split_conditions: Vec<f64>,
+        left: Vec<i64>,
+        right: Vec<i64>,
+    ) -> XgbModel {
+        use std::sync::atomic::{AtomicU64, Ordering};
+        static NONCE: AtomicU64 = AtomicU64::new(0);
+        let default_left = vec![0u8; split_indices.len()];
+        let json = serde_json::json!({
+            "learner": {
+                "learner_model_param": {"base_score": "0.5"},
+                "gradient_booster": {"model": {"trees": [{
+                    "split_indices": split_indices,
+                    "split_conditions": split_conditions,
+                    "left_children": left,
+                    "right_children": right,
+                    "default_left": default_left,
+                }]}}
+            }
+        });
+        let n = NONCE.fetch_add(1, Ordering::Relaxed);
+        let path =
+            std::env::temp_dir().join(format!("xgb_split_test_{}_{}.json", std::process::id(), n));
+        std::fs::write(&path, serde_json::to_string(&json).unwrap()).unwrap();
+        let m = XgbModel::load(&path).unwrap();
+        std::fs::remove_file(&path).ok();
+        m
+    }
+
+    #[test]
+    fn split_feature_indices_reports_only_real_splits() {
+        // Root split on feature 3, two leaf children → the only used index is {3}.
+        let m = model_from_tree(
+            vec![3, 0, 0],
+            vec![0.5, -0.1, 0.2],
+            vec![1, -1, -1],
+            vec![2, -1, -1],
+        );
+        let used = m.split_feature_indices();
+        assert!(used.contains(&3));
+        assert_eq!(used.len(), 1, "leaf nodes carry no feature");
+        // The leaves' split_indices entries (0) must NOT be counted as splits.
+        assert!(!used.contains(&0));
+    }
+
+    #[test]
+    fn assert_no_splits_on_rejects_price_leak_and_passes_clean() {
+        // A booster that splits on price index 0 is rejected.
+        let leaky = model_from_tree(
+            vec![0, 0, 0],
+            vec![0.5, -0.1, 0.2],
+            vec![1, -1, -1],
+            vec![2, -1, -1],
+        );
+        assert!(leaky.assert_no_splits_on(&[0, 8, 9]).is_err());
+        // A pure-leaf booster (no splits at all) passes.
+        let clean = model_from_tree(vec![0], vec![0.3], vec![-1], vec![-1]);
+        assert!(clean.split_feature_indices().is_empty());
+        assert!(clean.assert_no_splits_on(&[0, 8, 9]).is_ok());
+        // A booster that splits only on a NON-forbidden index passes.
+        let ok = model_from_tree(
+            vec![5, 0, 0],
+            vec![0.5, -0.1, 0.2],
+            vec![1, -1, -1],
+            vec![2, -1, -1],
+        );
+        assert!(ok.assert_no_splits_on(&[0, 8, 9]).is_ok());
     }
 
     #[test]

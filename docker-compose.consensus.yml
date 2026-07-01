@@ -45,8 +45,10 @@ services:
       # --- market_resid (price-free residual arm) lifecycle; set these in
       #     .env.consensus. Accrual is safe/additive; the arm stays default-OFF. ---
       MARKET_FEATURE_LOG: ${MARKET_FEATURE_LOG:-false}        # forward 29-feature log accrual
+      MARKET_PREFETCH_MAX: ${MARKET_PREFETCH_MAX:-200}        # cap distinct strict markets prefetched/cycle
       CONSENSUS_ARM_RESID: ${CONSENSUS_ARM_RESID:-false}      # enable the silent market_resid arm
-      CONSENSUS_ML_MARGIN: ${CONSENSUS_ML_MARGIN:-0.0}        # resid: p_cons − band_rate > margin
+      CONSENSUS_ML_MARGIN: ${CONSENSUS_ML_MARGIN:-0.0}        # legacy market arms: p − mid > margin
+      MARKET_RESID_MARGIN: ${MARKET_RESID_MARGIN:-0.0}        # resid arm's OWN knob: p_cons − band_rate > margin
       MARKET_RESID_TRAINED_THROUGH: ${MARKET_RESID_TRAINED_THROUGH:-}  # else the model's meta.json
       # Telegram is OPTIONAL — leave unset for ntfy-only (this deploy).
       # TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}

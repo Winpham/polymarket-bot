@@ -1,18 +1,33 @@
-//! Price-FREE residual arm (`market_resid`): the trading-bot's market-outcome
+//! Price-LEVEL-FREE residual arm (`market_resid`): the trading-bot's market-outcome
 //! model given a fair, tautology-free shot on the consensus path.
 //!
 //! The shipped `arm_market` fires on `p_model - clob_mid`, which scores ~0 by
 //! construction: the scoreboard already subtracts the band-matched `_blind`
 //! baseline (the favorite-longshot residual that `p_model` tracks). That measures
 //! the price feature, it does not test the model. Instead this arm:
-//!   1. predicts `p_yes` from NON-price features (the booster has no split on the
-//!      price indices — trained on constant price columns), then orients to the
-//!      consensus outcome (`1 - p_yes` for a NO-side pick);
+//!   1. predicts `p_yes` from NON-price-LEVEL features (the booster has no split on
+//!      the price-LEVEL indices {0,8,9} = yes_price / price_change_1d /
+//!      price_change_1w — trained on constant price-level columns), then orients to
+//!      the consensus outcome (`1 - p_yes` for a NO-side pick);
 //!   2. compares to the band's OWN `_blind` base rate (`band_rate`), NOT the live
 //!      mid — aligning the selection target with the gate's surplus-over-blind.
 //!
 //! The belief-blind gate still independently judges every re-emitted row; the
 //! alignment removes the tautology, it does not hand the model a free pass.
+//!
+//! # "price-LEVEL-free", precisely (two verified nuances — read before trusting a surplus)
+//! * **The guarantee is TRAIN-time, and rests SOLELY on the booster having no split
+//!   on {0,8,9}.** The `RobustScaler` does NOT neutralize price at inference: a
+//!   held-constant (zero-IQR) price column gets `scale = 1` in `Scaler::transform`,
+//!   so a live price value would pass straight through if the booster ever split on
+//!   it. Phase 1's Rust `assert_no_splits_on(&[0,8,9])` in `load_models` is what makes
+//!   this a hard guarantee — a price-leaking booster is refused (arm left OFF).
+//! * **This is price-LEVEL-free, NOT price-free.** Only the 3 price-LEVEL indices are
+//!   held constant. The price-SHAPE features {1,2,3,4} = momentum_1h / momentum_24h /
+//!   volatility_24h / rsi remain by design — all price-derived, and the closest
+//!   residual proxies for direction. Momentum can't reconstruct the level, but it can
+//!   shadow it; so any `market_resid` surplus is only believable once Phase 3's
+//!   price-SHAPE ablation shows it survives holding {1,2,3,4} constant too.
 
 use super::{ConsensusSignal, EnrichCtx, forward_ok, re_emit};
 
@@ -47,7 +62,7 @@ pub fn arm_market_resid(sigs: &[ConsensusSignal], ctx: &EnrichCtx) -> Vec<Consen
             1.0 - p_yes
         };
         let resid = p_cons - ex.band_rate(s.mean_price);
-        if resid > ctx.margins.ml {
+        if resid > ctx.margins.resid {
             out.push(re_emit(s, "market_resid"));
         }
     }
@@ -191,6 +206,50 @@ mod tests {
     }
 
     #[test]
+    fn resid_margin_gates_independently_of_ml() {
+        // p_yes=0.80, band_rate(0.55)=0.50 → resid=+0.30.
+        let models = EnrichModels {
+            market_resid: Some(const_model(0.80)),
+            market_resid_extras: Some(extras()),
+            ..Default::default()
+        };
+        let markets = one_market(0);
+        // (a) ml huge (would block a shared-knob arm) but resid=0 → STILL emits:
+        //     the arm reads its OWN margin, not `ml`.
+        let ctx_a = EnrichCtx {
+            now: chrono::Utc::now(),
+            models: &models,
+            margins: EnrichMargins {
+                ml: 10.0,
+                bayes: 0.0,
+                resid: 0.0,
+            },
+            markets: &markets,
+        };
+        assert_eq!(
+            arm_market_resid(&[strict_sig(0)], &ctx_a).len(),
+            1,
+            "resid arm must ignore `ml` and fire on resid > resid-margin"
+        );
+        // (b) resid margin above the residual (0.30) blocks emission even with ml
+        //     wide open — the dedicated knob is what gates.
+        let ctx_b = EnrichCtx {
+            now: chrono::Utc::now(),
+            models: &models,
+            margins: EnrichMargins {
+                ml: -1.0,
+                bayes: 0.0,
+                resid: 0.5,
+            },
+            markets: &markets,
+        };
+        assert!(
+            arm_market_resid(&[strict_sig(0)], &ctx_b).is_empty(),
+            "resid margin above the residual must block emission"
+        );
+    }
+
+    #[test]
     fn orients_no_side_then_residuals() {
         // NO-side pick: p_cons = 1 - 0.80 = 0.20, band_rate 0.50 -> resid -0.30 < 0
         // -> no emit. (The YES-side identical model emits; see above.)
@@ -236,6 +295,7 @@ mod tests {
             margins: EnrichMargins {
                 ml: -1.0,
                 bayes: 0.0,
+                resid: -1.0,
             },
             markets: &markets,
         };

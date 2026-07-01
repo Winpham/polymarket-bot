@@ -647,10 +647,20 @@ impl PgPortfolio {
     }
 
     /// Append a batch of forward 29-feature snapshots (`market_feature_log`,
-    /// migration 028) in one UNNEST insert. Re-logging the same
-    /// (signal, condition, outcome) keeps the freshest snapshot (the cycle may
-    /// re-upsert a strict signal as its consensus strengthens). Best-effort: the
-    /// caller logs a failure and never blocks the cycle on it.
+    /// migrations 028 + 029) in one UNNEST insert.
+    ///
+    /// Two snapshots per (signal, condition, outcome) are preserved additively:
+    /// * `features` / `captured_at` = the FRESHEST snapshot — re-logging the same
+    ///   key updates them (the cycle re-upserts a strict signal as consensus
+    ///   strengthens), so they drift to the last pre-resolution state.
+    /// * `first_features` / `first_captured_at` = the DECISION-TIME snapshot — set
+    ///   on the first INSERT and then held UNCHANGED (`COALESCE(existing, …)`), so a
+    ///   re-log never overwrites the first-strict-fire capture. A pre-029 row with a
+    ///   NULL `first_features` is opportunistically backfilled from the current
+    ///   snapshot the next time it re-logs (going-forward only; its true first snap
+    ///   is unrecoverable). Both columns are readable by the trainer's `--capture`.
+    ///
+    /// Best-effort: the caller logs a failure and never blocks the cycle on it.
     pub async fn log_market_features(&self, rows: &[NewMarketFeatureLog]) -> Result<u64> {
         if rows.is_empty() {
             return Ok(0);
@@ -664,11 +674,19 @@ impl PgPortfolio {
 
         let res = sqlx::query(
             "INSERT INTO market_feature_log \
-               (signal_id, condition_id, outcome_index, yes_token, clob_mid, features) \
-             SELECT * FROM UNNEST( \
+               (signal_id, condition_id, outcome_index, yes_token, clob_mid, features, \
+                first_features, first_captured_at) \
+             SELECT signal_id, condition_id, outcome_index, yes_token, clob_mid, features, \
+                    features, NOW() \
+             FROM UNNEST( \
                $1::int8[], $2::text[], $3::int4[], $4::bool[], $5::float8[], $6::jsonb[]) \
+               AS t(signal_id, condition_id, outcome_index, yes_token, clob_mid, features) \
              ON CONFLICT (signal_id, condition_id, outcome_index) DO UPDATE SET \
-               features = EXCLUDED.features, clob_mid = EXCLUDED.clob_mid, captured_at = NOW()",
+               features          = EXCLUDED.features, \
+               clob_mid          = EXCLUDED.clob_mid, \
+               captured_at       = NOW(), \
+               first_features    = COALESCE(market_feature_log.first_features, EXCLUDED.first_features), \
+               first_captured_at = COALESCE(market_feature_log.first_captured_at, EXCLUDED.first_captured_at)",
         )
         .bind(&signal_id)
         .bind(&condition_id)
@@ -680,6 +698,26 @@ impl PgPortfolio {
         .await
         .context("log_market_features")?;
         Ok(res.rows_affected())
+    }
+
+    /// Accrual progress for the `market_resid` forward log: `(distinct resolved
+    /// strict events with a logged feature row, total feature rows logged)`. The
+    /// event count mirrors the trainer's `--source forward` population exactly
+    /// (resolved strict signals with a known outcome, joined to their feature row),
+    /// so the board can show how close the arm is to its ≥30-event first gate read.
+    pub async fn market_feature_log_accrual(&self) -> Result<(i64, i64)> {
+        let (events, rows): (i64, i64) = sqlx::query_as(
+            "SELECT \
+               (SELECT COUNT(DISTINCT COALESCE(cs.event_slug, cs.condition_id)) \
+                  FROM market_feature_log mfl \
+                  JOIN consensus_signals cs ON cs.id = mfl.signal_id \
+                 WHERE cs.strategy = 'strict' AND cs.resolved AND cs.outcome_won IS NOT NULL), \
+               (SELECT COUNT(*) FROM market_feature_log)",
+        )
+        .fetch_one(&self.pool)
+        .await
+        .context("market_feature_log_accrual")?;
+        Ok((events, rows))
     }
 
     /// Load all window fill atoms at or after `since` (the trailing window) for
@@ -1565,9 +1603,16 @@ mod market_feature_log_it {
         );
 
         // Read back: right signal_id, captured mid, a 29-named-field JSON object.
-        let (got_sid, feats, mid): (i64, serde_json::Value, Option<f64>) = sqlx::query_as(
-            "SELECT signal_id, features, clob_mid FROM market_feature_log \
-             WHERE condition_id = 'mfl_cond1'",
+        // Phase 2: the first INSERT also populates first_features/first_captured_at.
+        let (got_sid, feats, mid, first_feats, first_cap): (
+            i64,
+            serde_json::Value,
+            Option<f64>,
+            serde_json::Value,
+            DateTime<Utc>,
+        ) = sqlx::query_as(
+            "SELECT signal_id, features, clob_mid, first_features, first_captured_at \
+             FROM market_feature_log WHERE condition_id = 'mfl_cond1'",
         )
         .fetch_one(&pf.pool)
         .await
@@ -1582,6 +1627,12 @@ mod market_feature_log_it {
         );
         assert!(obj.contains_key("yes_price") && obj.contains_key("q_certainty"));
         assert_eq!(obj["yes_price"].as_f64().unwrap(), 0.42);
+        // Decision-time snapshot == the freshest on the first insert.
+        assert_eq!(
+            first_feats["yes_price"].as_f64().unwrap(),
+            0.42,
+            "first_features set to the decision-time snapshot on INSERT"
+        );
 
         // Re-log the same (signal, condition, outcome): updates in place, no dup.
         let row2 = NewMarketFeatureLog {
@@ -1605,6 +1656,22 @@ mod market_feature_log_it {
         assert_eq!(cnt, 1, "re-log updates in place (no duplicate row)");
         assert_eq!(mid2, Some(0.61), "conflict updated clob_mid");
         assert_eq!(yp, 0.99, "conflict updated the features snapshot");
+
+        // Phase 2: the re-log refreshed `features` (→0.99) but the DECISION-TIME
+        // snapshot is held UNCHANGED — first_features stays 0.42 and
+        // first_captured_at is byte-identical to the first insert's timestamp.
+        let (first_yp, first_cap2): (f64, DateTime<Utc>) = sqlx::query_as(
+            "SELECT (first_features->>'yes_price')::float8, first_captured_at \
+             FROM market_feature_log WHERE condition_id = 'mfl_cond1'",
+        )
+        .fetch_one(&pf.pool)
+        .await
+        .unwrap();
+        assert_eq!(first_yp, 0.42, "re-log must NOT overwrite first_features");
+        assert_eq!(
+            first_cap2, first_cap,
+            "re-log must NOT touch first_captured_at"
+        );
 
         // Cascade: deleting the signal removes its feature-log row.
         sqlx::query("DELETE FROM consensus_signals WHERE id = $1")
