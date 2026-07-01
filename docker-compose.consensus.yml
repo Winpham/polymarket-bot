@@ -63,6 +63,8 @@ services:
       CAPTURE_ENTRY_ASK: ${CAPTURE_ENTRY_ASK:-false}          # capture real CLOB best-ask (else mid+haircut)
       ENTRY_ASK_MAX_PER_CYCLE: ${ENTRY_ASK_MAX_PER_CYCLE:-40} # cap book-ask fetches/cycle
       LEDGER_STRATEGIES: ${LEDGER_STRATEGIES:-}               # paper ledger scope (empty = all non-blind)
+      HONEST_DIGEST: ${HONEST_DIGEST:-false}                  # opt-in phone digest (material-change only)
+      HONEST_MAX_DRAWDOWN_USD: ${HONEST_MAX_DRAWDOWN_USD:-500.0} # paper-drawdown breach floor for the digest
       # Telegram is OPTIONAL — leave unset for ntfy-only (this deploy).
       # TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
       # TELEGRAM_CHAT_ID: ${TELEGRAM_CHAT_ID:-}

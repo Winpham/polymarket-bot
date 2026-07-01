@@ -292,6 +292,17 @@ pub struct CopyTradingConfig {
     #[config(env = "LEDGER_STRATEGIES", default = "")]
     pub ledger_strategies: String,
 
+    /// Opt-in minimal-noise honest-tracker phone digest. Default OFF: when off, no
+    /// digest is computed or pushed (silent). When on, it pushes to ntfy ONLY on a
+    /// material change — a strategy crossing INTO/OUT of pilot-ready, or a paper
+    /// drawdown newly breaching the floor — never a heartbeat.
+    #[config(env = "HONEST_DIGEST", default = false)]
+    pub honest_digest: bool,
+
+    /// Paper-drawdown floor ($) whose first breach triggers a digest push.
+    #[config(env = "HONEST_MAX_DRAWDOWN_USD", default = 500.0)]
+    pub honest_max_drawdown_usd: f64,
+
     /// Port for the Prometheus metrics HTTP endpoint.
     #[config(env = "METRICS_PORT", default = 9001)]
     pub metrics_port: u16,

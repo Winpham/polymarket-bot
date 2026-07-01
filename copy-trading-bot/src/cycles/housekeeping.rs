@@ -15,6 +15,7 @@ pub async fn housekeeping_cycle(
     notifier: &TelegramNotifier,
     http: &reqwest::Client,
     cfg: &CopyTradingConfig,
+    ntfy: Option<&polymarket_common::ntfy::Ntfy>,
 ) -> Result<()> {
     let open_ids = portfolio.open_copy_bet_market_ids().await?;
 
@@ -275,6 +276,10 @@ pub async fn housekeeping_cycle(
             "Consensus signals resolved"
         );
     }
+
+    // Phase 4: opt-in minimal-noise honest-tracker digest (material change only;
+    // silent by default). Read-only — never touches the live path.
+    crate::cycles::honest_digest::maybe_push(portfolio, ntfy, cfg).await;
 
     tracing::info!(
         open_copy_bets = open_ids.len(),

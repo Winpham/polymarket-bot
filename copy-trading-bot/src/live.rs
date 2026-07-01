@@ -183,14 +183,21 @@ pub async fn run_live(cfg: Arc<CopyTradingConfig>) -> Result<()> {
     let hk_portfolio = Arc::clone(&portfolio);
     let hk_notifier = Arc::clone(&notifier);
     let hk_cfg = Arc::clone(&cfg);
+    let hk_ntfy = ntfy.clone();
     let hk_http = reqwest::Client::builder()
         .timeout(Duration::from_secs(15))
         .build()
         .expect("failed to build housekeeping HTTP client");
     let housekeeping_loop = tokio::spawn(async move {
         loop {
-            if let Err(e) =
-                cycles::housekeeping_cycle(&hk_portfolio, &hk_notifier, &hk_http, &hk_cfg).await
+            if let Err(e) = cycles::housekeeping_cycle(
+                &hk_portfolio,
+                &hk_notifier,
+                &hk_http,
+                &hk_cfg,
+                hk_ntfy.as_deref(),
+            )
+            .await
             {
                 tracing::error!(err = %e, "Copy housekeeping cycle failed");
             }

@@ -186,10 +186,31 @@ async fn render_trust(portfolio: &PgPortfolio) -> String {
     out
 }
 
+/// A unicode block sparkline (▁▂▃▄▅▆▇█) from a series — the equity curve at a glance.
+fn sparkline(series: &[f64]) -> String {
+    if series.len() < 2 {
+        return "—".into();
+    }
+    const BARS: [char; 8] = ['▁', '▂', '▃', '▄', '▅', '▆', '▇', '█'];
+    let (mut lo, mut hi) = (f64::INFINITY, f64::NEG_INFINITY);
+    for &v in series {
+        lo = lo.min(v);
+        hi = hi.max(v);
+    }
+    let span = (hi - lo).max(1e-9);
+    series
+        .iter()
+        .map(|&v| {
+            let idx = (((v - lo) / span) * 7.0).round().clamp(0.0, 7.0) as usize;
+            BARS[idx]
+        })
+        .collect()
+}
+
 /// Render the **honest, realizable** P&L panel (read-only): per strategy the
-/// CLV-based ROI net of the execution haircut, event-clustered, shown alongside
-/// the old sharp `edge` for reference. Realizable, not flattering. The
-/// conservative pilot verdict + regime/equity detail arrive in later phases.
+/// CLV-based ROI net of the execution haircut, the conservative pilot GO/HOLD
+/// verdict (corrected bound + regime persistence + liquidity), capacity sizing,
+/// and the PAPER equity sparkline + max drawdown. Realizable, not flattering.
 async fn render_honest(portfolio: &PgPortfolio, honest: HonestBoardParams) -> String {
     let rows = match portfolio
         .honest_pnl_by_strategy(honest.exec_haircut, honest.fee_pct)
@@ -198,64 +219,41 @@ async fn render_honest(portfolio: &PgPortfolio, honest: HonestBoardParams) -> St
         Ok(r) if r.iter().any(|x| x.resolved > 0) => r,
         _ => return String::new(),
     };
-    // Per-strategy day-regime persistence (positive/total) from the segment table.
     let segs = portfolio
         .honest_pnl_segments(honest.exec_haircut, honest.fee_pct)
         .await
         .unwrap_or_default();
-    let mut regimes: std::collections::HashMap<String, (i64, i64)> =
-        std::collections::HashMap::new();
-    for s in &segs {
-        if s.seg_kind == "day" {
-            let e = regimes.entry(s.strategy.clone()).or_insert((0, 0));
-            e.1 += 1; // total distinct day-regimes
-            if s.honest_roi.unwrap_or(0.0) > 0.0 {
-                e.0 += 1; // positive day-regimes
-            }
-        }
-    }
-    // Bonferroni family sizes over the honest rows (experimental vs core).
-    let mut fam_n: std::collections::HashMap<&str, usize> = std::collections::HashMap::new();
-    for r in &rows {
-        if r.resolved > 0 {
-            *fam_n.entry(family(&r.strategy)).or_default() += 1;
-        }
-    }
     let th = honest.thresholds();
+    // Shared verdict machinery (identical to the digest — they can't drift).
+    let verdicts = crate::scanner::honest::verdicts_by_strategy(&rows, &segs, &th);
 
-    // Build (row, verdict, capacity), then sort GO-first, then by corrected LB.
-    let mut items: Vec<_> = rows
-        .iter()
-        .filter(|r| r.resolved > 0)
-        .map(|r| {
-            let (rp, rt) = regimes.get(&r.strategy).copied().unwrap_or((0, 0));
-            let inp = crate::scanner::honest::PilotInputs {
-                honest_roi: r.honest_roi,
-                honest_roi_sd: r.honest_roi_sd,
-                distinct_events: r.distinct_events,
-                regimes_positive: rp,
-                regimes_total: rt,
-                median_sharp_usd: r.median_sharp_usd,
-                n_family: fam_n.get(family(&r.strategy)).copied().unwrap_or(1),
-            };
-            let verdict = crate::scanner::honest::pilot_verdict(&inp, &th);
-            let cap = crate::scanner::honest::capacity(
-                honest.flat_stake,
-                honest.capacity_frac,
-                r.median_sharp_usd,
-                r.bets_per_day,
-                r.avg_hours_to_resolve,
-                r.honest_roi,
-            );
-            (r, verdict, cap, rp, rt)
-        })
-        .collect();
-    // Sort GO-first, then by corrected lower bound descending.
+    // Build (row, verdict, capacity, ledger-stats), then sort GO-first / LB desc.
+    let mut items = Vec::new();
+    for r in rows.iter().filter(|r| r.resolved > 0) {
+        let Some(sv) = verdicts.get(&r.strategy) else {
+            continue;
+        };
+        let cap = crate::scanner::honest::capacity(
+            honest.flat_stake,
+            honest.capacity_frac,
+            r.median_sharp_usd,
+            r.bets_per_day,
+            r.avg_hours_to_resolve,
+            r.honest_roi,
+        );
+        let ledger = portfolio.ledger_stats(&r.strategy).await.unwrap_or(None);
+        items.push((r, sv.clone(), cap, ledger));
+    }
     items.sort_by(|a, b| {
-        b.1.go.cmp(&a.1.go).then(
-            b.1.corrected_lower_bound
+        b.1.verdict.go.cmp(&a.1.verdict.go).then(
+            b.1.verdict
+                .corrected_lower_bound
                 .unwrap_or(f64::NEG_INFINITY)
-                .partial_cmp(&a.1.corrected_lower_bound.unwrap_or(f64::NEG_INFINITY))
+                .partial_cmp(
+                    &a.1.verdict
+                        .corrected_lower_bound
+                        .unwrap_or(f64::NEG_INFINITY),
+                )
                 .unwrap_or(std::cmp::Ordering::Equal),
         )
     });
@@ -266,10 +264,12 @@ async fn render_honest(portfolio: &PgPortfolio, honest: HonestBoardParams) -> St
          the edge we could actually realize. Event-clustered, multi-regime. Paper only, NO real money.</p>\
          <table><thead><tr><th>pilot</th><th>strategy</th><th class=r>events (N)</th>\
          <th class=r>honest ROI</th><th class=r>corrected LB</th><th class=r>regimes+</th>\
-         <th class=r>CLV</th><th class=r>sharp edge</th><th class=r>median $</th>\
-         <th class=r>stake</th><th class=r>proj $/wk</th></tr></thead><tbody>",
+         <th class=r>CLV</th><th class=r>sharp edge</th><th class=r>stake</th>\
+         <th class=r>proj $/wk</th><th>paper equity</th><th class=r>max DD</th>\
+         </tr></thead><tbody>",
     );
-    for (r, verdict, cap, rp, rt) in &items {
+    for (r, sv, cap, ledger) in &items {
+        let verdict = &sv.verdict;
         let (marker, mcls) = if verdict.go {
             ("✅ GO", "pos")
         } else {
@@ -280,29 +280,40 @@ async fn render_honest(portfolio: &PgPortfolio, honest: HonestBoardParams) -> St
             Some(_) => "neg",
             None => "muted",
         };
-        let med = r
-            .median_sharp_usd
-            .map(|v| format!("${v:.0}"))
-            .unwrap_or_else(|| "—".into());
+        let (spark, dd, equity) = match ledger {
+            Some(l) => (
+                sparkline(&l.curve),
+                format!("${:.0}", l.max_drawdown),
+                format!("${:+.0}", l.total_pnl),
+            ),
+            None => ("—".into(), "—".into(), String::new()),
+        };
         let tip = format!(
-            "{}  ·  working capital ≈ ${:.0}  ·  real-ask coverage {}",
+            "{}  ·  working capital ≈ ${:.0}  ·  real-ask coverage {}  ·  paper equity {}",
             verdict.reason,
             cap.working_capital,
             r.ask_coverage
                 .map(|c| format!("{:.0}%", c * 100.0))
                 .unwrap_or_else(|| "0% (heuristic haircut)".into()),
+            if equity.is_empty() {
+                "no bets".into()
+            } else {
+                equity
+            },
         );
         out.push_str(&format!(
             "<tr title=\"{reason}\"><td class={mcls}>{marker}</td><td class=mono>{strat}</td>\
              <td class=r>{ev}</td><td class=\"r {hrcls}\">{hroi}</td><td class=r>{lb}</td>\
              <td class=r>{rp}/{rt}</td><td class=r>{clv}</td><td class=\"r muted\">{sharp}</td>\
-             <td class=\"r muted\">{med}</td><td class=\"r muted\">${stake:.0}</td>\
-             <td class=\"r muted\">${projwk:.0}</td></tr>",
+             <td class=\"r muted\">${stake:.0}</td><td class=\"r muted\">${projwk:.0}</td>\
+             <td class=mono>{spark}</td><td class=\"r muted\">{dd}</td></tr>",
             reason = html_escape(&tip),
             strat = r.strategy,
             ev = r.distinct_events,
             hroi = pct(r.honest_roi),
             lb = pct(verdict.corrected_lower_bound),
+            rp = sv.regimes_positive,
+            rt = sv.regimes_total,
             clv = pct(r.clv_share),
             sharp = pct(r.sharp_edge),
             stake = cap.suggested_stake,
@@ -312,13 +323,14 @@ async fn render_honest(portfolio: &PgPortfolio, honest: HonestBoardParams) -> St
     out.push_str(&format!(
         "</tbody></table>\
          <p class=note><b>honest ROI</b> = event-clustered `AVG((outcome − entry)/entry − fee)` where \
-         <b>entry = captured mid + {hc:.0}¢ haircut</b> — the realizable per-$ edge (NOT the sharps' fill). \
-         <b>corrected LB</b> = Bonferroni-corrected 1-sided lower bound on honest ROI. ✅ GO requires ALL: \
-         LB &gt; {bar:+.0}%, N ≥ {ev} events, ≥{regfrac:.0}% of day-regimes positive (≥{minreg}), and \
-         liquidity ≥ ${liq:.0}. Conservative by design — a false GO risks real money, so the default is HOLD \
-         (hover a row for the binding reason). <b>sharp edge</b> = outcome − sharps' mean price, reference only \
-         (overstates what we can capture). <b>stake</b> = min(flat, {capfrac:.0}% × median $); <b>proj $/wk</b> = \
-         paper. Promotion to real money is a deliberate human call — never automatic. NO real money is placed.</p>",
+         <b>entry = captured mid + {hc:.0}¢ haircut</b> (or the real book ask where captured) — the realizable \
+         per-$ edge (NOT the sharps' fill). <b>corrected LB</b> = Bonferroni-corrected 1-sided lower bound. \
+         ✅ GO requires ALL: LB &gt; {bar:+.0}%, N ≥ {ev} events, ≥{regfrac:.0}% of day-regimes positive \
+         (≥{minreg}), and liquidity ≥ ${liq:.0}. Conservative by design — a false GO risks real money, so the \
+         default is HOLD (hover a row for the binding reason + working capital). <b>sharp edge</b> = outcome − \
+         sharps' mean price, reference only. <b>stake</b> = min(flat, {capfrac:.0}% × median $); <b>paper equity</b> \
+         = cumulative paper P&amp;L sparkline; <b>max DD</b> = peak-to-trough $. Promotion to real money is a \
+         deliberate human call — never automatic. NO real money is placed.</p>",
         hc = honest.exec_haircut * 100.0,
         bar = honest.min_pilot_roi * 100.0,
         ev = honest.pilot_min_events,
@@ -545,6 +557,97 @@ mod tests {
         println!("board_trust_render: trust table + market_resid accrual line render — OK");
 
         sqlx::query("DELETE FROM trader_fills WHERE wallet LIKE 'bd_%'")
+            .execute(&pool)
+            .await
+            .unwrap();
+    }
+
+    // Sparkline is a pure function — unit-test it without a DB.
+    #[test]
+    fn sparkline_maps_range_to_blocks() {
+        assert_eq!(sparkline(&[1.0]), "—", "needs ≥2 points");
+        let s = sparkline(&[0.0, 1.0, 2.0]);
+        assert_eq!(s.chars().count(), 3);
+        assert!(s.starts_with('▁'), "min → lowest block: {s}");
+        assert!(s.ends_with('█'), "max → highest block: {s}");
+    }
+
+    // Live: seed resolved consensus signals + a paper ledger, render the board,
+    // assert the honest panel renders with GO/HOLD, the corrected bound, and an
+    // equity sparkline. `#[ignore]`d (needs $DATABASE_URL).
+    #[tokio::test]
+    #[ignore = "requires a live Postgres at $DATABASE_URL with migrations applied"]
+    async fn board_honest_panel_render() {
+        let url = std::env::var("DATABASE_URL").expect("DATABASE_URL");
+        let pool = sqlx::PgPool::connect(&url).await.unwrap();
+        let pf = PgPortfolio::new(pool.clone()).await.unwrap();
+        pf.run_migrations().await.unwrap();
+        sqlx::query("DELETE FROM consensus_signals WHERE condition_id LIKE 'bh_%'")
+            .execute(&pool)
+            .await
+            .unwrap();
+        sqlx::query("DELETE FROM honest_paper_ledger WHERE strategy = 'bh_str'")
+            .execute(&pool)
+            .await
+            .unwrap();
+
+        // Two resolved signals over two days with a captured mid, then a paper
+        // ledger so the equity sparkline has ≥2 points.
+        for (i, (cond, won, day)) in [("bh_c1", true, 1), ("bh_c2", false, 0)]
+            .into_iter()
+            .enumerate()
+        {
+            sqlx::query(&format!(
+                "INSERT INTO consensus_signals \
+                   (strategy, condition_id, outcome_index, event_slug, n_backers, n_opposers, \
+                    net_count, net_quality, mean_price, price_std, recency_mins, total_usd, \
+                    score, tier, initial_market_price, resolved, outcome_won, \
+                    first_detected_at, resolved_at) \
+                 VALUES ('bh_str',$1,0,$2,5,0,5,5.0,0.50,0.02,10,2000,1.0,'WATCH',0.50,TRUE,$3, \
+                         NOW() - INTERVAL '{day} days 2 hours', NOW() - INTERVAL '{day} days')"
+            ))
+            .bind(cond)
+            .bind(format!("bh_ev{i}"))
+            .bind(won)
+            .execute(&pool)
+            .await
+            .unwrap();
+            pf.append_paper_bet("bh_str", cond, 0, 100.0, 0.01, 0.02)
+                .await
+                .unwrap();
+        }
+
+        let params = HonestBoardParams {
+            exec_haircut: 0.01,
+            fee_pct: 0.02,
+            flat_stake: 100.0,
+            capacity_frac: 0.05,
+            min_pilot_roi: 0.02,
+            pilot_min_events: 50,
+            pilot_min_regimes: 5,
+            regime_frac: 0.7,
+            min_liquidity_usd: 2000.0,
+        };
+        let html = render(&pf, 0.0, params).await;
+        assert!(
+            html.contains("Honest P&amp;L (realizable"),
+            "honest panel renders"
+        );
+        assert!(html.contains("bh_str"), "the seeded strategy appears");
+        // Small N → HOLD; the binding reason should be in the row tooltip.
+        assert!(html.contains("HOLD"), "conservative default verdict shows");
+        // The paper equity sparkline (≥2 ledger points) renders block glyphs.
+        assert!(
+            html.contains('▁') || html.contains('█') || html.contains('▄'),
+            "equity sparkline renders"
+        );
+        println!("board_honest_panel_render: honest panel + verdict + sparkline — OK");
+
+        sqlx::query("DELETE FROM consensus_signals WHERE condition_id LIKE 'bh_%'")
+            .execute(&pool)
+            .await
+            .unwrap();
+        sqlx::query("DELETE FROM honest_paper_ledger WHERE strategy = 'bh_str'")
             .execute(&pool)
             .await
             .unwrap();

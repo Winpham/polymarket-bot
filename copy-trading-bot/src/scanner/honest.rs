@@ -9,6 +9,11 @@
 //! machinery (`promotion::surplus_bounds`, so `probit` stays private there) — the
 //! only new logic here is the multi-regime persistence + liquidity floor.
 
+use std::collections::HashMap;
+
+use polymarket_common::storage::consensus::{HonestPnl, HonestSegment};
+
+use crate::scanner::enrich::family;
 use crate::scanner::promotion::{PromotionParams, surplus_bounds};
 
 /// Per-strategy inputs to the pilot verdict (all read-only measurements).
@@ -204,6 +209,121 @@ pub fn capacity(
     }
 }
 
+/// A strategy's pilot verdict plus the day-regime persistence it was judged on.
+#[derive(Debug, Clone)]
+pub struct StrategyVerdict {
+    pub verdict: PilotVerdict,
+    pub regimes_positive: i64,
+    pub regimes_total: i64,
+}
+
+/// Compute the pilot verdict for every strategy with resolved rows, from the
+/// honest scoreboard + the day-regime segments. Shared by the board panel and the
+/// digest so they can never drift. Bonferroni family = experimental vs core over
+/// the rows present (adding experimental arms never tightens the core bar).
+pub fn verdicts_by_strategy(
+    rows: &[HonestPnl],
+    segs: &[HonestSegment],
+    th: &PilotThresholds,
+) -> HashMap<String, StrategyVerdict> {
+    // Day-regime persistence per strategy: (positive, total).
+    let mut regimes: HashMap<&str, (i64, i64)> = HashMap::new();
+    for s in segs {
+        if s.seg_kind == "day" {
+            let e = regimes.entry(s.strategy.as_str()).or_insert((0, 0));
+            e.1 += 1;
+            if s.honest_roi.unwrap_or(0.0) > 0.0 {
+                e.0 += 1;
+            }
+        }
+    }
+    let mut fam_n: HashMap<&str, usize> = HashMap::new();
+    for r in rows {
+        if r.resolved > 0 {
+            *fam_n.entry(family(&r.strategy)).or_default() += 1;
+        }
+    }
+    let mut out = HashMap::new();
+    for r in rows.iter().filter(|r| r.resolved > 0) {
+        let (rp, rt) = regimes.get(r.strategy.as_str()).copied().unwrap_or((0, 0));
+        let inp = PilotInputs {
+            honest_roi: r.honest_roi,
+            honest_roi_sd: r.honest_roi_sd,
+            distinct_events: r.distinct_events,
+            regimes_positive: rp,
+            regimes_total: rt,
+            median_sharp_usd: r.median_sharp_usd,
+            n_family: fam_n.get(family(&r.strategy)).copied().unwrap_or(1),
+        };
+        out.insert(
+            r.strategy.clone(),
+            StrategyVerdict {
+                verdict: pilot_verdict(&inp, th),
+                regimes_positive: rp,
+                regimes_total: rt,
+            },
+        );
+    }
+    out
+}
+
+// --- Minimal-noise digest: notify ONLY on a material change ---------------
+
+/// One strategy's material-state snapshot for change detection.
+#[derive(Debug, Clone, PartialEq)]
+pub struct DigestSnapshot {
+    pub strategy: String,
+    /// Is the strategy pilot-ready right now?
+    pub go: bool,
+    /// Paper-ledger max drawdown ($).
+    pub max_drawdown: f64,
+}
+
+/// Per-strategy state we remember between digest checks.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct DigestState {
+    pub go: bool,
+    pub drawdown_breached: bool,
+}
+
+/// Detect material changes vs the previous digest state. Returns the human
+/// messages to push (empty ⇒ stay silent) and the NEW state to remember. A
+/// strategy seen for the FIRST time (no prior entry) establishes a baseline
+/// silently — so a restart never re-pushes. Material changes: crossing INTO or
+/// OUT of GO, and a NEWLY-breached drawdown floor.
+pub fn digest_changes(
+    prev: &HashMap<String, DigestState>,
+    snaps: &[DigestSnapshot],
+    drawdown_floor: f64,
+) -> (Vec<String>, HashMap<String, DigestState>) {
+    let mut msgs = Vec::new();
+    let mut next = HashMap::new();
+    for s in snaps {
+        let breached = s.max_drawdown >= drawdown_floor;
+        let state = DigestState {
+            go: s.go,
+            drawdown_breached: breached,
+        };
+        if let Some(p) = prev.get(&s.strategy) {
+            if p.go != s.go {
+                msgs.push(if s.go {
+                    format!("✅ {} crossed INTO pilot-ready (GO)", s.strategy)
+                } else {
+                    format!("⚠️ {} dropped OUT of pilot-ready (HOLD)", s.strategy)
+                });
+            }
+            if !p.drawdown_breached && breached {
+                msgs.push(format!(
+                    "🔻 {} paper drawdown breached ${:.0} (≥ ${:.0} floor)",
+                    s.strategy, s.max_drawdown, drawdown_floor
+                ));
+            }
+        }
+        next.insert(s.strategy.clone(), state);
+    }
+    (msgs, next)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -293,6 +413,62 @@ mod tests {
         assert_eq!(required_regimes(10, &th), 7);
         // 3 regimes × 0.7 = ceil(2.1)=3, but floor 5 dominates.
         assert_eq!(required_regimes(3, &th), 5);
+    }
+
+    fn snap(strategy: &str, go: bool, dd: f64) -> DigestSnapshot {
+        DigestSnapshot {
+            strategy: strategy.into(),
+            go,
+            max_drawdown: dd,
+        }
+    }
+
+    #[test]
+    fn first_observation_is_a_silent_baseline() {
+        let prev = HashMap::new();
+        let (msgs, next) = digest_changes(&prev, &[snap("s", true, 0.0)], 500.0);
+        assert!(
+            msgs.is_empty(),
+            "no push on the first observation (baseline)"
+        );
+        assert!(next.get("s").unwrap().go);
+    }
+
+    #[test]
+    fn digest_fires_exactly_on_go_crossing() {
+        let mut prev = HashMap::new();
+        prev.insert(
+            "s".to_string(),
+            DigestState {
+                go: false,
+                drawdown_breached: false,
+            },
+        );
+        // Crosses INTO GO → exactly one message.
+        let (msgs, next) = digest_changes(&prev, &[snap("s", true, 0.0)], 500.0);
+        assert_eq!(msgs.len(), 1);
+        assert!(msgs[0].contains("INTO pilot-ready"));
+        // No further change → silent.
+        let (msgs2, _) = digest_changes(&next, &[snap("s", true, 0.0)], 500.0);
+        assert!(msgs2.is_empty(), "no change ⇒ no push");
+    }
+
+    #[test]
+    fn digest_fires_on_drawdown_breach_once() {
+        let mut prev = HashMap::new();
+        prev.insert(
+            "s".to_string(),
+            DigestState {
+                go: true,
+                drawdown_breached: false,
+            },
+        );
+        let (msgs, next) = digest_changes(&prev, &[snap("s", true, 600.0)], 500.0);
+        assert_eq!(msgs.len(), 1);
+        assert!(msgs[0].contains("drawdown breached"));
+        // Still breached, no re-alert.
+        let (msgs2, _) = digest_changes(&next, &[snap("s", true, 700.0)], 500.0);
+        assert!(msgs2.is_empty(), "breach alerts once, not every cycle");
     }
 
     #[test]
