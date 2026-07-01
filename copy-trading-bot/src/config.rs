@@ -159,6 +159,10 @@ pub struct CopyTradingConfig {
     /// Enable the Bayesian-anchor arm (`bayes_anchor`).
     #[config(env = "CONSENSUS_ARM_BAYES", default = false)]
     pub consensus_arm_bayes: bool,
+    /// Enable the price-free residual arm (`market_resid`). Default OFF: silent,
+    /// judged in the experimental family; live `strict` stays byte-identical.
+    #[config(env = "CONSENSUS_ARM_RESID", default = false)]
+    pub consensus_arm_resid: bool,
 
     /// Enable the earned-trust consensus arms (`trust_weighted`, `trusted_only`).
     /// Default OFF: when off they aren't registered (portfolio byte-identical) and
@@ -185,6 +189,21 @@ pub struct CopyTradingConfig {
     /// empty = no forward-only guard (rely on live forwardness).
     #[config(env = "MARKET_ML_TRAINED_THROUGH", default = "")]
     pub market_ml_trained_through: String,
+    /// Path to the price-free residual model JSON (train_market_resid.py output).
+    /// Its `.resid.json`, `.scaler.json`, and `.meta.json` siblings load alongside.
+    #[config(env = "MARKET_RESID_MODEL_PATH", default = "model/market_resid.json")]
+    pub market_resid_model_path: String,
+    /// Forward cutoff override for `market_resid` (RFC3339); empty ⇒ use the
+    /// model's `.meta.json` `trained_through`, else rely on live forwardness.
+    #[config(env = "MARKET_RESID_TRAINED_THROUGH", default = "")]
+    pub market_resid_trained_through: String,
+
+    /// Log the forward 29-feature vector for every strict-fired market into
+    /// `market_feature_log` (the survivorship-free training source for the
+    /// `market_resid` arm). Default OFF: when off, no per-market data is fetched
+    /// for it and the cycle path is byte-identical.
+    #[config(env = "MARKET_FEATURE_LOG", default = false)]
+    pub market_feature_log: bool,
 
     /// Edge margin the ML arms must clear (`p_win − price > margin`).
     #[config(env = "CONSENSUS_ML_MARGIN", default = 0.0)]

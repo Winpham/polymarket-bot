@@ -16,18 +16,16 @@ trading-bot is unbroken — see FORGE_PLAN_LEVERS PREP-A). Then `scanner/enrich/
 (re-export), `scanner/enrich/bayes.rs`, the one `registry()` line.
 **Honest expectation:** a selection filter on `strict` picks; the gate judges its surplus. Likely marginal.
 
-## D2 — Import-model collapse-probe (`cml_*`) — only if cheap
-**Idea:** a clearly-labelled SECOND silent probe that imports the repo's market-outcome model
-(`MarketFeatures` + pure-Rust `XgbModel`) to confirm — on THIS data — the Foresight null that a generic
-market-prediction model doesn't beat the line. Per fired market it costs 1 Gamma + 1 CLOB-mid + 1
-prices-history fetch (bounded by distinct fired markets, throttled like housekeeping).
-**Prereq:** move `trading-bot/src/model/xgb.rs` → `common/src/model/xgb.rs` (re-export); produce a trained
-`model/xgb_model.json` via `scripts/fetch_data.py` + `scripts/train_model.py`; add `fetch_price_history` free fn
-to `common/src/data/models.rs`; config `XGB_MODEL_PATH`.
-**Owned files:** `common/src/model/xgb.rs` (+ re-export), `common/src/data/models.rs` (fetch_price_history),
-`scripts/`, `model/`, `scanner/enrich/import_model.rs`, the one `registry()` line, config.
-**Honest expectation:** ≈0 surplus (documented null). Build only as a cheap confirmation, never on the critical
-path; if standing up the artifact is non-trivial, skip it.
+## D2 — Import-model exploitation — PROMOTED to its own first-class run
+**Superseded — see [`RUN-TRADING-BOT-EXPLOIT.md`](RUN-TRADING-BOT-EXPLOIT.md).** The import-model is no
+longer a "confirm the null" cheap probe; it is now a **first-class exploitation target** with a full
+phase-structured run prompt + blueprint (`FORGE_PLAN_TRADING_BOT.md`). The old "≈0 surplus, documented
+null" expectation was a **price-conditioning artifact, not a refutation**: scoring `p_model − clob_mid`
+cancels against the gate's own `blind_edge[band]` subtraction, so a price-anchored model scores ~0 BY
+CONSTRUCTION. The new run gives the model a genuine, leak-free shot — a price-FREE residual model
+compared to baked per-band base rates (`band_rate`, not `clob_mid`), YES-oriented, GroupKFold-by-event,
+forward-calibrated on a new `market_feature_log`, judged solely by the belief-blind gate. Run that
+instead of building anything here for the market model.
 
 ## Both
 - Each arm is SILENT (`alerting=false`), judged only on surplus-over-blind by the gate.

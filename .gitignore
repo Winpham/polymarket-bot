@@ -26,3 +26,6 @@ tmp/
 # backups + backup log (local-only)
 backups/
 .backup.log
+
+# local coordination worktrees (never committed)
+wt/

@@ -20,11 +20,12 @@ use crate::config::CopyTradingConfig;
 use crate::scanner::consensus::{ConsensusSignal, Tier};
 use polymarket_common::model::consensus_win::ConsensusWinModel;
 use polymarket_common::model::features::MarketFeatures;
-use polymarket_common::model::xgb::XgbModel;
+use polymarket_common::model::xgb::{ResidExtras, XgbModel};
 
 pub mod bayes;
 pub mod features;
 pub mod market;
+pub mod market_resid;
 pub mod ml;
 
 /// Loaded model handles + arm switches. A field stays `None`/`false` unless
@@ -43,21 +44,32 @@ pub struct EnrichModels {
     pub market_xgb: Option<XgbModel>,
     /// Training cutoff for the imported market model (from config).
     pub market_through: Option<DateTime<Utc>>,
+    /// Price-free residual model (the `market_resid` arm) + its baked extras.
+    pub market_resid: Option<XgbModel>,
+    pub market_resid_extras: Option<ResidExtras>,
+    /// Forward-only training cutoff for `market_resid` (from its meta.json / env).
+    pub market_resid_through: Option<DateTime<Utc>>,
     /// Whether the Bayesian-anchor arm is enabled (it needs no model file).
     pub bayes_enabled: bool,
+    /// Whether to log the forward 29-feature vector for every strict-fired market
+    /// (the `market_feature_log` accrual path — no arm, just durable capture).
+    pub feature_log: bool,
 }
 
 impl EnrichModels {
     /// True if any arm needs per-market data pre-fetched (CLOB mid for bayes;
-    /// CLOB mid + Gamma + price history for the market model).
+    /// CLOB mid + Gamma + price history for the market model / the feature log).
     pub fn needs_market_data(&self) -> bool {
-        self.market_xgb.is_some() || self.bayes_enabled
+        self.market_xgb.is_some()
+            || self.market_resid.is_some()
+            || self.bayes_enabled
+            || self.feature_log
     }
 
     /// True if an arm needs the full [`MarketFeatures`] (Gamma + price history),
-    /// not just the CLOB mid.
+    /// not just the CLOB mid. The feature log needs the full vector too.
     pub fn needs_market_features(&self) -> bool {
-        self.market_xgb.is_some()
+        self.market_xgb.is_some() || self.market_resid.is_some() || self.feature_log
     }
 }
 
@@ -122,8 +134,67 @@ pub fn load_models(cfg: &CopyTradingConfig) -> EnrichModels {
         }
     }
 
+    if cfg.consensus_arm_resid {
+        let p = Path::new(&cfg.market_resid_model_path);
+        let sidecar = p.with_extension("resid.json");
+        // Load the booster AND its extras, or neither — a missing/invalid sidecar
+        // leaves the arm a no-op (we never fire without a band baseline).
+        if p.exists() && sidecar.exists() {
+            match (XgbModel::load(p), ResidExtras::load(&sidecar)) {
+                (Ok(model), Ok(extras)) => {
+                    m.market_resid = Some(model);
+                    m.market_resid_extras = Some(extras);
+                    m.market_resid_through =
+                        resid_trained_through(p, &cfg.market_resid_trained_through);
+                    tracing::info!(path = %p.display(), "Loaded market_resid model + extras");
+                }
+                (model, extras) => {
+                    if let Err(e) = model {
+                        tracing::warn!(err = %e, "market_resid model failed to load; arm off");
+                    }
+                    if let Err(e) = extras {
+                        tracing::warn!(err = %e, "market_resid extras failed to load; arm off");
+                    }
+                }
+            }
+        } else {
+            tracing::info!(path = %p.display(), "market_resid ON but model/sidecar absent; arm no-ops");
+        }
+    }
+
     m.bayes_enabled = cfg.consensus_arm_bayes;
+    m.feature_log = cfg.market_feature_log;
     m
+}
+
+/// Resolve the `market_resid` forward cutoff: prefer the model's `.meta.json`
+/// `trained_through`, else the `MARKET_RESID_TRAINED_THROUGH` override. `None`
+/// (neither set / unparseable) ⇒ rely on structural forwardness.
+fn resid_trained_through(model_path: &Path, env_override: &str) -> Option<DateTime<Utc>> {
+    let from_meta = std::fs::read_to_string(model_path.with_extension("meta.json"))
+        .ok()
+        .and_then(|s| serde_json::from_str::<serde_json::Value>(&s).ok())
+        .and_then(|v| {
+            v.get("trained_through")
+                .and_then(|t| t.as_str())
+                .map(str::to_string)
+        });
+    let raw = from_meta.unwrap_or_default();
+    let raw = if raw.trim().is_empty() {
+        env_override.trim()
+    } else {
+        raw.trim()
+    };
+    if raw.is_empty() {
+        return None;
+    }
+    match DateTime::parse_from_rfc3339(raw) {
+        Ok(d) => Some(d.with_timezone(&Utc)),
+        Err(e) => {
+            tracing::warn!(err = %e, value = raw, "bad market_resid trained_through; no guard");
+            None
+        }
+    }
 }
 
 /// Per-arm edge margin: surplus over the priced-in mid a pick must clear to be
@@ -148,11 +219,16 @@ impl Default for EnrichMargins {
 /// Pre-fetched per-market data for the market-dependent arms (built once per
 /// cycle for the strict-fired markets, bounded + throttled).
 pub struct MarketCtx {
-    /// Live CLOB mid of the consensus outcome.
+    /// Live CLOB mid of the consensus outcome (the comparison anchor for the
+    /// legacy `arm_market` and for CLV — NOT necessarily the YES-token mid).
     pub clob_mid: f64,
-    /// Full market feature vector (Gamma + price history); `None` if a fetch
-    /// failed or features weren't needed this cycle.
+    /// Full market feature vector (Gamma + price history). Always describes the
+    /// **YES (index-0) token** so an arm can convert `p_yes → p_consensus` via
+    /// `outcome_index`. `None` if a fetch failed or features weren't needed.
     pub features: Option<MarketFeatures>,
+    /// Which outcome the consensus picked. `0` means the consensus outcome IS the
+    /// YES token (so `p_consensus == p_yes`); otherwise `p_consensus == 1 - p_yes`.
+    pub outcome_index: i32,
 }
 
 /// Per-cycle context handed to every arm. An arm reads only what it needs.
@@ -178,6 +254,7 @@ pub fn registry() -> &'static [Enricher] {
         ml::arm_consensus_logit,
         ml::arm_consensus_ens,
         market::arm_market,
+        market_resid::arm_market_resid,
         bayes::arm_bayes,
     ]
 }
@@ -231,6 +308,7 @@ pub fn family(strategy: &str) -> &'static str {
         "consensus_logit",
         "market_ml",
         "market_veto",
+        "market_resid",
         "bayes_anchor",
         "trust_weighted",
         "trusted_only",

@@ -42,6 +42,12 @@ services:
       CONSENSUS_INTERVAL_MINS: "1"
       CONSENSUS_INCREMENTAL: "true"
       RUST_LOG: "copy_trading_bot=info,polymarket_common=warn"
+      # --- market_resid (price-free residual arm) lifecycle; set these in
+      #     .env.consensus. Accrual is safe/additive; the arm stays default-OFF. ---
+      MARKET_FEATURE_LOG: ${MARKET_FEATURE_LOG:-false}        # forward 29-feature log accrual
+      CONSENSUS_ARM_RESID: ${CONSENSUS_ARM_RESID:-false}      # enable the silent market_resid arm
+      CONSENSUS_ML_MARGIN: ${CONSENSUS_ML_MARGIN:-0.0}        # resid: p_cons − band_rate > margin
+      MARKET_RESID_TRAINED_THROUGH: ${MARKET_RESID_TRAINED_THROUGH:-}  # else the model's meta.json
       # Telegram is OPTIONAL — leave unset for ntfy-only (this deploy).
       # TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
       # TELEGRAM_CHAT_ID: ${TELEGRAM_CHAT_ID:-}

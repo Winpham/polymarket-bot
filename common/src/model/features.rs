@@ -1,7 +1,7 @@
 #![allow(dead_code)]
 
 use crate::data::models::{GammaMarket, PriceTick};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 /// Order book statistics computed from CLOB book endpoint.
 #[derive(Debug, Clone, Default)]
@@ -29,7 +29,7 @@ pub struct OrderBookStats {
 ///     sports; model needs this signal to learn to discount them.
 /// v5: added 16 NLP features from question text (no price leakage).
 ///     Inspired by NavnoorBawa (88-92% accuracy on high-confidence predictions).
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MarketFeatures {
     pub yes_price: f64,
     pub momentum_1h: f64,

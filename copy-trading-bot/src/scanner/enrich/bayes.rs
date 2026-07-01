@@ -124,6 +124,7 @@ mod tests {
             MarketCtx {
                 clob_mid: 0.5,
                 features: None,
+                outcome_index: 0,
             },
         );
         // net 4 → LR 1.6 → posterior > 0.5 mid → emit a silent bayes_anchor row.
@@ -143,6 +144,7 @@ mod tests {
             MarketCtx {
                 clob_mid: 0.5,
                 features: None,
+                outcome_index: 0,
             },
         );
         assert!(arm_bayes(&[strict_sig()], &ctx(&off, &markets)).is_empty());
