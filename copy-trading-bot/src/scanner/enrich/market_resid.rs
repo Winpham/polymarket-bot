@@ -10,6 +10,7 @@
 //!      consensus outcome (`1 - p_yes` for a NO-side pick);
 //!   2. compares to the band's OWN `_blind` base rate (`band_rate`), NOT the live
 //!      mid — aligning the selection target with the gate's surplus-over-blind.
+//!
 //! The belief-blind gate still independently judges every re-emitted row; the
 //! alignment removes the tautology, it does not hand the model a free pass.
 
