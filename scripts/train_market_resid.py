@@ -161,19 +161,31 @@ def load_synthetic(n: int = 600):
         datetime.now(timezone.utc).isoformat()
 
 
-def load_forward(db: str):
+def load_forward(db: str, capture: str = "first"):
     """The bot's OWN strict-fired population. Features are YES-oriented; convert the
     consensus-outcome label to yes_won via yes_token. Band rates come from the
-    resolved `_blind` rows (consensus-outcome space), exactly the gate's baseline."""
+    resolved `_blind` rows (consensus-outcome space), exactly the gate's baseline.
+
+    `capture` selects which snapshot column feeds training (migration 029):
+      * 'first'    → the DECISION-TIME snapshot (first strict-fire), what a real
+                     bettor would have acted on. Falls back to the freshest snapshot
+                     for pre-029 rows whose `first_features` is NULL.
+      * 'freshest' → the last pre-resolution snapshot (`features`).
+    Reports an OOF AUC for BOTH captures when both are populated, so the drift
+    between decision-time and freshest is visible before you pick one."""
     import psycopg2  # noqa: PLC0415
     import psycopg2.extras  # noqa: PLC0415
 
+    if capture not in ("first", "freshest"):
+        sys.exit(f"--capture must be first|freshest, got {capture!r}")
     conn = psycopg2.connect(db)
     try:
         cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        # Pull BOTH snapshots so we can report each capture's AUC; train on `chosen`.
         cur.execute(
             """
-            SELECT mfl.features, mfl.yes_token,
+            SELECT COALESCE(mfl.first_features, mfl.features) AS first_features,
+                   mfl.features AS features, mfl.yes_token,
                    cs.outcome_won::int AS won,
                    COALESCE(cs.event_slug, cs.condition_id) AS ev,
                    cs.mean_price, cs.resolved_at
@@ -194,29 +206,78 @@ def load_forward(db: str):
 
     if not rows:
         sys.exit("No resolved strict-fired feature rows yet — let the log accrue.")
-    X, y_yes, prices, groups, stamps = [], [], [], [], []
+    X_first, X_fresh, y_yes, prices, groups, stamps = [], [], [], [], [], []
     for r in rows:
-        feats = r["features"]
-        if isinstance(feats, str):
-            feats = json.loads(feats)
-        X.append([float(feats[name]) for name in FEATURE_NAMES])
+        X_first.append(_feat_row(r["first_features"]))
+        X_fresh.append(_feat_row(r["features"]))
         # YES-orient the label: yes_won = won if yes_token else 1 - won.
         won = int(r["won"])
         y_yes.append(won if r["yes_token"] else 1 - won)
         prices.append(float(r["mean_price"]))
         groups.append(str(r["ev"]))
         stamps.append(r.get("resolved_at"))
+    y_arr = np.array(y_yes, dtype=int)
+    g_arr = np.array(groups)
+    Xf_arr = np.array(X_first, dtype=float)
+    Xr_arr = np.array(X_fresh, dtype=float)
+    # Report each capture's leak-free OOF AUC so the decision-time vs freshest drift
+    # is visible before training. Best-effort (needs 2 classes + enough events).
+    for name, Xc in (("first(decision-time)", Xf_arr), ("freshest", Xr_arr)):
+        try:
+            a = quick_oof_auc(Xc, y_arr, g_arr)
+            print(f"  capture={name:22s} OOF AUC={a}")
+        except Exception as e:  # noqa: BLE001
+            print(f"  capture={name:22s} OOF AUC unavailable ({e})")
+    chosen = Xf_arr if capture == "first" else Xr_arr
+    print(f"training on capture={capture!r}")
     blind_prices = [float(b["mean_price"]) for b in blind] or prices
     blind_labels = [int(b["won"]) for b in blind] or y_yes
     return (
-        np.array(X, dtype=float),
-        np.array(y_yes, dtype=int),
+        chosen,
+        y_arr,
         np.array(prices, dtype=float),
-        np.array(groups),
+        g_arr,
         blind_prices,
         blind_labels,
         _trained_through(stamps),
     )
+
+
+def _feat_row(feats):
+    """Parse one stored feature JSON object into the canonical positional vector."""
+    if isinstance(feats, str):
+        feats = json.loads(feats)
+    return [float(feats[name]) for name in FEATURE_NAMES]
+
+
+def quick_oof_auc(X, y, groups):
+    """Leak-free OOF AUC via the SAME price-level-zeroing + GroupKFold pipeline the
+    exported model uses — for reporting capture/ablation drift only (not persisted).
+    Returns a rounded float, or the string 'n/a' when folds are degenerate."""
+    import xgboost as xgb  # noqa: PLC0415
+    from sklearn.metrics import roc_auc_score  # noqa: PLC0415
+    from sklearn.model_selection import GroupKFold  # noqa: PLC0415
+    from sklearn.preprocessing import RobustScaler  # noqa: PLC0415
+
+    Xz = X.astype(float).copy()
+    for i in PRICE_LEVEL_IDX:
+        Xz[:, i] = 0.0
+    Xs = RobustScaler().fit_transform(Xz)
+    n_events = len(set(groups.tolist()))
+    n_splits = max(2, min(5, n_events))
+    oof = np.full(len(y), np.nan)
+    for tr, te in GroupKFold(n_splits=n_splits).split(Xs, y, groups):
+        if len(set(y[tr].tolist())) < 2:
+            continue
+        clf = xgb.XGBClassifier(
+            n_estimators=120, max_depth=3, learning_rate=0.08,
+            subsample=0.9, colsample_bytree=0.9, eval_metric="logloss",
+        ).fit(Xs[tr], y[tr])
+        oof[te] = clf.predict_proba(Xs[te])[:, 1]
+    mask = ~np.isnan(oof)
+    if mask.sum() == 0 or len(set(y[mask].tolist())) < 2:
+        return "n/a"
+    return round(float(roc_auc_score(y[mask], oof[mask])), 3)
 
 
 def load_historical(limit: int):
@@ -410,6 +471,9 @@ def main():
     ap.add_argument("--limit", type=int, default=3000,
                     help="historical fetch cap")
     ap.add_argument("--n", type=int, default=600, help="synthetic row count")
+    ap.add_argument("--capture", choices=["first", "freshest"], default="first",
+                    help="forward source: which market_feature_log snapshot to train "
+                         "on — 'first' (decision-time, default) or 'freshest'")
     args = ap.parse_args()
 
     if args.source == "synthetic":
@@ -418,7 +482,7 @@ def main():
         db = args.db or os.environ.get("DATABASE_URL")
         if not db:
             sys.exit("--source forward needs --db or $DATABASE_URL")
-        data = load_forward(db)
+        data = load_forward(db, args.capture)
     else:
         data = load_historical(args.limit)
 
