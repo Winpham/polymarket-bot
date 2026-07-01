@@ -96,7 +96,14 @@ pub async fn run_live(cfg: Arc<CopyTradingConfig>) -> Result<()> {
         let port = cfg.board_port;
         // Phase 0: gate arms at the follower's capture bar (slippage + fees).
         let capture_margin = cfg.slippage_pct + cfg.fee_pct;
-        tokio::spawn(async move { crate::board::serve(bd_portfolio, port, capture_margin).await });
+        // Read-only honest-P&L panel params (CLV − execution haircut).
+        let honest = crate::board::HonestBoardParams {
+            exec_haircut: cfg.exec_haircut,
+            fee_pct: cfg.fee_pct,
+        };
+        tokio::spawn(async move {
+            crate::board::serve(bd_portfolio, port, capture_margin, honest).await
+        });
     }
 
     // Spawn Telegram command polling loop

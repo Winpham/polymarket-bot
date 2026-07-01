@@ -235,6 +235,15 @@ pub struct CopyTradingConfig {
     #[config(env = "FEE_PCT", default = 0.02)]
     pub fee_pct: f64,
 
+    // --- Honest P&L tracker (read-only; CLV-based, execution-haircut, multi-regime) ---
+    // These knobs never touch selection/alerting/betting: they only parameterize the
+    // read-only `honest_pnl_by_strategy` instrument + the conservative pilot verdict.
+    /// Buy-side execution haircut in PRICE units (0.01 = 1¢) added to the captured
+    /// mid to get the executable entry price when no real book-ask was captured.
+    /// The honest realizable edge is measured net of this.
+    #[config(env = "EXEC_HAIRCUT", default = 0.01)]
+    pub exec_haircut: f64,
+
     /// Port for the Prometheus metrics HTTP endpoint.
     #[config(env = "METRICS_PORT", default = 9001)]
     pub metrics_port: u16,

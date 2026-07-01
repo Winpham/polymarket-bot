@@ -50,6 +50,9 @@ services:
       CONSENSUS_ML_MARGIN: ${CONSENSUS_ML_MARGIN:-0.0}        # legacy market arms: p − mid > margin
       MARKET_RESID_MARGIN: ${MARKET_RESID_MARGIN:-0.0}        # resid arm's OWN knob: p_cons − band_rate > margin
       MARKET_RESID_TRAINED_THROUGH: ${MARKET_RESID_TRAINED_THROUGH:-}  # else the model's meta.json
+      # --- honest P&L tracker (read-only; CLV − execution haircut, multi-regime).
+      #     All read-only analytics knobs; none touch selection/alerting/betting. ---
+      EXEC_HAIRCUT: ${EXEC_HAIRCUT:-0.01}                     # buy-side haircut (price units) when no real ask
       # Telegram is OPTIONAL — leave unset for ntfy-only (this deploy).
       # TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
       # TELEGRAM_CHAT_ID: ${TELEGRAM_CHAT_ID:-}

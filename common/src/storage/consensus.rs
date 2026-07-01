@@ -556,6 +556,133 @@ impl PgPortfolio {
         Ok(rows)
     }
 
+    /// The **honest, realizable** per-strategy P&L instrument (read-only). Unlike
+    /// `consensus_scoreboard_by_strategy` (whose `edge` is vs `mean_price`, the
+    /// SHARPS' average fill we cannot get), this measures the outcome against the
+    /// **price we actually observed while the market was open** (`initial_market_price`
+    /// = CLV), minus an explicit buy-side **execution haircut** — the edge we could
+    /// realize. Everything is event-clustered at `COALESCE(event_slug, condition_id)`
+    /// (the within-match leak fix) BEFORE aggregating across events.
+    ///
+    /// `exec_haircut` (price units) is added to the captured mid to get the
+    /// executable entry (`entry = p0 + h`); `fee_pct` is a fractional fee on ROI.
+    /// When Phase 2's real `entry_ask` is captured it is preferred over the mid+
+    /// haircut heuristic. Leak-free by construction: `outcome_won` is read for
+    /// scoring ONLY, always paired with a price captured strictly before resolution.
+    /// SQL stays sums/means/stddev/percentiles — the corrected bound + GO/HOLD
+    /// verdict live in the binary (`scanner::honest`).
+    pub async fn honest_pnl_by_strategy(
+        &self,
+        exec_haircut: f64,
+        fee_pct: f64,
+    ) -> Result<Vec<HonestPnl>> {
+        let rows: Vec<HonestPnl> = sqlx::query_as(
+            "WITH base AS ( \
+                 SELECT strategy, COALESCE(event_slug, condition_id) AS ev, \
+                        (outcome_won::int)::double precision AS w, \
+                        initial_market_price + $1 AS entry, \
+                        initial_market_price AS p0, mean_price, total_usd \
+                 FROM consensus_signals \
+                 WHERE resolved AND initial_market_price IS NOT NULL AND strategy <> '_blind' \
+             ), \
+             sig AS ( \
+                 SELECT strategy, ev, w, p0, mean_price, total_usd, entry, \
+                        (w - p0) AS clv_share, \
+                        (w - p0) / NULLIF(p0, 0) AS clv_roi, \
+                        (w - entry) AS honest_edge_share, \
+                        (w - entry) / NULLIF(entry, 0) - $2 AS honest_roi, \
+                        (w - mean_price) AS sharp_adv \
+                 FROM base \
+             ), \
+             evt AS ( \
+                 SELECT strategy, ev, AVG(w) AS ev_hit, AVG(clv_share) AS ev_clv, \
+                        AVG(clv_roi) AS ev_clvroi, AVG(honest_edge_share) AS ev_hedge, \
+                        AVG(honest_roi) AS ev_hroi, AVG(sharp_adv) AS ev_sharp \
+                 FROM sig GROUP BY strategy, ev \
+             ), \
+             agg AS ( \
+                 SELECT strategy, COUNT(*) AS distinct_events, AVG(ev_hit) AS hit_rate, \
+                        AVG(ev_clv) AS clv_share, AVG(ev_clvroi) AS clv_roi, \
+                        AVG(ev_hedge) AS honest_edge_share, AVG(ev_hroi) AS honest_roi, \
+                        STDDEV_SAMP(ev_hroi) AS honest_roi_sd, AVG(ev_sharp) AS sharp_edge \
+                 FROM evt GROUP BY strategy \
+             ), \
+             liq AS ( \
+                 SELECT strategy, COUNT(*) AS resolved, \
+                        percentile_cont(0.5) WITHIN GROUP (ORDER BY total_usd) AS median_sharp_usd, \
+                        AVG((EXTRACT(EPOCH FROM (resolved_at - first_detected_at)) / 3600.0)::double precision) AS avg_hours_to_resolve, \
+                        GREATEST((EXTRACT(EPOCH FROM (MAX(resolved_at) - MIN(resolved_at))) / 86400.0)::double precision, 1.0) AS span_days \
+                 FROM consensus_signals \
+                 WHERE resolved AND initial_market_price IS NOT NULL AND strategy <> '_blind' \
+                 GROUP BY strategy \
+             ) \
+             SELECT a.strategy, l.resolved, a.distinct_events, a.hit_rate, \
+                    a.clv_share, a.clv_roi, a.honest_edge_share, a.honest_roi, a.honest_roi_sd, \
+                    l.median_sharp_usd, l.avg_hours_to_resolve, \
+                    (a.distinct_events::double precision / l.span_days) AS bets_per_day, \
+                    a.sharp_edge \
+             FROM agg a JOIN liq l USING (strategy) \
+             ORDER BY a.honest_roi DESC NULLS LAST",
+        )
+        .bind(exec_haircut)
+        .bind(fee_pct)
+        .fetch_all(&self.pool)
+        .await
+        .context("honest_pnl_by_strategy")?;
+        Ok(rows)
+    }
+
+    /// Per (strategy × segment) honest-ROI + event count for the regime/band/
+    /// horizon breakdown (read-only). Segments: `day` (day-regime = the persistence
+    /// axis the pilot verdict keys on), `band` (`width_bucket(p0)`), `horizon`
+    /// (`same_day` if resolved <24h after first detection else `multi_day`). Same
+    /// event-clustering + leak-free discipline as `honest_pnl_by_strategy`.
+    pub async fn honest_pnl_segments(
+        &self,
+        exec_haircut: f64,
+        fee_pct: f64,
+    ) -> Result<Vec<HonestSegment>> {
+        let rows: Vec<HonestSegment> = sqlx::query_as(
+            "WITH base AS ( \
+                 SELECT strategy, COALESCE(event_slug, condition_id) AS ev, \
+                        (outcome_won::int)::double precision AS w, \
+                        initial_market_price + $1 AS entry, \
+                        initial_market_price AS p0, resolved_at, \
+                        EXTRACT(EPOCH FROM (resolved_at - first_detected_at)) / 3600.0 AS hrs \
+                 FROM consensus_signals \
+                 WHERE resolved AND initial_market_price IS NOT NULL AND strategy <> '_blind' \
+             ), \
+             sig AS ( \
+                 SELECT strategy, ev, \
+                        (w - entry) / NULLIF(entry, 0) - $2 AS honest_roi, \
+                        to_char(date_trunc('day', resolved_at), 'YYYY-MM-DD') AS day_key, \
+                        width_bucket(p0, 0.0, 1.0, 5)::text AS band_key, \
+                        CASE WHEN hrs < 24 THEN 'same_day' ELSE 'multi_day' END AS horizon_key \
+                 FROM base \
+             ), \
+             u AS ( \
+                 SELECT strategy, 'day'  AS seg_kind, day_key     AS seg_key, ev, honest_roi FROM sig \
+                 UNION ALL \
+                 SELECT strategy, 'band' AS seg_kind, band_key    AS seg_key, ev, honest_roi FROM sig \
+                 UNION ALL \
+                 SELECT strategy, 'horizon' AS seg_kind, horizon_key AS seg_key, ev, honest_roi FROM sig \
+             ), \
+             evt AS ( \
+                 SELECT strategy, seg_kind, seg_key, ev, AVG(honest_roi) AS ev_hroi \
+                 FROM u GROUP BY strategy, seg_kind, seg_key, ev \
+             ) \
+             SELECT strategy, seg_kind, seg_key, COUNT(*) AS n_events, AVG(ev_hroi) AS honest_roi \
+             FROM evt GROUP BY strategy, seg_kind, seg_key \
+             ORDER BY strategy, seg_kind, seg_key",
+        )
+        .bind(exec_haircut)
+        .bind(fee_pct)
+        .fetch_all(&self.pool)
+        .await
+        .context("honest_pnl_segments")?;
+        Ok(rows)
+    }
+
     // --- L1: incremental polling vote-window store (migration 025) ---
 
     /// Per-trader consensus cursors (`followed_traders.consensus_polled_at`) for
@@ -1149,6 +1276,52 @@ pub struct StrategyScore {
     /// the gap between the mid when we noticed and the sharps' entry price.
     /// Materially negative → faster polling has real value.
     pub capture_lag: Option<f64>,
+}
+
+/// One strategy's **honest, realizable** P&L row (CLV-based, execution-haircut,
+/// event-clustered). This is the read-only instrument the pilot go/no-go keys off:
+/// every float is measured against the price we OBSERVED while the market was open
+/// (`initial_market_price`), net of the buy-side haircut — realizable, not flattering.
+#[derive(Debug, Clone, sqlx::FromRow)]
+pub struct HonestPnl {
+    pub strategy: String,
+    /// Resolved signals (rows) with a captured pre-resolution price.
+    pub resolved: i64,
+    /// Distinct resolved EVENTS — the de-correlated sample size (the gate's N).
+    pub distinct_events: i64,
+    /// Event-clustered hit-rate `AVG_event(outcome_won)`.
+    pub hit_rate: Option<f64>,
+    /// Event-clustered CLV in price units `AVG_event(w − p0)` — realizable edge/$ share.
+    pub clv_share: Option<f64>,
+    /// Event-clustered CLV ROI `AVG_event((w − p0)/p0)` (gross of haircut/fee).
+    pub clv_roi: Option<f64>,
+    /// Event-clustered honest edge share `AVG_event(w − entry)` (net of haircut).
+    pub honest_edge_share: Option<f64>,
+    /// Event-clustered honest ROI per $ staked `AVG_event((w − entry)/entry − fee)`.
+    /// This is the headline realizable number; the pilot verdict keys off it.
+    pub honest_roi: Option<f64>,
+    /// Std-dev of per-EVENT honest ROI — feeds the corrected confidence bound.
+    pub honest_roi_sd: Option<f64>,
+    /// Median `total_usd` (liquidity proxy) — the capacity + liquidity-floor input.
+    pub median_sharp_usd: Option<f64>,
+    /// Mean hours from first detection to resolution (working-capital horizon).
+    pub avg_hours_to_resolve: Option<f64>,
+    /// Distinct events per day over the record's span (throughput for capacity).
+    pub bets_per_day: Option<f64>,
+    /// The OLD sharp benchmark `AVG_event(w − mean_price)` — shown for reference only.
+    pub sharp_edge: Option<f64>,
+}
+
+/// One (strategy × segment) honest-ROI cell for the regime/band/horizon breakdown.
+/// `seg_kind` ∈ {`day`, `band`, `horizon`}; `honest_roi` is event-clustered within
+/// the segment. The day-regime cells drive the pilot verdict's persistence check.
+#[derive(Debug, Clone, sqlx::FromRow)]
+pub struct HonestSegment {
+    pub strategy: String,
+    pub seg_kind: String,
+    pub seg_key: String,
+    pub n_events: i64,
+    pub honest_roi: Option<f64>,
 }
 
 /// One (wallet × slice) earned-trust statistic over resolved BUY fills. Numbers
@@ -1757,5 +1930,116 @@ mod market_feature_log_it {
             .await
             .unwrap();
         println!("market_feature_log_it: roundtrip + conflict-update + cascade all OK");
+    }
+}
+
+/// Live-DB integration test for the honest, realizable P&L instrument (Phase 0).
+/// `#[ignore]`d so the normal gate stays DB-free; run against a throwaway Postgres
+/// (schema migrated):
+///
+/// ```text
+/// DATABASE_URL=postgres://bot:bot@localhost:55499/polymarket \
+///   cargo test -p polymarket-common honest_pnl_it -- --ignored --nocapture
+/// ```
+#[cfg(test)]
+mod honest_pnl_it {
+    use super::*;
+
+    /// Insert a resolved consensus signal with a captured pre-resolution mid.
+    #[allow(clippy::too_many_arguments)]
+    async fn seed(
+        pf: &PgPortfolio,
+        strategy: &str,
+        cond: &str,
+        event_slug: &str,
+        p0: f64,
+        mean_price: f64,
+        total_usd: f64,
+        won: bool,
+    ) {
+        sqlx::query(
+            "INSERT INTO consensus_signals \
+               (strategy, condition_id, outcome_index, event_slug, n_backers, n_opposers, \
+                net_count, net_quality, mean_price, price_std, recency_mins, total_usd, \
+                score, tier, initial_market_price, resolved, outcome_won, \
+                first_detected_at, resolved_at) \
+             VALUES ($1,$2,0,$3,5,0,5,5.0,$5,0.02,10,$6,1.0,'WATCH',$4,TRUE,$7, \
+                     NOW() - INTERVAL '2 hours', NOW())",
+        )
+        .bind(strategy)
+        .bind(cond)
+        .bind(event_slug)
+        .bind(p0)
+        .bind(mean_price)
+        .bind(total_usd)
+        .bind(won)
+        .execute(&pf.pool)
+        .await
+        .expect("seed consensus_signal");
+    }
+
+    #[tokio::test]
+    #[ignore = "requires a live Postgres at $DATABASE_URL with migrations applied"]
+    async fn honest_roi_event_clustered_and_blind_excluded() {
+        let url = std::env::var("DATABASE_URL").expect("DATABASE_URL must be set");
+        let pool = sqlx::PgPool::connect(&url).await.expect("connect");
+        let pf = PgPortfolio::new(pool).await.expect("portfolio");
+        pf.run_migrations().await.expect("migrations");
+
+        sqlx::query("DELETE FROM consensus_signals WHERE condition_id LIKE 'hp_%'")
+            .execute(&pf.pool)
+            .await
+            .unwrap();
+
+        // Strategy 'hp_a': two events. ev1 has TWO signals (varied bands) to
+        // exercise the within-event collapse; ev2 has one.
+        //   S1: ev1 p0=0.40 won   → honest_roi = 0.59/0.41 − 0.02 =  1.41902
+        //   S2: ev1 p0=0.60 lost  → honest_roi = −0.61/0.61 − 0.02 = −1.02000
+        //   S3: ev2 p0=0.50 won   → honest_roi = 0.49/0.51 − 0.02 =  0.94078
+        // ev1 = mean(S1,S2) = 0.19951 ; ev2 = 0.94078
+        // honest_roi (across 2 events) = 0.570145
+        seed(&pf, "hp_a", "hp_c1", "hp_ev1", 0.40, 0.45, 3000.0, true).await;
+        seed(&pf, "hp_a", "hp_c2", "hp_ev1", 0.60, 0.55, 1000.0, false).await;
+        seed(&pf, "hp_a", "hp_c3", "hp_ev2", 0.50, 0.50, 2000.0, true).await;
+        // A `_blind` row that MUST be excluded from the instrument.
+        seed(&pf, "_blind", "hp_c4", "hp_ev3", 0.30, 0.30, 5000.0, true).await;
+
+        let rows = pf.honest_pnl_by_strategy(0.01, 0.02).await.unwrap();
+        assert!(
+            rows.iter().all(|r| r.strategy != "_blind"),
+            "the blind baseline is never a tracked strategy"
+        );
+        let a = rows
+            .iter()
+            .find(|r| r.strategy == "hp_a")
+            .expect("hp_a present");
+
+        assert_eq!(a.distinct_events, 2, "two distinct events");
+        assert_eq!(a.resolved, 3, "three resolved rows");
+        let approx = |got: Option<f64>, want: f64, what: &str| {
+            let g = got.unwrap_or(f64::NAN);
+            assert!((g - want).abs() < 1e-4, "{what}: got {g}, want {want}");
+        };
+        // Event-clustered honest ROI — the hand-computed 0.570145.
+        approx(a.honest_roi, 0.570_145, "honest_roi");
+        // clv_share event-clustered: ev1 mean(0.60,−0.60)=0, ev2 0.50 → 0.25.
+        approx(a.clv_share, 0.25, "clv_share");
+        // honest_edge_share: ev1 mean(0.59,−0.61)=−0.01, ev2 0.49 → 0.24.
+        approx(a.honest_edge_share, 0.24, "honest_edge_share");
+        // sharp_edge: ev1 mean(0.55,−0.55)=0, ev2 0.50 → 0.25.
+        approx(a.sharp_edge, 0.25, "sharp_edge");
+        // hit-rate event-clustered: ev1 0.5, ev2 1.0 → 0.75.
+        approx(a.hit_rate, 0.75, "hit_rate");
+        // median liquidity proxy over the 3 resolved rows: median(3000,1000,2000).
+        approx(a.median_sharp_usd, 2000.0, "median_sharp_usd");
+
+        sqlx::query("DELETE FROM consensus_signals WHERE condition_id LIKE 'hp_%'")
+            .execute(&pf.pool)
+            .await
+            .unwrap();
+        println!(
+            "honest_pnl_it: honest_roi={:?} (want 0.570145), event-clustered, _blind excluded — OK",
+            a.honest_roi
+        );
     }
 }

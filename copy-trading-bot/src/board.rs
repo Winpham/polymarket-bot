@@ -13,8 +13,22 @@ use crate::scanner::promotion::{PromotionParams, promotion_verdict};
 use crate::scanner::trader_trust::{TraderTrust, TrustVerdict, trust_verdict};
 use crate::storage::postgres::PgPortfolio;
 
+/// Read-only honest-P&L tracker parameters threaded to the board (never touches
+/// the live path). `exec_haircut` + `fee_pct` define the realizable entry price
+/// (`entry = mid + haircut`, minus `fee_pct` on ROI) for the CLV-based panel.
+#[derive(Clone, Copy)]
+pub struct HonestBoardParams {
+    pub exec_haircut: f64,
+    pub fee_pct: f64,
+}
+
 /// Serve the board on `0.0.0.0:port` forever. Best-effort; logs and retries binds.
-pub async fn serve(portfolio: Arc<PgPortfolio>, port: u16, capture_margin: f64) {
+pub async fn serve(
+    portfolio: Arc<PgPortfolio>,
+    port: u16,
+    capture_margin: f64,
+    honest: HonestBoardParams,
+) {
     let listener = match TcpListener::bind(("0.0.0.0", port)).await {
         Ok(l) => l,
         Err(e) => {
@@ -36,7 +50,7 @@ pub async fn serve(portfolio: Arc<PgPortfolio>, port: u16, capture_margin: f64) 
             // Drain the request line (we serve the same page for any GET).
             let mut buf = [0u8; 1024];
             let _ = socket.read(&mut buf).await;
-            let html = render(&pf, capture_margin).await;
+            let html = render(&pf, capture_margin, honest).await;
             let resp = format!(
                 "HTTP/1.1 200 OK\r\nContent-Type: text/html; charset=utf-8\r\n\
                  Content-Length: {}\r\nConnection: close\r\n\r\n{}",
@@ -143,7 +157,71 @@ async fn render_trust(portfolio: &PgPortfolio) -> String {
     out
 }
 
-async fn render(portfolio: &PgPortfolio, capture_margin: f64) -> String {
+/// Render the **honest, realizable** P&L panel (read-only): per strategy the
+/// CLV-based ROI net of the execution haircut, event-clustered, shown alongside
+/// the old sharp `edge` for reference. Realizable, not flattering. The
+/// conservative pilot verdict + regime/equity detail arrive in later phases.
+async fn render_honest(portfolio: &PgPortfolio, honest: HonestBoardParams) -> String {
+    let rows = match portfolio
+        .honest_pnl_by_strategy(honest.exec_haircut, honest.fee_pct)
+        .await
+    {
+        Ok(r) if r.iter().any(|x| x.resolved > 0) => r,
+        _ => return String::new(),
+    };
+    let mut out = String::from(
+        "<h1 style='margin-top:34px'>💵 Honest P&amp;L (realizable)</h1>\
+         <p class=sub>Outcome vs the mid we saw while OPEN (CLV), net of the execution haircut — \
+         the edge we could actually realize. Event-clustered. Paper only, NO real money.</p>\
+         <table><thead><tr><th>strategy</th><th class=r>events (N)</th><th class=r>hit-rate</th>\
+         <th class=r>honest ROI</th><th class=r>CLV</th><th class=r>honest edge</th>\
+         <th class=r>sharp edge</th><th class=r>median $</th><th class=r>bets/day</th>\
+         </tr></thead><tbody>",
+    );
+    for r in rows.iter().filter(|r| r.resolved > 0) {
+        let hrcls = match r.honest_roi {
+            Some(v) if v > 0.0 => "pos",
+            Some(_) => "neg",
+            None => "muted",
+        };
+        let bpd = r
+            .bets_per_day
+            .map(|v| format!("{v:.1}"))
+            .unwrap_or_else(|| "—".into());
+        let med = r
+            .median_sharp_usd
+            .map(|v| format!("${v:.0}"))
+            .unwrap_or_else(|| "—".into());
+        out.push_str(&format!(
+            "<tr><td class=mono>{strat}</td><td class=r>{ev}</td><td class=r>{hr}</td>\
+             <td class=\"r {hrcls}\">{hroi}</td><td class=r>{clv}</td><td class=r>{hedge}</td>\
+             <td class=\"r muted\">{sharp}</td><td class=\"r muted\">{med}</td>\
+             <td class=\"r muted\">{bpd}</td></tr>",
+            strat = r.strategy,
+            ev = r.distinct_events,
+            hr = r
+                .hit_rate
+                .map(|v| format!("{:.0}%", v * 100.0))
+                .unwrap_or_else(|| "—".into()),
+            hroi = pct(r.honest_roi),
+            clv = pct(r.clv_share),
+            hedge = pct(r.honest_edge_share),
+            sharp = pct(r.sharp_edge),
+        ));
+    }
+    out.push_str(&format!(
+        "</tbody></table>\
+         <p class=note><b>honest ROI</b> = event-clustered `AVG((outcome − entry)/entry − fee)` where \
+         <b>entry = captured mid + {hc:.0}¢ haircut</b> — the realizable per-$ edge (NOT the sharps' fill). \
+         <b>CLV</b> = outcome − captured mid (gross). <b>sharp edge</b> = outcome − sharps' mean price, shown \
+         for reference only — it overstates what we can capture. <b>median $</b> = liquidity proxy (capacity). \
+         Everything here is a PAPER measurement; no real money is ever placed.</p>",
+        hc = honest.exec_haircut * 100.0,
+    ));
+    out
+}
+
+async fn render(portfolio: &PgPortfolio, capture_margin: f64, honest: HonestBoardParams) -> String {
     let rows = portfolio
         .consensus_scoreboard_by_strategy()
         .await
@@ -247,7 +325,10 @@ async fn render(portfolio: &PgPortfolio, capture_margin: f64) -> String {
         body.push_str("</tbody></table>");
     }
 
-    // --- Second table: earned trader trust ("who to actually follow") ---
+    // --- Honest, realizable P&L panel (CLV − execution haircut; read-only) ---
+    body.push_str(&render_honest(portfolio, honest).await);
+
+    // --- Earned trader trust ("who to actually follow") ---
     body.push_str(&render_trust(portfolio).await);
 
     format!(
@@ -324,7 +405,15 @@ mod tests {
             }
         }
 
-        let html = render(&pf, 0.0).await;
+        let html = render(
+            &pf,
+            0.0,
+            HonestBoardParams {
+                exec_haircut: 0.01,
+                fee_pct: 0.02,
+            },
+        )
+        .await;
         assert!(html.contains("Trader trust"), "trust table rendered");
         assert!(html.contains("bd_good"), "skilled trader appears");
         assert!(
