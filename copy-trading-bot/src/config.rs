@@ -205,12 +205,18 @@ pub struct CopyTradingConfig {
     #[config(env = "MARKET_FEATURE_LOG", default = false)]
     pub market_feature_log: bool,
 
-    /// Edge margin the ML arms must clear (`p_win − price > margin`).
+    /// Edge margin the legacy ML arms must clear (`p_win − price > margin`).
     #[config(env = "CONSENSUS_ML_MARGIN", default = 0.0)]
     pub consensus_ml_margin: f64,
     /// Edge margin the Bayesian-anchor arm must clear (`posterior − mid > margin`).
     #[config(env = "CONSENSUS_BAYES_MARGIN", default = 0.0)]
     pub consensus_bayes_margin: f64,
+    /// Dedicated edge margin for the `market_resid` arm: `p_cons − band_rate >
+    /// margin`. Its unit is a residual over the band's BLIND base rate — distinct
+    /// from `CONSENSUS_ML_MARGIN`'s surplus-over-mid — so it gets its own knob
+    /// (set it to the model's suggested calRMSE cushion from its `.meta.json`).
+    #[config(env = "MARKET_RESID_MARGIN", default = 0.0)]
+    pub market_resid_margin: f64,
 
     // --- Betting ---
     /// Slippage assumption as a fraction (0.01 = 1%).

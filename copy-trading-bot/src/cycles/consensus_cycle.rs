@@ -277,6 +277,7 @@ pub async fn consensus_cycle(
             margins: EnrichMargins {
                 ml: cfg.consensus_ml_margin,
                 bayes: cfg.consensus_bayes_margin,
+                resid: cfg.market_resid_margin,
             },
             markets: &markets,
         },

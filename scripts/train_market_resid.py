@@ -398,7 +398,7 @@ def train(X, y, prices, groups, blind_prices, blind_labels, trained_through,
         "exported_at": datetime.now(timezone.utc).isoformat(),
     }, indent=2))
     print(f"wrote {meta_path}  trained_through={trained_through}")
-    print(f"Suggested CONSENSUS_ML_MARGIN (held-out calRMSE cushion) = {rmse:.4f}")
+    print(f"Suggested MARKET_RESID_MARGIN (held-out calRMSE cushion) = {rmse:.4f}")
 
 
 def main():

@@ -62,7 +62,7 @@ pub fn arm_market_resid(sigs: &[ConsensusSignal], ctx: &EnrichCtx) -> Vec<Consen
             1.0 - p_yes
         };
         let resid = p_cons - ex.band_rate(s.mean_price);
-        if resid > ctx.margins.ml {
+        if resid > ctx.margins.resid {
             out.push(re_emit(s, "market_resid"));
         }
     }
@@ -206,6 +206,50 @@ mod tests {
     }
 
     #[test]
+    fn resid_margin_gates_independently_of_ml() {
+        // p_yes=0.80, band_rate(0.55)=0.50 → resid=+0.30.
+        let models = EnrichModels {
+            market_resid: Some(const_model(0.80)),
+            market_resid_extras: Some(extras()),
+            ..Default::default()
+        };
+        let markets = one_market(0);
+        // (a) ml huge (would block a shared-knob arm) but resid=0 → STILL emits:
+        //     the arm reads its OWN margin, not `ml`.
+        let ctx_a = EnrichCtx {
+            now: chrono::Utc::now(),
+            models: &models,
+            margins: EnrichMargins {
+                ml: 10.0,
+                bayes: 0.0,
+                resid: 0.0,
+            },
+            markets: &markets,
+        };
+        assert_eq!(
+            arm_market_resid(&[strict_sig(0)], &ctx_a).len(),
+            1,
+            "resid arm must ignore `ml` and fire on resid > resid-margin"
+        );
+        // (b) resid margin above the residual (0.30) blocks emission even with ml
+        //     wide open — the dedicated knob is what gates.
+        let ctx_b = EnrichCtx {
+            now: chrono::Utc::now(),
+            models: &models,
+            margins: EnrichMargins {
+                ml: -1.0,
+                bayes: 0.0,
+                resid: 0.5,
+            },
+            markets: &markets,
+        };
+        assert!(
+            arm_market_resid(&[strict_sig(0)], &ctx_b).is_empty(),
+            "resid margin above the residual must block emission"
+        );
+    }
+
+    #[test]
     fn orients_no_side_then_residuals() {
         // NO-side pick: p_cons = 1 - 0.80 = 0.20, band_rate 0.50 -> resid -0.30 < 0
         // -> no emit. (The YES-side identical model emits; see above.)
@@ -251,6 +295,7 @@ mod tests {
             margins: EnrichMargins {
                 ml: -1.0,
                 bayes: 0.0,
+                resid: -1.0,
             },
             markets: &markets,
         };
