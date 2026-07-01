@@ -956,6 +956,71 @@ impl PgPortfolio {
         Ok(rows)
     }
 
+    /// Leak-free **as-of** clone of `trader_slice_scores`: every wallet's per-slice
+    /// event-clustered surplus computed using ONLY fills resolved strictly before
+    /// `cut`. The `resolved_at < $1` predicate lives in the `adv` CTE, so BOTH the
+    /// per-slice surplus AND the fleet band-blind are bounded by the cut — a signal
+    /// timestamped ≥ `cut` cannot be weighted with its own (future) resolved outcome
+    /// (charter H2 / blueprint Item 6). This is the hard prerequisite for any arm that
+    /// FITS or MINES on history (edge-pool temperature, coalition mining).
+    ///
+    /// The `recency7d`/`recency30d` slices are intentionally dropped — "7d before the
+    /// cut" is ambiguous under a walk-forward split; only `overall`/`sport`/`band`
+    /// (the slices arms consume) are emitted.
+    ///
+    /// NOTE (DECISIONS.md D1): on the *current backfilled archive*, `resolved_at` is a
+    /// bulk-ingest stamp (all in 2026-06/07), so `resolved_at < cut` is degenerate for
+    /// retrospective analysis of that archive — use the slug-parsed event-date harness
+    /// (`scripts/asof_preflight.py`) there. This query is correct for FORWARD data,
+    /// where `resolved_at` is populated in real time as markets close.
+    pub async fn trader_slice_scores_asof(
+        &self,
+        cut: DateTime<Utc>,
+    ) -> Result<Vec<TraderSliceStat>> {
+        let rows: Vec<TraderSliceStat> = sqlx::query_as(
+            "WITH adv AS ( \
+                 SELECT wallet, COALESCE(event_slug, condition_id) AS ev, \
+                        width_bucket(price, 0.0, 1.0, 5) AS band, \
+                        (outcome_won::int)::double precision - price AS a, \
+                        (outcome_won::int)::double precision AS won, \
+                        COALESCE(sport, 'other') AS sport, ts \
+                 FROM trader_fills \
+                 WHERE resolved AND side = 'BUY' AND outcome_won IS NOT NULL \
+                   AND resolved_at IS NOT NULL AND resolved_at < $1 \
+             ), \
+             blind AS ( SELECT band, AVG(a) AS blind_edge FROM adv GROUP BY band ), \
+             surp AS ( SELECT v.wallet, v.ev, v.band, v.a, v.won, v.sport, v.ts, \
+                              v.a - COALESCE(b.blind_edge, 0) AS s \
+                       FROM adv v LEFT JOIN blind b USING (band) ), \
+             tagged AS ( \
+                 SELECT wallet, 'overall'::text AS slice_kind, ''::text AS slice_key, ev, a, s, won FROM surp \
+                 UNION ALL \
+                 SELECT wallet, 'sport', sport, ev, a, s, won FROM surp \
+                 UNION ALL \
+                 SELECT wallet, 'band', 'b' || band::text, ev, a, s, won FROM surp \
+             ), \
+             evl AS ( \
+                 SELECT wallet, slice_kind, slice_key, ev, \
+                        AVG(s) AS ev_surplus, AVG(a) AS ev_adv, AVG(won) AS ev_hit, \
+                        COUNT(*) AS ev_rows \
+                 FROM tagged GROUP BY wallet, slice_kind, slice_key, ev \
+             ) \
+             SELECT wallet, slice_kind, slice_key, \
+                    COUNT(DISTINCT ev)        AS n_events, \
+                    SUM(ev_rows)::bigint      AS n_resolved, \
+                    AVG(ev_surplus)           AS surplus, \
+                    STDDEV_SAMP(ev_surplus)   AS surplus_sd, \
+                    AVG(ev_adv)               AS mean_adv, \
+                    AVG(ev_hit)               AS hit_rate \
+             FROM evl GROUP BY wallet, slice_kind, slice_key",
+        )
+        .bind(cut)
+        .fetch_all(&self.pool)
+        .await
+        .context("trader_slice_scores_asof")?;
+        Ok(rows)
+    }
+
     /// One wallet's slice scores (filtered from the fleet query so the band-blind
     /// baseline stays fleet-wide) plus its `capture_gap_count` (so the surface can
     /// flag "⚠ partial capture"). `wallet` is matched case-insensitively against

@@ -14,7 +14,7 @@ use crate::scanner::trader_trust::{TraderTrust, TrustVerdict, trust_verdict};
 use crate::storage::postgres::PgPortfolio;
 
 /// Serve the board on `0.0.0.0:port` forever. Best-effort; logs and retries binds.
-pub async fn serve(portfolio: Arc<PgPortfolio>, port: u16) {
+pub async fn serve(portfolio: Arc<PgPortfolio>, port: u16, capture_margin: f64) {
     let listener = match TcpListener::bind(("0.0.0.0", port)).await {
         Ok(l) => l,
         Err(e) => {
@@ -36,7 +36,7 @@ pub async fn serve(portfolio: Arc<PgPortfolio>, port: u16) {
             // Drain the request line (we serve the same page for any GET).
             let mut buf = [0u8; 1024];
             let _ = socket.read(&mut buf).await;
-            let html = render(&pf).await;
+            let html = render(&pf, capture_margin).await;
             let resp = format!(
                 "HTTP/1.1 200 OK\r\nContent-Type: text/html; charset=utf-8\r\n\
                  Content-Length: {}\r\nConnection: close\r\n\r\n{}",
@@ -143,14 +143,22 @@ async fn render_trust(portfolio: &PgPortfolio) -> String {
     out
 }
 
-async fn render(portfolio: &PgPortfolio) -> String {
+async fn render(portfolio: &PgPortfolio, capture_margin: f64) -> String {
     let rows = portfolio
         .consensus_scoreboard_by_strategy()
         .await
         .unwrap_or_default();
     let tracked = portfolio.count_tracked_traders().await.unwrap_or(0);
     let n429 = polymarket_common::metrics::data_api_429_count();
-    let pp = PromotionParams::default();
+    // Phase 0 (capture margin): gate arms at the bar a *follower* actually captures —
+    // `slippage_pct + fee_pct` — not the sharp's own edge (margin 0). Only edges whose
+    // Bonferroni lower bound clears the fees+slippage cushion render ✅. This raises the
+    // bar for every arm; it does NOT touch `strict` alerting or `trader_trust` (a
+    // deliberately different "better than blind" question, margin 0). See DECISIONS.md D3.
+    let pp = PromotionParams {
+        margin: capture_margin,
+        ..PromotionParams::default()
+    };
     let n = rows.len();
     // Bonferroni denominator PER FAMILY: experimental arms are corrected among
     // themselves, so adding them never tightens the core portfolio's bar.
@@ -285,7 +293,7 @@ mod tests {
             }
         }
 
-        let html = render(&pf).await;
+        let html = render(&pf, 0.0).await;
         assert!(html.contains("Trader trust"), "trust table rendered");
         assert!(html.contains("bd_good"), "skilled trader appears");
         assert!(

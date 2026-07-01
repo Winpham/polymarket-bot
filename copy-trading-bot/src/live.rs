@@ -94,7 +94,9 @@ pub async fn run_live(cfg: Arc<CopyTradingConfig>) -> Result<()> {
     {
         let bd_portfolio = Arc::clone(&portfolio);
         let port = cfg.board_port;
-        tokio::spawn(async move { crate::board::serve(bd_portfolio, port).await });
+        // Phase 0: gate arms at the follower's capture bar (slippage + fees).
+        let capture_margin = cfg.slippage_pct + cfg.fee_pct;
+        tokio::spawn(async move { crate::board::serve(bd_portfolio, port, capture_margin).await });
     }
 
     // Spawn Telegram command polling loop
