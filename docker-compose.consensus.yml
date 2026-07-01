@@ -50,6 +50,21 @@ services:
       CONSENSUS_ML_MARGIN: ${CONSENSUS_ML_MARGIN:-0.0}        # legacy market arms: p − mid > margin
       MARKET_RESID_MARGIN: ${MARKET_RESID_MARGIN:-0.0}        # resid arm's OWN knob: p_cons − band_rate > margin
       MARKET_RESID_TRAINED_THROUGH: ${MARKET_RESID_TRAINED_THROUGH:-}  # else the model's meta.json
+      # --- honest P&L tracker (read-only; CLV − execution haircut, multi-regime).
+      #     All read-only analytics knobs; none touch selection/alerting/betting. ---
+      EXEC_HAIRCUT: ${EXEC_HAIRCUT:-0.01}                     # buy-side haircut (price units) when no real ask
+      FLAT_STAKE: ${FLAT_STAKE:-100.0}                        # paper stake $/bet (capacity ceiling)
+      CAPACITY_FRAC: ${CAPACITY_FRAC:-0.05}                   # usable fraction of median sharp $
+      MIN_PILOT_ROI: ${MIN_PILOT_ROI:-0.02}                   # corrected honest-ROI LB bar for a GO
+      PILOT_MIN_EVENTS: ${PILOT_MIN_EVENTS:-50}               # distinct-event floor for a GO
+      PILOT_MIN_REGIMES: ${PILOT_MIN_REGIMES:-5}              # min positive day-regimes for a GO
+      REGIME_FRAC: ${REGIME_FRAC:-0.7}                        # fraction of regimes that must be positive
+      MIN_LIQUIDITY_USD: ${MIN_LIQUIDITY_USD:-2000.0}         # liquidity floor (median sharp $) for a GO
+      CAPTURE_ENTRY_ASK: ${CAPTURE_ENTRY_ASK:-false}          # capture real CLOB best-ask (else mid+haircut)
+      ENTRY_ASK_MAX_PER_CYCLE: ${ENTRY_ASK_MAX_PER_CYCLE:-40} # cap book-ask fetches/cycle
+      LEDGER_STRATEGIES: ${LEDGER_STRATEGIES:-}               # paper ledger scope (empty = all non-blind)
+      HONEST_DIGEST: ${HONEST_DIGEST:-false}                  # opt-in phone digest (material-change only)
+      HONEST_MAX_DRAWDOWN_USD: ${HONEST_MAX_DRAWDOWN_USD:-500.0} # paper-drawdown breach floor for the digest
       # Telegram is OPTIONAL — leave unset for ntfy-only (this deploy).
       # TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
       # TELEGRAM_CHAT_ID: ${TELEGRAM_CHAT_ID:-}

@@ -244,6 +244,9 @@ const CLOB_API: &str = "https://clob.polymarket.com";
 /// One outcome token from the CLOB `/markets/{condition_id}` response.
 #[derive(Debug, Clone, Deserialize)]
 pub struct ClobToken {
+    /// The ERC-1155 token id — the key for the CLOB `/book?token_id=` endpoint.
+    #[serde(default)]
+    pub token_id: String,
     #[serde(default)]
     pub outcome: String,
     /// Live mid price of this outcome in [0,1] — the "stock price" of the outcome.
@@ -284,6 +287,53 @@ impl ClobMarket {
         }
         self.tokens.get(outcome_index as usize).map(|t| t.price)
     }
+
+    /// The CLOB `token_id` for an outcome — the key to fetch its order book.
+    /// `None` for an out-of-range index or an empty id.
+    pub fn outcome_token_id(&self, outcome_index: i32) -> Option<&str> {
+        if outcome_index < 0 {
+            return None;
+        }
+        self.tokens
+            .get(outcome_index as usize)
+            .map(|t| t.token_id.as_str())
+            .filter(|id| !id.is_empty())
+    }
+}
+
+/// One aggregated price level in a CLOB order book (`/book`). Prices/sizes are
+/// returned as strings by the API.
+#[derive(Debug, Clone, Deserialize)]
+struct BookLevel {
+    #[serde(default)]
+    price: String,
+}
+
+#[derive(Debug, Clone, Deserialize, Default)]
+struct ClobBook {
+    #[serde(default)]
+    asks: Vec<BookLevel>,
+}
+
+/// Fetch the best (lowest) executable ASK for a token from the CLOB `/book`
+/// endpoint — the price a BUYER would actually pay right now. Returns `None` if
+/// the book is empty or unparseable (the caller falls back to the heuristic
+/// haircut). Best-effort: a transient error is an `Err` the caller can ignore.
+pub async fn fetch_best_ask(http: &reqwest::Client, token_id: &str) -> Result<Option<f64>> {
+    let url = format!("{CLOB_API}/book?token_id={token_id}");
+    let resp = http.get(&url).send().await?;
+    let text = resp.text().await?;
+    let book: ClobBook = serde_json::from_str(&text)
+        .with_context(|| format!("failed to parse CLOB book token={token_id}"))?;
+    // Asks may be returned in any order; the best ask for a buyer is the lowest
+    // price. Ignore any level whose price doesn't parse or sits outside (0,1].
+    let best = book
+        .asks
+        .iter()
+        .filter_map(|l| l.price.parse::<f64>().ok())
+        .filter(|p| *p > 0.0 && *p <= 1.0)
+        .min_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
+    Ok(best)
 }
 
 /// Fetch the CLOB market for a `condition_id`. Robust resolution + live price.
@@ -362,6 +412,7 @@ mod consensus_resolution_tests {
     fn clob_resolution_and_price() {
         use super::{ClobMarket, ClobToken};
         let tok = |o: &str, p: f64, w: bool| ClobToken {
+            token_id: format!("tok_{o}"),
             outcome: o.into(),
             price: p,
             winner: w,

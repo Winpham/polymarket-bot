@@ -235,6 +235,74 @@ pub struct CopyTradingConfig {
     #[config(env = "FEE_PCT", default = 0.02)]
     pub fee_pct: f64,
 
+    // --- Honest P&L tracker (read-only; CLV-based, execution-haircut, multi-regime) ---
+    // These knobs never touch selection/alerting/betting: they only parameterize the
+    // read-only `honest_pnl_by_strategy` instrument + the conservative pilot verdict.
+    /// Buy-side execution haircut in PRICE units (0.01 = 1¢) added to the captured
+    /// mid to get the executable entry price when no real book-ask was captured.
+    /// The honest realizable edge is measured net of this.
+    #[config(env = "EXEC_HAIRCUT", default = 0.01)]
+    pub exec_haircut: f64,
+
+    /// Flat paper stake ($) per bet — the capacity ceiling and ledger default.
+    #[config(env = "FLAT_STAKE", default = 100.0)]
+    pub flat_stake: f64,
+
+    /// Fraction of a market's liquidity proxy (median sharp $) usable as a stake
+    /// before the edge erodes: `suggested_stake = min(FLAT_STAKE, frac × median $)`.
+    #[config(env = "CAPACITY_FRAC", default = 0.05)]
+    pub capacity_frac: f64,
+
+    /// Minimum corrected honest-ROI lower bound a strategy must clear to be
+    /// pilot-ready (execution-aware GO threshold). A false GO risks real money.
+    #[config(env = "MIN_PILOT_ROI", default = 0.02)]
+    pub min_pilot_roi: f64,
+
+    /// Distinct-EVENT floor before a pilot verdict is even considered.
+    #[config(env = "PILOT_MIN_EVENTS", default = 50)]
+    pub pilot_min_events: i64,
+
+    /// Minimum number of distinct positive day-regimes required for a GO.
+    #[config(env = "PILOT_MIN_REGIMES", default = 5)]
+    pub pilot_min_regimes: i64,
+
+    /// Fraction of day-regimes that must be positive for a GO (with the floor above).
+    #[config(env = "REGIME_FRAC", default = 0.7)]
+    pub regime_frac: f64,
+
+    /// Market-liquidity floor (median sharp $) required to place a stake for a GO.
+    #[config(env = "MIN_LIQUIDITY_USD", default = 2000.0)]
+    pub min_liquidity_usd: f64,
+
+    /// Capture the REAL executable best ask (CLOB `/book`) once per open tracked
+    /// signal, so the honest edge uses the market ask instead of the mid+haircut
+    /// heuristic. Default OFF: an extra bounded book fetch per newly-open signal;
+    /// with it off the honest query falls back to the heuristic (byte-identical).
+    #[config(env = "CAPTURE_ENTRY_ASK", default = false)]
+    pub capture_entry_ask: bool,
+
+    /// Max book-ask captures per housekeeping cycle (bounds the extra `/book`
+    /// fetch load; uncaptured signals settle on later cycles).
+    #[config(env = "ENTRY_ASK_MAX_PER_CYCLE", default = 40)]
+    pub entry_ask_max_per_cycle: usize,
+
+    /// Comma-separated strategies the PAPER equity ledger tracks. Empty = every
+    /// non-`_blind` strategy (the whole tracked family). Appends one paper bet at
+    /// each resolution; PAPER only, this system NEVER places real money.
+    #[config(env = "LEDGER_STRATEGIES", default = "")]
+    pub ledger_strategies: String,
+
+    /// Opt-in minimal-noise honest-tracker phone digest. Default OFF: when off, no
+    /// digest is computed or pushed (silent). When on, it pushes to ntfy ONLY on a
+    /// material change — a strategy crossing INTO/OUT of pilot-ready, or a paper
+    /// drawdown newly breaching the floor — never a heartbeat.
+    #[config(env = "HONEST_DIGEST", default = false)]
+    pub honest_digest: bool,
+
+    /// Paper-drawdown floor ($) whose first breach triggers a digest push.
+    #[config(env = "HONEST_MAX_DRAWDOWN_USD", default = 500.0)]
+    pub honest_max_drawdown_usd: f64,
+
     /// Port for the Prometheus metrics HTTP endpoint.
     #[config(env = "METRICS_PORT", default = 9001)]
     pub metrics_port: u16,

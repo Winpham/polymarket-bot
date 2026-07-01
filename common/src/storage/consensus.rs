@@ -131,6 +131,9 @@ pub struct UnresolvedConsensus {
     pub net_count: i32,
     pub n_backers: i32,
     pub is_sports: bool,
+    /// Real executable ask already captured while open (Phase 2). `Some` ⇒ skip
+    /// re-fetching the book for this signal.
+    pub entry_ask: Option<f64>,
 }
 
 impl PgPortfolio {
@@ -352,7 +355,7 @@ impl PgPortfolio {
     pub async fn unresolved_consensus_signals(&self) -> Result<Vec<UnresolvedConsensus>> {
         let rows: Vec<UnresolvedConsensus> = sqlx::query_as(
             "SELECT id, strategy, condition_id, COALESCE(slug, '') AS slug, outcome_index, \
-                    mean_price, net_count, n_backers, is_sports \
+                    mean_price, net_count, n_backers, is_sports, entry_ask \
              FROM consensus_signals WHERE resolved = FALSE",
         )
         .fetch_all(&self.pool)
@@ -434,6 +437,24 @@ impl PgPortfolio {
             .context("snapshot_consensus_signal (price)")?;
         }
         Ok(())
+    }
+
+    /// Capture the real executable best ASK for a signal ONCE while it is open
+    /// (Phase 2). COALESCE-once + `resolved = FALSE`: never overwritten and never
+    /// written post-resolution, exactly like `initial_market_price` — so it stays
+    /// a genuinely pre-resolution executable price (leak-free). No-op if already
+    /// set. Returns whether a value was newly written.
+    pub async fn set_entry_ask(&self, signal_id: i32, ask: f64) -> Result<bool> {
+        let res = sqlx::query(
+            "UPDATE consensus_signals SET entry_ask = $2 \
+             WHERE id = $1 AND entry_ask IS NULL AND resolved = FALSE",
+        )
+        .bind(signal_id)
+        .bind(ask)
+        .execute(&self.pool)
+        .await
+        .context("set_entry_ask")?;
+        Ok(res.rows_affected() > 0)
     }
 
     /// The full trajectory of a signal — its "stock chart": consensus state +
@@ -554,6 +575,221 @@ impl PgPortfolio {
         .await
         .context("consensus_scoreboard_by_strategy")?;
         Ok(rows)
+    }
+
+    /// The **honest, realizable** per-strategy P&L instrument (read-only). Unlike
+    /// `consensus_scoreboard_by_strategy` (whose `edge` is vs `mean_price`, the
+    /// SHARPS' average fill we cannot get), this measures the outcome against the
+    /// **price we actually observed while the market was open** (`initial_market_price`
+    /// = CLV), minus an explicit buy-side **execution haircut** — the edge we could
+    /// realize. Everything is event-clustered at `COALESCE(event_slug, condition_id)`
+    /// (the within-match leak fix) BEFORE aggregating across events.
+    ///
+    /// `exec_haircut` (price units) is added to the captured mid to get the
+    /// executable entry (`entry = p0 + h`); `fee_pct` is a fractional fee on ROI.
+    /// When Phase 2's real `entry_ask` is captured it is preferred over the mid+
+    /// haircut heuristic. Leak-free by construction: `outcome_won` is read for
+    /// scoring ONLY, always paired with a price captured strictly before resolution.
+    /// SQL stays sums/means/stddev/percentiles — the corrected bound + GO/HOLD
+    /// verdict live in the binary (`scanner::honest`).
+    pub async fn honest_pnl_by_strategy(
+        &self,
+        exec_haircut: f64,
+        fee_pct: f64,
+    ) -> Result<Vec<HonestPnl>> {
+        let rows: Vec<HonestPnl> = sqlx::query_as(
+            "WITH base AS ( \
+                 SELECT strategy, COALESCE(event_slug, condition_id) AS ev, \
+                        (outcome_won::int)::double precision AS w, \
+                        COALESCE(entry_ask, initial_market_price + $1) AS entry, \
+                        initial_market_price AS p0, mean_price, total_usd \
+                 FROM consensus_signals \
+                 WHERE resolved AND initial_market_price IS NOT NULL AND strategy <> '_blind' \
+             ), \
+             sig AS ( \
+                 SELECT strategy, ev, w, p0, mean_price, total_usd, entry, \
+                        (w - p0) AS clv_share, \
+                        (w - p0) / NULLIF(p0, 0) AS clv_roi, \
+                        (w - entry) AS honest_edge_share, \
+                        (w - entry) / NULLIF(entry, 0) - $2 AS honest_roi, \
+                        (w - mean_price) AS sharp_adv \
+                 FROM base \
+             ), \
+             evt AS ( \
+                 SELECT strategy, ev, AVG(w) AS ev_hit, AVG(clv_share) AS ev_clv, \
+                        AVG(clv_roi) AS ev_clvroi, AVG(honest_edge_share) AS ev_hedge, \
+                        AVG(honest_roi) AS ev_hroi, AVG(sharp_adv) AS ev_sharp \
+                 FROM sig GROUP BY strategy, ev \
+             ), \
+             agg AS ( \
+                 SELECT strategy, COUNT(*) AS distinct_events, AVG(ev_hit) AS hit_rate, \
+                        AVG(ev_clv) AS clv_share, AVG(ev_clvroi) AS clv_roi, \
+                        AVG(ev_hedge) AS honest_edge_share, AVG(ev_hroi) AS honest_roi, \
+                        STDDEV_SAMP(ev_hroi) AS honest_roi_sd, AVG(ev_sharp) AS sharp_edge \
+                 FROM evt GROUP BY strategy \
+             ), \
+             liq AS ( \
+                 SELECT strategy, COUNT(*) AS resolved, \
+                        COUNT(*) FILTER (WHERE entry_ask IS NOT NULL) AS ask_rows, \
+                        percentile_cont(0.5) WITHIN GROUP (ORDER BY total_usd) AS median_sharp_usd, \
+                        AVG((EXTRACT(EPOCH FROM (resolved_at - first_detected_at)) / 3600.0)::double precision) AS avg_hours_to_resolve, \
+                        GREATEST((EXTRACT(EPOCH FROM (MAX(resolved_at) - MIN(resolved_at))) / 86400.0)::double precision, 1.0) AS span_days \
+                 FROM consensus_signals \
+                 WHERE resolved AND initial_market_price IS NOT NULL AND strategy <> '_blind' \
+                 GROUP BY strategy \
+             ) \
+             SELECT a.strategy, l.resolved, a.distinct_events, a.hit_rate, \
+                    a.clv_share, a.clv_roi, a.honest_edge_share, a.honest_roi, a.honest_roi_sd, \
+                    l.median_sharp_usd, l.avg_hours_to_resolve, \
+                    (a.distinct_events::double precision / l.span_days) AS bets_per_day, \
+                    a.sharp_edge, \
+                    (l.ask_rows::double precision / NULLIF(l.resolved, 0)) AS ask_coverage \
+             FROM agg a JOIN liq l USING (strategy) \
+             ORDER BY a.honest_roi DESC NULLS LAST",
+        )
+        .bind(exec_haircut)
+        .bind(fee_pct)
+        .fetch_all(&self.pool)
+        .await
+        .context("honest_pnl_by_strategy")?;
+        Ok(rows)
+    }
+
+    /// Per (strategy × segment) honest-ROI + event count for the regime/band/
+    /// horizon breakdown (read-only). Segments: `day` (day-regime = the persistence
+    /// axis the pilot verdict keys on), `band` (`width_bucket(p0)`), `horizon`
+    /// (`same_day` if resolved <24h after first detection else `multi_day`). Same
+    /// event-clustering + leak-free discipline as `honest_pnl_by_strategy`.
+    pub async fn honest_pnl_segments(
+        &self,
+        exec_haircut: f64,
+        fee_pct: f64,
+    ) -> Result<Vec<HonestSegment>> {
+        let rows: Vec<HonestSegment> = sqlx::query_as(
+            "WITH base AS ( \
+                 SELECT strategy, COALESCE(event_slug, condition_id) AS ev, \
+                        (outcome_won::int)::double precision AS w, \
+                        COALESCE(entry_ask, initial_market_price + $1) AS entry, \
+                        initial_market_price AS p0, resolved_at, \
+                        EXTRACT(EPOCH FROM (resolved_at - first_detected_at)) / 3600.0 AS hrs \
+                 FROM consensus_signals \
+                 WHERE resolved AND initial_market_price IS NOT NULL AND strategy <> '_blind' \
+             ), \
+             sig AS ( \
+                 SELECT strategy, ev, \
+                        (w - entry) / NULLIF(entry, 0) - $2 AS honest_roi, \
+                        to_char(date_trunc('day', resolved_at), 'YYYY-MM-DD') AS day_key, \
+                        width_bucket(p0, 0.0, 1.0, 5)::text AS band_key, \
+                        CASE WHEN hrs < 24 THEN 'same_day' ELSE 'multi_day' END AS horizon_key \
+                 FROM base \
+             ), \
+             u AS ( \
+                 SELECT strategy, 'day'  AS seg_kind, day_key     AS seg_key, ev, honest_roi FROM sig \
+                 UNION ALL \
+                 SELECT strategy, 'band' AS seg_kind, band_key    AS seg_key, ev, honest_roi FROM sig \
+                 UNION ALL \
+                 SELECT strategy, 'horizon' AS seg_kind, horizon_key AS seg_key, ev, honest_roi FROM sig \
+             ), \
+             evt AS ( \
+                 SELECT strategy, seg_kind, seg_key, ev, AVG(honest_roi) AS ev_hroi \
+                 FROM u GROUP BY strategy, seg_kind, seg_key, ev \
+             ) \
+             SELECT strategy, seg_kind, seg_key, COUNT(*) AS n_events, AVG(ev_hroi) AS honest_roi \
+             FROM evt GROUP BY strategy, seg_kind, seg_key \
+             ORDER BY strategy, seg_kind, seg_key",
+        )
+        .bind(exec_haircut)
+        .bind(fee_pct)
+        .fetch_all(&self.pool)
+        .await
+        .context("honest_pnl_segments")?;
+        Ok(rows)
+    }
+
+    /// Append ONE paper bet to the honest equity ledger for a just-resolved
+    /// (strategy, condition, outcome) — the ongoing PAPER track record (Phase 3).
+    /// Entry is the realizable `COALESCE(entry_ask, initial_market_price + haircut)`;
+    /// `pnl = stake × ((won − entry)/entry − fee)`; `cum_equity` is the running
+    /// strategy equity at append time. Idempotent: `ON CONFLICT DO NOTHING`, so
+    /// re-running resolution never double-appends. Skips rows without a captured
+    /// pre-resolution price (entry undefined). Returns whether a row was appended.
+    /// PAPER only — this NEVER places real money.
+    pub async fn append_paper_bet(
+        &self,
+        strategy: &str,
+        condition_id: &str,
+        outcome_index: i32,
+        flat_stake: f64,
+        exec_haircut: f64,
+        fee_pct: f64,
+    ) -> Result<bool> {
+        let res = sqlx::query(
+            "WITH src AS ( \
+                 SELECT strategy, condition_id, outcome_index, \
+                        COALESCE(resolved_at, NOW()) AS rat, \
+                        COALESCE(entry_ask, initial_market_price + $5) AS entry, \
+                        outcome_won \
+                 FROM consensus_signals \
+                 WHERE condition_id = $2 AND outcome_index = $3 AND strategy = $1 \
+                   AND resolved AND outcome_won IS NOT NULL AND initial_market_price IS NOT NULL \
+             ), \
+             calc AS ( \
+                 SELECT strategy, condition_id, outcome_index, rat, entry, outcome_won, \
+                        $4 * (((outcome_won::int)::double precision - entry) / NULLIF(entry, 0) - $6) AS pnl \
+                 FROM src \
+             ) \
+             INSERT INTO honest_paper_ledger \
+                 (strategy, condition_id, outcome_index, resolved_at, stake, entry, outcome_won, pnl, cum_equity) \
+             SELECT c.strategy, c.condition_id, c.outcome_index, c.rat, $4, c.entry, c.outcome_won, c.pnl, \
+                    COALESCE((SELECT SUM(pnl) FROM honest_paper_ledger WHERE strategy = c.strategy), 0) + c.pnl \
+             FROM calc c \
+             ON CONFLICT (strategy, condition_id, outcome_index) DO NOTHING",
+        )
+        .bind(strategy)
+        .bind(condition_id)
+        .bind(outcome_index)
+        .bind(flat_stake)
+        .bind(exec_haircut)
+        .bind(fee_pct)
+        .execute(&self.pool)
+        .await
+        .context("append_paper_bet")?;
+        Ok(res.rows_affected() > 0)
+    }
+
+    /// The paper equity curve for a strategy: cumulative P&L over time, recomputed
+    /// authoritatively as a running sum ordered by resolution (robust to any
+    /// out-of-order appends). Points are `(resolved_at, cumulative_equity)`.
+    pub async fn equity_curve(&self, strategy: &str) -> Result<Vec<(DateTime<Utc>, f64)>> {
+        let rows: Vec<(DateTime<Utc>, f64)> = sqlx::query_as(
+            "SELECT resolved_at, \
+                    SUM(pnl) OVER (ORDER BY resolved_at, id)::double precision AS cum \
+             FROM honest_paper_ledger WHERE strategy = $1 ORDER BY resolved_at, id",
+        )
+        .bind(strategy)
+        .fetch_all(&self.pool)
+        .await
+        .context("equity_curve")?;
+        Ok(rows)
+    }
+
+    /// Ledger statistics for a strategy: cumulative P&L, peak, max drawdown, a
+    /// daily-returns Sharpe-like ratio, win rate, bet count, and ROI on turnover.
+    /// Computed in Rust from the ordered ledger so the SQL stays a plain fetch.
+    /// `None` if the strategy has no paper bets yet.
+    pub async fn ledger_stats(&self, strategy: &str) -> Result<Option<LedgerStats>> {
+        let rows: Vec<(DateTime<Utc>, f64, f64, bool)> = sqlx::query_as(
+            "SELECT resolved_at, stake, pnl, outcome_won \
+             FROM honest_paper_ledger WHERE strategy = $1 ORDER BY resolved_at, id",
+        )
+        .bind(strategy)
+        .fetch_all(&self.pool)
+        .await
+        .context("ledger_stats")?;
+        if rows.is_empty() {
+            return Ok(None);
+        }
+        Ok(Some(LedgerStats::from_rows(&rows)))
     }
 
     // --- L1: incremental polling vote-window store (migration 025) ---
@@ -1149,6 +1385,137 @@ pub struct StrategyScore {
     /// the gap between the mid when we noticed and the sharps' entry price.
     /// Materially negative → faster polling has real value.
     pub capture_lag: Option<f64>,
+}
+
+/// One strategy's **honest, realizable** P&L row (CLV-based, execution-haircut,
+/// event-clustered). This is the read-only instrument the pilot go/no-go keys off:
+/// every float is measured against the price we OBSERVED while the market was open
+/// (`initial_market_price`), net of the buy-side haircut — realizable, not flattering.
+#[derive(Debug, Clone, sqlx::FromRow)]
+pub struct HonestPnl {
+    pub strategy: String,
+    /// Resolved signals (rows) with a captured pre-resolution price.
+    pub resolved: i64,
+    /// Distinct resolved EVENTS — the de-correlated sample size (the gate's N).
+    pub distinct_events: i64,
+    /// Event-clustered hit-rate `AVG_event(outcome_won)`.
+    pub hit_rate: Option<f64>,
+    /// Event-clustered CLV in price units `AVG_event(w − p0)` — realizable edge/$ share.
+    pub clv_share: Option<f64>,
+    /// Event-clustered CLV ROI `AVG_event((w − p0)/p0)` (gross of haircut/fee).
+    pub clv_roi: Option<f64>,
+    /// Event-clustered honest edge share `AVG_event(w − entry)` (net of haircut).
+    pub honest_edge_share: Option<f64>,
+    /// Event-clustered honest ROI per $ staked `AVG_event((w − entry)/entry − fee)`.
+    /// This is the headline realizable number; the pilot verdict keys off it.
+    pub honest_roi: Option<f64>,
+    /// Std-dev of per-EVENT honest ROI — feeds the corrected confidence bound.
+    pub honest_roi_sd: Option<f64>,
+    /// Median `total_usd` (liquidity proxy) — the capacity + liquidity-floor input.
+    pub median_sharp_usd: Option<f64>,
+    /// Mean hours from first detection to resolution (working-capital horizon).
+    pub avg_hours_to_resolve: Option<f64>,
+    /// Distinct events per day over the record's span (throughput for capacity).
+    pub bets_per_day: Option<f64>,
+    /// The OLD sharp benchmark `AVG_event(w − mean_price)` — shown for reference only.
+    pub sharp_edge: Option<f64>,
+    /// Fraction of resolved rows with a REAL captured `entry_ask` (Phase 2). The
+    /// rest fall back to the mid+haircut heuristic; `None`/0 = all heuristic.
+    pub ask_coverage: Option<f64>,
+}
+
+/// One (strategy × segment) honest-ROI cell for the regime/band/horizon breakdown.
+/// `seg_kind` ∈ {`day`, `band`, `horizon`}; `honest_roi` is event-clustered within
+/// the segment. The day-regime cells drive the pilot verdict's persistence check.
+#[derive(Debug, Clone, sqlx::FromRow)]
+pub struct HonestSegment {
+    pub strategy: String,
+    pub seg_kind: String,
+    pub seg_key: String,
+    pub n_events: i64,
+    pub honest_roi: Option<f64>,
+}
+
+/// Paper-ledger track record for one strategy — the ongoing realization of the
+/// honest edge (Phase 3). All PAPER; this system never places real money.
+#[derive(Debug, Clone, Default)]
+pub struct LedgerStats {
+    /// Number of paper bets.
+    pub bets: i64,
+    /// Cumulative paper P&L (= final equity).
+    pub total_pnl: f64,
+    /// Total staked (turnover).
+    pub turnover: f64,
+    /// P&L per $ turned over.
+    pub roi_on_turnover: f64,
+    /// Fraction of paper bets that won.
+    pub win_rate: f64,
+    /// Highest equity reached.
+    pub peak_equity: f64,
+    /// Largest peak-to-trough equity drop (absolute $, ≥ 0).
+    pub max_drawdown: f64,
+    /// Daily-returns Sharpe-like ratio (mean/sd of per-day P&L; 0 if <2 days or sd=0).
+    pub sharpe: f64,
+    /// Cumulative-equity points for the sparkline (in resolution order).
+    pub curve: Vec<f64>,
+}
+
+impl LedgerStats {
+    /// Compute the track record from ledger rows ordered by resolution
+    /// `(resolved_at, stake, pnl, outcome_won)`.
+    fn from_rows(rows: &[(DateTime<Utc>, f64, f64, bool)]) -> Self {
+        let bets = rows.len() as i64;
+        let turnover: f64 = rows.iter().map(|r| r.1).sum();
+        let total_pnl: f64 = rows.iter().map(|r| r.2).sum();
+        let wins = rows.iter().filter(|r| r.3).count() as f64;
+        // Running equity → curve, peak, max drawdown.
+        let mut equity = 0.0;
+        let mut peak = f64::NEG_INFINITY;
+        let mut max_drawdown = 0.0;
+        let mut curve = Vec::with_capacity(rows.len());
+        for r in rows {
+            equity += r.2;
+            curve.push(equity);
+            if equity > peak {
+                peak = equity;
+            }
+            let dd = peak - equity;
+            if dd > max_drawdown {
+                max_drawdown = dd;
+            }
+        }
+        // Sharpe-like ratio over per-DAY P&L (de-correlates within-day bets).
+        let mut by_day: std::collections::BTreeMap<i64, f64> = std::collections::BTreeMap::new();
+        for r in rows {
+            let day = r.0.timestamp().div_euclid(86_400);
+            *by_day.entry(day).or_insert(0.0) += r.2;
+        }
+        let daily: Vec<f64> = by_day.values().copied().collect();
+        let sharpe = if daily.len() >= 2 {
+            let n = daily.len() as f64;
+            let mean = daily.iter().sum::<f64>() / n;
+            let var = daily.iter().map(|d| (d - mean).powi(2)).sum::<f64>() / (n - 1.0);
+            let sd = var.sqrt();
+            if sd > 0.0 { mean / sd } else { 0.0 }
+        } else {
+            0.0
+        };
+        Self {
+            bets,
+            total_pnl,
+            turnover,
+            roi_on_turnover: if turnover > 0.0 {
+                total_pnl / turnover
+            } else {
+                0.0
+            },
+            win_rate: if bets > 0 { wins / bets as f64 } else { 0.0 },
+            peak_equity: if peak.is_finite() { peak.max(0.0) } else { 0.0 },
+            max_drawdown,
+            sharpe,
+            curve,
+        }
+    }
 }
 
 /// One (wallet × slice) earned-trust statistic over resolved BUY fills. Numbers
@@ -1757,5 +2124,312 @@ mod market_feature_log_it {
             .await
             .unwrap();
         println!("market_feature_log_it: roundtrip + conflict-update + cascade all OK");
+    }
+}
+
+/// Live-DB integration test for the honest, realizable P&L instrument (Phase 0).
+/// `#[ignore]`d so the normal gate stays DB-free; run against a throwaway Postgres
+/// (schema migrated):
+///
+/// ```text
+/// DATABASE_URL=postgres://bot:bot@localhost:55499/polymarket \
+///   cargo test -p polymarket-common honest_pnl_it -- --ignored --nocapture
+/// ```
+#[cfg(test)]
+mod honest_pnl_it {
+    use super::*;
+
+    /// Insert a resolved consensus signal with a captured pre-resolution mid.
+    #[allow(clippy::too_many_arguments)]
+    async fn seed(
+        pf: &PgPortfolio,
+        strategy: &str,
+        cond: &str,
+        event_slug: &str,
+        p0: f64,
+        mean_price: f64,
+        total_usd: f64,
+        won: bool,
+    ) {
+        sqlx::query(
+            "INSERT INTO consensus_signals \
+               (strategy, condition_id, outcome_index, event_slug, n_backers, n_opposers, \
+                net_count, net_quality, mean_price, price_std, recency_mins, total_usd, \
+                score, tier, initial_market_price, resolved, outcome_won, \
+                first_detected_at, resolved_at) \
+             VALUES ($1,$2,0,$3,5,0,5,5.0,$5,0.02,10,$6,1.0,'WATCH',$4,TRUE,$7, \
+                     NOW() - INTERVAL '2 hours', NOW())",
+        )
+        .bind(strategy)
+        .bind(cond)
+        .bind(event_slug)
+        .bind(p0)
+        .bind(mean_price)
+        .bind(total_usd)
+        .bind(won)
+        .execute(&pf.pool)
+        .await
+        .expect("seed consensus_signal");
+    }
+
+    #[tokio::test]
+    #[ignore = "requires a live Postgres at $DATABASE_URL with migrations applied"]
+    async fn honest_roi_event_clustered_and_blind_excluded() {
+        let url = std::env::var("DATABASE_URL").expect("DATABASE_URL must be set");
+        let pool = sqlx::PgPool::connect(&url).await.expect("connect");
+        let pf = PgPortfolio::new(pool).await.expect("portfolio");
+        pf.run_migrations().await.expect("migrations");
+
+        sqlx::query("DELETE FROM consensus_signals WHERE condition_id LIKE 'hp_%'")
+            .execute(&pf.pool)
+            .await
+            .unwrap();
+
+        // Strategy 'hp_a': two events. ev1 has TWO signals (varied bands) to
+        // exercise the within-event collapse; ev2 has one.
+        //   S1: ev1 p0=0.40 won   → honest_roi = 0.59/0.41 − 0.02 =  1.41902
+        //   S2: ev1 p0=0.60 lost  → honest_roi = −0.61/0.61 − 0.02 = −1.02000
+        //   S3: ev2 p0=0.50 won   → honest_roi = 0.49/0.51 − 0.02 =  0.94078
+        // ev1 = mean(S1,S2) = 0.19951 ; ev2 = 0.94078
+        // honest_roi (across 2 events) = 0.570145
+        seed(&pf, "hp_a", "hp_c1", "hp_ev1", 0.40, 0.45, 3000.0, true).await;
+        seed(&pf, "hp_a", "hp_c2", "hp_ev1", 0.60, 0.55, 1000.0, false).await;
+        seed(&pf, "hp_a", "hp_c3", "hp_ev2", 0.50, 0.50, 2000.0, true).await;
+        // A `_blind` row that MUST be excluded from the instrument.
+        seed(&pf, "_blind", "hp_c4", "hp_ev3", 0.30, 0.30, 5000.0, true).await;
+
+        let rows = pf.honest_pnl_by_strategy(0.01, 0.02).await.unwrap();
+        assert!(
+            rows.iter().all(|r| r.strategy != "_blind"),
+            "the blind baseline is never a tracked strategy"
+        );
+        let a = rows
+            .iter()
+            .find(|r| r.strategy == "hp_a")
+            .expect("hp_a present");
+
+        assert_eq!(a.distinct_events, 2, "two distinct events");
+        assert_eq!(a.resolved, 3, "three resolved rows");
+        let approx = |got: Option<f64>, want: f64, what: &str| {
+            let g = got.unwrap_or(f64::NAN);
+            assert!((g - want).abs() < 1e-4, "{what}: got {g}, want {want}");
+        };
+        // Event-clustered honest ROI — the hand-computed 0.570145.
+        approx(a.honest_roi, 0.570_145, "honest_roi");
+        // clv_share event-clustered: ev1 mean(0.60,−0.60)=0, ev2 0.50 → 0.25.
+        approx(a.clv_share, 0.25, "clv_share");
+        // honest_edge_share: ev1 mean(0.59,−0.61)=−0.01, ev2 0.49 → 0.24.
+        approx(a.honest_edge_share, 0.24, "honest_edge_share");
+        // sharp_edge: ev1 mean(0.55,−0.55)=0, ev2 0.50 → 0.25.
+        approx(a.sharp_edge, 0.25, "sharp_edge");
+        // hit-rate event-clustered: ev1 0.5, ev2 1.0 → 0.75.
+        approx(a.hit_rate, 0.75, "hit_rate");
+        // median liquidity proxy over the 3 resolved rows: median(3000,1000,2000).
+        approx(a.median_sharp_usd, 2000.0, "median_sharp_usd");
+
+        // Segment breakdown: day / band / horizon cells all render, event-clustered.
+        let segs = pf.honest_pnl_segments(0.01, 0.02).await.unwrap();
+        let a_segs: Vec<_> = segs.iter().filter(|s| s.strategy == "hp_a").collect();
+        assert!(!a_segs.is_empty(), "hp_a has segment cells");
+        // All rows resolved NOW() → exactly ONE day-regime.
+        let days: Vec<_> = a_segs.iter().filter(|s| s.seg_kind == "day").collect();
+        assert_eq!(days.len(), 1, "one day-regime");
+        assert_eq!(days[0].n_events, 2, "both events in the single day-regime");
+        // Horizon: first_detected_at = NOW()-2h → same_day for every row.
+        let hz: Vec<_> = a_segs.iter().filter(|s| s.seg_kind == "horizon").collect();
+        assert_eq!(hz.len(), 1, "one horizon bucket");
+        assert_eq!(hz[0].seg_key, "same_day", "resolved <24h ⇒ same_day");
+        // Bands: p0 0.40 & 0.50 → band 3; 0.60 → band 4 (two distinct bands).
+        let bands: Vec<_> = a_segs.iter().filter(|s| s.seg_kind == "band").collect();
+        assert_eq!(bands.len(), 2, "two price bands");
+
+        sqlx::query("DELETE FROM consensus_signals WHERE condition_id LIKE 'hp_%'")
+            .execute(&pf.pool)
+            .await
+            .unwrap();
+        println!(
+            "honest_pnl_it: honest_roi={:?} (want 0.570145), event-clustered, _blind excluded — OK",
+            a.honest_roi
+        );
+    }
+
+    #[tokio::test]
+    #[ignore = "requires a live Postgres at $DATABASE_URL with migrations applied"]
+    async fn entry_ask_set_once_and_preferred_over_heuristic() {
+        let url = std::env::var("DATABASE_URL").expect("DATABASE_URL must be set");
+        let pool = sqlx::PgPool::connect(&url).await.expect("connect");
+        let pf = PgPortfolio::new(pool).await.expect("portfolio");
+        pf.run_migrations().await.expect("migrations");
+        sqlx::query("DELETE FROM consensus_signals WHERE condition_id LIKE 'hpask_%'")
+            .execute(&pf.pool)
+            .await
+            .unwrap();
+
+        // An OPEN signal (resolved=false) with a captured mid but no ask yet.
+        let (id,): (i32,) = sqlx::query_as(
+            "INSERT INTO consensus_signals \
+               (strategy, condition_id, outcome_index, event_slug, n_backers, n_opposers, \
+                net_count, net_quality, mean_price, price_std, recency_mins, total_usd, \
+                score, tier, initial_market_price, resolved, first_detected_at) \
+             VALUES ('hp_ask','hpask_c1',0,'hpask_ev',5,0,5,5.0,0.50,0.02,10,2000,1.0,'WATCH', \
+                     0.50, FALSE, NOW() - INTERVAL '2 hours') RETURNING id",
+        )
+        .fetch_one(&pf.pool)
+        .await
+        .unwrap();
+
+        // COALESCE-once: the first ask sticks; a later capture is a no-op.
+        assert!(
+            pf.set_entry_ask(id, 0.55).await.unwrap(),
+            "first ask written"
+        );
+        assert!(
+            !pf.set_entry_ask(id, 0.99).await.unwrap(),
+            "second capture never overwrites"
+        );
+        let (ask,): (Option<f64>,) =
+            sqlx::query_as("SELECT entry_ask FROM consensus_signals WHERE id = $1")
+                .bind(id)
+                .fetch_one(&pf.pool)
+                .await
+                .unwrap();
+        assert_eq!(ask, Some(0.55), "entry_ask is the first captured value");
+
+        // Now the signal resolves (won). Post-resolution the ask cannot change.
+        sqlx::query(
+            "UPDATE consensus_signals SET resolved = TRUE, outcome_won = TRUE, resolved_at = NOW() \
+             WHERE id = $1",
+        )
+        .bind(id)
+        .execute(&pf.pool)
+        .await
+        .unwrap();
+        assert!(
+            !pf.set_entry_ask(id, 0.10).await.unwrap(),
+            "resolved rows are never touched (leak-free)"
+        );
+
+        // The honest query PREFERS the real ask: entry = 0.55 (not mid+haircut 0.51).
+        // honest_roi = (1 − 0.55)/0.55 − 0.02 = 0.79818 ; ask_coverage = 100%.
+        let rows = pf.honest_pnl_by_strategy(0.01, 0.02).await.unwrap();
+        let r = rows.iter().find(|r| r.strategy == "hp_ask").unwrap();
+        assert!(
+            (r.honest_roi.unwrap() - 0.798_18).abs() < 1e-3,
+            "entry_ask preferred: honest_roi={:?} (want ~0.79818, NOT the heuristic 0.94078)",
+            r.honest_roi
+        );
+        assert!(
+            (r.ask_coverage.unwrap() - 1.0).abs() < 1e-9,
+            "100% real-ask coverage"
+        );
+
+        sqlx::query("DELETE FROM consensus_signals WHERE condition_id LIKE 'hpask_%'")
+            .execute(&pf.pool)
+            .await
+            .unwrap();
+        println!("entry_ask_it: set-once + resolved-guard + query-prefers-ask — OK");
+    }
+
+    /// Insert a RESOLVED consensus signal with an explicit resolution day-offset.
+    async fn seed_resolved_dayoffset(
+        pf: &PgPortfolio,
+        strategy: &str,
+        cond: &str,
+        p0: f64,
+        won: bool,
+        days_ago: i64,
+    ) {
+        sqlx::query(&format!(
+            "INSERT INTO consensus_signals \
+               (strategy, condition_id, outcome_index, n_backers, n_opposers, net_count, \
+                net_quality, mean_price, price_std, recency_mins, total_usd, score, tier, \
+                initial_market_price, resolved, outcome_won, first_detected_at, resolved_at) \
+             VALUES ($1,$2,0,5,0,5,5.0,$3,0.02,10,2000,1.0,'WATCH',$3,TRUE,$4, \
+                     NOW() - INTERVAL '{days_ago} days 2 hours', NOW() - INTERVAL '{days_ago} days')"
+        ))
+        .bind(strategy)
+        .bind(cond)
+        .bind(p0)
+        .bind(won)
+        .execute(&pf.pool)
+        .await
+        .expect("seed resolved signal");
+    }
+
+    #[tokio::test]
+    #[ignore = "requires a live Postgres at $DATABASE_URL with migrations applied"]
+    async fn paper_ledger_appends_idempotently_with_stats() {
+        let url = std::env::var("DATABASE_URL").expect("DATABASE_URL must be set");
+        let pool = sqlx::PgPool::connect(&url).await.expect("connect");
+        let pf = PgPortfolio::new(pool).await.expect("portfolio");
+        pf.run_migrations().await.expect("migrations");
+        sqlx::query("DELETE FROM consensus_signals WHERE condition_id LIKE 'hpled_%'")
+            .execute(&pf.pool)
+            .await
+            .unwrap();
+        sqlx::query("DELETE FROM honest_paper_ledger WHERE strategy = 'hp_led'")
+            .execute(&pf.pool)
+            .await
+            .unwrap();
+
+        // 3 resolved signals over 2 days, stake 100, haircut 1¢, fee 2% → entry 0.51.
+        //   L1 won  (day -1) pnl = 100×(0.49/0.51 − 0.02) =  +94.078
+        //   L2 lost (day -1) pnl = 100×(−0.51/0.51 − 0.02) = −102.000
+        //   L3 won  (day  0) pnl =  +94.078
+        seed_resolved_dayoffset(&pf, "hp_led", "hpled_1", 0.50, true, 1).await;
+        seed_resolved_dayoffset(&pf, "hp_led", "hpled_2", 0.50, false, 1).await;
+        seed_resolved_dayoffset(&pf, "hp_led", "hpled_3", 0.50, true, 0).await;
+
+        for c in ["hpled_1", "hpled_2", "hpled_3"] {
+            assert!(
+                pf.append_paper_bet("hp_led", c, 0, 100.0, 0.01, 0.02)
+                    .await
+                    .unwrap(),
+                "first append writes a ledger row for {c}"
+            );
+        }
+        // Idempotent: re-running resolution appends NOTHING.
+        for c in ["hpled_1", "hpled_2", "hpled_3"] {
+            assert!(
+                !pf.append_paper_bet("hp_led", c, 0, 100.0, 0.01, 0.02)
+                    .await
+                    .unwrap(),
+                "second append is a no-op for {c}"
+            );
+        }
+
+        let curve = pf.equity_curve("hp_led").await.unwrap();
+        assert_eq!(curve.len(), 3, "one curve point per bet");
+        // Running equity: +94.078, −7.922, +86.156.
+        assert!((curve[0].1 - 94.078).abs() < 0.01);
+        assert!((curve[1].1 - (-7.922)).abs() < 0.01);
+        assert!((curve[2].1 - 86.156).abs() < 0.01);
+
+        let s = pf.ledger_stats("hp_led").await.unwrap().expect("stats");
+        assert_eq!(s.bets, 3);
+        assert!((s.total_pnl - 86.156).abs() < 0.01, "final equity");
+        assert!((s.turnover - 300.0).abs() < 1e-6);
+        assert!((s.win_rate - 2.0 / 3.0).abs() < 1e-6);
+        // Peak +94.078 then trough −7.922 → max drawdown 102.0.
+        assert!((s.max_drawdown - 102.0).abs() < 0.01, "peak-to-trough $");
+        // Two distinct days ⇒ a finite Sharpe-like ratio.
+        assert!(
+            s.sharpe.is_finite() && s.sharpe > 0.0,
+            "sharpe {}",
+            s.sharpe
+        );
+
+        sqlx::query("DELETE FROM consensus_signals WHERE condition_id LIKE 'hpled_%'")
+            .execute(&pf.pool)
+            .await
+            .unwrap();
+        sqlx::query("DELETE FROM honest_paper_ledger WHERE strategy = 'hp_led'")
+            .execute(&pf.pool)
+            .await
+            .unwrap();
+        println!(
+            "ledger_it: 3 appends, idempotent re-run, equity/drawdown ${:.1}/${:.1}, sharpe {:.3} — OK",
+            s.total_pnl, s.max_drawdown, s.sharpe
+        );
     }
 }
