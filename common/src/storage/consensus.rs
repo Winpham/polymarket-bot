@@ -706,6 +706,92 @@ impl PgPortfolio {
         Ok(rows)
     }
 
+    /// Append ONE paper bet to the honest equity ledger for a just-resolved
+    /// (strategy, condition, outcome) — the ongoing PAPER track record (Phase 3).
+    /// Entry is the realizable `COALESCE(entry_ask, initial_market_price + haircut)`;
+    /// `pnl = stake × ((won − entry)/entry − fee)`; `cum_equity` is the running
+    /// strategy equity at append time. Idempotent: `ON CONFLICT DO NOTHING`, so
+    /// re-running resolution never double-appends. Skips rows without a captured
+    /// pre-resolution price (entry undefined). Returns whether a row was appended.
+    /// PAPER only — this NEVER places real money.
+    pub async fn append_paper_bet(
+        &self,
+        strategy: &str,
+        condition_id: &str,
+        outcome_index: i32,
+        flat_stake: f64,
+        exec_haircut: f64,
+        fee_pct: f64,
+    ) -> Result<bool> {
+        let res = sqlx::query(
+            "WITH src AS ( \
+                 SELECT strategy, condition_id, outcome_index, \
+                        COALESCE(resolved_at, NOW()) AS rat, \
+                        COALESCE(entry_ask, initial_market_price + $5) AS entry, \
+                        outcome_won \
+                 FROM consensus_signals \
+                 WHERE condition_id = $2 AND outcome_index = $3 AND strategy = $1 \
+                   AND resolved AND outcome_won IS NOT NULL AND initial_market_price IS NOT NULL \
+             ), \
+             calc AS ( \
+                 SELECT strategy, condition_id, outcome_index, rat, entry, outcome_won, \
+                        $4 * (((outcome_won::int)::double precision - entry) / NULLIF(entry, 0) - $6) AS pnl \
+                 FROM src \
+             ) \
+             INSERT INTO honest_paper_ledger \
+                 (strategy, condition_id, outcome_index, resolved_at, stake, entry, outcome_won, pnl, cum_equity) \
+             SELECT c.strategy, c.condition_id, c.outcome_index, c.rat, $4, c.entry, c.outcome_won, c.pnl, \
+                    COALESCE((SELECT SUM(pnl) FROM honest_paper_ledger WHERE strategy = c.strategy), 0) + c.pnl \
+             FROM calc c \
+             ON CONFLICT (strategy, condition_id, outcome_index) DO NOTHING",
+        )
+        .bind(strategy)
+        .bind(condition_id)
+        .bind(outcome_index)
+        .bind(flat_stake)
+        .bind(exec_haircut)
+        .bind(fee_pct)
+        .execute(&self.pool)
+        .await
+        .context("append_paper_bet")?;
+        Ok(res.rows_affected() > 0)
+    }
+
+    /// The paper equity curve for a strategy: cumulative P&L over time, recomputed
+    /// authoritatively as a running sum ordered by resolution (robust to any
+    /// out-of-order appends). Points are `(resolved_at, cumulative_equity)`.
+    pub async fn equity_curve(&self, strategy: &str) -> Result<Vec<(DateTime<Utc>, f64)>> {
+        let rows: Vec<(DateTime<Utc>, f64)> = sqlx::query_as(
+            "SELECT resolved_at, \
+                    SUM(pnl) OVER (ORDER BY resolved_at, id)::double precision AS cum \
+             FROM honest_paper_ledger WHERE strategy = $1 ORDER BY resolved_at, id",
+        )
+        .bind(strategy)
+        .fetch_all(&self.pool)
+        .await
+        .context("equity_curve")?;
+        Ok(rows)
+    }
+
+    /// Ledger statistics for a strategy: cumulative P&L, peak, max drawdown, a
+    /// daily-returns Sharpe-like ratio, win rate, bet count, and ROI on turnover.
+    /// Computed in Rust from the ordered ledger so the SQL stays a plain fetch.
+    /// `None` if the strategy has no paper bets yet.
+    pub async fn ledger_stats(&self, strategy: &str) -> Result<Option<LedgerStats>> {
+        let rows: Vec<(DateTime<Utc>, f64, f64, bool)> = sqlx::query_as(
+            "SELECT resolved_at, stake, pnl, outcome_won \
+             FROM honest_paper_ledger WHERE strategy = $1 ORDER BY resolved_at, id",
+        )
+        .bind(strategy)
+        .fetch_all(&self.pool)
+        .await
+        .context("ledger_stats")?;
+        if rows.is_empty() {
+            return Ok(None);
+        }
+        Ok(Some(LedgerStats::from_rows(&rows)))
+    }
+
     // --- L1: incremental polling vote-window store (migration 025) ---
 
     /// Per-trader consensus cursors (`followed_traders.consensus_polled_at`) for
@@ -1348,6 +1434,88 @@ pub struct HonestSegment {
     pub seg_key: String,
     pub n_events: i64,
     pub honest_roi: Option<f64>,
+}
+
+/// Paper-ledger track record for one strategy — the ongoing realization of the
+/// honest edge (Phase 3). All PAPER; this system never places real money.
+#[derive(Debug, Clone, Default)]
+pub struct LedgerStats {
+    /// Number of paper bets.
+    pub bets: i64,
+    /// Cumulative paper P&L (= final equity).
+    pub total_pnl: f64,
+    /// Total staked (turnover).
+    pub turnover: f64,
+    /// P&L per $ turned over.
+    pub roi_on_turnover: f64,
+    /// Fraction of paper bets that won.
+    pub win_rate: f64,
+    /// Highest equity reached.
+    pub peak_equity: f64,
+    /// Largest peak-to-trough equity drop (absolute $, ≥ 0).
+    pub max_drawdown: f64,
+    /// Daily-returns Sharpe-like ratio (mean/sd of per-day P&L; 0 if <2 days or sd=0).
+    pub sharpe: f64,
+    /// Cumulative-equity points for the sparkline (in resolution order).
+    pub curve: Vec<f64>,
+}
+
+impl LedgerStats {
+    /// Compute the track record from ledger rows ordered by resolution
+    /// `(resolved_at, stake, pnl, outcome_won)`.
+    fn from_rows(rows: &[(DateTime<Utc>, f64, f64, bool)]) -> Self {
+        let bets = rows.len() as i64;
+        let turnover: f64 = rows.iter().map(|r| r.1).sum();
+        let total_pnl: f64 = rows.iter().map(|r| r.2).sum();
+        let wins = rows.iter().filter(|r| r.3).count() as f64;
+        // Running equity → curve, peak, max drawdown.
+        let mut equity = 0.0;
+        let mut peak = f64::NEG_INFINITY;
+        let mut max_drawdown = 0.0;
+        let mut curve = Vec::with_capacity(rows.len());
+        for r in rows {
+            equity += r.2;
+            curve.push(equity);
+            if equity > peak {
+                peak = equity;
+            }
+            let dd = peak - equity;
+            if dd > max_drawdown {
+                max_drawdown = dd;
+            }
+        }
+        // Sharpe-like ratio over per-DAY P&L (de-correlates within-day bets).
+        let mut by_day: std::collections::BTreeMap<i64, f64> = std::collections::BTreeMap::new();
+        for r in rows {
+            let day = r.0.timestamp().div_euclid(86_400);
+            *by_day.entry(day).or_insert(0.0) += r.2;
+        }
+        let daily: Vec<f64> = by_day.values().copied().collect();
+        let sharpe = if daily.len() >= 2 {
+            let n = daily.len() as f64;
+            let mean = daily.iter().sum::<f64>() / n;
+            let var = daily.iter().map(|d| (d - mean).powi(2)).sum::<f64>() / (n - 1.0);
+            let sd = var.sqrt();
+            if sd > 0.0 { mean / sd } else { 0.0 }
+        } else {
+            0.0
+        };
+        Self {
+            bets,
+            total_pnl,
+            turnover,
+            roi_on_turnover: if turnover > 0.0 {
+                total_pnl / turnover
+            } else {
+                0.0
+            },
+            win_rate: if bets > 0 { wins / bets as f64 } else { 0.0 },
+            peak_equity: if peak.is_finite() { peak.max(0.0) } else { 0.0 },
+            max_drawdown,
+            sharpe,
+            curve,
+        }
+    }
 }
 
 /// One (wallet × slice) earned-trust statistic over resolved BUY fills. Numbers
@@ -2160,5 +2328,108 @@ mod honest_pnl_it {
             .await
             .unwrap();
         println!("entry_ask_it: set-once + resolved-guard + query-prefers-ask — OK");
+    }
+
+    /// Insert a RESOLVED consensus signal with an explicit resolution day-offset.
+    async fn seed_resolved_dayoffset(
+        pf: &PgPortfolio,
+        strategy: &str,
+        cond: &str,
+        p0: f64,
+        won: bool,
+        days_ago: i64,
+    ) {
+        sqlx::query(&format!(
+            "INSERT INTO consensus_signals \
+               (strategy, condition_id, outcome_index, n_backers, n_opposers, net_count, \
+                net_quality, mean_price, price_std, recency_mins, total_usd, score, tier, \
+                initial_market_price, resolved, outcome_won, first_detected_at, resolved_at) \
+             VALUES ($1,$2,0,5,0,5,5.0,$3,0.02,10,2000,1.0,'WATCH',$3,TRUE,$4, \
+                     NOW() - INTERVAL '{days_ago} days 2 hours', NOW() - INTERVAL '{days_ago} days')"
+        ))
+        .bind(strategy)
+        .bind(cond)
+        .bind(p0)
+        .bind(won)
+        .execute(&pf.pool)
+        .await
+        .expect("seed resolved signal");
+    }
+
+    #[tokio::test]
+    #[ignore = "requires a live Postgres at $DATABASE_URL with migrations applied"]
+    async fn paper_ledger_appends_idempotently_with_stats() {
+        let url = std::env::var("DATABASE_URL").expect("DATABASE_URL must be set");
+        let pool = sqlx::PgPool::connect(&url).await.expect("connect");
+        let pf = PgPortfolio::new(pool).await.expect("portfolio");
+        pf.run_migrations().await.expect("migrations");
+        sqlx::query("DELETE FROM consensus_signals WHERE condition_id LIKE 'hpled_%'")
+            .execute(&pf.pool)
+            .await
+            .unwrap();
+        sqlx::query("DELETE FROM honest_paper_ledger WHERE strategy = 'hp_led'")
+            .execute(&pf.pool)
+            .await
+            .unwrap();
+
+        // 3 resolved signals over 2 days, stake 100, haircut 1¢, fee 2% → entry 0.51.
+        //   L1 won  (day -1) pnl = 100×(0.49/0.51 − 0.02) =  +94.078
+        //   L2 lost (day -1) pnl = 100×(−0.51/0.51 − 0.02) = −102.000
+        //   L3 won  (day  0) pnl =  +94.078
+        seed_resolved_dayoffset(&pf, "hp_led", "hpled_1", 0.50, true, 1).await;
+        seed_resolved_dayoffset(&pf, "hp_led", "hpled_2", 0.50, false, 1).await;
+        seed_resolved_dayoffset(&pf, "hp_led", "hpled_3", 0.50, true, 0).await;
+
+        for c in ["hpled_1", "hpled_2", "hpled_3"] {
+            assert!(
+                pf.append_paper_bet("hp_led", c, 0, 100.0, 0.01, 0.02)
+                    .await
+                    .unwrap(),
+                "first append writes a ledger row for {c}"
+            );
+        }
+        // Idempotent: re-running resolution appends NOTHING.
+        for c in ["hpled_1", "hpled_2", "hpled_3"] {
+            assert!(
+                !pf.append_paper_bet("hp_led", c, 0, 100.0, 0.01, 0.02)
+                    .await
+                    .unwrap(),
+                "second append is a no-op for {c}"
+            );
+        }
+
+        let curve = pf.equity_curve("hp_led").await.unwrap();
+        assert_eq!(curve.len(), 3, "one curve point per bet");
+        // Running equity: +94.078, −7.922, +86.156.
+        assert!((curve[0].1 - 94.078).abs() < 0.01);
+        assert!((curve[1].1 - (-7.922)).abs() < 0.01);
+        assert!((curve[2].1 - 86.156).abs() < 0.01);
+
+        let s = pf.ledger_stats("hp_led").await.unwrap().expect("stats");
+        assert_eq!(s.bets, 3);
+        assert!((s.total_pnl - 86.156).abs() < 0.01, "final equity");
+        assert!((s.turnover - 300.0).abs() < 1e-6);
+        assert!((s.win_rate - 2.0 / 3.0).abs() < 1e-6);
+        // Peak +94.078 then trough −7.922 → max drawdown 102.0.
+        assert!((s.max_drawdown - 102.0).abs() < 0.01, "peak-to-trough $");
+        // Two distinct days ⇒ a finite Sharpe-like ratio.
+        assert!(
+            s.sharpe.is_finite() && s.sharpe > 0.0,
+            "sharpe {}",
+            s.sharpe
+        );
+
+        sqlx::query("DELETE FROM consensus_signals WHERE condition_id LIKE 'hpled_%'")
+            .execute(&pf.pool)
+            .await
+            .unwrap();
+        sqlx::query("DELETE FROM honest_paper_ledger WHERE strategy = 'hp_led'")
+            .execute(&pf.pool)
+            .await
+            .unwrap();
+        println!(
+            "ledger_it: 3 appends, idempotent re-run, equity/drawdown ${:.1}/${:.1}, sharpe {:.3} — OK",
+            s.total_pnl, s.max_drawdown, s.sharpe
+        );
     }
 }

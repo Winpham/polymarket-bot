@@ -62,6 +62,7 @@ services:
       MIN_LIQUIDITY_USD: ${MIN_LIQUIDITY_USD:-2000.0}         # liquidity floor (median sharp $) for a GO
       CAPTURE_ENTRY_ASK: ${CAPTURE_ENTRY_ASK:-false}          # capture real CLOB best-ask (else mid+haircut)
       ENTRY_ASK_MAX_PER_CYCLE: ${ENTRY_ASK_MAX_PER_CYCLE:-40} # cap book-ask fetches/cycle
+      LEDGER_STRATEGIES: ${LEDGER_STRATEGIES:-}               # paper ledger scope (empty = all non-blind)
       # Telegram is OPTIONAL — leave unset for ntfy-only (this deploy).
       # TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
       # TELEGRAM_CHAT_ID: ${TELEGRAM_CHAT_ID:-}

@@ -118,6 +118,16 @@ pub async fn housekeeping_cycle(
     let mut fills_resolved = 0u64;
     // Phase 2: bounded real book-ask capture (only when CAPTURE_ENTRY_ASK is on).
     let mut asks_captured = 0usize;
+    // Phase 3: paper equity ledger scope (empty = every non-blind strategy) + count.
+    let ledger_set: std::collections::HashSet<&str> = cfg
+        .ledger_strategies
+        .split(',')
+        .map(|s| s.trim())
+        .filter(|s| !s.is_empty())
+        .collect();
+    let should_ledger =
+        |strat: &str| strat != "_blind" && (ledger_set.is_empty() || ledger_set.contains(strat));
+    let mut ledger_appends = 0usize;
     for cond in &all_conds {
         tokio::time::sleep(Duration::from_millis(120)).await;
         let market = match crate::data::models::fetch_clob_market(http, cond).await {
@@ -138,6 +148,28 @@ pub async fn housekeeping_cycle(
                                     won,
                                     sig.is_sports,
                                 );
+                                // Phase 3: append the PAPER equity-ledger bet at the
+                                // realizable entry. Idempotent (ON CONFLICT DO NOTHING),
+                                // so re-resolution never double-appends. PAPER only.
+                                if should_ledger(&sig.strategy) {
+                                    match portfolio
+                                        .append_paper_bet(
+                                            &sig.strategy,
+                                            cond,
+                                            sig.outcome_index,
+                                            cfg.flat_stake,
+                                            cfg.exec_haircut,
+                                            cfg.fee_pct,
+                                        )
+                                        .await
+                                    {
+                                        Ok(true) => ledger_appends += 1,
+                                        Ok(false) => {}
+                                        Err(e) => tracing::warn!(
+                                            err = %e, signal_id = sig.id, "append_paper_bet failed"
+                                        ),
+                                    }
+                                }
                             }
                             Err(e) => {
                                 tracing::warn!(err = %e, signal_id = sig.id, "resolve_consensus_signal failed")
@@ -212,6 +244,12 @@ pub async fn housekeeping_cycle(
     }
     if asks_captured > 0 {
         tracing::info!(asks_captured, "Honest tracker: real book-asks captured");
+    }
+    if ledger_appends > 0 {
+        tracing::info!(
+            ledger_appends,
+            "Honest tracker: paper equity-ledger bets appended"
+        );
     }
     if fills_resolved > 0 {
         tracing::info!(fills_resolved, "Trader fills resolved");

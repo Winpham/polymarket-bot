@@ -286,6 +286,12 @@ pub struct CopyTradingConfig {
     #[config(env = "ENTRY_ASK_MAX_PER_CYCLE", default = 40)]
     pub entry_ask_max_per_cycle: usize,
 
+    /// Comma-separated strategies the PAPER equity ledger tracks. Empty = every
+    /// non-`_blind` strategy (the whole tracked family). Appends one paper bet at
+    /// each resolution; PAPER only, this system NEVER places real money.
+    #[config(env = "LEDGER_STRATEGIES", default = "")]
+    pub ledger_strategies: String,
+
     /// Port for the Prometheus metrics HTTP endpoint.
     #[config(env = "METRICS_PORT", default = 9001)]
     pub metrics_port: u16,
