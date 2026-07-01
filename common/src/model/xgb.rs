@@ -156,10 +156,19 @@ fn logit(p: f64) -> f64 {
     (p / (1.0 - p)).ln()
 }
 
-/// Companion calibration + band-baseline extras for the price-free `market_resid`
-/// arm, loaded from a `<model>.resid.json` sidecar. Kept entirely separate from
-/// [`XgbModel`] so the booster artifact stays untouched; the Python trainer bakes
-/// every field and the Rust side only looks up + interpolates.
+/// Companion calibration + band-baseline extras for the price-LEVEL-free
+/// `market_resid` arm, loaded from a `<model>.resid.json` sidecar. Kept entirely
+/// separate from [`XgbModel`] so the booster artifact stays untouched; the Python
+/// trainer bakes every field and the Rust side only looks up + interpolates.
+///
+/// NOTE on "price-LEVEL-free": the guarantee is TRAIN-time and rests SOLELY on the
+/// booster having no split on the price-LEVEL indices {0,8,9}. The [`Scaler`] does
+/// NOT neutralize price at inference — a held-constant (zero-IQR) price column gets
+/// `scale = 1` (see [`Scaler::transform`]), so a live price value would pass through
+/// if the booster ever split on it. [`XgbModel::assert_no_splits_on`] is what turns
+/// this into a hard, Rust-enforced guarantee. Price-SHAPE features {1,2,3,4}
+/// (momentum/volatility/rsi) are NOT held constant — this is price-LEVEL-free, not
+/// price-free.
 #[derive(Debug, Clone, Deserialize)]
 pub struct ResidExtras {
     /// `_blind` base rate `P(won)` per Postgres `width_bucket(p,0,1,5)` band 1..=5.
@@ -222,6 +231,10 @@ impl ResidExtras {
 /// Mirror Postgres `width_bucket(p, 0.0, 1.0, 5)`: `p < 0 → 0`, `p >= 1 → 6`, else
 /// `floor(p*5) + 1`. The consensus scoreboard buckets `mean_price` with exactly
 /// this call, so the arm must too (verified against Postgres in `width_bucket_parity`).
+///
+/// This buckets the price LEVEL only to pick the band's blind base rate — it is NOT
+/// a model feature and does not reintroduce price-level into inference (the
+/// price-LEVEL-free guarantee is about the booster's splits, see [`ResidExtras`]).
 pub fn pg_width_bucket5(p: f64) -> i32 {
     if p < 0.0 {
         0

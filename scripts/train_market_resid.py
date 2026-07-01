@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Train the PRICE-FREE residual market model for the `market_resid` arm.
+"""Train the PRICE-LEVEL-FREE residual market model for the `market_resid` arm.
 
 The crux this run rests on: the shipped market arm fires on `p_model - clob_mid`,
 which scores ~0 by construction because the scoreboard already subtracts the
@@ -8,12 +8,23 @@ That is a measurement of the price feature, NOT a refutation of the model.
 
 So we give the model a *fair* shot the gate actually rewards:
 
-  * PRICE-FREE: the 3 price-LEVEL features (yes_price, price_change_1d,
-    price_change_1w) are held CONSTANT (0.0) before fitting. XGBoost gains nothing
-    from a constant column, so the booster produces NO split nodes on those
-    indices — the stock pure-Rust XgbModel is then price-free at inference with the
-    full 29-wide positional layout preserved (no inference-time masking). We ASSERT
-    the exported booster has zero splits on the price indices.
+  * PRICE-LEVEL-FREE: the 3 price-LEVEL features (yes_price, price_change_1d,
+    price_change_1w — indices {0,8,9}) are held CONSTANT (0.0) before fitting.
+    XGBoost gains nothing from a constant column, so the booster produces NO split
+    nodes on those indices — the stock pure-Rust XgbModel is then price-level-free at
+    inference with the full 29-wide positional layout preserved (no inference-time
+    masking). We ASSERT the exported booster has zero splits on the price indices.
+    TWO NUANCES this label carries (do not overstate it as "price-free"):
+      (a) The guarantee is TRAIN-time and rests SOLELY on the booster having no split
+          on {0,8,9}. The RobustScaler does NOT neutralize price at inference — a
+          held-constant (zero-IQR) column gets scale=1, so a live price would pass
+          straight through if a split ever referenced it. The Rust side independently
+          re-checks the booster (assert_no_splits_on) before the arm goes live.
+      (b) The price-SHAPE features {1,2,3,4} = momentum_1h / momentum_24h /
+          volatility_24h / rsi are NOT held constant here — they remain by design and
+          are the closest residual proxies for direction (momentum can't rebuild the
+          level, but it can shadow it). See --price-free-level {level,shape} for the
+          fully price-blind ablation that tests whether a surplus leaks through them.
   * YES-ORIENTED: features always describe the index-0 (YES) token, and the label
     is `yes_won` (= outcome_won for a YES-side pick, else 1 - outcome_won). The arm
     converts p_yes -> p_consensus by outcome_index at inference. Training a YES
