@@ -100,6 +100,136 @@ fn html_escape(s: &str) -> String {
         .replace('"', "&quot;")
 }
 
+/// Phase 4 (deep leaderboard): "who's efficient below the whales." Runs the SAME
+/// belief-blind trust gate (`trust_verdict`) over the CAPTURED deep pool (rank >
+/// cutoff, `consensus_eligible = FALSE` — profiled but not voting) and surfaces
+/// any deep trader whose forward-measured surplus clears the gate. Read-only; NO
+/// new gate, and nothing here promotes — a deep trader earns a consensus vote only
+/// by a deliberate human flip. Renders only when a deep pool is actually tracked,
+/// and an honest NULL until it accrues resolved history.
+async fn render_deep_efficiency(portfolio: &PgPortfolio) -> String {
+    let traders = match portfolio.get_active_traders().await {
+        Ok(t) => t,
+        Err(_) => return String::new(),
+    };
+    // Provenance for the depth question: lower-cased wallet → (rank, eligible),
+    // leaderboard rows only (manual follows aren't part of hot-vs-deep).
+    let mut prov: std::collections::HashMap<String, (Option<i32>, bool)> =
+        std::collections::HashMap::new();
+    for t in &traders {
+        if t.source == "leaderboard" {
+            prov.insert(
+                t.proxy_wallet.to_lowercase(),
+                (t.rank, t.consensus_eligible),
+            );
+        }
+    }
+    // No deep (ineligible) traders ⇒ depth widening isn't on ⇒ nothing to render
+    // (keeps the board byte-identical at the top-40 default).
+    if !prov.values().any(|(_, eligible)| !*eligible) {
+        return String::new();
+    }
+
+    let scores = match crate::scanner::trader_trust::cached_slice_scores(
+        portfolio,
+        std::time::Duration::from_secs(30),
+    )
+    .await
+    {
+        Ok(s) => s,
+        Err(_) => return String::new(),
+    };
+    let mut by: std::collections::HashMap<String, Vec<_>> = std::collections::HashMap::new();
+    for s in scores {
+        by.entry(s.wallet.clone()).or_default().push(s);
+    }
+
+    struct DeepRow {
+        wallet: String,
+        rank: Option<i32>,
+        t: TraderTrust,
+    }
+    let mut deep_rows: Vec<DeepRow> = Vec::new();
+    let (mut hot_certified, mut deep_profiled, mut deep_certified) = (0usize, 0usize, 0usize);
+    for (w, slices) in by {
+        let (rank, eligible) = match prov.get(&w) {
+            Some(x) => *x,
+            None => continue, // manual / untracked — not part of the depth question
+        };
+        let t = trust_verdict(&slices);
+        if t.n_events == 0 {
+            continue;
+        }
+        if eligible {
+            if matches!(t.verdict, TrustVerdict::Trusted) {
+                hot_certified += 1;
+            }
+        } else {
+            deep_profiled += 1;
+            if matches!(t.verdict, TrustVerdict::Trusted) {
+                deep_certified += 1;
+            }
+            deep_rows.push(DeepRow { wallet: w, rank, t });
+        }
+    }
+
+    // Deep pool tracked but NO resolved history yet — the honest NULL.
+    if deep_profiled == 0 {
+        return String::from(
+            "<h1 style='margin-top:34px'>🔎 Efficient below the whales</h1>\
+             <p class=sub>Deep pool (rank &gt; cutoff) is captured but has no resolved history \
+             yet — the efficiency verdict pends forward accrual. NULL for now, by construction.</p>",
+        );
+    }
+
+    let key = |t: &TraderTrust| match t.verdict {
+        TrustVerdict::Trusted => 10.0 + t.lower_bound,
+        TrustVerdict::Indeterminate => t.surplus,
+        TrustVerdict::Avoid => -10.0 + t.surplus,
+    };
+    deep_rows.sort_by(|a, b| {
+        key(&b.t)
+            .partial_cmp(&key(&a.t))
+            .unwrap_or(std::cmp::Ordering::Equal)
+    });
+
+    let mut out = format!(
+        "<h1 style='margin-top:34px'>🔎 Efficient below the whales</h1>\
+         <p class=sub>Deep pool profiled: {deep_profiled} · certified (Trusted): {deep_certified} · \
+         top-50 certified: {hot_certified}. Same belief-blind gate; nothing here promotes.</p>\
+         <table><thead><tr><th>trust</th><th>wallet</th><th class=r>lb rank</th>\
+         <th class=r>events (N)</th><th class=r>surplus</th><th class=r>bound</th></tr></thead><tbody>",
+    );
+    for r in deep_rows.iter().take(25) {
+        let (marker, scls) = match r.t.verdict {
+            TrustVerdict::Trusted => ("✅", "pos"),
+            TrustVerdict::Avoid => ("⛔", "neg"),
+            TrustVerdict::Indeterminate => ("⏸", "muted"),
+        };
+        let bound = match r.t.verdict {
+            TrustVerdict::Avoid => pct(Some(r.t.upper_bound)),
+            TrustVerdict::Trusted => pct(Some(r.t.lower_bound)),
+            TrustVerdict::Indeterminate => "—".into(),
+        };
+        let rank = r.rank.map(|x| x.to_string()).unwrap_or_else(|| "—".into());
+        let short: String = r.wallet.chars().take(12).collect();
+        out.push_str(&format!(
+            "<tr><td>{marker}</td><td class=mono>{short}…</td><td class=r>{rank}</td>\
+             <td class=r>{ev}</td><td class=\"r {scls}\">{surplus}</td><td class=r>{bound}</td></tr>",
+            ev = r.t.n_events,
+            surplus = pct(Some(r.t.surplus)),
+        ));
+    }
+    out.push_str(
+        "</tbody></table>\
+         <p class=note>The deep pool is a CANDIDATE universe, not trust. A ✅ here means a \
+         sub-whale trader's forward surplus clears the same gate the top-50 face — a candidate to \
+         earn a consensus vote, by a deliberate human flip, never automatically. An empty/all-⏸ \
+         list is an honest finding: depth 51+ carries no certified edge the top-50 lacked (yet).</p>",
+    );
+    out
+}
+
 /// Render the earned trader-trust table ("who to actually follow"): each tracked
 /// trader with resolved fills, ranked by earned trust, with best/worst games,
 /// surplus ± bound, and capture completeness. Empty until fills resolve.
@@ -409,7 +539,9 @@ async fn render(portfolio: &PgPortfolio, capture_margin: f64, honest: HonestBoar
         .await
         .unwrap_or_default();
     let tracked = portfolio.count_tracked_traders().await.unwrap_or(0);
+    let (hot, deep) = portfolio.count_tracked_split().await.unwrap_or((0, 0));
     let n429 = polymarket_common::metrics::data_api_429_count();
+    let (poll_n, poll_ms) = polymarket_common::metrics::consensus_last_poll();
     // Phase 0 (capture margin): gate arms at the bar a *follower* actually captures —
     // `slippage_pct + fee_pct` — not the sharp's own edge (margin 0). Only edges whose
     // Bonferroni lower bound clears the fees+slippage cushion render ✅. This raises the
@@ -513,6 +645,9 @@ async fn render(portfolio: &PgPortfolio, capture_margin: f64, honest: HonestBoar
     // --- Earned trader trust ("who to actually follow") ---
     body.push_str(&render_trust(portfolio).await);
 
+    // --- Deep-pool efficiency ("who's efficient below the whales") ---
+    body.push_str(&render_deep_efficiency(portfolio).await);
+
     format!(
         "<!doctype html><html><head><meta charset=utf-8>\
          <meta name=viewport content='width=device-width,initial-scale=1'>\
@@ -528,7 +663,7 @@ async fn render(portfolio: &PgPortfolio, capture_margin: f64, honest: HonestBoar
          .accrual{{background:#11151b;border:1px solid #1c2128;border-radius:8px;padding:10px 12px;font-size:13px;color:#c3cad6;margin:0 0 18px}}\
          </style></head><body>\
          <h1>🤝 Consensus scoreboard</h1>\
-         <p class=sub>Tracking {tracked} top traders · {n} strategies forward · data-api 429s: {n429} · auto-refresh 30s</p>\
+         <p class=sub>Tracking {tracked} traders ({hot} hot · {deep} deep) · {n} strategies forward · last poll: {poll_n} in {poll_ms}ms · data-api 429s: {n429} · auto-refresh 30s</p>\
          {body}\
          <p class=note><b>surplus</b> = edge over the band-matched blind baseline (favorite-longshot-neutralized) — \
          the real signal. <b>lower bound</b> = Bonferroni-corrected 1-sided bound. ✅ = passes the belief-blind \
@@ -619,6 +754,96 @@ mod tests {
         println!("board_trust_render: trust table + market_resid accrual line render — OK");
 
         sqlx::query("DELETE FROM trader_fills WHERE wallet LIKE 'bd_%'")
+            .execute(&pool)
+            .await
+            .unwrap();
+    }
+
+    // Live: seed a deep (rank > cutoff, consensus_eligible=FALSE) trader with a
+    // Trusted forward record, render, and assert the "Efficient below the whales"
+    // panel surfaces it under the SAME belief-blind gate. `#[ignore]`d (needs DB).
+    #[tokio::test]
+    #[ignore = "requires a live Postgres at $DATABASE_URL with migrations applied"]
+    async fn board_deep_efficiency_render() {
+        let url = std::env::var("DATABASE_URL").expect("DATABASE_URL");
+        let pool = sqlx::PgPool::connect(&url).await.unwrap();
+        let pf = PgPortfolio::new(pool.clone()).await.unwrap();
+        pf.run_migrations().await.unwrap();
+        sqlx::query("DELETE FROM trader_fills WHERE wallet LIKE 'de\\_%'")
+            .execute(&pool)
+            .await
+            .unwrap();
+        sqlx::query("DELETE FROM followed_traders WHERE proxy_wallet LIKE 'de\\_%'")
+            .execute(&pool)
+            .await
+            .unwrap();
+
+        // Blind baseline population + a skilled deep wallet (75% over 60 events).
+        for (w, wins) in [("de_base", 100), ("de_deep", 45)] {
+            let n = if w == "de_base" { 200 } else { 60 };
+            for i in 0..n {
+                let won = i < wins;
+                let adv = (won as i32) as f64 - 0.5;
+                let cond = format!("{w}_c{i}");
+                sqlx::query(
+                    "INSERT INTO trader_fills (wallet, condition_id, outcome_index, outcome, side, \
+                       price, size_usd, title, slug, event_slug, is_sports, sport, ts, resolved, \
+                       outcome_won, advantage, resolved_at) \
+                     VALUES ($1,$2,0,'Yes','BUY',0.5,100,'t','s',$3,false,'other', \
+                       NOW()-INTERVAL '1 hour',true,$4,$5,NOW())",
+                )
+                .bind(w)
+                .bind(&cond)
+                .bind(&cond)
+                .bind(won)
+                .bind(adv)
+                .execute(&pool)
+                .await
+                .unwrap();
+            }
+        }
+        // Mark de_deep a DEEP (ineligible) leaderboard trader; de_base just supplies
+        // the baseline population and needs no provenance.
+        sqlx::query(
+            "INSERT INTO followed_traders (proxy_wallet, source, rank, active, consensus_eligible) \
+             VALUES ('de_deep', 'leaderboard', 120, TRUE, FALSE)",
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+
+        let html = render(
+            &pf,
+            0.0,
+            HonestBoardParams {
+                exec_haircut: 0.01,
+                fee_pct: 0.02,
+                flat_stake: 100.0,
+                capacity_frac: 0.05,
+                min_pilot_roi: 0.02,
+                pilot_min_events: 50,
+                pilot_min_regimes: 5,
+                regime_frac: 0.7,
+                min_liquidity_usd: 2000.0,
+            },
+        )
+        .await;
+        assert!(
+            html.contains("Efficient below the whales"),
+            "deep-efficiency panel renders once a deep pool is tracked"
+        );
+        assert!(html.contains("de_deep"), "the deep sharp is surfaced");
+        assert!(
+            html.contains("Deep pool profiled:"),
+            "the hot/deep aggregate verdict line renders"
+        );
+        println!("board_deep_efficiency_render: deep sharp surfaced under the trust gate — OK");
+
+        sqlx::query("DELETE FROM trader_fills WHERE wallet LIKE 'de\\_%'")
+            .execute(&pool)
+            .await
+            .unwrap();
+        sqlx::query("DELETE FROM followed_traders WHERE proxy_wallet LIKE 'de\\_%'")
             .execute(&pool)
             .await
             .unwrap();

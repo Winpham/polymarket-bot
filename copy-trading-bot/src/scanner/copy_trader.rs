@@ -9,16 +9,31 @@ use chrono::{DateTime, Utc};
 use futures_util::future::join_all;
 use reqwest::Client;
 use serde::Deserialize;
+use std::sync::Arc;
 use std::time::Duration;
+use tokio::sync::Semaphore;
 
 use crate::storage::postgres::{NewCopyTradeEvent, PgPortfolio};
 
 /// Trades older than this are skipped — price has likely moved too far.
 const STALE_TRADE_SECS: i64 = 300; // 5 minutes
 
+/// Max concurrent `/activity` polls in the legacy `detect_new_trades` fan-out.
+/// Mirrors the consensus cycle's `CONSENSUS_MAX_CONCURRENCY` default so widening
+/// the tracked universe can never turn `COPY_TRADE_ENABLED=true` into a burst of
+/// hundreds of simultaneous requests (429 storm). Strict hardening, depth-agnostic.
+const COPY_TRADE_MAX_CONCURRENCY: usize = 8;
+
 const DATA_API: &str = "https://data-api.polymarket.com";
 /// Default HTTP timeout for all data-API calls.
 const REQUEST_TIMEOUT: Duration = Duration::from_secs(15);
+/// Server-side page size for the leaderboard endpoint. `limit` is hard-capped at
+/// 50 server-side (verified 2026-07-01: sending `limit=100` returns 50), so depth
+/// is achieved by paginating with `offset`, not by raising `limit`.
+const LEADERBOARD_PAGE_SIZE: usize = 50;
+/// Politeness delay between successive leaderboard pages so a deep (top-500) fetch
+/// paces itself instead of bursting 10 back-to-back GETs into the data-api.
+const LEADERBOARD_PAGE_DELAY: Duration = Duration::from_millis(150);
 /// Number of traders shown per period section in the inline leaderboard reply.
 const LEADERBOARD_SECTION_LIMIT: usize = 5;
 
@@ -287,6 +302,127 @@ pub async fn fetch_leaderboard_n(
         .collect())
 }
 
+/// Fetch a single leaderboard page (`offset..offset+PAGE_SIZE`) for a period.
+/// Read-only. A 429 surfaces as `Err` (and is counted) so a rate-limited page
+/// never silently truncates the paginated universe — the caller aborts the whole
+/// fetch and the refresh leaves the universe untouched, retrying next cycle.
+async fn fetch_leaderboard_page(
+    http: &Client,
+    time_period: &str,
+    offset: usize,
+) -> Result<Vec<LeaderboardRaw>> {
+    let url = format!(
+        "{DATA_API}/v1/leaderboard?timePeriod={time_period}&limit={LEADERBOARD_PAGE_SIZE}&offset={offset}"
+    );
+    let resp = http
+        .get(&url)
+        .timeout(REQUEST_TIMEOUT)
+        .send()
+        .await
+        .context("leaderboard page request failed")?;
+
+    // Mirror the activity-poll 429 discipline: surface as Err (counted) rather
+    // than parse an empty/partial body and silently drop deeper ranks.
+    if resp.status() == reqwest::StatusCode::TOO_MANY_REQUESTS {
+        crate::metrics::record_data_api_429();
+        return Err(anyhow::anyhow!(
+            "data-api 429 (rate-limited) on leaderboard offset={offset}"
+        ));
+    }
+
+    let entries: Vec<LeaderboardEntry> = resp
+        .error_for_status()
+        .context("leaderboard page returned non-2xx")?
+        .json()
+        .await
+        .context("leaderboard page JSON parse failed")?;
+
+    // Rank is re-derived globally in `merge_leaderboard_pages`; leave it 0 here.
+    Ok(entries
+        .into_iter()
+        .map(|e| LeaderboardRaw {
+            pnl: e.pnl_f64(),
+            volume: e.volume_f64(),
+            username: e.name.filter(|s| !s.is_empty()),
+            wallet: e.proxy_wallet,
+            rank: 0,
+        })
+        .collect())
+}
+
+/// Merge paginated leaderboard rows into a single PnL-descending, globally-ranked
+/// universe: dedup by wallet (keep the higher-PnL sighting), sort PnL desc, cap at
+/// `depth`, and re-derive `rank = i+1` across the merged pool. Pure — unit-tested.
+fn merge_leaderboard_pages(rows: Vec<LeaderboardRaw>, depth: usize) -> Vec<LeaderboardRaw> {
+    use std::collections::HashMap;
+    let mut by_wallet: HashMap<String, LeaderboardRaw> = HashMap::new();
+    for r in rows {
+        by_wallet
+            .entry(r.wallet.clone())
+            .and_modify(|cur| {
+                // Overlapping pages shouldn't happen with clean offset pagination,
+                // but if a wallet is seen twice keep the higher-PnL (better) row.
+                if r.pnl > cur.pnl {
+                    *cur = r.clone();
+                }
+            })
+            .or_insert(r);
+    }
+
+    let mut merged: Vec<LeaderboardRaw> = by_wallet.into_values().collect();
+    merged.sort_by(|a, b| {
+        b.pnl
+            .partial_cmp(&a.pnl)
+            .unwrap_or(std::cmp::Ordering::Equal)
+    });
+    merged.truncate(depth);
+    for (i, r) in merged.iter_mut().enumerate() {
+        r.rank = (i + 1) as i32;
+    }
+    merged
+}
+
+/// Fetch the top `depth` leaderboard traders for a period via `offset` pagination
+/// (`offset = 0, 50, 100, …`), up to `depth` rows or a short/empty page (board
+/// end). Additive sibling to [`fetch_leaderboard_n`] — the deep-universe path.
+/// Paces requests, surfaces a 429 as `Err` (no silent truncation), dedups by
+/// wallet, and re-derives global PnL-descending rank. Read-only.
+pub async fn fetch_leaderboard_paged(
+    http: &Client,
+    time_period: &str,
+    depth: usize,
+) -> Result<Vec<LeaderboardRaw>> {
+    let depth = depth.max(1);
+    let mut rows: Vec<LeaderboardRaw> = Vec::with_capacity(depth);
+    let mut offset = 0usize;
+    let mut pages = 0usize;
+
+    while rows.len() < depth {
+        if offset > 0 {
+            tokio::time::sleep(LEADERBOARD_PAGE_DELAY).await;
+        }
+        let page = fetch_leaderboard_page(http, time_period, offset).await?;
+        let got = page.len();
+        rows.extend(page);
+        pages += 1;
+        // Board end: a short (or empty) page means no deeper ranks exist.
+        if got < LEADERBOARD_PAGE_SIZE {
+            break;
+        }
+        offset += LEADERBOARD_PAGE_SIZE;
+    }
+
+    let merged = merge_leaderboard_pages(rows, depth);
+    tracing::info!(
+        period = %time_period,
+        depth,
+        pages,
+        fetched = merged.len(),
+        "Leaderboard paged fetch"
+    );
+    Ok(merged)
+}
+
 /// Format a slice of [`LeaderboardDisplay`] entries as a single period section
 /// (no header or footer — used internally by [`format_multi_leaderboard`]).
 ///
@@ -489,7 +625,10 @@ impl CopyTraderMonitor {
 
         tracing::info!(count = traders.len(), "Polling active traders");
 
-        // Poll all traders concurrently.
+        // Poll all traders concurrently, but BOUNDED by a semaphore so a large
+        // tracked universe can't burst hundreds of simultaneous /activity requests
+        // into the data-api (429 storm). Mirrors the consensus-cycle fan-out.
+        let sem = Arc::new(Semaphore::new(COPY_TRADE_MAX_CONCURRENCY.max(1)));
         let poll_futures = traders.iter().map(|trader| {
             let since = trader
                 .last_checked_at
@@ -505,7 +644,9 @@ impl CopyTraderMonitor {
                 since = %since.format("%Y-%m-%d %H:%M"),
                 "Polling trader"
             );
+            let sem = Arc::clone(&sem);
             async move {
+                let _permit = sem.acquire_owned().await;
                 let result = self.poll_trader_activity(&trader.proxy_wallet, since).await;
                 (trader, name, result)
             }
@@ -763,5 +904,147 @@ mod tests {
             assert!(t.price > 0.0 && t.price < 1.0, "price must be in (0,1)");
             assert!(t.size_usd >= 0.0, "size_usd must be non-negative");
         }
+    }
+
+    fn raw(wallet: &str, pnl: f64) -> LeaderboardRaw {
+        LeaderboardRaw {
+            wallet: wallet.to_string(),
+            username: Some(wallet.to_string()),
+            rank: 0,
+            pnl,
+            volume: pnl * 2.0,
+        }
+    }
+
+    /// Three contiguous pages merge into one PnL-descending pool with contiguous
+    /// global rank and no gaps — the core offset-pagination invariant.
+    #[test]
+    fn test_merge_pages_contiguous_rank() {
+        // Page 0 (ranks 1-3), page 1 (4-6), page 2 (7-9), each PnL-descending and
+        // globally continuous (no overlap), as the live API returns them.
+        let rows = vec![
+            raw("0xa", 900.0),
+            raw("0xb", 800.0),
+            raw("0xc", 700.0),
+            raw("0xd", 600.0),
+            raw("0xe", 500.0),
+            raw("0xf", 400.0),
+            raw("0xg", 300.0),
+            raw("0xh", 200.0),
+            raw("0xi", 100.0),
+        ];
+        let merged = merge_leaderboard_pages(rows, 100);
+        assert_eq!(merged.len(), 9);
+        // Contiguous rank 1..=9, PnL strictly descending.
+        for (i, r) in merged.iter().enumerate() {
+            assert_eq!(r.rank, (i + 1) as i32, "rank must be contiguous i+1");
+        }
+        assert_eq!(merged[0].wallet, "0xa");
+        assert_eq!(merged[8].wallet, "0xi");
+        for w in merged.windows(2) {
+            assert!(w[0].pnl >= w[1].pnl, "PnL must be descending");
+        }
+    }
+
+    /// A wallet appearing on two pages (overlap) is deduped to a single row,
+    /// keeping the higher-PnL sighting; global rank stays contiguous.
+    #[test]
+    fn test_merge_pages_dedup_by_wallet() {
+        let rows = vec![
+            raw("0xa", 900.0),
+            raw("0xb", 800.0),
+            raw("0xa", 950.0), // duplicate wallet, higher PnL — should win
+            raw("0xc", 700.0),
+        ];
+        let merged = merge_leaderboard_pages(rows, 100);
+        assert_eq!(merged.len(), 3, "duplicate wallet collapsed to one row");
+        assert_eq!(merged[0].wallet, "0xa");
+        assert_eq!(merged[0].pnl, 950.0, "kept the higher-PnL sighting");
+        for (i, r) in merged.iter().enumerate() {
+            assert_eq!(r.rank, (i + 1) as i32);
+        }
+    }
+
+    /// `depth` caps the merged pool and re-ranks over the survivors only.
+    #[test]
+    fn test_merge_pages_depth_cap() {
+        let rows = vec![
+            raw("0xa", 900.0),
+            raw("0xb", 800.0),
+            raw("0xc", 700.0),
+            raw("0xd", 600.0),
+            raw("0xe", 500.0),
+        ];
+        let merged = merge_leaderboard_pages(rows, 3);
+        assert_eq!(merged.len(), 3, "capped at depth");
+        assert_eq!(merged[2].wallet, "0xc");
+        assert_eq!(merged[2].rank, 3);
+    }
+
+    /// SCALE-GATE MEASUREMENT (Phase 2): poll a real depth-200 universe through the
+    /// same semaphore-bounded fan-out the consensus cycle uses, and report the
+    /// wall-clock + 429 count. This is the regression surface — if this stays well
+    /// inside the ~120s cycle window with zero 429s, the semaphore alone is the
+    /// poll-cadence budget and no cadence tiering is needed.
+    #[tokio::test]
+    #[ignore] // hits real API ~200 times; run explicitly to read the number
+    async fn measure_deep_poll_load_live() {
+        let http = Client::new();
+        let universe = fetch_leaderboard_paged(&http, "WEEK", 200).await.unwrap();
+        let wallets: Vec<String> = universe.iter().map(|e| e.wallet.clone()).collect();
+        let n = wallets.len();
+        let monitor = CopyTraderMonitor::new(http);
+        let since = Utc::now() - chrono::Duration::hours(48);
+
+        let before_429 = crate::metrics::data_api_429_count();
+        let t0 = std::time::Instant::now();
+        let sem = Arc::new(Semaphore::new(COPY_TRADE_MAX_CONCURRENCY.max(1)));
+        let polls = wallets.iter().map(|w| {
+            let sem = Arc::clone(&sem);
+            let monitor = &monitor;
+            async move {
+                let _permit = sem.acquire_owned().await;
+                monitor.poll_trader_activity(w, since).await.is_ok()
+            }
+        });
+        let results = join_all(polls).await;
+        let elapsed = t0.elapsed();
+        let ok = results.iter().filter(|r| **r).count();
+        let n429 = crate::metrics::data_api_429_count() - before_429;
+
+        println!(
+            "SCALE-GATE: polled {n} deep traders @ concurrency {COPY_TRADE_MAX_CONCURRENCY} in \
+             {:.1}s ({ok} ok, {} failed), data-api 429s: {n429}",
+            elapsed.as_secs_f64(),
+            n - ok,
+        );
+        // The fan-out must clear the universe well inside a ~120s consensus cycle.
+        assert!(
+            elapsed.as_secs() < 120,
+            "depth-200 poll fan-out took {:.1}s — approaching the cycle window; \
+             cadence tiering would be required",
+            elapsed.as_secs_f64()
+        );
+    }
+
+    #[tokio::test]
+    #[ignore] // hits real API
+    async fn test_fetch_leaderboard_paged_live() {
+        let http = Client::new();
+        let entries = fetch_leaderboard_paged(&http, "WEEK", 120).await.unwrap();
+        assert!(entries.len() >= 100, "should page past the 50-row cap");
+        // Ranks contiguous from 1, PnL descending — proves offset pagination.
+        for (i, r) in entries.iter().enumerate() {
+            assert_eq!(r.rank, (i + 1) as i32);
+        }
+        for w in entries.windows(2) {
+            assert!(w[0].pnl >= w[1].pnl, "PnL descending across page seams");
+        }
+        // No duplicate wallets across pages.
+        let mut wallets: Vec<&str> = entries.iter().map(|e| e.wallet.as_str()).collect();
+        let n = wallets.len();
+        wallets.sort_unstable();
+        wallets.dedup();
+        assert_eq!(wallets.len(), n, "no duplicate wallets across page seams");
     }
 }
