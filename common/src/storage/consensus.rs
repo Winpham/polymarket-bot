@@ -239,9 +239,11 @@ impl PgPortfolio {
                (strategy, condition_id, outcome_index, outcome_label, title, slug, event_slug, \
                 is_sports, observed_votes, n_backers, n_opposers, net_count, net_quality, \
                 mean_price, price_std, recency_mins, total_usd, best_backer_rank, score, tier, \
-                backers, initial_n_backers, initial_net_count, initial_mean_price, last_updated_at) \
+                backers, initial_n_backers, initial_net_count, initial_mean_price, \
+                initial_price_std, initial_recency_mins, initial_total_usd, \
+                initial_best_backer_rank, last_updated_at) \
              VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21, \
-                     $10,$12,$14,NOW()) \
+                     $10,$12,$14,$15,$16,$17,$18,NOW()) \
              ON CONFLICT (strategy, condition_id, outcome_index) DO UPDATE SET \
                outcome_label    = EXCLUDED.outcome_label, \
                title            = EXCLUDED.title, \
@@ -3450,6 +3452,107 @@ mod scoreboard_at_fire_it {
             .unwrap();
         println!(
             "scoreboard_at_fire_it: edge {edge:+.2} uses initial_mean_price despite drifted mean_price — OK"
+        );
+    }
+}
+
+// Live-DB test for the AT-FIRE consensus-shape capture (slice study, migration 036):
+// σ / recency / liquidity / best-rank must be set ONCE at first insert and survive a
+// drifted re-upsert untouched, while the current columns keep following the window.
+//
+//   DATABASE_URL=postgres://bot:bot@localhost:55432/polymarket \
+//     cargo test -p polymarket-common atfire_shape -- --ignored --nocapture
+#[cfg(test)]
+mod atfire_shape_it {
+    use super::*;
+
+    fn sig(price_std: f64, recency: i64, usd: f64, rank: Option<i32>) -> NewConsensusSignal {
+        NewConsensusSignal {
+            strategy: "afs_str".into(),
+            condition_id: "afs_c1".into(),
+            outcome_index: 0,
+            outcome_label: "Yes".into(),
+            title: "AFS test".into(),
+            slug: "afs-test".into(),
+            event_slug: Some("afs_ev1".into()),
+            is_sports: true,
+            observed_votes: serde_json::json!([]),
+            n_backers: 3,
+            n_opposers: 0,
+            net_count: 3,
+            net_quality: 3.0,
+            mean_price: 0.70,
+            price_std,
+            recency_mins: recency,
+            total_usd: usd,
+            best_backer_rank: rank,
+            score: 1.0,
+            tier: "WATCH".into(),
+            backers_json: serde_json::json!([]),
+        }
+    }
+
+    #[tokio::test]
+    #[ignore = "requires a live Postgres at $DATABASE_URL with migrations applied"]
+    async fn initial_shape_is_set_once_and_upsert_proof() {
+        let url = std::env::var("DATABASE_URL").expect("DATABASE_URL must be set");
+        let pool = sqlx::PgPool::connect(&url).await.expect("connect");
+        let pf = PgPortfolio::new(pool).await.expect("portfolio");
+        pf.run_migrations().await.expect("migrations");
+
+        sqlx::query("DELETE FROM consensus_signals WHERE condition_id = 'afs_c1'")
+            .execute(&pf.pool)
+            .await
+            .unwrap();
+
+        // Fire: σ 0.03, recency 12m, $1,500, best rank 7 — then a drifted re-upsert.
+        pf.upsert_consensus_signal(&sig(0.03, 12, 1500.0, Some(7)))
+            .await
+            .expect("first upsert");
+        pf.upsert_consensus_signal(&sig(0.09, 240, 9000.0, Some(31)))
+            .await
+            .expect("second upsert");
+
+        let (i_std, i_rec, i_usd, i_rank, c_std, c_rec, c_usd, c_rank): (
+            f64,
+            i64,
+            f64,
+            i32,
+            f64,
+            i64,
+            f64,
+            i32,
+        ) = sqlx::query_as(
+            "SELECT initial_price_std, initial_recency_mins, initial_total_usd, \
+                    initial_best_backer_rank, price_std, recency_mins, total_usd, \
+                    best_backer_rank \
+             FROM consensus_signals WHERE condition_id = 'afs_c1'",
+        )
+        .fetch_one(&pf.pool)
+        .await
+        .expect("row back");
+
+        assert!(
+            (i_std - 0.03).abs() < 1e-9 && i_rec == 12 && (i_usd - 1500.0).abs() < 1e-9,
+            "initial shape must keep the AT-FIRE values (got σ {i_std}, rec {i_rec}, usd {i_usd})"
+        );
+        assert_eq!(i_rank, 7, "initial best rank must keep the at-fire value");
+        assert!(
+            (c_std - 0.09).abs() < 1e-9 && c_rec == 240 && (c_usd - 9000.0).abs() < 1e-9,
+            "current shape must follow the drifted window"
+        );
+        assert_eq!(
+            c_rank, 31,
+            "current best rank must follow the drifted window"
+        );
+
+        sqlx::query("DELETE FROM consensus_signals WHERE condition_id = 'afs_c1'")
+            .execute(&pf.pool)
+            .await
+            .unwrap();
+        println!(
+            "atfire_shape_it: initial σ/recency/usd/rank {i_std}/{i_rec}/{i_usd}/{i_rank} \
+             survived a drifted re-upsert ({c_std}/{c_rec}/{c_usd}/{c_rank}) — OK"
         );
     }
 }
