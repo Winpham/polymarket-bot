@@ -75,6 +75,11 @@ services:
       #     so raising depth is byte-for-byte non-regressive for consensus. ---
       TRACK_DEPTH: ${TRACK_DEPTH:-40}                          # >50 paginates; deep ranks captured+profiled, not voting
       TRACK_CONSENSUS_RANK_CUTOFF: ${TRACK_CONSENSUS_RANK_CUTOFF:-40} # rank ≤ this votes; deeper is candidate-only
+      # --- winner alerting (D10): which strategies push, and whether their
+      #     WATCH-tier (net=3) fires push too. Defaults = incumbent behavior. ---
+      CONSENSUS_ALERT_STRATEGIES: ${CONSENSUS_ALERT_STRATEGIES:-}   # empty = built-in flags (strict only)
+      CONSENSUS_ALERT_WATCH_FOR: ${CONSENSUS_ALERT_WATCH_FOR:-}     # empty = WATCH never pushes
+      CONSENSUS_ALERT_CROSS_DEDUP_MINS: ${CONSENSUS_ALERT_CROSS_DEDUP_MINS:-60} # one push per market across strategies
       # --- optional consensus tuning (sensible defaults baked in) ---
       # TRACK_TOP_N: "40"
       # TRACK_PERIODS: "WEEK,MONTH"

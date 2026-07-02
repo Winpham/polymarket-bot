@@ -127,6 +127,26 @@ pub struct CopyTradingConfig {
     #[config(env = "CONSENSUS_STRATEGIES", default = "")]
     pub consensus_strategies: String,
 
+    /// Comma list overriding WHICH strategies push alerts, e.g.
+    /// "strict,favorite,elite_fresh_fav". Empty = the portfolio's built-in
+    /// alerting flags (today: `strict` only) — byte-identical default.
+    #[config(env = "CONSENSUS_ALERT_STRATEGIES", default = "")]
+    pub consensus_alert_strategies: String,
+
+    /// Comma list of strategies whose WATCH-tier fires ALSO push. The certified
+    /// winners' edge lives at net=3 (WATCH), which the tier gate otherwise
+    /// drops. Empty = WATCH never pushes (today's behavior).
+    #[config(env = "CONSENSUS_ALERT_WATCH_FOR", default = "")]
+    pub consensus_alert_watch_for: String,
+
+    /// Cross-STRATEGY alert dedup window (minutes): skip a push when a
+    /// DIFFERENT strategy already alerted the same (market, outcome) within
+    /// this window, so overlapping winners produce one push per market. Same-
+    /// strategy re-alerts (tier upgrade / net delta) are exempt, preserving
+    /// `strict`'s incumbent behavior exactly. 0 disables.
+    #[config(env = "CONSENSUS_ALERT_CROSS_DEDUP_MINS", default = 60)]
+    pub consensus_alert_cross_dedup_mins: i64,
+
     /// L1: use incremental vote-window ingestion — poll only the delta since each
     /// trader's cursor and rebuild books from the stored trailing window, instead
     /// of re-polling the full window every cycle. Verified-equivalent to the legacy

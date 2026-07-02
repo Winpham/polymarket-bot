@@ -326,6 +326,38 @@ impl PgPortfolio {
         Ok(())
     }
 
+    /// Cross-STRATEGY alert dedup: has any OTHER strategy already pushed an
+    /// alert for this (condition, outcome) within the last `mins` minutes?
+    /// Same-strategy history is deliberately excluded so a strategy's own
+    /// re-alert logic (tier upgrade / net delta) is untouched — with a single
+    /// alerting strategy this can never fire, keeping the incumbent behavior
+    /// byte-identical.
+    pub async fn recent_alert_by_other_strategy(
+        &self,
+        condition_id: &str,
+        outcome_index: i32,
+        strategy: &str,
+        mins: i64,
+    ) -> Result<bool> {
+        let (exists,): (bool,) = sqlx::query_as(
+            "SELECT EXISTS ( \
+                 SELECT 1 FROM consensus_alerts a \
+                 JOIN consensus_signals s ON s.id = a.signal_id \
+                 WHERE s.condition_id = $1 AND s.outcome_index = $2 \
+                   AND a.strategy <> $3 \
+                   AND a.sent_at > NOW() - make_interval(mins => $4::int) \
+             )",
+        )
+        .bind(condition_id)
+        .bind(outcome_index)
+        .bind(strategy)
+        .bind(mins as i32)
+        .fetch_one(&self.pool)
+        .await
+        .context("recent_alert_by_other_strategy")?;
+        Ok(exists)
+    }
+
     /// Build a `/consensus` summary of the most recent strong/elite signals for
     /// one strategy (default the alerting `strict`, so the list reflects pushes).
     pub async fn consensus_summary(&self, strategy: &str, limit: i64) -> Result<String> {
