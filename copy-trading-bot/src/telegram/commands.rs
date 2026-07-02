@@ -69,7 +69,9 @@ pub async fn handle_command(
             match portfolio.consensus_scoreboard_by_strategy().await {
                 Ok(rows) if rows.iter().any(|r| r.resolved > 0) => {
                     use crate::scanner::enrich::family;
-                    use crate::scanner::promotion::{PromotionParams, promotion_verdict};
+                    use crate::scanner::promotion::{
+                        PromotionParams, promotion_verdict, selection_null_p_for,
+                    };
                     // Bonferroni denominator PER FAMILY: experimental arms are
                     // corrected among themselves, never tightening core's bar.
                     let mut fam_n: std::collections::HashMap<&str, usize> =
@@ -97,9 +99,11 @@ pub async fn handle_command(
                         let n_fam = fam_n.get(family(&r.strategy)).copied().unwrap_or(1);
                         let v = promotion_verdict(
                             r.distinct_events,
+                            r.distinct_days,
                             r.surplus,
                             r.surplus_sd,
                             n_fam,
+                            selection_null_p_for(&r.strategy),
                             &pp,
                         );
                         let flag = if v.promotable { "✅" } else { "⏳" };
@@ -437,6 +441,7 @@ mod tests {
             slice_kind: kind.into(),
             slice_key: key.into(),
             n_events: n,
+            n_days: n, // one day per event ⇒ no clustering deflation in the fixture
             n_resolved: n,
             surplus,
             surplus_sd: sd,
@@ -481,6 +486,7 @@ mod tests {
                 slice_kind: "overall".into(),
                 slice_key: "".into(),
                 n_events: 60,
+                n_days: 60,
                 n_resolved: 60,
                 surplus: Some(0.15),
                 surplus_sd: Some(0.08),
@@ -493,6 +499,7 @@ mod tests {
                 slice_kind: "overall".into(),
                 slice_key: "".into(),
                 n_events: 10,
+                n_days: 10,
                 n_resolved: 10,
                 surplus: Some(0.05),
                 surplus_sd: Some(0.2),

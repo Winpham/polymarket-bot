@@ -57,7 +57,7 @@ pub enum TrustVerdict {
     Trusted,
     /// Not enough events, or the bound straddles the margin.
     Indeterminate,
-    /// Surplus UPPER bound is below `−margin` — demonstrably worse than blind.
+    /// Surplus UPPER bound is below `0` — demonstrably worse than blind.
     Avoid,
 }
 
@@ -101,8 +101,10 @@ pub struct TraderTrust {
 }
 
 /// Compute one wallet's trust verdict from its slice stats, using the default
-/// promotion thresholds (≥30 events, margin 0, α 0.05). `slices` must all belong
-/// to the same wallet.
+/// promotion thresholds (≥30 events, the capture-cost margin, α 0.05). `slices`
+/// must all belong to the same wallet. "Trusted" now means the surplus lower
+/// bound clears the real cost cushion (`DEFAULT_PROMOTION_MARGIN`), NOT a
+/// literal-zero baseline — closing the "Trusted vs 0 baseline" false-promote.
 pub fn trust_verdict(slices: &[TraderSliceStat]) -> TraderTrust {
     trust_verdict_with(slices, &PromotionParams::default())
 }
@@ -159,11 +161,22 @@ pub fn trust_verdict_with(slices: &[TraderSliceStat], p: &PromotionParams) -> Tr
         };
     }
 
+    // Effective N deflates the event count to distinct fill-DAYS (within-day
+    // correlation): a wallet whose events all fall on one correlated weekend
+    // gets an SE keyed on ~1 day, not N independent events — so a single
+    // clustered weekend can't certify. Clamp low ⇒ unknown/zero day count
+    // degrades to 1 (fail-closed); clamp high ⇒ it can only DEFLATE N.
+    let eff_n = o.n_days.clamp(1, o.n_events.max(1));
+
     // RAW event-clustered surplus + sd — no point shrinkage at the verdict.
-    let (lo, hi) = surplus_bounds(o.n_events, surplus, o.surplus_sd, n_comparisons, p);
+    let (lo, hi) = surplus_bounds(eff_n, surplus, o.surplus_sd, n_comparisons, p);
     let verdict = if lo > p.margin {
         TrustVerdict::Trusted
-    } else if hi < -p.margin {
+    } else if hi < 0.0 {
+        // Avoid: upper bound below ZERO (demonstrably worse than blind). Pinned
+        // at 0, NOT −margin: raising the Trusted margin above 0 must never make
+        // the Avoid warning RARER. With the old margin-0 default this was
+        // `hi < -0` ≡ `hi < 0`, so this preserves today's Avoid behavior exactly.
         TrustVerdict::Avoid
     } else {
         TrustVerdict::Indeterminate
@@ -193,11 +206,28 @@ mod tests {
         surplus: Option<f64>,
         sd: Option<f64>,
     ) -> TraderSliceStat {
+        // Default: one distinct day per event (no clustering deflation), so the
+        // legacy tests exercise the event-level N. Cluster tests set n_days
+        // explicitly via `slice_days`.
+        slice_days(wallet, kind, key, n_events, n_events, surplus, sd)
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn slice_days(
+        wallet: &str,
+        kind: &str,
+        key: &str,
+        n_events: i64,
+        n_days: i64,
+        surplus: Option<f64>,
+        sd: Option<f64>,
+    ) -> TraderSliceStat {
         TraderSliceStat {
             wallet: wallet.into(),
             slice_kind: kind.into(),
             slice_key: key.into(),
             n_events,
+            n_days,
             n_resolved: n_events,
             surplus,
             surplus_sd: sd,
@@ -242,6 +272,74 @@ mod tests {
         let slices = vec![slice("w", "overall", "", 80, Some(0.0), Some(0.08))];
         let t = trust_verdict(&slices);
         assert_eq!(t.verdict, TrustVerdict::Indeterminate);
+    }
+
+    #[test]
+    fn hairline_surplus_no_cost_cushion_is_not_trusted() {
+        // margin-0.0 regression: overall +2% surplus, tight sd 1% over 60
+        // events → lo ≈ +1.8% > 0 (the OLD margin-0 default would certify this
+        // wallet "Trusted") but < the 3% capture cushion ⇒ INDETERMINATE now.
+        let slices = vec![slice("w", "overall", "", 60, Some(0.02), Some(0.01))];
+        let t = trust_verdict(&slices);
+        assert!(
+            t.lower_bound > 0.0,
+            "beats blind by a hair: lo={}",
+            t.lower_bound
+        );
+        assert_eq!(
+            t.verdict,
+            TrustVerdict::Indeterminate,
+            "lo={}",
+            t.lower_bound
+        );
+    }
+
+    #[test]
+    fn clustered_weekend_is_not_trusted() {
+        // A big apparent surplus (+10%) but every event on one correlated
+        // weekend (2 distinct days) → effective N 2 blows up the SE ⇒ the
+        // lower bound collapses below the margin ⇒ INDETERMINATE, not Trusted.
+        let clustered = vec![slice_days(
+            "w",
+            "overall",
+            "",
+            60,
+            2,
+            Some(0.10),
+            Some(0.10),
+        )];
+        assert_eq!(
+            trust_verdict(&clustered).verdict,
+            TrustVerdict::Indeterminate
+        );
+        // The IDENTICAL surplus/sd spread over 60 distinct days IS Trusted —
+        // the deflation discriminates, it doesn't blanket-reject.
+        let spread = vec![slice_days(
+            "w",
+            "overall",
+            "",
+            60,
+            60,
+            Some(0.10),
+            Some(0.10),
+        )];
+        assert_eq!(trust_verdict(&spread).verdict, TrustVerdict::Trusted);
+    }
+
+    #[test]
+    fn avoid_between_neg_margin_and_zero_is_preserved() {
+        // Upper bound ≈ −1.2% — worse than blind, but NOT below −3%. Pinning
+        // the Avoid test at 0 (not −margin) keeps this an Avoid even though the
+        // Trusted margin rose to 3%; a wider Trusted band must never shrink the
+        // Avoid warning.
+        let slices = vec![slice("w", "overall", "", 60, Some(-0.033), Some(0.10))];
+        let t = trust_verdict(&slices);
+        assert!(
+            t.upper_bound < 0.0 && t.upper_bound > -0.03,
+            "hi in (−3%,0): {}",
+            t.upper_bound
+        );
+        assert_eq!(t.verdict, TrustVerdict::Avoid);
     }
 
     #[test]
@@ -304,11 +402,18 @@ mod tests {
         ) {
             let adv = (won as i32) as f64 - price;
             let cond = format!("{wallet}_c{i}");
+            // Stamp each fill on its OWN day (ts = NOW() − i days) so distinct
+            // events ⇒ distinct fill-days ⇒ the day-deflated effective N equals
+            // the event N (no artificial clustering). Surplus math is
+            // ts-independent and no test asserts on recency, so spreading the
+            // timestamps is safe. Without this, all fills share one day and the
+            // trust gate's within-day deflation would collapse effective N to 1.
             sqlx::query(
                 "INSERT INTO trader_fills \
                    (wallet, tx_hash, condition_id, outcome_index, outcome, side, price, size_usd, \
                     title, slug, event_slug, is_sports, sport, ts, resolved, outcome_won, advantage, resolved_at) \
-                 VALUES ($1,$2,$3,0,'Yes','BUY',$4,100,'t','s',$5,true,$6,NOW()-INTERVAL '1 hour',true,$7,$8,NOW())",
+                 VALUES ($1,$2,$3,0,'Yes','BUY',$4,100,'t','s',$5,true,$6, \
+                         NOW() - make_interval(days => $9) - INTERVAL '1 hour',true,$7,$8,NOW())",
             )
             .bind(wallet)
             .bind(format!("{cond}_tx"))
@@ -318,6 +423,7 @@ mod tests {
             .bind(sport)
             .bind(won)
             .bind(adv)
+            .bind(i as i32)
             .execute(pool)
             .await
             .unwrap();
