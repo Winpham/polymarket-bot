@@ -28,6 +28,32 @@ Key columns on `consensus_signals`: `observed_votes` (JSONB atoms), `initial_*` 
 `last_market_price`, `mean_price`/`mean entry`, `net_count`/`net_quality`, `is_sports`, `event_slug`
 (cluster key), `resolved`/`outcome_won`/`resolved_at`.
 
+## Executable entry price (`entry_ask`) — the realizable-ROI input
+The honest P&L panel measures the outcome against a **realizable entry**, not the sharps' fill:
+`entry = COALESCE(entry_ask, initial_market_price + EXEC_HAIRCUT)`. `initial_market_price` is the
+first live CLOB **mid** a signal ever sees — set COALESCE-once in `snapshot_consensus_signal` on the
+**first housekeeping pass** (≤5 min after detection; base strategies fetch no mid at detection).
+`entry_ask` is the real executable best **ask** from `/book` — the price a follower could truly hit.
+
+Capture state (columns on `consensus_signals`):
+- `entry_ask` (mig 030) — best ask captured once while OPEN (set-once, `resolved=FALSE`, leak-free).
+- `entry_ask_at` / `entry_ask_mid` (mig 032) — WHEN the ask was captured and the mid at the SAME
+  instant. Together they (a) **prove decision-time** (`entry_ask_at ≈ first_detected_at`) and
+  (b) **measure the real haircut** (`entry_ask − entry_ask_mid`), replacing the `EXEC_HAIRCUT` guess.
+
+Decision-time discipline: the ask is captured in the SAME housekeeping pass that first sets
+`initial_market_price`, so `entry_ask_mid == initial_market_price` and both come from one moment.
+If that first pass is capped/empty-book, a **lagged fallback** captures on a later pass — visible as
+`entry_ask_at − first_detected_at` (the capture-lag histogram), so the realized ROI can filter to
+decision-time-only rows (within `REALIZED_DECISION_LAG_SECS`).
+
+History: capture was default-OFF (`CAPTURE_ENTRY_ASK=false`) and, when enabled, LAGGED — the only
+site was the housekeeping snapshot loop, which grabbed whatever ask existed whenever it next ran, not
+the ask paired with the decision-time mid. The decision-time capture + `entry_ask_at`/`entry_ask_mid`
+tagging (mig 032) fixed both: the headline realized ROI now rests on a measured, decision-time ask.
+When `entry_ask` is NULL (capture off / empty book / pre-032 row) the query falls back to
+`initial_market_price + EXEC_HAIRCUT` — never a crash or a dropped signal.
+
 ## Storage efficiency
 - **Upsert, not append** for signals — a market/outcome is one row per strategy, refreshed in place.
 - **Change-only snapshots** — identical consecutive points are not stored (was ~20k/day of mostly
