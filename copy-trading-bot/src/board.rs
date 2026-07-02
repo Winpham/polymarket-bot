@@ -825,6 +825,7 @@ mod tests {
                 pilot_min_regimes: 5,
                 regime_frac: 0.7,
                 min_liquidity_usd: 2000.0,
+                realized_decision_lag_secs: 900.0,
             },
         )
         .await;
