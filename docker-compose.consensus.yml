@@ -70,6 +70,11 @@ services:
       # Telegram is OPTIONAL — leave unset for ntfy-only (this deploy).
       # TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
       # TELEGRAM_CHAT_ID: ${TELEGRAM_CHAT_ID:-}
+      # --- deep-leaderboard ingestion (feat/deep-leaderboard). Widen CAPTURE via
+      #     offset pagination; the voter set stays rank ≤ cutoff (= today's top-40),
+      #     so raising depth is byte-for-byte non-regressive for consensus. ---
+      TRACK_DEPTH: ${TRACK_DEPTH:-40}                          # >50 paginates; deep ranks captured+profiled, not voting
+      TRACK_CONSENSUS_RANK_CUTOFF: ${TRACK_CONSENSUS_RANK_CUTOFF:-40} # rank ≤ this votes; deeper is candidate-only
       # --- optional consensus tuning (sensible defaults baked in) ---
       # TRACK_TOP_N: "40"
       # TRACK_PERIODS: "WEEK,MONTH"
