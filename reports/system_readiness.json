@@ -1,0 +1,45 @@
+{
+ "accrual": {
+  "favorite": {
+   "resolved": 203,
+   "clusters": 4,
+   "per_24h": 45,
+   "need": 6,
+   "eta_days": 6
+  },
+  "elite_fresh_fav": {
+   "resolved": 69,
+   "clusters": 4,
+   "per_24h": 10,
+   "need": 6,
+   "eta_days": 6
+  },
+  "trust_weighted": {
+   "resolved": 111,
+   "clusters": 1,
+   "per_24h": 111,
+   "need": 9,
+   "eta_days": 9
+  },
+  "strict": {
+   "resolved": 652,
+   "clusters": 4,
+   "per_24h": 123,
+   "need": 6,
+   "eta_days": 6
+  }
+ },
+ "ortho_lever": {
+  "velocity_vs_favorite": 2.47,
+  "clusters": 1
+ },
+ "alert_audit": {
+  "effective_alerting": [
+   "strict"
+  ],
+  "winners_alerting": [],
+  "losing_strategy_alerting": true,
+  "LEAK": true,
+  "fix": "append to .env.consensus: CONSENSUS_ALERT_STRATEGIES=strict,favorite,elite_fresh_fav + CONSENSUS_ALERT_WATCH_FOR=favorite,elite_fresh_fav, then run scripts/consensus-autoupdate.sh (Tue's go \u2014 changes live alerts)"
+ }
+}
