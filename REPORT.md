@@ -1,3 +1,59 @@
+# REPORT — Fable improvement run (2026-07-02)
+
+## Executive summary (one screen)
+
+**Mission:** more reliable, more accurate, more profitable — nothing regressed, everything
+reversible, paper-only, the belief-blind gate the only judge.
+
+**What shipped (branch `fable/improve-run-20260702`, off main ae0db80):**
+1. **Ops (no code): real book-ask capture ON** (`CAPTURE_ENTRY_ASK=true`, D5). 0% → accruing
+   (40 rows in the first cycle). Unrecoverable data that now accrues forever.
+2. **The gate now judges the AT-FIRE entry** (D6). `mean_price` is upsert-drifted; judging it
+   both leaked post-fire information and UNDERSTATED the edge. Proof of safe swap:
+   `scripts/scoreboard_parity.py` — per-strategy N identical, only surplus moves.
+3. **Standing selection-matched null + pre-registered promotion rule** (D7):
+   `scripts/selection_null.py` (calibration-gated, seeded, exact scoreboard statistic).
+   Rule: eligible ⇔ gate LB>3% ∧ null p≤0.01 ∧ ≥2 sport-regimes positive.
+4. **Docs:** DECISIONS D5-D8, this report, FORGE_PLAN_FABLE_RUN.md (pre-registration),
+   FORGE_DEBATES_FABLE_RUN.md (design record).
+
+**Headline finding (full live record: 11,819 resolved signals, 3,113 blind events, 2026-06-29→07-02):**
+the consensus-favorite selection is REAL and now measured honestly —
+
+| strategy | events | at-fire surplus | LB @3% margin | selection-null p | regimes > 0 |
+|---|---:|---:|---:|---:|---|
+| favorite | 92 | +10.54% | **+3.33% ✅** | **0.0000 (z 3.82)** | 4/4 (soccer/tennis/mlb/other) |
+| elite_fresh_fav | 38 | +8.87% | **+4.80% ✅** | **0.0000 (z 2.77)** | 2/2 (soccer/tennis) |
+| strict/count/whales | 212 | +3.53% | −2.61% ⏳ | 0.022-0.028 | mixed |
+| loose | 381 | +1.00% | −3.20% ⏳ | 0.21 NULL | — |
+
+**Certified vs paper vs refuted:**
+- *Promotion-ELIGIBLE (per D7 rule, first time ever):* `favorite`, `elite_fresh_fav` — BUT
+  **deliberately NOT promoted**: elite_fresh_fav N=38 < 50 pilot floor, favorite honest-ROI LB
+  still below the pilot bar after execution haircut, regimes thin (tennis N=17-44), and the
+  record is one 4-day window, not two disjoint accrual blocks. Re-read after Wimbledon.
+- *Paper-only instruments:* everything in this run. No alerting change, no real money.
+- *Refuted/parked:* `longshot` selection signal is real-ish per-share (p=0.03) but cost-dead
+  (flat-shares −$227 after haircut+fee) — parked. `loose`/`tight_cluster` selection = NULL.
+  market_resid stays OFF (2026-07-01 refutation stands).
+- *Sizing discipline confirmed on full data:* strict flat-$ −$4,726 vs flat-shares +$114;
+  loose flat-$ −$18,198. Flat-shares is mandatory (REFINED-STRATEGY rule 3 re-confirmed).
+
+**What was deliberately NOT done:** see DECISIONS D8 (parallel-session file regions deferred —
+sport segments + flat-shares in Rust board; migration-032 collision flagged for the integrator;
+no promotions; no new arms; no relational build).
+
+**Non-regression evidence:** full gate green at every commit (`cargo fmt --check`, `clippy
+--workspace --all-targets -Dwarnings`, `cargo test --workspace`: 228 passed / 0 failed);
+`scoreboard_at_fire_it` regression test green on a throwaway PG; parity harness K1 OK;
+`strict` alerting, trader_trust, honest-P&L math untouched.
+
+**Exact rollback:**
+- Code: `git -C ~/polymarket-bot reset --hard pre-fable-run-20260701` (or revert the single
+  --no-ff merge commit).
+- Ops: delete the `CAPTURE_ENTRY_ASK=true` line from `.env.consensus`
+  (backup: `backups/pre-fable-run-20260701-untracked/.env.consensus.bak`) + recreate the stack.
+
 # REPORT — Optimal Congregation Engine
 
 ## Executive summary (one screen)

@@ -566,15 +566,25 @@ impl PgPortfolio {
     }
 
     /// Per-strategy forward-tracking scoreboard, best edge first. This is the
-    /// instrument that ranks the portfolio: `edge = AVG(outcome_won − mean_price)`
-    /// is the leak-free realized edge vs the price each signal entered at.
+    /// instrument that ranks the portfolio: `edge = AVG(outcome_won − entry)`
+    /// is the leak-free realized edge vs the AT-FIRE price each signal entered at.
     pub async fn consensus_scoreboard_by_strategy(&self) -> Result<Vec<StrategyScore>> {
         // The denominator (catalog #1). For each resolved signal, advantage
-        // `a = outcome_won - mean_price`. The `_blind` arm captures EVERY observed
-        // outcome, so its per-price-band average `a` is the blind baseline that
-        // favorite-longshot bias would already earn. A strategy's SURPLUS =
-        // AVG(a - blind_edge[band]) is what it adds beyond blindly betting that
-        // band — the only edge number that isn't gamed by loading favorites.
+        // `a = outcome_won - entry`, where `entry` is the AT-FIRE consensus mean
+        // (`initial_mean_price`, set once at insert and never updated — see
+        // `upsert_consensus_signal`). `mean_price` is refreshed on every upsert
+        // with the CURRENT window state, so it embeds post-fire information (avg
+        // drift ≈ +1.2¢ on strict; ~29% of rows move >2¢) — judging on it both
+        // leaks and, empirically, UNDERSTATES the at-fire edge the strategy spec
+        // acts on (REFINED-STRATEGY rule 4: act at fire). The drifted `mean_price`
+        // stays stored for capture/diagnostics but never judges. (2026-07-02 run;
+        // COALESCE is belt-and-suspenders for any legacy row without the initial.)
+        // The `_blind` arm captures EVERY observed outcome, so its per-price-band
+        // average `a` is the blind baseline that favorite-longshot bias would
+        // already earn — banded on the SAME at-fire entry for consistency. A
+        // strategy's SURPLUS = AVG(a - blind_edge[band]) is what it adds beyond
+        // blindly betting that band — the only edge number that isn't gamed by
+        // loading favorites.
         // `distinct_events` is the honest (de-correlated) sample size — outcomes
         // of one event_slug are correlated (the within-match leak); the promotion
         // gate keys off distinct_events, not raw resolved count.
@@ -585,14 +595,15 @@ impl PgPortfolio {
         // CLV instrumentation (same EVENT clustering, over resolved rows with a
         // captured `initial_market_price`): `our_clv = AVG_event(outcome_won −
         // initial_market_price)` is the edge if we'd entered at the first live mid
-        // we saw; `capture_lag = AVG_event(initial_market_price − mean_price)` is
-        // the gap between the mid when we *noticed* and the price the sharps paid.
-        // A materially negative `capture_lag` means faster polling has real value.
+        // we saw; `capture_lag = AVG_event(initial_market_price − entry)` is the
+        // gap between the mid when we *noticed* and the at-fire price the sharps
+        // paid. A materially negative `capture_lag` means faster polling has value.
         let rows: Vec<StrategyScore> = sqlx::query_as(
             "WITH adv AS ( \
                  SELECT strategy, COALESCE(event_slug, condition_id) AS ev, resolved, outcome_won, \
-                        width_bucket(mean_price, 0.0, 1.0, 5) AS band, \
-                        (outcome_won::int)::double precision - mean_price AS a \
+                        width_bucket(COALESCE(initial_mean_price, mean_price), 0.0, 1.0, 5) AS band, \
+                        (outcome_won::int)::double precision \
+                          - COALESCE(initial_mean_price, mean_price) AS a \
                  FROM consensus_signals \
              ), \
              blind AS ( \
@@ -615,7 +626,7 @@ impl PgPortfolio {
              clv_evt AS ( \
                  SELECT strategy, COALESCE(event_slug, condition_id) AS ev, \
                         AVG((outcome_won::int)::double precision - initial_market_price) AS ev_clv, \
-                        AVG(initial_market_price - mean_price) AS ev_lag \
+                        AVG(initial_market_price - COALESCE(initial_mean_price, mean_price)) AS ev_lag \
                  FROM consensus_signals \
                  WHERE resolved AND initial_market_price IS NOT NULL AND strategy <> '_blind' \
                  GROUP BY strategy, ev \
@@ -1472,7 +1483,8 @@ pub struct StrategyScore {
     pub distinct_events: i64,
     /// Resolved signals whose consensus outcome won.
     pub won: i64,
-    /// Mean realized edge vs entry: `AVG(outcome_won::int - mean_price)`.
+    /// Mean realized edge vs the AT-FIRE entry:
+    /// `AVG(outcome_won::int - COALESCE(initial_mean_price, mean_price))`.
     /// `None` when nothing has resolved yet.
     pub edge: Option<f64>,
     /// Surplus over the band-matched `_blind` baseline — the favorite-longshot-
@@ -3068,6 +3080,69 @@ mod honest_pnl_it {
         println!(
             "ledger_it: 3 appends, idempotent re-run, equity/drawdown ${:.1}/${:.1}, sharpe {:.3} — OK",
             s.total_pnl, s.max_drawdown, s.sharpe
+        );
+    }
+}
+
+// Live-DB integration test for the AT-FIRE scoreboard entry (2026-07-02 run):
+// the gate must judge on `initial_mean_price` (set once at insert) even when the
+// per-cycle upsert has drifted `mean_price` afterwards. Run with:
+//
+//   DATABASE_URL=postgres://bot:bot@localhost:55432/polymarket \
+//     cargo test -p polymarket-common scoreboard_at_fire -- --ignored --nocapture
+#[cfg(test)]
+mod scoreboard_at_fire_it {
+    use super::*;
+
+    #[tokio::test]
+    #[ignore = "requires a live Postgres at $DATABASE_URL with migrations applied"]
+    async fn scoreboard_uses_at_fire_entry_not_drifted_mean() {
+        let url = std::env::var("DATABASE_URL").expect("DATABASE_URL must be set");
+        let pool = sqlx::PgPool::connect(&url).await.expect("connect");
+        let pf = PgPortfolio::new(pool).await.expect("portfolio");
+        pf.run_migrations().await.expect("migrations");
+
+        sqlx::query("DELETE FROM consensus_signals WHERE condition_id LIKE 'af_%'")
+            .execute(&pf.pool)
+            .await
+            .unwrap();
+
+        // One resolved WON signal whose consensus mean drifted after fire:
+        // at-fire entry 0.50, drifted final mean 0.90. The honest advantage is
+        // +0.50; judging the drifted mean would report +0.10.
+        sqlx::query(
+            "INSERT INTO consensus_signals \
+               (strategy, condition_id, outcome_index, event_slug, n_backers, n_opposers, \
+                net_count, net_quality, mean_price, price_std, recency_mins, total_usd, \
+                score, tier, initial_mean_price, resolved, outcome_won, \
+                first_detected_at, resolved_at) \
+             VALUES ('af_str','af_c1',0,'af_ev1',5,0,5,5.0,0.90,0.02,10,2000,1.0,'WATCH', \
+                     0.50,TRUE,TRUE, NOW() - INTERVAL '2 hours', NOW())",
+        )
+        .execute(&pf.pool)
+        .await
+        .unwrap();
+
+        let rows = pf
+            .consensus_scoreboard_by_strategy()
+            .await
+            .expect("scoreboard");
+        let r = rows
+            .iter()
+            .find(|r| r.strategy == "af_str")
+            .expect("af_str row present");
+        let edge = r.edge.expect("edge computed");
+        assert!(
+            (edge - 0.50).abs() < 1e-9,
+            "edge judged at-fire (want +0.50, got {edge:+.4}); drifted mean would give +0.10"
+        );
+
+        sqlx::query("DELETE FROM consensus_signals WHERE condition_id LIKE 'af_%'")
+            .execute(&pf.pool)
+            .await
+            .unwrap();
+        println!(
+            "scoreboard_at_fire_it: edge {edge:+.2} uses initial_mean_price despite drifted mean_price — OK"
         );
     }
 }

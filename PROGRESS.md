@@ -1,3 +1,25 @@
+# PROGRESS — Fable improvement run (2026-07-02)
+
+Branch `fable/improve-run-20260702` (worktree off main ae0db80, tag `pre-fable-run-20260701`).
+Gate: fmt --check + clippy --workspace --all-targets -Dwarnings + cargo test --workspace.
+
+- **Item 0 (ops):** CAPTURE_ENTRY_ASK=true in .env.consensus + stack recreate. Verified: 40
+  entry_ask rows in the first cycle (was 0% forever). D5.
+- **Item 1:** scoreboard judges AT-FIRE entry (initial_mean_price) for a/band/capture_lag,
+  strategy rows + _blind baseline. Regression test `scoreboard_at_fire_it` (throwaway PG).
+  Parity proof scripts/scoreboard_parity.py: K1 OK (N identical ∀ strategies); favorite LB
+  +0.21%→+3.33% (promotable @3%), elite_fresh_fav +4.01%→+4.80%. D6.
+- **Item 2:** scripts/selection_null.py — selection-matched null (band×day-matched draws from
+  _blind, exact scoreboard statistic, seeded), --calibrate self-test PASS (6%/76%); plus
+  sport-regime persistence table and flat-$ vs flat-shares readout. Pre-registered promotion
+  rule (LB ∧ p≤0.01 ∧ ≥2 regimes) in D7. First reading: favorite + elite_fresh_fav
+  SELECTION-REAL (p=0.0000); strict-family indeterminate; loose/tight_cluster NULL.
+- **Items 3/4 (deferred Rust surfacing):** sport segments in honest panel + flat-shares in
+  ledger_stats — regions actively edited by parallel sessions (feat/entry-ask-decision,
+  feat/deep-leaderboard); readouts shipped in selection_null.py instead. D8.
+- **NOT done deliberately:** no promotions (floors unmet), no new arms, longshot parked,
+  market_resid untouched-OFF. D8.
+
 # PROGRESS — Optimal Congregation Engine run
 
 Branch `feat/congregation-engine` (worktree off `feat/consensus-engine`), 2026-06-30.

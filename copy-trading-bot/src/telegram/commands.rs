@@ -21,7 +21,7 @@ pub async fn handle_command(
     notifier: &TelegramNotifier,
     _monitor: &CopyTraderMonitor,
     http: &reqwest::Client,
-    _cfg: &CopyTradingConfig,
+    cfg: &CopyTradingConfig,
 ) -> String {
     match cmd {
         "start" => {
@@ -77,7 +77,14 @@ pub async fn handle_command(
                     for r in &rows {
                         *fam_n.entry(family(&r.strategy)).or_default() += 1;
                     }
-                    let pp = PromotionParams::default();
+                    // Same bar as the web board (DECISIONS D3/D6): gate at the
+                    // margin a FOLLOWER actually captures (slippage + fee), not
+                    // the sharp's own edge (margin 0). The two surfaces must
+                    // agree — a promotion read off a looser Telegram ✅ over-promotes.
+                    let pp = PromotionParams {
+                        margin: cfg.slippage_pct + cfg.fee_pct,
+                        ..PromotionParams::default()
+                    };
                     let mut board = String::from(
                         "\n\n📊 *Strategy scoreboard* (sorted by surplus-over-blind)\n",
                     );
