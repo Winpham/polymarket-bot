@@ -111,6 +111,28 @@ the fills real; it is not latency-fragile and capture is 97.6%. Two things it di
   its surplus is (band×day×regime) composition, not selection. Treat `favorite` as the primary edge;
   gate elite on the regime×band baseline if ever promoted.
 
+## Reliability-portfolio hardening (2026-07-02, entry 14 / DECISIONS D17)
+Three paper-only instruments off D15/D16 (`scripts/{effective_n,edge_orthogonality,portfolio_constructor}.py`),
+each self-tested, nothing promoted:
+- **Effective-N reconciliation (resolves D16-a).** The board's day-N LB (**−20%**) assumes within-day
+  ICC=1; the MEASURED within-day ICC is **0.007≈0**, so that reads a strong, near-independent edge as
+  statistically dead. Split the conflated SE: **within-sample** the surplus is well pinned down (event-N
+  ≈ cluster-robust LB ≈ **+4.6%**); **out-of-sample persistence** is the real wall and is NOT a
+  within-sample SE (encoding it as one is grain-arbitrary: day-grain t LB −8% vs tournament +4.5%). The
+  honest binding constraint is the **COUNT of independent clusters** (~4 days / ~2 tournament cycles) —
+  i.e. accrual, stated rigorously. favorite is individually **+ in 4/4 disjoint regimes**. Proposed (not
+  applied) convention: cluster-robust SE at the measured ICC + an explicit independent-cluster-count floor.
+- **Orthogonality gate — reliability is supply-limited, PROVEN not asserted.** 0 of 12 captured strategies
+  add a second edge that diversifies favorite (G1 independent volume ∧ G2 orthogonal-component
+  selection-real Bonferroni ∧ G3 residual+shock independent). The broad-consensus strategies add volume
+  that is the reliably-losing non-favorite residue and co-moves with favorite. **Watch-item:
+  `trust_weighted`** (ladder L3) passes independence (orth +4.7%, residual r −0.05, a −0.76 regime hedge)
+  but fails G2 (power-starved, N=46) — the leading orthogonal-edge candidate, uncertified.
+- **The book (constructor).** Re-derives `kelly_eighth_capped` on **[favorite] only** (elite nested →
+  dropped) — no sizing change to rule 3. A second edge's worth here is **volume + continuity (post-WC
+  supply droughts) + insurance**, NOT per-bet variance reduction (decorrelating fixed volume ≈ 0 at
+  favorite's ~0 within-slate correlation). Re-run at each accrual block; MANDATORY before any pilot.
+
 ## Honest status & posture
 - **Certified/bankable today: nothing.** One tournament, ~89% World Cup soccer. The favorite edge is
   real and attack-hardened, but 4 correlated event-days cannot clear the day-deflated SE — accrual-gated.

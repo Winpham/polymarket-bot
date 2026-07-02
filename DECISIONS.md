@@ -442,3 +442,57 @@ gate elite on the regime×band baseline, not the global-band surplus.
 mirror-symmetry passes (elite F2 is composition, not corrupt data); K4 no split-half sign flip.
 **Nominations: NONE** (A exit-follow fails the N≥20 floor + FDR + is −EV). No behavior change, no
 migration, no env flip — analysis instruments + docs only.
+
+## D17 — Reliability-first portfolio: one honest effective-N, an orthogonality gate, and the book (2026-07-02, entry 14)
+
+Branch `feat/reliability-portfolio` (worktree off `main` 210b745, tag
+`pre-reliability-portfolio-20260702`). Three self-testing paper-only instruments off D15 (risk
+engine) + D16 (truth audit), reusing the gate machinery byte-identically. Nothing promoted, no
+env/alert change, ZERO migrations. Full write-up: reports/entries/14.
+
+**D17-a — effective-N reconciliation (resolves the D16-a/E-1 board-vs-pilot disagreement).**
+`scripts/effective_n.py` (self-test PASS: the cluster-robust `n_eff_CR = sd²/V_CR` provably
+spans the two Rust endpoints — event-N at ICC=0, distinct_days at ICC=1). The single day-deflated
+SE conflates two questions: **Q1 within-sample precision** (measured within-day ICC=0.007≈0 ⇒
+events ~independent ⇒ event-N LB **+4.6%** ≈ cluster-robust; board.rs's day-N **−20.3%** is a
+FALSIFIED-mechanism artifact that reads a strong edge as dead) and **Q2 out-of-sample
+persistence** (NOT a within-sample SE — encoding it as one is grain-arbitrary: small-cluster t LB
+= −8% at day grain G=4 vs +4.5% at tournament G=6). The binding wall is the **COUNT of independent
+clusters (~4 days / ~2 tournament cycles)**, which caps the d.o.f. of ANY robust CI. board.rs gets
+the right answer (hold) via a misleading mechanism; honest.rs's event-N ignores Q2. Point estimate
+strong: favorite +12.4%, **4/4 disjoint regimes individually +** (tennis/soccer/mlb/other).
+**Reconciled convention PROPOSED, not applied to Rust (paper-only):** surplus LB from the
+cluster-robust SE at the measured ICC (drop the ICC=1 √days deflation); make the binding gate an
+EXPLICIT independent-cluster-COUNT / persistence floor. *(A self-caught overclaim is recorded in
+entry 14: an intermediate version presented the −8% day-grain t LB as "the honest CI" using the
+gate's normal z — the same misleading-mechanism sin; corrected to the Q1/Q2 split.)*
+
+**D17-b — orthogonality gate: 0 of 12 candidates diversify favorite.** `scripts/edge_orthogonality.py`
+(self-test PASS incl. G3 as the deciding gate; negative regime-shock = hedge PASSES, positive
+FAILS). A candidate diversifies iff G1 (≥10 independent events) ∧ G2 (orthogonal-component
+selection-real, **Bonferroni** p ≤ 0.01/n_candidates) ∧ G3 (residual two-sided + regime-shock
+one-sided independent). Live: every broad-consensus strategy adds independent VOLUME but its
+orthogonal component is the reliably-LOSING non-favorite residue (G2 fail) and co-moves with
+favorite (r_shared +0.5..0.64, G3 fail); elite is nested (G1 fail). **Standout watch-item
+`trust_weighted`** (ladder L3): PASSES independence (orth +4.7%, r_shared −0.05, shock −0.76 = a
+hedge), fails ONLY G2 (p≈0.24, N=46 — power-starved). This is the RIGOROUS backing for D15's
+"diversification is supply-limited, not allocation-limited": reliability accrues only with forward
+time + new uncorrelated SUPPLY (sibling breadth run) or a matured trust_weighted — never by
+recombining today's picks.
+
+**D17-c — the reliability-first book (pre-registered for the hypothetical GO day).**
+`scripts/portfolio_constructor.py` (self-test PASS) composes the gate (menu built from
+diversifiers, not hardcoded) + effective_n + risk_engine. BOOK = **[favorite] only**, sized
+`kelly_eighth_capped` (re-derives the D15 recommendation — no sizing change), all horizons
+labelled EXTRAPOLATION beyond n_eff≈59 (K1). The value of a second edge, priced two ways:
+decorrelating FIXED volume ≈ 0 (favorite within-slate corr ≈ 0; P(loss)=0 is the D15
+no-losing-slate artifact); ADDING independent volume shrinks combined SE by √((Na+Nb)/Na) —
+so a second edge's worth is VOLUME + continuity (post-WC supply droughts) + insurance (if
+favorite's edge degrades), NOT per-bet variance reduction. Re-run triggers: post-WC +
+post-Wimbledon; +50 favorite / +300 fleet events; any orthogonality candidate clearing G1∧G2∧G3;
+MANDATORY before any real-money pilot.
+
+**Kill criteria honored:** K1 (H=1000 extrapolation-labelled), K2 (grain sensitivity IS the
+Pillar-1 headline; conservative grain binds → hold), K3 (conditional-on-edge on every P(profit);
+no "guaranteed"), K4 (nothing live changed — instruments + docs + a *proposed* SE convention only).
+**Rollback:** git-revert the merge; delete reports/{effective_n,edge_orthogonality,portfolio_constructor}.json.
