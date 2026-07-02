@@ -356,4 +356,92 @@ mod tests {
             assert_eq!(s.net_count_delta, 0);
         }
     }
+
+    // --- Report harness: run the REAL promotion pass + shadow study over a DB
+    //     snapshot and print it. Read-only; `#[ignore]`d. Point $DATABASE_URL at
+    //     a RESTORED BACKUP (never prod):
+    //
+    //   DATABASE_URL=postgres://bot:bot@localhost:55498/polymarket \
+    //     cargo test -p copy-trading-bot report_deep_sharp_pass -- --ignored --nocapture
+    #[tokio::test]
+    #[ignore = "report harness: run against a restored snapshot at $DATABASE_URL"]
+    async fn report_deep_sharp_pass() {
+        use crate::storage::postgres::PgPortfolio;
+
+        let url = std::env::var("DATABASE_URL").expect("DATABASE_URL");
+        let pool = sqlx::PgPool::connect(&url).await.unwrap();
+        let pf = PgPortfolio::new(pool).await.unwrap();
+
+        let trust = crate::cycles::consensus_cycle::compute_trust_map(&pf).await;
+        let traders = pf.get_active_traders().await.unwrap();
+        let pass = deep_sharp_pass(&traders, &trust);
+        println!("=== deep-sharp promotion pass: {} profiled ===", pass.len());
+        for d in &pass {
+            println!(
+                "{} rank={:>4} N={:>4} surplus={:+.3} lb={:+.3} ub={:+.3} {}{}",
+                d.trust.verdict.marker(),
+                d.rank.map(|r| r.to_string()).unwrap_or("—".into()),
+                d.trust.n_events,
+                d.trust.surplus,
+                d.trust.lower_bound,
+                d.trust.upper_bound,
+                d.wallet.chars().take(14).collect::<String>(),
+                if d.earned { " [earned]" } else { "" },
+            );
+        }
+        let promo = promotable_deep_sharps(&pass);
+        println!(
+            "promotable: {} · earned: {}",
+            promo.iter().filter(|d| !d.earned).count(),
+            pass.iter().filter(|d| d.earned).count()
+        );
+
+        // Shadow study over the snapshot's current window (48h default).
+        let voters: std::collections::HashSet<String> = promo
+            .iter()
+            .filter(|d| !d.earned)
+            .map(|d| d.wallet.to_lowercase())
+            .collect();
+        if voters.is_empty() {
+            println!("shadow: no certified-but-unearned sharps — zero impact.");
+            return;
+        }
+        let since = Utc::now() - chrono::Duration::hours(48);
+        let live = pf.load_window_votes(since).await.unwrap();
+        let excl = pf.load_excluded_window_votes(since).await.unwrap();
+        let added: Vec<_> = excl
+            .into_iter()
+            .filter(|v| voters.contains(&v.trader_wallet))
+            .collect();
+        let all: Vec<_> = live.iter().chain(added.iter()).cloned().collect();
+        let lb = crate::cycles::consensus_cycle::books_from_window_votes(&live, &trust);
+        let sb = crate::cycles::consensus_cycle::books_from_window_votes(&all, &trust);
+        let portfolio = default_portfolio(&ConsensusParams::default());
+        let impact = shadow_impact(&lb, &sb, &portfolio, Utc::now(), voters.len(), added.len());
+        println!(
+            "=== shadow: {} voter(s), {} votes added ===",
+            impact.voters, impact.votes_added
+        );
+        for s in &impact.strategies {
+            if s.strategy == "strict"
+                || s.new_signals > 0
+                || s.tier_upgrades > 0
+                || s.net_count_delta != 0
+            {
+                println!(
+                    "{:<16} live W/S/E {}/{}/{} → shadow {}/{}/{} · new={} upg={} Δnet={:+}",
+                    s.strategy,
+                    s.live_tiers.0,
+                    s.live_tiers.1,
+                    s.live_tiers.2,
+                    s.shadow_tiers.0,
+                    s.shadow_tiers.1,
+                    s.shadow_tiers.2,
+                    s.new_signals,
+                    s.tier_upgrades,
+                    s.net_count_delta,
+                );
+            }
+        }
+    }
 }
