@@ -541,7 +541,10 @@ async fn render_honest(portfolio: &PgPortfolio, honest: HonestBoardParams) -> St
             r.avg_hours_to_resolve,
             r.honest_roi,
         );
-        let ledger = portfolio.ledger_stats(&r.strategy).await.unwrap_or(None);
+        let ledger = portfolio
+            .ledger_stats(&r.strategy, honest.fee_pct)
+            .await
+            .unwrap_or(None);
         items.push((r, sv.clone(), cap, ledger));
     }
     items.sort_by(|a, b| {
@@ -587,7 +590,12 @@ async fn render_honest(portfolio: &PgPortfolio, honest: HonestBoardParams) -> St
             Some(l) => (
                 sparkline(&l.curve),
                 format!("${:.0}", l.max_drawdown),
-                format!("${:+.0}", l.total_pnl),
+                // flat-$ (the stored ledger) beside flat-SHARES (same fills,
+                // stake read as a share count) — the sizing-discipline split.
+                format!(
+                    "${:+.0} ($) / ${:+.0} (sh)",
+                    l.total_pnl, l.total_pnl_shares
+                ),
             ),
             None => ("—".into(), "—".into(), String::new()),
         };
@@ -603,8 +611,24 @@ async fn render_honest(portfolio: &PgPortfolio, honest: HonestBoardParams) -> St
                 )
             })
             .unwrap_or_else(|| "real haircut n/a (no ask captured)".into());
+        // Sport-regime persistence — the true disjointness axis (D7 rule (c)):
+        // per-sport honest ROI from the 'sport' segments, largest N first.
+        let mut sports: Vec<_> = segs
+            .iter()
+            .filter(|s| s.strategy == r.strategy && s.seg_kind == "sport")
+            .collect();
+        sports.sort_by_key(|s| std::cmp::Reverse(s.n_events));
+        let sport_txt = if sports.is_empty() {
+            "sports n/a".to_string()
+        } else {
+            let parts: Vec<String> = sports
+                .iter()
+                .map(|s| format!("{} {} (N={})", s.seg_key, pct(s.honest_roi), s.n_events))
+                .collect();
+            format!("sports: {}", parts.join(" · "))
+        };
         let tip = format!(
-            "{}  ·  working capital ≈ ${:.0}  ·  real-ask coverage {}  ·  decision-time coverage {}  ·  {}  ·  paper equity {}",
+            "{}  ·  working capital ≈ ${:.0}  ·  real-ask coverage {}  ·  decision-time coverage {}  ·  {}  ·  {}  ·  paper equity {}",
             verdict.reason,
             cap.working_capital,
             r.ask_coverage
@@ -614,6 +638,7 @@ async fn render_honest(portfolio: &PgPortfolio, honest: HonestBoardParams) -> St
                 .map(|c| format!("{:.0}% (N={})", c * 100.0, r.realized_events.unwrap_or(0)))
                 .unwrap_or_else(|| "0%".into()),
             haircut_txt,
+            sport_txt,
             if equity.is_empty() {
                 "no bets".into()
             } else {

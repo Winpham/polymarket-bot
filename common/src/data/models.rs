@@ -272,12 +272,20 @@ pub struct ClobMarket {
 }
 
 impl ClobMarket {
-    /// Per-outcome resolution: `Some(true/false)` once `closed`, else `None`.
+    /// Per-outcome resolution: `Some(true/false)` once `closed` — but `None`
+    /// for a VOID close (closed with NO winning token, i.e. refunded). Grading
+    /// a void as a loss manufactured phantom losses in the consensus ledger
+    /// while the trader-fills path correctly skipped it (DECISIONS D9); both
+    /// paths now agree: voids are never graded.
     pub fn outcome_won(&self, outcome_index: i32) -> Option<bool> {
         if !self.closed || outcome_index < 0 {
             return None;
         }
-        self.tokens.get(outcome_index as usize).map(|t| t.winner)
+        let won = self.tokens.get(outcome_index as usize)?.winner;
+        if !won && !self.tokens.iter().any(|t| t.winner) {
+            return None; // void/refund: closed but nobody won
+        }
+        Some(won)
     }
 
     /// Live price of an outcome (the trajectory data point), if present.
@@ -440,6 +448,16 @@ mod consensus_resolution_tests {
             tokens: vec![tok("Yes", 0.62, false), tok("No", 0.38, false)],
         };
         assert_eq!(open.outcome_won(0), None, "open => no resolution");
+
+        // VOID close: closed=true but no winning token (refund). Must not be
+        // graded — Some(false) here booked phantom losses (D9 defect #3).
+        let void = ClobMarket {
+            closed: true,
+            condition_id: "0xvoid".into(),
+            tokens: vec![tok("Yes", 0.5, false), tok("No", 0.5, false)],
+        };
+        assert_eq!(void.outcome_won(0), None, "void close is never a loss");
+        assert_eq!(void.outcome_won(1), None);
         assert_eq!(
             open.outcome_price(0),
             Some(0.62),

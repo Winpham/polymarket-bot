@@ -225,3 +225,38 @@ Two read-only audit passes ran alongside this run. What they found, and what was
   (2) VOID markets grade as LOSSES in consensus but are skipped in trader_fills — phantom-loss
   bias, direction CONSERVATIVE (understates edge; cannot false-promote); (3) `resolved_at=NOW()`
   is processing time, not close time (conservative for leakage; inflates avg_hours_to_resolve).
+
+## D10 — Winner alerting: WATCH-tier pushes + cross-strategy dedup (why flags alone were useless)
+
+Investigation before code: `favorite` had only 6 STRONG+ signals and ALL were already alerted by
+`strict`; the winners' edge lives at net=3 = WATCH tier, which the alert path unconditionally
+dropped. So "flip alerting=true" would have changed nothing. Shipped instead (all default-inert):
+`CONSENSUS_ALERT_STRATEGIES` (override the alerting set), `CONSENSUS_ALERT_WATCH_FOR` (strategies
+whose WATCH fires push, priority-3 ntfy), `CONSENSUS_ALERT_CROSS_DEDUP_MINS` (one push per
+(market,outcome) across strategies; same-strategy re-alerts exempt ⇒ strict byte-identical; fail-
+open on DB errors so an outage can never silence alerts). Intended ops values (D12):
+`CONSENSUS_ALERT_STRATEGIES=strict,favorite,elite_fresh_fav`,
+`CONSENSUS_ALERT_WATCH_FOR=favorite,elite_fresh_fav`. Expected volume ≈ favorite∪elite events/day
+≈ 25-30 pushes/day during peak slates — the strategy's true trade stream; tune via env if noisy.
+
+## D11 — Dense capture ON + the first speed budget (and what it did NOT measure)
+
+`signal_price_trajectory` (migration 034) + a flag-gated 45s dense capture loop for fresh
+actionable signals (bounded: 15-min window, 40 pairs/tick, dedup to earliest anchor). The decay
+instrument (`scripts/decay_analysis.py`, self-testing: injected decay recovered within CI,
+no-decay fixture flat) produced the first confound-controlled reading on 5-min data:
+**no material decay inside 30 min** for favorite (+8.2% fire edge, budget ≈54m) and
+elite_fresh_fav (flat to 60m within CI) → **manual execution is fine**; the structural follower
+tax (sharps' fill → our first mid; speed cannot recover it) is +2.1¢ / +1.3¢ / +0.8¢ for
+favorite / elite_fresh_fav / strict. NOT measured yet: τ < 10 min (change-only 5-min snapshots
+echo the p0 anchor → exact-zero artifact, flagged in the report). Dense capture exists precisely
+to fill that; re-run after a few days of DENSE_CAPTURE=true. Deferred deliberately (no-bloat):
+the board decay panel + hourly launchd re-run — they earn their place when the sub-10-min buckets
+become publishable; until then the instrument runs at gate-reads.
+
+## D12 — Ops changes (2026-07-02, not git-tracked; .env.consensus)
+
+Appended: `CONSENSUS_ALERT_STRATEGIES=strict,favorite,elite_fresh_fav`,
+`CONSENSUS_ALERT_WATCH_FOR=favorite,elite_fresh_fav`, `DENSE_CAPTURE=true`. Deploy via
+`scripts/consensus-autoupdate.sh` (the sanctioned path). Revert = delete the lines + re-run the
+updater. Backup: backups/pre-fable-run-20260701-untracked/.env.consensus.bak (pre-run state).
