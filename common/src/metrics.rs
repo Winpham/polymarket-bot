@@ -151,6 +151,14 @@ pub fn record_tracked_traders(count: u64) {
     gauge!("consensus_tracked_traders").set(count as f64);
 }
 
+/// Update the hot/deep split of the tracked universe: `hot` = consensus-eligible
+/// (voting) traders, `deep` = captured-but-not-voting deep candidates. The gap is
+/// the candidate pool the depth-widening buys us without touching the live engine.
+pub fn record_tracked_split(hot: u64, deep: u64) {
+    gauge!("consensus_tracked_hot").set(hot as f64);
+    gauge!("consensus_tracked_deep").set(deep as f64);
+}
+
 /// Record a completed consensus cycle: markets scored and signals found.
 pub fn record_consensus_cycle(markets: u64, signals: u64) {
     counter!("consensus_cycles_total").increment(1);

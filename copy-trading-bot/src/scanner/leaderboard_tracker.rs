@@ -12,9 +12,13 @@ use chrono::Utc;
 use reqwest::Client;
 
 use crate::config::CopyTradingConfig;
-use crate::scanner::copy_trader::{LeaderboardRaw, fetch_leaderboard_n};
+use crate::scanner::copy_trader::{LeaderboardRaw, fetch_leaderboard_n, fetch_leaderboard_paged};
 use crate::storage::consensus::LeaderboardTraderUpsert;
 use crate::storage::postgres::PgPortfolio;
+
+/// Above this fetch depth the refresh paginates (offset 0,50,…) instead of a
+/// single `limit`-capped call. Mirrors the server-side page size.
+const PAGED_FETCH_THRESHOLD: usize = 50;
 
 /// Union of a trader across periods, keeping the best (lowest) rank.
 struct Merged {
@@ -36,9 +40,19 @@ pub async fn refresh_universe(
         .filter(|s| !s.is_empty())
         .collect();
 
+    // Effective capture depth: never shrink below the legacy `track_top_n` knob
+    // (additive). `> 50` paginates; otherwise the single `limit`-capped call —
+    // byte-identical to today when both default to 40.
+    let depth = cfg.track_depth.max(cfg.track_top_n);
+
     let mut merged: HashMap<String, Merged> = HashMap::new();
     for period in &periods {
-        match fetch_leaderboard_n(http, period, cfg.track_top_n).await {
+        let fetched = if depth > PAGED_FETCH_THRESHOLD {
+            fetch_leaderboard_paged(http, period, depth).await
+        } else {
+            fetch_leaderboard_n(http, period, depth).await
+        };
+        match fetched {
             Ok(entries) => {
                 for e in entries {
                     merged
@@ -72,6 +86,9 @@ pub async fn refresh_universe(
 
     let mut upserted = 0usize;
     for m in merged.values() {
+        // Belief-blind provenance: rank ≤ cutoff ⇒ votes in consensus; deeper ⇒
+        // captured/profiled candidate only (consensus_eligible = FALSE).
+        let consensus_eligible = m.raw.rank <= cfg.track_consensus_rank_cutoff;
         let up = LeaderboardTraderUpsert {
             wallet: m.raw.wallet.clone(),
             username: m.raw.username.clone(),
@@ -79,6 +96,7 @@ pub async fn refresh_universe(
             pnl: Some(m.raw.pnl),
             volume: Some(m.raw.volume),
             periods: m.periods.join(","),
+            consensus_eligible,
         };
         match portfolio.upsert_tracked_trader(&up).await {
             Ok(()) => upserted += 1,
@@ -99,12 +117,17 @@ pub async fn refresh_universe(
     if let Ok(active) = portfolio.count_tracked_traders().await {
         crate::metrics::record_tracked_traders(active as u64);
     }
+    let (hot, deep) = portfolio.count_tracked_split().await.unwrap_or((0, 0));
+    crate::metrics::record_tracked_split(hot as u64, deep as u64);
 
     tracing::info!(
         tracked = upserted,
         deactivated,
+        hot,
+        deep,
         periods = ?periods,
-        top_n = cfg.track_top_n,
+        depth,
+        cutoff = cfg.track_consensus_rank_cutoff,
         "Leaderboard universe refreshed"
     );
     Ok((upserted, deactivated))

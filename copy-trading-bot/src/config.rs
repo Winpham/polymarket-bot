@@ -46,6 +46,21 @@ pub struct CopyTradingConfig {
     #[config(env = "TRACK_TOP_N", default = 40)]
     pub track_top_n: usize,
 
+    /// Deep-universe capture depth. `> 50` switches the refresh onto the paginated
+    /// leaderboard fetch (offset 0,50,…) so ranks 51..depth are CAPTURED + profiled
+    /// as candidates. Defaults to `track_top_n` (40) — today's exact top-40 behavior
+    /// — so widening is opt-in. Ranks past `track_consensus_rank_cutoff` are stored
+    /// `consensus_eligible = FALSE`: polled + archived, but never voting in consensus
+    /// until they clear the belief-blind earned-trust gate.
+    #[config(env = "TRACK_DEPTH", default = 40)]
+    pub track_depth: usize,
+
+    /// Rank cutoff at/under which a tracked trader is `consensus_eligible` (votes in
+    /// consensus). Deep traders (rank > cutoff) are captured but excluded from
+    /// backer/opposer counts — depth is a candidate pool, not automatic trust.
+    #[config(env = "TRACK_CONSENSUS_RANK_CUTOFF", default = 50)]
+    pub track_consensus_rank_cutoff: i32,
+
     /// Comma-separated leaderboard periods to union (DAY,WEEK,MONTH,ALL).
     #[config(env = "TRACK_PERIODS", default = "WEEK,MONTH")]
     pub track_periods: String,

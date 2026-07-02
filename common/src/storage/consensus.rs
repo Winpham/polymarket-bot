@@ -19,6 +19,9 @@ pub struct LeaderboardTraderUpsert {
     pub pnl: Option<f64>,
     pub volume: Option<f64>,
     pub periods: String,
+    /// Whether this trader votes in consensus (rank ≤ cutoff). Deep traders
+    /// (rank > cutoff) are captured/profiled but excluded from backer counts.
+    pub consensus_eligible: bool,
 }
 
 /// Data needed to upsert one consensus signal.
@@ -145,14 +148,18 @@ impl PgPortfolio {
         sqlx::query(
             "INSERT INTO followed_traders \
                (proxy_wallet, username, source, rank, pnl, volume, periods, \
-                active, last_seen_on_lb) \
-             VALUES ($1, $2, 'leaderboard', $3, $4, $5, $6, TRUE, NOW()) \
+                consensus_eligible, active, last_seen_on_lb) \
+             VALUES ($1, $2, 'leaderboard', $3, $4, $5, $6, $7, TRUE, NOW()) \
              ON CONFLICT (proxy_wallet) DO UPDATE SET \
                username        = COALESCE(EXCLUDED.username, followed_traders.username), \
                rank            = EXCLUDED.rank, \
                pnl             = EXCLUDED.pnl, \
                volume          = EXCLUDED.volume, \
                periods         = EXCLUDED.periods, \
+               consensus_eligible = CASE \
+                 WHEN followed_traders.source = 'manual' \
+                   THEN followed_traders.consensus_eligible \
+                 ELSE EXCLUDED.consensus_eligible END, \
                active          = TRUE, \
                last_seen_on_lb = NOW()",
         )
@@ -162,6 +169,7 @@ impl PgPortfolio {
         .bind(t.pnl)
         .bind(t.volume)
         .bind(&t.periods)
+        .bind(t.consensus_eligible)
         .execute(&self.pool)
         .await
         .context("upsert_tracked_trader")?;
@@ -194,6 +202,23 @@ impl PgPortfolio {
         .await
         .context("count_tracked_traders")?;
         Ok(n)
+    }
+
+    /// Split the active leaderboard universe into `(hot, deep)` — consensus-eligible
+    /// (rank ≤ cutoff, voting) vs deep candidates (captured/profiled, not voting).
+    /// The headline for the depth-widening: how much candidate pool we carry vs how
+    /// much of it actually feeds the engine.
+    pub async fn count_tracked_split(&self) -> Result<(i64, i64)> {
+        let row: (i64, i64) = sqlx::query_as(
+            "SELECT \
+               COUNT(*) FILTER (WHERE consensus_eligible) AS hot, \
+               COUNT(*) FILTER (WHERE NOT consensus_eligible) AS deep \
+             FROM followed_traders WHERE active = TRUE AND source = 'leaderboard'",
+        )
+        .fetch_one(&self.pool)
+        .await
+        .context("count_tracked_split")?;
+        Ok(row)
     }
 
     // --- Consensus signals ---
@@ -1665,6 +1690,7 @@ mod window_store_it {
             pnl: None,
             volume: None,
             periods: "WEEK".into(),
+            consensus_eligible: true,
         })
         .await
         .unwrap();
@@ -1734,6 +1760,113 @@ mod trader_fills_it {
 
     #[tokio::test]
     #[ignore = "requires a live Postgres at $DATABASE_URL with migrations applied"]
+    async fn deep_universe_eligibility_split() {
+        let url = std::env::var("DATABASE_URL").expect("DATABASE_URL must be set");
+        let pool = sqlx::PgPool::connect(&url).await.expect("connect");
+        let pf = PgPortfolio::new(pool).await.expect("portfolio");
+        pf.run_migrations()
+            .await
+            .expect("migrations (incl. 032 consensus_eligible)");
+
+        // Isolate: clear any synthetic rows from a prior run.
+        sqlx::query("DELETE FROM followed_traders WHERE proxy_wallet LIKE '0xdeep\\_%'")
+            .execute(&pf.pool)
+            .await
+            .unwrap();
+
+        let cutoff = 50i32;
+        let depth = 200usize;
+        let upsert = |i: usize, eligible: bool, periods: &'static str| {
+            let pf = &pf;
+            async move {
+                pf.upsert_tracked_trader(&LeaderboardTraderUpsert {
+                    wallet: format!("0xdeep_{i:04}"),
+                    username: Some(format!("deep{i}")),
+                    rank: Some(i as i32),
+                    pnl: Some((depth - i) as f64),
+                    volume: Some(0.0),
+                    periods: periods.into(),
+                    consensus_eligible: eligible,
+                })
+                .await
+                .unwrap();
+            }
+        };
+
+        const SPLIT_SQL: &str = "SELECT COUNT(*) FILTER (WHERE consensus_eligible), \
+                    COUNT(*) FILTER (WHERE NOT consensus_eligible) \
+             FROM followed_traders WHERE proxy_wallet LIKE '0xdeep\\_%' AND active = TRUE";
+
+        // Upsert a synthetic depth-200 universe: rank i, eligible = rank ≤ cutoff.
+        for i in 1..=depth {
+            upsert(i, (i as i32) <= cutoff, "WEEK").await;
+        }
+        let (hot, deep): (i64, i64) = sqlx::query_as(SPLIT_SQL).fetch_one(&pf.pool).await.unwrap();
+        assert_eq!(
+            hot, cutoff as i64,
+            "exactly cutoff traders vote in consensus"
+        );
+        assert_eq!(
+            deep,
+            depth as i64 - cutoff as i64,
+            "the deep pool is captured but not voting"
+        );
+
+        // Idempotent: re-running the refresh yields the same split (ON CONFLICT).
+        for i in 1..=depth {
+            upsert(i, (i as i32) <= cutoff, "WEEK,MONTH").await;
+        }
+        let split2: (i64, i64) = sqlx::query_as(SPLIT_SQL).fetch_one(&pf.pool).await.unwrap();
+        assert_eq!(split2, (hot, deep), "refresh is idempotent");
+
+        // Non-monotonic under rank churn: a trader dropping past the cutoff loses
+        // its vote (required for the byte-for-byte non-regression proof).
+        upsert(1, false, "WEEK").await; // rank re-supplied deep, eligible=false
+        let elig: bool = sqlx::query_scalar(
+            "SELECT consensus_eligible FROM followed_traders WHERE proxy_wallet = '0xdeep_0001'",
+        )
+        .fetch_one(&pf.pool)
+        .await
+        .unwrap();
+        assert!(!elig, "leaderboard trader past cutoff is de-eligibled");
+
+        // Manual follows are NEVER de-eligibled by a deep leaderboard sighting.
+        sqlx::query(
+            "INSERT INTO followed_traders (proxy_wallet, source, active, consensus_eligible) \
+             VALUES ('0xdeep_manual', 'manual', TRUE, TRUE)",
+        )
+        .execute(&pf.pool)
+        .await
+        .unwrap();
+        pf.upsert_tracked_trader(&LeaderboardTraderUpsert {
+            wallet: "0xdeep_manual".into(),
+            username: None,
+            rank: Some(180),
+            pnl: Some(1.0),
+            volume: Some(0.0),
+            periods: "WEEK".into(),
+            consensus_eligible: false,
+        })
+        .await
+        .unwrap();
+        let (src, elig_m): (String, bool) = sqlx::query_as(
+            "SELECT source, consensus_eligible FROM followed_traders \
+             WHERE proxy_wallet = '0xdeep_manual'",
+        )
+        .fetch_one(&pf.pool)
+        .await
+        .unwrap();
+        assert_eq!(src, "manual", "manual source preserved");
+        assert!(elig_m, "manual follow stays eligible despite a deep rank");
+
+        sqlx::query("DELETE FROM followed_traders WHERE proxy_wallet LIKE '0xdeep\\_%'")
+            .execute(&pf.pool)
+            .await
+            .unwrap();
+    }
+
+    #[tokio::test]
+    #[ignore = "requires a live Postgres at $DATABASE_URL with migrations applied"]
     async fn insert_dedup_capture_loadfills() {
         let url = std::env::var("DATABASE_URL").expect("DATABASE_URL must be set");
         let pool = sqlx::PgPool::connect(&url).await.expect("connect");
@@ -1782,6 +1915,7 @@ mod trader_fills_it {
             pnl: None,
             volume: None,
             periods: "WEEK".into(),
+            consensus_eligible: true,
         })
         .await
         .unwrap();
