@@ -155,6 +155,13 @@ pub struct ConsensusParams {
     /// every vote counts (incumbent). With default `TraderVote.trusted == true`,
     /// this drops nothing, so it's a no-op until the trust map marks traders.
     pub trusted_only: bool,
+    /// Cross-cohort conviction gate (deep-pool edge run, Phase 2): with
+    /// `Some(cutoff)`, a signal fires only when its backers include BOTH a
+    /// whale (rank ≤ cutoff) AND a certified deep sharp (gate-Trusted with
+    /// rank > cutoff). Deep sharps enter live books only once EARNED in, so
+    /// this arm emits nothing until then — silent by construction. Default
+    /// `None` = no-op (incumbent behavior).
+    pub cross_cohort_cutoff: Option<i32>,
 }
 
 impl Default for ConsensusParams {
@@ -173,6 +180,7 @@ impl Default for ConsensusParams {
             sports_mode: SportsMode::Include,
             weight_mode: WeightMode::Quality,
             trusted_only: false,
+            cross_cohort_cutoff: None,
         }
     }
 }
@@ -427,6 +435,19 @@ pub fn score_market(
             .any(|r| r <= params.elite_rank);
         if params.require_elite && !has_elite {
             continue;
+        }
+
+        // Cross-cohort conviction gate (cross_cohort variant): a whale AND a
+        // certified deep sharp must both back. `trusted` rides on the vote (from
+        // the trust map); a deep backer can only be in a live book if earned in.
+        if let Some(cut) = params.cross_cohort_cutoff {
+            let has_whale = backers.values().filter_map(|v| v.rank).any(|r| r <= cut);
+            let has_deep_sharp = backers
+                .values()
+                .any(|v| v.trusted && v.rank.is_some_and(|r| r > cut));
+            if !(has_whale && has_deep_sharp) {
+                continue;
+            }
         }
 
         // --- Composite score (ranking only) ---
@@ -694,7 +715,9 @@ pub fn default_portfolio(base: &ConsensusParams) -> Vec<StrategyDef> {
 /// tighten core's Bonferroni bar. Appended to the portfolio ONLY when
 /// `CONSENSUS_TRUST_ARMS` is on; when off they aren't registered, so the live
 /// portfolio is byte-identical. They derive from `base` like every other variant.
-pub fn trust_arms(base: &ConsensusParams) -> Vec<StrategyDef> {
+/// `cohort_cutoff` is the voting rank cutoff (`TRACK_CONSENSUS_RANK_CUTOFF`) the
+/// cross-cohort conviction arm splits whales from deep sharps on.
+pub fn trust_arms(base: &ConsensusParams, cohort_cutoff: i32) -> Vec<StrategyDef> {
     vec![
         // Rank by summed earned-trust quality of the backers.
         StrategyDef {
@@ -705,7 +728,8 @@ pub fn trust_arms(base: &ConsensusParams) -> Vec<StrategyDef> {
             },
             alerting: false,
         },
-        // Count only gate-Trusted backers (drops untrusted/Avoid).
+        // Count only gate-Trusted backers (drops untrusted/Avoid) — the
+        // "sharp_only" conviction arm across ALL cohorts.
         StrategyDef {
             name: "trusted_only",
             params: ConsensusParams {
@@ -714,7 +738,58 @@ pub fn trust_arms(base: &ConsensusParams) -> Vec<StrategyDef> {
             },
             alerting: false,
         },
+        // Cross-cohort conviction (deep-pool edge run, Phase 2): fires only when
+        // a whale AND a certified deep sharp back the same outcome. Emits nothing
+        // until a deep sharp is EARNED into the voter set — silent + inert today,
+        // forward-tracked from the moment promotion happens.
+        StrategyDef {
+            name: "cross_cohort",
+            params: ConsensusParams {
+                cross_cohort_cutoff: Some(cohort_cutoff),
+                ..base.clone()
+            },
+            alerting: false,
+        },
     ]
+}
+
+/// Parse the `CONSENSUS_RETUNED` spec — `"min_backers,strong_net,elite_net"` —
+/// into the re-tuned threshold triple. Empty/garbage ⇒ `None` (arm not
+/// registered; live portfolio unchanged). The re-tune exists because a WIDER
+/// eligible voter set inflates `net_count`: with more voters, today's absolute
+/// thresholds fire more, so selectivity must be re-chosen deliberately — as a
+/// silent VARIANT, never by moving `strict` itself.
+pub fn parse_retuned(spec: &str) -> Option<(usize, i64, i64)> {
+    let parts: Vec<i64> = spec
+        .split(',')
+        .map(|s| s.trim().parse::<i64>())
+        .collect::<Result<_, _>>()
+        .ok()?;
+    let &[min_backers, strong_net, elite_net] = parts.as_slice() else {
+        return None;
+    };
+    (min_backers >= 1 && strong_net >= min_backers && elite_net >= strong_net).then_some((
+        min_backers as usize,
+        strong_net,
+        elite_net,
+    ))
+}
+
+/// The re-tuned `strict` variant from a parsed [`parse_retuned`] spec: identical
+/// to `strict` except the absolute count thresholds. Silent — measured against
+/// `strict` on the scoreboard/honest panel like every other candidate.
+pub fn retuned_arm(base: &ConsensusParams, t: (usize, i64, i64)) -> StrategyDef {
+    let (min_backers, strong_net, elite_net) = t;
+    StrategyDef {
+        name: "strict_retuned",
+        params: ConsensusParams {
+            min_backers,
+            strong_net,
+            elite_net,
+            ..base.clone()
+        },
+        alerting: false,
+    }
 }
 
 #[cfg(test)]
@@ -1077,16 +1152,138 @@ mod tests {
         // when CONSENSUS_TRUST_ARMS is on, so the live portfolio stays identical.
         let core = default_portfolio(&base);
         assert!(
-            !core
-                .iter()
-                .any(|d| d.name == "trust_weighted" || d.name == "trusted_only"),
+            !core.iter().any(|d| {
+                d.name == "trust_weighted" || d.name == "trusted_only" || d.name == "cross_cohort"
+            }),
             "trust arms must NOT be in the default portfolio"
         );
-        let arms = trust_arms(&base);
-        assert_eq!(arms.len(), 2);
+        let arms = trust_arms(&base, 40);
+        assert_eq!(arms.len(), 3);
         assert!(arms.iter().all(|d| !d.alerting), "trust arms never alert");
         assert!(arms.iter().any(|d| d.name == "trust_weighted"));
         assert!(arms.iter().any(|d| d.name == "trusted_only"));
+        let cc = arms.iter().find(|d| d.name == "cross_cohort").unwrap();
+        assert_eq!(cc.params.cross_cohort_cutoff, Some(40));
+    }
+
+    // --- Phase 2 (deep-pool edge run): cross-cohort conviction + re-tune ---
+
+    #[test]
+    fn cross_cohort_requires_whale_and_certified_deep_sharp() {
+        let now = Utc::now();
+        let mk = |w: &str, rank: Option<i32>, trusted: bool| TraderVote {
+            wallet: w.into(),
+            name: w.into(),
+            rank,
+            pnl: None,
+            quality: quality_weight(rank),
+            earned_quality: quality_weight(rank),
+            trusted,
+            price: 0.50,
+            size_usd: 1000.0,
+            ts: now - Duration::minutes(5),
+        };
+        let cc = ConsensusParams {
+            cross_cohort_cutoff: Some(40),
+            ..ConsensusParams::default()
+        };
+        let book = |votes: Vec<TraderVote>| {
+            let mut b = MarketBook::new("0xc", "t", "s", None, false);
+            for v in votes {
+                b.add_vote(0, "Yes", v);
+            }
+            b
+        };
+
+        // Whales only (3 backers, no certified deep) → cross_cohort silent,
+        // strict-equivalent default still fires.
+        let whales_only = book(vec![
+            mk("w1", Some(5), true),
+            mk("w2", Some(12), true),
+            mk("w3", Some(30), true),
+        ]);
+        assert_eq!(
+            score_market(&whales_only, now, &ConsensusParams::default()).len(),
+            1
+        );
+        assert!(score_market(&whales_only, now, &cc).is_empty());
+
+        // Whales + an EARNED certified deep sharp (rank 120, trusted) → fires.
+        let cross = book(vec![
+            mk("w1", Some(5), true),
+            mk("w2", Some(12), true),
+            mk("d1", Some(120), true),
+        ]);
+        assert_eq!(score_market(&cross, now, &cc).len(), 1);
+
+        // Deep backer present but NOT certified (trusted=false) → silent.
+        let uncert = book(vec![
+            mk("w1", Some(5), true),
+            mk("w2", Some(12), true),
+            mk("d1", Some(120), false),
+        ]);
+        assert!(score_market(&uncert, now, &cc).is_empty());
+
+        // Certified deep sharps only (no whale) → silent: it's a CROSS-cohort
+        // conviction signal, not a deep-only one.
+        let deep_only = book(vec![
+            mk("d1", Some(120), true),
+            mk("d2", Some(150), true),
+            mk("d3", Some(200), true),
+        ]);
+        assert!(score_market(&deep_only, now, &cc).is_empty());
+    }
+
+    #[test]
+    fn parse_retuned_accepts_valid_rejects_garbage() {
+        assert_eq!(parse_retuned("4,5,8"), Some((4, 5, 8)));
+        assert_eq!(parse_retuned(" 3 , 4 , 6 "), Some((3, 4, 6)));
+        // Empty (the default) and garbage never register the arm.
+        assert_eq!(parse_retuned(""), None);
+        assert_eq!(parse_retuned("4,5"), None);
+        assert_eq!(parse_retuned("a,b,c"), None);
+        // Ordering must be sane: min_backers ≤ strong ≤ elite, all ≥ 1.
+        assert_eq!(parse_retuned("0,5,8"), None);
+        assert_eq!(parse_retuned("5,4,8"), None);
+        assert_eq!(parse_retuned("4,8,5"), None);
+    }
+
+    #[test]
+    fn retuned_arm_only_moves_the_count_thresholds() {
+        let base = ConsensusParams::default();
+        let arm = retuned_arm(&base, (4, 5, 8));
+        assert_eq!(arm.name, "strict_retuned");
+        assert!(!arm.alerting, "the re-tune variant is silent");
+        assert_eq!(arm.params.min_backers, 4);
+        assert_eq!(arm.params.strong_net, 5);
+        assert_eq!(arm.params.elite_net, 8);
+        // Everything else identical to strict's base.
+        assert_eq!(arm.params.max_opposers, base.max_opposers);
+        assert_eq!(arm.params.max_price_std, base.max_price_std);
+        assert_eq!(arm.params.max_age_mins, base.max_age_mins);
+        // Selectivity holds: a 3-backer book fires strict but not the re-tune.
+        let now = Utc::now();
+        let mut b = MarketBook::new("0xc", "t", "s", None, false);
+        for w in ["wa", "wb", "wc"] {
+            b.add_vote(
+                0,
+                "Yes",
+                TraderVote {
+                    wallet: w.into(),
+                    name: w.into(),
+                    rank: Some(10),
+                    pnl: None,
+                    quality: 1.5,
+                    earned_quality: 1.5,
+                    trusted: true,
+                    price: 0.5,
+                    size_usd: 1000.0,
+                    ts: now,
+                },
+            );
+        }
+        assert_eq!(score_market(&b, now, &base).len(), 1);
+        assert!(score_market(&b, now, &arm.params).is_empty());
     }
 
     #[test]

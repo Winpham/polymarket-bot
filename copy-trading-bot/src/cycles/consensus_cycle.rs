@@ -53,6 +53,7 @@ fn params_from_cfg(cfg: &CopyTradingConfig) -> ConsensusParams {
         },
         weight_mode: crate::scanner::consensus::WeightMode::Quality,
         trusted_only: false,
+        cross_cohort_cutoff: None,
     }
 }
 
@@ -850,7 +851,12 @@ pub(crate) fn active_portfolio(cfg: &CopyTradingConfig) -> Vec<StrategyDef> {
     // Earned-trust arms are registered ONLY when CONSENSUS_TRUST_ARMS is on;
     // off ⇒ not appended ⇒ the portfolio is byte-identical to today.
     if cfg.consensus_trust_arms {
-        all.extend(trust_arms(&base));
+        all.extend(trust_arms(&base, cfg.track_consensus_rank_cutoff));
+    }
+    // Re-tuned strict-thresholds variant (Phase 2): registered only when the
+    // CONSENSUS_RETUNED spec parses; silent; empty default = not registered.
+    if let Some(t) = crate::scanner::consensus::parse_retuned(&cfg.consensus_retuned) {
+        all.push(crate::scanner::consensus::retuned_arm(&base, t));
     }
     let filter = cfg.consensus_strategies.trim();
     if filter.is_empty() {

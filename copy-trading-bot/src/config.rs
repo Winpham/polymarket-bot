@@ -235,12 +235,22 @@ pub struct CopyTradingConfig {
     #[config(env = "CONSENSUS_ARM_RESID", default = false)]
     pub consensus_arm_resid: bool,
 
-    /// Enable the earned-trust consensus arms (`trust_weighted`, `trusted_only`).
-    /// Default OFF: when off they aren't registered (portfolio byte-identical) and
-    /// the trust-map refresh task is skipped. They're silent + judged in the
-    /// experimental family; live `strict` is non-regressive (tiering = net_count).
+    /// Enable the earned-trust consensus arms (`trust_weighted`, `trusted_only`,
+    /// `cross_cohort`). Default OFF: when off they aren't registered (portfolio
+    /// byte-identical) and the trust-map refresh task is skipped. They're silent +
+    /// judged in the experimental family; live `strict` is non-regressive
+    /// (tiering = net_count).
     #[config(env = "CONSENSUS_TRUST_ARMS", default = false)]
     pub consensus_trust_arms: bool,
+
+    /// Re-tuned `strict` thresholds variant, `"min_backers,strong_net,elite_net"`
+    /// (e.g. "4,5,8"). Deep-pool edge run, Phase 2: a WIDER eligible voter set
+    /// inflates net_count, so selectivity must be re-chosen — as a SILENT
+    /// forward-tracked arm (`strict_retuned`), never by moving `strict` itself.
+    /// Empty (default) or unparseable ⇒ the arm isn't registered; portfolio
+    /// byte-identical to today.
+    #[config(env = "CONSENSUS_RETUNED", default = "")]
+    pub consensus_retuned: String,
 
     /// How often (minutes) to refresh the cached earned-trust map. Trust inputs
     /// change ~daily as markets resolve, so this is slow — NOT per 1-min cycle.
