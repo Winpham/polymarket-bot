@@ -939,6 +939,65 @@ impl PgPortfolio {
         Ok(Some(LedgerStats::from_rows(&rows, fee_pct)))
     }
 
+    // --- Dense early-life trajectory (migration 034, decay run Phase 0) ---
+
+    /// Fresh, still-open (market, outcome) pairs eligible for dense early-life
+    /// capture: fired within the last `window_mins` by one of `strategies`,
+    /// deduped to ONE anchor signal per (condition, outcome) (the earliest-
+    /// fired row, so `secs_after_fire` is measured from the true first fire),
+    /// capped at `cap`. Read every dense tick; bounded by construction.
+    pub async fn dense_capture_candidates(
+        &self,
+        strategies: &[String],
+        window_mins: i64,
+        cap: i64,
+    ) -> Result<Vec<DenseCandidate>> {
+        let rows: Vec<DenseCandidate> = sqlx::query_as(
+            "SELECT DISTINCT ON (condition_id, outcome_index) \
+                    id AS signal_id, condition_id, outcome_index, \
+                    first_detected_at, n_backers \
+             FROM consensus_signals \
+             WHERE resolved = FALSE \
+               AND strategy = ANY($1) \
+               AND first_detected_at > NOW() - make_interval(mins => $2::int) \
+             ORDER BY condition_id, outcome_index, first_detected_at, id \
+             LIMIT $3",
+        )
+        .bind(strategies)
+        .bind(window_mins as i32)
+        .bind(cap)
+        .fetch_all(&self.pool)
+        .await
+        .context("dense_capture_candidates")?;
+        Ok(rows)
+    }
+
+    /// Append one dense trajectory point. Best-effort; the caller treats a
+    /// failure as a skipped tick, never as a cycle error.
+    pub async fn insert_trajectory_point(
+        &self,
+        signal_id: i32,
+        secs_after_fire: i32,
+        mid: Option<f64>,
+        ask: Option<f64>,
+        n_backers: Option<i32>,
+    ) -> Result<()> {
+        sqlx::query(
+            "INSERT INTO signal_price_trajectory \
+                 (signal_id, secs_after_fire, mid, ask, n_backers) \
+             VALUES ($1, $2, $3, $4, $5)",
+        )
+        .bind(signal_id)
+        .bind(secs_after_fire)
+        .bind(mid)
+        .bind(ask)
+        .bind(n_backers)
+        .execute(&self.pool)
+        .await
+        .context("insert_trajectory_point")?;
+        Ok(())
+    }
+
     // --- L1: incremental polling vote-window store (migration 025) ---
 
     /// Per-trader consensus cursors (`followed_traders.consensus_polled_at`) for
@@ -1704,6 +1763,18 @@ impl LedgerStats {
             total_pnl_shares,
         }
     }
+}
+
+/// One fresh (market, outcome) anchor row for dense early-life capture
+/// (migration 034). `signal_id` is the EARLIEST-fired signal for the pair, so
+/// `secs_after_fire` measures from the true first fire.
+#[derive(Debug, Clone, sqlx::FromRow)]
+pub struct DenseCandidate {
+    pub signal_id: i32,
+    pub condition_id: String,
+    pub outcome_index: i32,
+    pub first_detected_at: DateTime<Utc>,
+    pub n_backers: i32,
 }
 
 /// One (wallet × slice) earned-trust statistic over resolved BUY fills. Numbers
@@ -3211,5 +3282,98 @@ mod scoreboard_at_fire_it {
         println!(
             "scoreboard_at_fire_it: edge {edge:+.2} uses initial_mean_price despite drifted mean_price — OK"
         );
+    }
+}
+
+// Live-DB test for the dense-capture storage path (decay run Phase 0): fresh
+// signals are candidates (deduped per (cond, outcome), earliest anchor), stale/
+// resolved ones aren't, points insert, and the FK cascade removes them.
+//
+//   DATABASE_URL=postgres://bot:bot@localhost:55499/polymarket \
+//     cargo test -p polymarket-common dense_capture -- --ignored --nocapture
+#[cfg(test)]
+mod dense_capture_it {
+    use super::*;
+
+    #[tokio::test]
+    #[ignore = "requires a live Postgres at $DATABASE_URL with migrations applied"]
+    async fn candidates_dedupe_insert_and_cascade() {
+        let url = std::env::var("DATABASE_URL").expect("DATABASE_URL must be set");
+        let pool = sqlx::PgPool::connect(&url).await.expect("connect");
+        let pf = PgPortfolio::new(pool).await.expect("portfolio");
+        pf.run_migrations().await.expect("migrations");
+        sqlx::query("DELETE FROM consensus_signals WHERE condition_id LIKE 'dc_%'")
+            .execute(&pf.pool)
+            .await
+            .unwrap();
+
+        // Two strategies fire the SAME (cond, outcome) — favorite first (the
+        // anchor); one stale strict fire outside the window; one resolved row.
+        let seed = |strategy: &str, cond: &str, mins_ago: i32, resolved: bool| {
+            let q = format!(
+                "INSERT INTO consensus_signals \
+                   (strategy, condition_id, outcome_index, event_slug, n_backers, n_opposers, \
+                    net_count, net_quality, mean_price, price_std, recency_mins, total_usd, \
+                    score, tier, resolved, outcome_won, first_detected_at) \
+                 VALUES ($1, $2, 0, 'dc_ev', 3, 0, 3, 3.0, 0.9, 0.02, 5, 1000, 1.0, 'WATCH', \
+                         $3, CASE WHEN $3 THEN TRUE ELSE NULL END, \
+                         NOW() - make_interval(mins => {mins_ago}))"
+            );
+            let pool = pf.pool.clone();
+            let (s, c) = (strategy.to_string(), cond.to_string());
+            async move {
+                sqlx::query(&q)
+                    .bind(s)
+                    .bind(c)
+                    .bind(resolved)
+                    .execute(&pool)
+                    .await
+                    .unwrap();
+            }
+        };
+        seed("favorite", "dc_c1", 5, false).await; // anchor (earliest = 5 min ago)
+        seed("elite_fresh_fav", "dc_c1", 3, false).await; // same pair, later
+        seed("strict", "dc_c2", 60, false).await; // outside 15-min window
+        seed("favorite", "dc_c3", 2, true).await; // resolved — ineligible
+
+        let strategies: Vec<String> = ["strict", "favorite", "elite_fresh_fav"]
+            .iter()
+            .map(|s| s.to_string())
+            .collect();
+        let cands = pf
+            .dense_capture_candidates(&strategies, 15, 40)
+            .await
+            .expect("candidates");
+        let dc: Vec<_> = cands
+            .iter()
+            .filter(|c| c.condition_id.starts_with("dc_"))
+            .collect();
+        assert_eq!(dc.len(), 1, "one fresh unresolved pair, deduped: {dc:?}");
+        assert_eq!(dc[0].condition_id, "dc_c1");
+
+        // Insert a point; verify; then cascade-delete via the parent signal.
+        pf.insert_trajectory_point(dc[0].signal_id, 300, Some(0.91), Some(0.93), Some(3))
+            .await
+            .expect("insert point");
+        let (n,): (i64,) =
+            sqlx::query_as("SELECT COUNT(*) FROM signal_price_trajectory WHERE signal_id = $1")
+                .bind(dc[0].signal_id)
+                .fetch_one(&pf.pool)
+                .await
+                .unwrap();
+        assert_eq!(n, 1, "trajectory point landed");
+
+        sqlx::query("DELETE FROM consensus_signals WHERE condition_id LIKE 'dc_%'")
+            .execute(&pf.pool)
+            .await
+            .unwrap();
+        let (n2,): (i64,) =
+            sqlx::query_as("SELECT COUNT(*) FROM signal_price_trajectory WHERE signal_id = $1")
+                .bind(dc[0].signal_id)
+                .fetch_one(&pf.pool)
+                .await
+                .unwrap();
+        assert_eq!(n2, 0, "FK cascade removed the trajectory");
+        println!("dense_capture_it: candidates dedupe + insert + cascade — OK");
     }
 }

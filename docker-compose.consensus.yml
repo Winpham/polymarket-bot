@@ -80,6 +80,13 @@ services:
       CONSENSUS_ALERT_STRATEGIES: ${CONSENSUS_ALERT_STRATEGIES:-}   # empty = built-in flags (strict only)
       CONSENSUS_ALERT_WATCH_FOR: ${CONSENSUS_ALERT_WATCH_FOR:-}     # empty = WATCH never pushes
       CONSENSUS_ALERT_CROSS_DEDUP_MINS: ${CONSENSUS_ALERT_CROSS_DEDUP_MINS:-60} # one push per market across strategies
+      # --- dense early-life capture (decay Phase 0): sub-5-min trajectory for
+      #     fresh actionable signals; OFF = loop never spawned. ---
+      DENSE_CAPTURE: ${DENSE_CAPTURE:-false}
+      DENSE_INTERVAL_SECS: ${DENSE_INTERVAL_SECS:-45}
+      DENSE_WINDOW_MINS: ${DENSE_WINDOW_MINS:-15}
+      DENSE_MAX_SIGNALS: ${DENSE_MAX_SIGNALS:-40}
+      DENSE_STRATEGIES: ${DENSE_STRATEGIES:-strict,favorite,elite_fresh_fav}
       # --- optional consensus tuning (sensible defaults baked in) ---
       # TRACK_TOP_N: "40"
       # TRACK_PERIODS: "WEEK,MONTH"

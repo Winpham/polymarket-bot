@@ -147,6 +147,30 @@ pub struct CopyTradingConfig {
     #[config(env = "CONSENSUS_ALERT_CROSS_DEDUP_MINS", default = 60)]
     pub consensus_alert_cross_dedup_mins: i64,
 
+    /// Dense early-life capture (decay run Phase 0): record a ~45s-spaced mid
+    /// + executable best-ask for the first minutes of fresh signals so the
+    /// latency-decay analysis can resolve a 1-5 minute action window. OFF by
+    /// default — the loop is never spawned; live path byte-identical.
+    #[config(env = "DENSE_CAPTURE", default = false)]
+    pub dense_capture: bool,
+
+    /// Seconds between dense-capture ticks.
+    #[config(env = "DENSE_INTERVAL_SECS", default = 45)]
+    pub dense_interval_secs: u64,
+
+    /// A signal is dense-tracked while `first_detected_at` is within this many
+    /// minutes (its early life).
+    #[config(env = "DENSE_WINDOW_MINS", default = 15)]
+    pub dense_window_mins: i64,
+
+    /// Cap on (market, outcome) pairs snapshotted per tick (API budget).
+    #[config(env = "DENSE_MAX_SIGNALS", default = 40)]
+    pub dense_max_signals: i64,
+
+    /// Strategies whose fresh fires are dense-tracked (the actionable set).
+    #[config(env = "DENSE_STRATEGIES", default = "strict,favorite,elite_fresh_fav")]
+    pub dense_strategies: String,
+
     /// L1: use incremental vote-window ingestion — poll only the delta since each
     /// trader's cursor and rebuild books from the stored trailing window, instead
     /// of re-polling the full window every cycle. Verified-equivalent to the legacy

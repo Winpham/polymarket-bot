@@ -206,6 +206,32 @@ pub async fn run_live(cfg: Arc<CopyTradingConfig>) -> Result<()> {
         }
     });
 
+    // Dense early-life capture (decay Phase 0) — flag-gated: never spawned
+    // when off, so the live path is byte-identical. Best-effort, bounded.
+    if cfg.dense_capture {
+        let dc_portfolio = Arc::clone(&portfolio);
+        let dc_cfg = Arc::clone(&cfg);
+        let dc_http = reqwest::Client::builder()
+            .timeout(Duration::from_secs(15))
+            .build()
+            .expect("failed to build dense-capture HTTP client");
+        tokio::spawn(async move {
+            tracing::info!(
+                interval_secs = dc_cfg.dense_interval_secs,
+                window_mins = dc_cfg.dense_window_mins,
+                max_signals = dc_cfg.dense_max_signals,
+                strategies = %dc_cfg.dense_strategies,
+                "Dense early-life capture ON"
+            );
+            loop {
+                if let Err(e) = cycles::dense_capture_tick(&dc_portfolio, &dc_http, &dc_cfg).await {
+                    tracing::warn!(err = %e, "dense capture tick failed");
+                }
+                tokio::time::sleep(Duration::from_secs(dc_cfg.dense_interval_secs.max(10))).await;
+            }
+        });
+    }
+
     // Leaderboard auto-tracker: keep the followed universe synced to the top-N.
     let tr_portfolio = Arc::clone(&portfolio);
     let tr_notifier = Arc::clone(&notifier);
