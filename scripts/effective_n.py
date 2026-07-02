@@ -7,10 +7,10 @@ disagree, BY CONSTRUCTION, on the effective N that deflates the surplus SE:
 
   * board.rs / promotion_verdict  →  effective_n = clamp(distinct_days, 1, distinct_events)
        = **distinct event-DAYS** (Moulton-style FULL within-day correlation ⇒ ICC = 1).
-       favorite: 4 days ⇒ SE = sd/√4 ⇒ LB ≈ −23%  ("nothing certifies on 4 days").
+       favorite (match key): 4 days ⇒ SE = sd/√4 ⇒ LB ≈ −21%  ("nothing certifies on 4 days").
   * honest.rs / surplus_bounds    →  effective_n = distinct_events
        = **event count** (independence ⇒ ICC = 0).
-       favorite: 96 events ⇒ SE = sd/√96 ⇒ LB ≈ +4.2%  ("eligible").
+       favorite (match key): 71 events ⇒ SE = sd/√71 ⇒ LB ≈ +4.6%  ("eligible").
 
 Both are ENDPOINTS of the same design-effect formula at opposite extreme ICC assumptions.
 The data does not have to be guessed — the concentration instrument MEASURED the within-day
@@ -190,11 +190,16 @@ def reconcile(rows, strategy, nc):
     # t(G-1) at the SAME family-wise alpha — which is much wider and is the number that binds.
     lb_cr_day = lb_at(surplus, cr_day["se_CR"], z)
     lb_cr_tourn = lb_at(surplus, cr_tourn["se_CR"], z)
-    t_df = max(1, cr_day["G"] - 1)
-    t_crit_bonf = _t_ppf(1 - 0.05 / max(nc, 1), t_df)   # small-cluster, family-wise
-    lb_cr_day_bonf_t = surplus - t_crit_bonf * cr_day["se_CR"]
-    t_df_t = max(1, cr_tourn["G"] - 1)
-    lb_cr_tourn_bonf_t = surplus - _t_ppf(1 - 0.05 / max(nc, 1), t_df_t) * cr_tourn["se_CR"]
+    # Small-cluster t needs ≥2 d.o.f. (G≥3) to be even loosely informative; below that the
+    # bound is nonsense (t(1)≈83) and we report it as undefined rather than print garbage.
+    def _small_cluster_t_lb(cr):
+        df = cr["G"] - 1
+        if df < 2:
+            return None, df
+        return surplus - _t_ppf(1 - 0.05 / max(nc, 1), df) * cr["se_CR"], df
+    lb_cr_day_bonf_t, t_df = _small_cluster_t_lb(cr_day)
+    lb_cr_tourn_bonf_t, _ = _small_cluster_t_lb(cr_tourn)
+    t_crit_bonf = _t_ppf(1 - 0.05 / max(nc, 1), max(2, t_df))
 
     # Persistence (Q2): per-regime surplus (rule c), how many disjoint regimes individually > 0.
     by_reg = defaultdict(list)
@@ -223,6 +228,7 @@ def run_live():
     nc = rk.n_core(rows)
     print(f"EFFECTIVE-N RECONCILIATION · core family n={nc} · at-fire entry · match-level clustering")
     print("Reconciling board.rs (day-N, ICC=1) vs honest.rs (event-N, ICC=0) into one measured n_eff.\n")
+    pf = lambda x: "n/a" if x is None else f"{x:+.2%}"  # noqa: E731  (t-LB is None when G<3)
     results = {}
     for s in WINNERS:
         r = reconcile(rows, s, nc)
@@ -231,16 +237,18 @@ def run_live():
         results[s] = r
         print(f"── {s}  (surplus {r['surplus']:+.2%}, sd {r['sd']:.2%}, "
               f"{r['distinct_events']} matches over {r['distinct_days']} days) ──")
-        print(f"  Q1  the SURPLUS CI — what effective N deflates the SE, and the resulting LB (Bonferroni z={r['z']:.2f}):")
-        print(f"      honest.rs  event-N   N={r['distinct_events']:>3}  (ICC=0 assumed)   LB {r['lb_eventN_honest_rs']:+.2%}")
-        print(f"      board.rs   day-N     N={r['distinct_days']:>3}  (ICC=1 assumed)   LB {r['lb_dayN_board_rs']:+.2%}")
-        print(f"      measured DE (day)    within-day ICC={r['measured_de_day']['icc']:.3f} (NOT 1) → point n_eff {r['measured_de_day']['n_eff']:.0f}")
-        print(f"      cluster-robust day   n_eff_CR {r['n_eff_CR_day']:>5.0f} over G={r['n_clusters_day']} clusters:"
-              f"  normal-z LB {r['lb_cr_day_gate_z']:+.2%}  →  honest small-cluster t({r['t_df_day']}) LB {r['lb_cr_day_bonf_t']:+.2%}")
-        print(f"      cluster-robust tourn n_eff_CR {r['n_eff_CR_tourn']:>5.0f} over G={r['n_clusters_tourn']} clusters:"
-              f"  normal-z LB {r['lb_cr_tourn_gate_z']:+.2%}  →  small-cluster t LB {r['lb_cr_tourn_bonf_t']:+.2%}")
-        print(f"  Q2  PERSISTENCE — disjoint regime-blocks individually > 0 (rule c, N≥5):"
-              f" {r['n_pos_regimes']} of {len(r['regimes'])}")
+        print(f"  Q1  WITHIN-SAMPLE precision of the surplus (Bonferroni z={r['z']:.2f}) — how well is +{r['surplus']*100:.1f}% pinned down?")
+        print(f"      board.rs   day-N     N={r['distinct_days']:>3}  (assumes within-day ICC=1)   LB {r['lb_dayN_board_rs']:+.2%}  ← FALSIFIED")
+        print(f"      measured within-day ICC = {r['measured_de_day']['icc']:.3f} ≈ 0  ⇒  events ~independent in-sample ⇒ ICC=1 is wrong")
+        print(f"      honest.rs  event-N   N={r['distinct_events']:>3}  (ICC≈0, matches data)        LB {r['lb_eventN_honest_rs']:+.2%}")
+        print(f"      cluster-robust @measured ICC (n_eff_CR {r['n_eff_CR_day']:.0f})                 LB {r['lb_cr_day_gate_z']:+.2%}  ← agrees w/ event-N")
+        print(f"      ⇒ IN-SAMPLE the surplus is well-estimated and clears 3%. board.rs's {r['lb_dayN_board_rs']:+.0%} is a misleading artifact.")
+        print(f"  Q2  OUT-OF-SAMPLE persistence — the ACTUAL wall, and it is NOT a within-sample SE:")
+        print(f"      trying to price persistence by clustering+penalising is GRAIN-ARBITRARY: small-cluster t LB =")
+        print(f"        {pf(r['lb_cr_day_bonf_t'])} at day grain (G={r['n_clusters_day']}, t({r['t_df_day']}))  vs  {pf(r['lb_cr_tourn_bonf_t'])} at tournament grain (G={r['n_clusters_tourn']}).")
+        print(f"      the answer swings on an arbitrary grain ⇒ persistence must be COUNTED, not deflated into an SE.")
+        print(f"      independent regime-blocks individually > 0 (rule c, N≥5):"
+              f" {r['n_pos_regimes']} of {len(r['regimes'])}  (but only ~2 tournament cycles / {r['distinct_days']} calendar days total)")
         for rg, v in sorted(r["regimes"].items(), key=lambda kv: -kv[1]["n"]):
             flag = "＋" if v["surplus"] > 0 and v["n"] >= 5 else " "
             print(f"        {flag} {rg:<8} N={v['n']:>3}  surplus {v['surplus']:+.2%}")
@@ -249,23 +257,21 @@ def run_live():
     # Verdict
     fav = results.get("favorite")
     if fav:
-        print("VERDICT (favorite) — board.rs reaches the RIGHT conclusion (hold) via a MISLEADING mechanism:")
-        print(f"  • board.rs's −23% comes from assuming within-day ICC=1 (√{fav['distinct_days']}-day deflation). The MEASURED")
-        print(f"    within-day ICC is {fav['measured_de_day']['icc']:.3f} ≈ 0 → that specific mechanism is FALSIFIED, and it makes a")
-        print("    strong, near-independent edge look statistically DEAD. honest.rs's event-N (ICC=0) is the opposite error.")
-        print(f"  • The honest cluster-robust CI does NOT rescue certification, and it is GRAIN-SENSITIVE: the")
-        print(f"    family-wise small-cluster t LB is {fav['lb_cr_day_bonf_t']:+.2%} at day grain (G={fav['n_clusters_day']}) vs "
-              f"{fav['lb_cr_tourn_bonf_t']:+.2%} at tournament (G={fav['n_clusters_tourn']}).")
-        print("    Per the risk engine's K2 (the CONSERVATIVE / fewest-cluster grain binds), the day grain governs")
-        print("    → NEGATIVE → hold. The normal-z LB (+3.8%) is an ILLUSION of too-few-clusters d.o.f.; do not lean on it.")
-        print(f"  • So the binding wall is neither the surplus SD nor within-day correlation — it is the COUNT of")
-        print(f"    INDEPENDENT CLUSTERS (≈{fav['n_clusters_day']} days / ~2 tournament cycles), which caps the d.o.f. of ANY robust CI.")
-        print(f"    That is the accrual wall, derived rigorously. (Point estimate is strong: {fav['n_pos_regimes']}/"
-              f"{len(fav['regimes'])} disjoint regimes individually +, surplus {fav['surplus']:+.1%}.)")
-        print("  RECONCILED CONVENTION (proposed, NOT applied to Rust): drop the ICC=1 √days deflation (misleading);")
-        print("  compute the surplus LB with the cluster-robust SE at small-cluster t; and make the BINDING gate an")
-        print("  EXPLICIT independent-cluster-COUNT floor (≥K disjoint day/regime blocks), which no SE re-derivation")
-        print("  can shortcut. Both current gates mis-handle this (event-N over-lax; day-N right answer, wrong reason).")
+        print("VERDICT (favorite) — the gate conflates TWO questions; separating them is the whole fix:")
+        print(f"  • WITHIN-SAMPLE (Q1): board.rs's {fav['lb_dayN_board_rs']:+.0%} assumes within-day ICC=1; the MEASURED ICC is "
+              f"{fav['measured_de_day']['icc']:.3f}≈0,")
+        print(f"    so events are ~independent in-sample and the surplus IS well pinned down: event-N LB {fav['lb_eventN_honest_rs']:+.1%} ≈ "
+              f"cluster-robust LB {fav['lb_cr_day_gate_z']:+.1%} > 3%. The −20% is a misleading artifact, not a dead edge.")
+        print(f"  • OUT-OF-SAMPLE (Q2) is the ACTUAL wall — and it is NOT a within-sample SE. Encoding persistence-doubt")
+        print(f"    as an SE is grain-arbitrary (day-grain t LB {fav['lb_cr_day_bonf_t']:+.1%} vs tournament {fav['lb_cr_tourn_bonf_t']:+.1%} — the answer")
+        print(f"    flips on the grain). board.rs's ICC=1 and my own earlier 'small-cluster t' framing commit the SAME sin.")
+        print(f"    The honest wall is a COUNT: ~{fav['distinct_days']} calendar days / ~2 tournament cycles — too few INDEPENDENT")
+        print(f"    regime-blocks to establish generalisation, however precise the in-sample estimate. Point estimate is")
+        print(f"    strong and consistent ({fav['n_pos_regimes']}/{len(fav['regimes'])} disjoint regimes individually +, surplus {fav['surplus']:+.1%}) → promising, unproven.")
+        print("  RECONCILED CONVENTION (proposed, NOT applied to Rust): (a) surplus WITHIN-SAMPLE LB from the")
+        print("  cluster-robust SE at the MEASURED ICC (≈ event-N here) — drop the ICC=1 √days deflation entirely;")
+        print("  (b) a SEPARATE, EXPLICIT independent-cluster-COUNT / persistence floor for Q2 — never an SE. Both")
+        print("  current gates mis-handle it: event-N ignores Q2; day-N smuggles Q2 into the SE and gets Q1 wrong too.")
     return results
 
 

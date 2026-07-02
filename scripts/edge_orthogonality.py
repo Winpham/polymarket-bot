@@ -20,8 +20,11 @@ DIVERSIFIES favorite iff ALL THREE hold:
       (p ≤ 0.01) and positive. If S's only edge is on the events it SHARES with favorite,
       it is favorite wearing a different name.
   G3  RESIDUAL INDEPENDENCE.  On shared events, S's advantage residual must be ~uncorrelated
-      with favorite's (else the "independent" volume co-moves with favorite through a common
-      shock). Report Pearson r on shared events + the S_only-vs-fav regime-shock correlation.
+      with favorite's (two-sided: strong |r| either way ⇒ redundant or mirror). On DISJOINT
+      events, S_only must not POSITIVELY co-move with favorite through a shared (regime×day)
+      shock (one-sided: a NEGATIVE shock correlation is a genuine hedge and passes). Caveat:
+      the shock leg only sees co-movement WITHIN shared (regime×day) slates — a market-wide
+      cross-regime day shock is invisible here (acceptable under the "orthogonal regime" frame).
 
 Only a candidate clearing G1∧G2∧G3 buys reliability. The RELIABILITY VALUE of one that does
 is priced by the design effect: two uncorrelated edges of N_a, N_b independent events combine
@@ -122,16 +125,18 @@ def regime_shock_corr(anchor_rows, cand_only_rows, blind_edge):
 def reliability_value(n_fav_indep, n_s_indep, r_resid):
     """Design-effect value of a CLEAN orthogonal edge: two uncorrelated edges of N_a, N_b
     independent events combine to ≈ N_a+N_b effective bets → combined per-bet SE shrinks by
-    √((N_a+N_b)/N_a). A residual correlation r inflates the combined variance by the usual
-    portfolio factor, discounting the effective added N by (1−r) on the shared axis."""
+    √((N_a+N_b)/N_a). Only POSITIVE residual co-movement discounts the added N (it fakes
+    independence); a NEGATIVE correlation is a hedge and does not reduce it — we conservatively
+    cap its credit at full independence (factor 1) rather than over-crediting a thin-data hedge."""
     if n_s_indep <= 0:
         return {"se_shrink_factor": 1.0, "eff_added_n": 0.0}
-    eff_added = n_s_indep * max(0.0, 1.0 - abs(r_resid or 0.0))
+    eff_added = n_s_indep * min(1.0, max(0.0, 1.0 - max(0.0, r_resid or 0.0)))
     shrink = math.sqrt((n_fav_indep + eff_added) / n_fav_indep) if n_fav_indep > 0 else 1.0
     return {"se_shrink_factor": shrink, "eff_added_n": eff_added}
 
 
-def gate_candidate(name, anchor_rows, cand_rows, anchor_resid, blind_cells, blind_edge, rng):
+def gate_candidate(name, anchor_rows, cand_rows, anchor_resid, blind_cells, blind_edge, rng,
+                   n_tested=1):
     anchor_evs = {r["ev"] for r in anchor_rows}
     cand_evs = {r["ev"] for r in cand_rows}
     s_only_evs = cand_evs - anchor_evs
@@ -141,17 +146,21 @@ def gate_candidate(name, anchor_rows, cand_rows, anchor_resid, blind_cells, blin
     g1_indep = len(s_only_evs)                       # independent events added
     frac_indep = g1_indep / max(1, len(cand_evs))
 
-    # G2: does the diversifying component carry edge?
+    # G2: does the diversifying component carry edge? Bonferroni-corrected across the family of
+    # candidates tested (selection_null.py's own warning: multiplicity or it's a false-promote).
+    p_bar = P_BAR / max(1, n_tested)
     if g1_indep >= 10:
         obs, mu, sd, p, n_ev = selection_null_on(s_only_rows, blind_cells, blind_edge, rng)
     else:
         obs, mu, sd, p, n_ev = (float("nan"), None, None, None, g1_indep)
-    g2_edge_real = (p is not None and p <= P_BAR and obs > 0)
+    g2_edge_real = (p is not None and p <= p_bar and obs > 0)
 
-    # G3: residual independence on shared events + regime-shock independence on disjoint events.
+    # G3: independence. Shared-event residual is TWO-sided (strong |r| either way ⇒ redundant or
+    # mirror, not independent evidence). Regime-shock is ONE-sided: only POSITIVE co-movement
+    # fakes diversification; a NEGATIVE shock correlation is a genuine hedge and PASSES.
     r_shared, n_shared = shared_residual_corr(anchor_resid, cand_resid)
     r_shock, n_shock_slates = regime_shock_corr(anchor_rows, s_only_rows, blind_edge)
-    g3_independent = (abs(r_shared or 0.0) <= 0.3) and (abs(r_shock or 0.0) <= 0.5)
+    g3_independent = (abs(r_shared or 0.0) <= 0.3) and ((r_shock or 0.0) <= 0.5)
 
     diversifies = (g1_indep >= 10) and g2_edge_real and g3_independent
     rv = reliability_value(len(anchor_evs), g1_indep, r_shared)
@@ -169,32 +178,39 @@ def gate_candidate(name, anchor_rows, cand_rows, anchor_resid, blind_cells, blin
     }
 
 
-def run_live():
-    rows = sn.fetch()
+def evaluate(rows=None):
+    """Compute the gate over every candidate WITHOUT printing. Returns (results, anchor_n,
+    n_tested). Used by portfolio_constructor.py to build the diversifying menu from data."""
+    if rows is None:
+        rows = sn.fetch()
     rng = random.Random(SEED)
     blind_edge = blind_edge_map(rows)
     blind_cells = defaultdict(list)
     for r in rows:
         if r["strategy"] == "_blind":
             blind_cells[(sn.band(r["entry"]), r["day"])].append((r["ev"], r["won"] - r["entry"]))
-
     anchor_rows = [r for r in rows if r["strategy"] == ANCHOR]
     anchor_resid = ev_residuals(anchor_rows, blind_edge)
     candidates = sorted({r["strategy"] for r in rows}
                         - {"_blind", ANCHOR}
                         - {s for s in {r["strategy"] for r in rows}
                            if len({r["ev"] for r in rows if r["strategy"] == s}) < 10})
+    n_tested = len(candidates)
+    results = [gate_candidate(c, anchor_rows, [r for r in rows if r["strategy"] == c],
+                              anchor_resid, blind_cells, blind_edge, rng, n_tested)
+               for c in candidates]
+    return results, len(anchor_resid), n_tested
 
-    print(f"ORTHOGONALITY GATE · anchor={ANCHOR} (N={len(anchor_resid)}) · seed {SEED} · "
-          f"a candidate DIVERSIFIES iff G1(≥10 indep evts) ∧ G2(orth-component selection-real p≤{P_BAR}) ∧ G3(residual+shock independent)")
+
+def run_live():
+    results, anchor_n, n_tested = evaluate()
+    print(f"ORTHOGONALITY GATE · anchor={ANCHOR} (N={anchor_n}) · seed {SEED} · {n_tested} candidates · "
+          f"a candidate DIVERSIFIES iff G1(≥10 indep evts) ∧ G2(orth-component selection-real, Bonferroni p≤{P_BAR}/{n_tested}={P_BAR/max(1,n_tested):.4f}) ∧ G3(residual two-sided + shock one-sided independent)")
     print(f"\n{'candidate':<16}{'N':>5}{'indep':>6}{'%ind':>6}{'orth surplus':>13}{'orth p':>8}"
           f"{'r_shared':>9}{'r_shock':>8}{'  gates':>8}  verdict")
     print("-" * 96)
-    results = []
-    for c in candidates:
-        crows = [r for r in rows if r["strategy"] == c]
-        g = gate_candidate(c, anchor_rows, crows, anchor_resid, blind_cells, blind_edge, rng)
-        results.append(g)
+    for g in results:
+        c = g["candidate"]
         gates = ("G1" if g["g1_pass"] else "··") + ("G2" if g["g2_pass"] else "··") + ("G3" if g["g3_pass"] else "··")
         surp = "n/a" if g["orth_surplus"] is None else f"{g['orth_surplus']:+.2%}"
         pp = "n/a" if g["orth_null_p"] is None else f"{g['orth_null_p']:.4f}"
@@ -241,12 +257,15 @@ def _synth_rows(rng):
     for i in range(400):
         rows.append(_mk("_blind", f"bl{i}", 0.70, 1 if rng.random() < 0.70 else 0,
                         days[i % 4], slug=f"fifwc-x{i}-2026-06-29"))
-    # favorite: base rate 0.70 but wins 0.88 → +edge, on soccer/tennis
+    # favorite: +edge, on soccer, with DAY-VARYING win rates so per-slate residuals actually
+    # vary (else there is no shock signal for a G3 test to correlate against).
+    fav_rate = {days[0]: 0.95, days[1]: 0.70, days[2]: 0.95, days[3]: 0.70}
     fav_evs = []
     for i in range(60):
+        day = days[i % 4]
         ev = f"fifwc-fav{i}-2026-06-29"
-        fav_evs.append((ev, days[i % 4]))
-        rows.append(_mk("favorite", ev, 0.70, 1 if rng.random() < 0.88 else 0, days[i % 4], slug=ev))
+        fav_evs.append((ev, day))
+        rows.append(_mk("favorite", ev, 0.70, 1 if rng.random() < fav_rate[day] else 0, day, slug=ev))
     # NESTED decoy: same events, mirrors favorite outcome residual (fully correlated, 0 indep)
     for ev, day in fav_evs:
         won = next(r["won"] for r in rows if r["strategy"] == "favorite" and r["ev"] == ev)
@@ -259,6 +278,23 @@ def _synth_rows(rng):
     for i in range(40):
         ev = f"btc-ort{i}-2026-07-01"
         rows.append(_mk("ortho", ev, 0.70, 1 if rng.random() < 0.88 else 0, days[i % 4], slug=ev))
+
+    # SHOCKPOS / HEDGE decoys — DETERMINISTIC outcomes (clean per-slate means, so the 4-point
+    # shock correlation is robustly signed, not noise). Both disjoint soccer events sharing
+    # favorite's slates, both strong +edge (G2 passes). SHOCKPOS tracks favorite's day rate
+    # (positive shock → must FAIL G3); HEDGE anti-tracks (negative shock → a genuine hedge that
+    # must PASS all gates — the finding-#1 fix).
+    def _fill(strategy, rate_by_day, n=48):
+        per_day = defaultdict(int)
+        for i in range(n):
+            per_day[days[i % 4]] += 1
+        for day, cnt in per_day.items():
+            nwin = round(rate_by_day[day] * cnt)
+            for j in range(cnt):
+                ev = f"fifwc-{strategy}{day}_{j}-2026-06-29"
+                rows.append(_mk(strategy, ev, 0.70, 1 if j < nwin else 0, day, slug=ev))
+    _fill("shockpos", {d: (0.97 if fav_rate[d] > 0.8 else 0.83) for d in days})   # tracks
+    _fill("hedge", {d: (0.83 if fav_rate[d] > 0.8 else 0.97) for d in days})      # anti-tracks
     return rows
 
 
@@ -277,7 +313,7 @@ def selftest():
 
     def gate(name):
         return gate_candidate(name, anchor_rows, [r for r in rows if r["strategy"] == name],
-                              anchor_resid, blind_cells, blind_edge, prng)
+                              anchor_resid, blind_cells, blind_edge, prng, n_tested=5)
 
     nested = gate("nested")
     c_nested = (nested["n_independent"] == 0) and (not nested["g1_pass"]) and (not nested["diversifies"])
@@ -297,6 +333,23 @@ def selftest():
     ok = ok and c_ortho
     print(f"  [{'ok' if c_ortho else 'FAIL'}] ORTHO edge: G1={ortho['g1_pass']} G2={ortho['g2_pass']} "
           f"G3={ortho['g3_pass']} → diversifies={ortho['diversifies']}, SE×{ortho['se_shrink_if_real']} (want all True)")
+
+    # G3 as the DECIDING gate: positive regime-shock co-movement must fail G3 despite G1∧G2.
+    shockpos = gate("shockpos")
+    c_shock = shockpos["g1_pass"] and shockpos["g2_pass"] and (not shockpos["g3_pass"]) \
+        and (not shockpos["diversifies"]) and (shockpos["r_regime_shock"] or 0) > 0.3
+    ok = ok and c_shock
+    print(f"  [{'ok' if c_shock else 'FAIL'}] SHOCKPOS: G1={shockpos['g1_pass']} G2={shockpos['g2_pass']} "
+          f"r_shock={shockpos['r_regime_shock']} → G3={shockpos['g3_pass']}, diversifies={shockpos['diversifies']} (want G3 the decider: F)")
+
+    # finding-#1 fix: a NEGATIVE regime-shock (a hedge) with real edge must PASS all gates
+    # (not be rejected by abs()) — a genuine anti-correlated diversifier.
+    hedge = gate("hedge")
+    c_hedge = hedge["g1_pass"] and hedge["g2_pass"] and (hedge["r_regime_shock"] or 0) < -0.3 \
+        and hedge["g3_pass"] and hedge["diversifies"]
+    ok = ok and c_hedge
+    print(f"  [{'ok' if c_hedge else 'FAIL'}] HEDGE (neg shock, +edge): r_shock={hedge['r_regime_shock']} "
+          f"G2={hedge['g2_pass']} → G3={hedge['g3_pass']} diversifies={hedge['diversifies']} (want a hedge PASSES all)")
 
     print("selftest:", "PASS" if ok else "FAIL")
     sys.exit(0 if ok else 1)

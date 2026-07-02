@@ -54,11 +54,28 @@ import selection_null as sn
 import risk_engine as rk_risk
 import rekey_headline as rk
 import effective_n as en
+import edge_orthogonality as eo
 
 SEED = 20260702
 MIN_INDEP = 10           # an edge must add ≥ this many independent events to enter the book
 N_PATHS = 8_000
-MENU = ["favorite", "elite_fresh_fav"]   # the certifiable-quality edges to consider (belief-blind)
+# The certifiable-quality anchor + any strategy the orthogonality gate CERTIFIES as a
+# diversifier (built from data, not hardcoded). elite_fresh_fav is kept as an explicit
+# nested-dedup demonstration; the anchor is always considered.
+BASE_MENU = ["favorite", "elite_fresh_fav"]
+
+
+def build_menu(rows):
+    """MENU = anchor + explicit nested demo + every edge_orthogonality diversifier (G1∧G2∧G3).
+    Today the gate certifies none, so MENU == BASE_MENU — but a matured orthogonal edge would
+    enter automatically, which is the whole point of composing the gate rather than hardcoding."""
+    results, _, _ = eo.evaluate(rows)
+    diversifiers = [g["candidate"] for g in results if g["diversifies"]]
+    menu = list(BASE_MENU)
+    for d in diversifiers:
+        if d not in menu:
+            menu.append(d)
+    return menu, diversifiers
 
 
 def build_book(menu, pop_rows):
@@ -123,14 +140,16 @@ def price_independence(events, kelly_full, n_paths, seed):
 
 def run_live():
     rows = sn.fetch()
-    nc = rk.n_core(rk.fetch())
-    pop_rows = {p: [r for r in rows if r["strategy"] == p] for p in MENU}
+    rk_rows = rk.fetch()
+    nc = rk.n_core(rk_rows)
+    menu, diversifiers = build_menu(rows)
+    pop_rows = {p: [r for r in rows if r["strategy"] == p] for p in menu}
 
     # honest cluster-robust n_eff (Q1) from effective_n
-    recon = en.reconcile(rk.fetch(), "favorite", nc)
+    recon = en.reconcile(rk_rows, "favorite", nc)
     n_eff_day = recon["n_eff_CR_day"] if recon else float("nan")
 
-    selected, merged, contrib = build_book(MENU, pop_rows)
+    selected, merged, contrib = build_book(menu, pop_rows)
     events = rk_risk.build_events(merged)
     book, kelly_full = score_book(events, n_eff_day, N_PATHS, SEED)
     price = price_independence(events, kelly_full, rk_risk.N_PATHS_SENS, SEED + 50)
@@ -138,9 +157,10 @@ def run_live():
     print("RELIABILITY-FIRST PORTFOLIO CONSTRUCTOR")
     print("ALL P(profit) ARE CONDITIONAL ON THE MEASURED EDGE BEING REAL & PERSISTING (D7). "
           "Sizing sizes an edge; it cannot create one.\n")
-    print(f"MENU considered (belief-blind): {MENU}")
+    print(f"MENU considered (belief-blind) = anchor + nested-demo + orthogonality-certified diversifiers: {menu}")
+    print(f"  (edge_orthogonality certified {len(diversifiers)} diversifier(s) today: {diversifiers or 'none'})")
     print("STEP 1 — dedup (an edge enters the book only if it adds ≥%d independent bets):" % MIN_INDEP)
-    for name in MENU:
+    for name in menu:
         c = contrib[name]
         verdict = "SELECTED" if name in selected else f"DROPPED (adds {c['independent_added']} < {MIN_INDEP})"
         print(f"    {name:<18} {c['n_events']:>3} events, +{c['independent_added']:>3} independent → {verdict}")
@@ -157,30 +177,36 @@ def run_live():
         print(f"  {H:>11}{c['median_pnl']:>+10.0f}{c['p5_pnl']:>+10.0f}{c['p_profit']:>11.1%}"
               f"{c['p_maxdd_over_30pct']:>11.1%}{c['p_ruin']:>9.1%}  {trust}")
 
-    print("\nSTEP 4 — price of the reliability we do NOT yet have (value of an extra INDEPENDENT")
-    print("  regime/edge; same H=100 volume spread across k uncorrelated sub-streams, flat-shares):")
-    print(f"  {'k regimes':>10}{'P(loss)':>9}{'SD P&L':>9}{'5th P&L':>10}{'ΔP(loss)':>10}{'ΔSD':>8}")
+    print("\nSTEP 4 — what a second edge is (and is NOT) worth, priced two honest ways:")
+    print("  (a) DECORRELATING FIXED volume — same H=100 spread across k uncorrelated sub-streams (flat-shares):")
+    print(f"      {'k regimes':>10}{'P(loss)':>9}{'SD P&L':>9}{'5th P&L':>10}{'ΔSD':>8}")
     for k in (1, 2, 3, 4):
         r = price[f"{k}_independent_regimes"]
-        dpl = r.get("p_loss_reduction_vs_prev"); dsd = r.get("sd_reduction_frac_vs_prev")
-        dpl_s = "" if dpl is None else f"{dpl:+.1%}"
+        dsd = r.get("sd_reduction_frac_vs_prev")
         dsd_s = "" if dsd is None else f"{dsd:+.0%}"
-        print(f"  {k:>10}{r['p_loss']:>9.1%}{r['sd_pnl']:>9.0f}{r['p5_pnl']:>+10.0f}{dpl_s:>10}{dsd_s:>8}")
+        print(f"      {k:>10}{r['p_loss']:>9.1%}{r['sd_pnl']:>9.0f}{r['p5_pnl']:>+10.0f}{dsd_s:>8}")
+    print("      → ~0 by construction: favorite's within-slate correlation is ≈0, so re-spreading the SAME")
+    print("        volume buys almost nothing, and P(loss)=0% is the D15 no-losing-slate artifact (uninformative).")
+    print("  (b) ADDING independent volume (√N) — the value edge_orthogonality.reliability_value prices: a")
+    print("      clean orthogonal edge of Nb independent events shrinks the combined per-bet SE by √((Na+Nb)/Na).")
+    print("      THIS is a second edge's real worth here — VOLUME + continuity (betting through post-WC supply")
+    print("      droughts) + INSURANCE if favorite's edge degrades — NOT per-bet variance reduction of fixed volume.")
 
     print("\nVERDICT — the pre-registered reliability-first book (for the hypothetical GO day):")
     print(f"  • BOOK: {selected} only — sized {book['policy']} (⅛-Kelly per band, SE-shrunk, exposure-capped).")
     print("    elite_fresh_fav is nested in favorite → adds 0 independent bets → NOT in the book (never double-count).")
     print("  • RELIABILITY today comes ONLY from the structural caps (drawdown bounded by construction)")
-    print("    and forward accrual — NOT from diversification: the orthogonality gate found 0 partner edges,")
-    print("    so there is nothing to spread across. The k-regime price above is the variance reduction a")
-    print("    real second edge WOULD buy — the honest value of the sibling breadth run + the trust_weighted watch-item.")
+    print("    and forward accrual — NOT from diversification: the orthogonality gate certified 0 partner edges,")
+    print("    so there is nothing to spread across. A second edge's worth is added-volume/continuity/insurance")
+    print("    (STEP 4b), not fixed-volume variance reduction (STEP 4a ≈ 0 at favorite's ~0 within-slate corr).")
     print("  • ACCRUAL TRIGGERS (re-run this constructor at each): post-WC + post-Wimbledon (first adverse")
     print("    regime — the DD ceiling may finally bind, unlocking ¼-Kelly); +50 favorite / +300 fleet events;")
     print("    any edge_orthogonality candidate reaching G1∧G2∧G3; and MANDATORY before any real-money pilot.")
     print("  • CONDITIONAL: if favorite's edge is not real or does not persist, every policy loses to costs.")
 
-    return {"menu": MENU, "book": selected, "contrib": contrib, "n_eff_day": n_eff_day,
-            "sizing": book, "independence_price": price}
+    return {"menu": menu, "diversifiers_certified": diversifiers, "book": selected,
+            "contrib": contrib, "n_eff_day": n_eff_day, "sizing": book,
+            "independence_price_fixed_volume": price}
 
 
 # ---------------------------------------------------------------------------------------
