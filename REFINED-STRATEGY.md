@@ -75,6 +75,19 @@ The engine is NOT a raw count. Levels, simplest→richest, each gated by the bel
   cost-realistic, frequency-weighted. Re-run at +7 days / +300 fleet events / after each
   tournament block. Today's overlap of reliability × volume: favorite's favorite-band
   slices at 10–20 ev/day; the reliably-negative mass is the fleet's non-favorite residue.
+- **The adaptive overlay (`scripts/map_state.py` + `map_checkpoint.py`, entry 11, D14):**
+  the slice map as a LIVING versioned state machine — cells enter DODGE/PRIORITIZE on the
+  WHOLE record (power) and exit/rehabilitate on the RECENT window (adaptivity), with STALE
+  (silence holds) and THRASH (two flips freeze) guards. A cut applies itself only while the
+  evidence binds and reverses at the bar when the world changes (owner directive: no
+  permanent cuts). `fleet_mapped` is judged on paired lift over `strict` + the excluded-pick
+  counterfactual on FORWARD rows only; the Rust arm is earned, not built. Adaptive means
+  re-reading the frozen procedure on new data, never re-tuning it.
+- **Breadth is emergent, not code-blocked (entry 11 audit):** the only alerting strategy
+  runs SportsMode::Include; the leaderboard is global category-blind PnL (6h drop-grace) so
+  volume follows the calendar automatically. Post-WC forecast: strict survives ~15/day (MLB
+  is the daily bridge → Oct), favorite thins to ~4/day, elite_fresh_fav (97% WC+Wimbledon)
+  goes near-silent. Breadth is bought by more MARKETS via rotation, never by loosening gates.
 
 ## Honest status & posture
 - **Certified/bankable today: nothing.** One tournament, ~89% World Cup soccer.
