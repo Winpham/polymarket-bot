@@ -1,3 +1,4 @@
+pub mod cohort;
 pub mod consensus;
 pub mod copy_trader;
 pub mod enrich;

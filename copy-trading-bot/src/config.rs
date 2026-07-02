@@ -65,6 +65,14 @@ pub struct CopyTradingConfig {
     #[config(env = "TRACK_CONSENSUS_RANK_CUTOFF", default = 40)]
     pub track_consensus_rank_cutoff: i32,
 
+    /// Comma-separated inclusive upper rank bounds defining the cohort BANDS the
+    /// deep-pool observatory slices/groups by (see `scanner::cohort`). The first
+    /// band is the trusted top cohort — keep its bound aligned with
+    /// `track_consensus_rank_cutoff` (40). Deeper bands are experimental candidates.
+    /// Display/filter only; never affects capture, voting, or alerting.
+    #[config(env = "TRACK_COHORT_BANDS", default = "40,100,250,500")]
+    pub track_cohort_bands: String,
+
     /// Comma-separated leaderboard periods to union (DAY,WEEK,MONTH,ALL).
     #[config(env = "TRACK_PERIODS", default = "WEEK,MONTH")]
     pub track_periods: String,
