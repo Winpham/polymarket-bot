@@ -260,3 +260,50 @@ Appended: `CONSENSUS_ALERT_STRATEGIES=strict,favorite,elite_fresh_fav`,
 `CONSENSUS_ALERT_WATCH_FOR=favorite,elite_fresh_fav`, `DENSE_CAPTURE=true`. Deploy via
 `scripts/consensus-autoupdate.sh` (the sanctioned path). Revert = delete the lines + re-run the
 updater. Backup: backups/pre-fable-run-20260701-untracked/.env.consensus.bak (pre-run state).
+
+## D13 — Slice study: the PRIORITIZE/DODGE map, its multiplicity machinery, and the at-fire shape capture
+
+**The run (2026-07-02, `feat/slice-study`, reports/entries/10):** the whole 4-day forward
+record mapped into a PRE-REGISTERED family of ~123 slices (3 populations × 12 dimensions;
+frozen in the report before anything was computed), each judged on matched-blind surplus
+(regime×band baseline, never global blind), a profile-matched selection null
+((band × UTC-day × regime) draws reusing `selection_null.py`'s machinery — its CLI is
+byte-identical), realizable ROI at MEASURED costs (0.5¢ + 2%), frequency (whole record +
+last-48h), and persistence — event-clustered everywhere, at-fire entry everywhere (D6).
+
+**Why the machinery is trustworthy:** BH-FDR q=0.10 across the whole family (83 testable
+cells → 45 survive); mandatory self-test PASSES (injected-edge cell → PRIORITIZE, no-edge
+cell → NEUTRAL, pure-noise fixture → 0 FDR survivors); K2 drift-stability check on every
+cell (0 UNSTABLE); leave-one-day-out on every verdict cell; explicit ex-World-Cup column
+for soccer-driven cells. Inheritance is stated: cells test slice-vs-blind, not
+slice-vs-parent, so the map is an ORDERING, not 45 discoveries.
+
+**What it found (binding tables in reports/entries/2026-07-02-10-slice-study.md):**
+- PRIORITIZE concentrates where favorite's favorite-band mass is: horizon<6h (+$283/d,
+  ROI LB +6.8%), opposition≥1 (+$228/d, LB +10.1%), UTC 00–08, moneylines, band
+  0.80–0.90. All LODO-robust, K2-stable, WC-exclusion-surviving.
+- DODGE (the mirror test): strict-tennis (realizable −23.7% [−37.3,−8.7], N=110) and
+  strict-moneyline-all-bands (−13.7% [−25.8,−2.5], N=179) — verified mechanism: the
+  NON-favorite residue (tennis band 1: 0% hit on 26 events at entry≈0.10). Rule 1 made
+  quantitative; favorite-side tennis is fine (misses PRIORITIZE by LB −0.1%).
+- strict/prop PRIORITIZE (+56.7% ROI) is 100% World Cup → EXPIRING, not actionable.
+- The volume question gets a K3-flavored answer: no pre-listed volume-add clears the bar
+  (strict 0.65–0.80 NEUTRAL; tennis-only misses by a hair); favorite has no negative
+  slice to exclude. The winners are already the right granularity at today's N.
+
+**Nominations (pre-registered forward reads, ZERO new variants/Bonferroni slots):**
+(1) favorite∩opp≥1 capital-efficiency claim; (2) favorite∩tennis. Both: first read at 30
+NEW events post 2026-07-02 16:45 UTC, then every +15, D7-equivalent bars on forward data
+(plus, for (1), the opp≥1−opp=0 DIFFERENCE > 0 at 95% — not established today). Study
+re-run trigger: +7 days or +300 fleet events, and once after the WC final.
+
+**Data-honesty decision — DRIFT-DEFINED dims + migration 036:** the upsert overwrites
+σ/recency/liquidity/best-rank every cycle; only entry/net_count/n_backers had set-once
+at-fire columns. Slices defined on drifted values are not knowable at fire, so their
+verdicts are †-capped (nominate, never bind). Fix shipped: migration 036 + set-once
+`initial_price_std/recency_mins/total_usd/best_backer_rank` in the upsert INSERT (ON
+CONFLICT never touches them) — same justification as D5: every uncaptured day is
+unrecoverable. Verified via throwaway-PG `atfire_shape_it` (initial values survive a
+drifted re-upsert); `scoreboard_at_fire_it` still green; behavior-neutral (nothing reads
+the new columns yet). `slice_study.py` prefers the initial columns and auto-uncaps a
+drift dimension once ≥95% of a cell's rows carry at-fire values.
