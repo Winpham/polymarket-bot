@@ -54,6 +54,23 @@ is NOT needed and was deliberately not built as dead code.** If a future depth/t
 cycle pushes latency toward the window, the lever is a deep-only stagger inside the
 existing `join_all`+`Semaphore`.
 
+### Live-production addendum (post-deploy, honest)
+The 8.5s above is the *raw poll fan-out* only. The `record_consensus_poll` metric in
+production wraps the **full ingest** (poll + per-trader fills-insert + window-insert +
+record_capture), and the **first cycle after a deploy backfills 48h for every trader**.
+Observed live at depth-200 (267 active = 56 hot / 211 deep):
+- **Cold first cycle: 96s poll / ~3.5 min full cycle** (delta≈21k, 15.5k new fills) — near
+  but inside the 120s `CONSENSUS_INTERVAL_MINS` window.
+- **Steady state: ~46s and falling** (fills_inserted 15.5k→3.3k as cursors catch up), **0
+  data-api 429s throughout.**
+- The per-cycle delta stays ~22k because the `/activity` endpoint **ignores `startTs`** and
+  returns the last ~100 rows/trader regardless (a pre-existing trait, now ×251 traders);
+  the redundant rows are filtered at the fills `ON CONFLICT`.
+
+Verdict holds: steady-state latency sits comfortably under the cycle window with 0 429s, so
+the semaphore remains sufficient. The one-time cold backfill is the tightest point (96s) — if
+depth is later raised toward 500, re-check the cold cycle against the window before shipping.
+
 ## Non-regression — proven byte-for-byte
 - **Storage** (`eligibility_gate_load_is_byte_for_byte`, live PG): both book sources return
   the eligible wallets only; all captured votes (deep included) remain in the archive.
