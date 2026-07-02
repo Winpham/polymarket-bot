@@ -123,7 +123,10 @@ pub async fn housekeeping_cycle(
     // backlog can't starve them; `asks_captured` counts lagged fallback captures.
     let mut asks_captured = 0usize;
     let mut decision_asks_captured = 0usize;
-    let mut entry_ask_capped = false;
+    // One cap-flag PER budget (audit #8): a single shared flag would drop the lagged
+    // cap event if the decision budget capped first in the same cycle.
+    let mut decision_capped = false;
+    let mut lagged_capped = false;
     // Phase 3: paper equity ledger scope (empty = every non-blind strategy) + count.
     let ledger_set: std::collections::HashSet<&str> = cfg
         .ledger_strategies
@@ -207,16 +210,20 @@ pub async fn housekeeping_cycle(
                                 false
                             }
                         };
-                        // Executable-ask capture (Phase 1–2; only when
-                        // CAPTURE_ENTRY_ASK is on). Bound to the mid we JUST observed
-                        // (`price`), so the ask and its paired mid come from ONE
-                        // moment. On the first-price pass this mid is the same value
-                        // frozen into `initial_market_price` → a DECISION-TIME capture
-                        // (housekeeping runs every 5 min, so within minutes of first
-                        // detection). Decision-time captures get their OWN per-cycle
-                        // budget so a lagged backlog can never starve them; lagged
-                        // (later/capped/empty-book) captures use the original budget
-                        // and are distinguished by `entry_ask_at − first_detected_at`.
+                        // Executable-ask capture (only when CAPTURE_ENTRY_ASK is on).
+                        // Paired with the mid we JUST observed (`price`) — the /markets
+                        // mid and the /book ask are from the SAME housekeeping pass
+                        // (~sub-second apart, two endpoints), NOT literally one tick.
+                        // On the first-price pass this mid is the value frozen into
+                        // `initial_market_price` — the FIRST price the housekeeping loop
+                        // observes for the signal. NB: that is ~one full pass after
+                        // detection (the loop iterates the whole open backlog at 120ms/
+                        // condition; a pass is ~10-15 min, NOT ≤5 min — the 5-min figure
+                        // is only the post-cycle sleep), so this is a first-OBSERVED,
+                        // not literally alert-instant, price. First-price captures get
+                        // their OWN per-cycle budget so a lagged backlog can't starve
+                        // them; lagged (later/capped/empty-book) captures use the other
+                        // budget, distinguished by `entry_ask_at − first_detected_at`.
                         // Set-once, resolved-guarded, best-effort: a failure just
                         // leaves entry_ask NULL and the honest query falls back to
                         // mid+haircut. NEVER touches the live alert path — pure
@@ -232,8 +239,12 @@ pub async fn housekeeping_cycle(
                                 asks_captured < cfg.entry_ask_max_per_cycle
                             };
                             if !within_budget {
-                                if !entry_ask_capped {
-                                    entry_ask_capped = true;
+                                let already = if first_price {
+                                    std::mem::replace(&mut decision_capped, true)
+                                } else {
+                                    std::mem::replace(&mut lagged_capped, true)
+                                };
+                                if !already {
                                     crate::metrics::record_entry_ask_capped(first_price);
                                     tracing::info!(
                                         decision = first_price,

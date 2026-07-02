@@ -32,26 +32,34 @@ Key columns on `consensus_signals`: `observed_votes` (JSONB atoms), `initial_*` 
 The honest P&L panel measures the outcome against a **realizable entry**, not the sharps' fill:
 `entry = COALESCE(entry_ask, initial_market_price + EXEC_HAIRCUT)`. `initial_market_price` is the
 first live CLOB **mid** a signal ever sees — set COALESCE-once in `snapshot_consensus_signal` on the
-**first housekeeping pass** (≤5 min after detection; base strategies fetch no mid at detection).
-`entry_ask` is the real executable best **ask** from `/book` — the price a follower could truly hit.
+**first housekeeping pass to reach the signal**. That is NOT ≤5 min: the loop iterates the whole open
+backlog at 120ms/condition, so a pass is **~10-15 min** (the 5-min figure is only the post-cycle
+sleep), and base strategies fetch no mid at detection. So `initial_market_price` / `entry_ask` is the
+**first-OBSERVED** executable price ~10-15 min post-alert — a serviceable proxy for a follower's fill
+on a signal that resolves in hours, but NOT the alert-instant price, and it does not capture the
+alert→first-observed drift (that drift is separately measured as `capture_lag = initial_market_price −
+mean_price`). `entry_ask` is the real executable best **ask** from `/book`.
 
 Capture state (columns on `consensus_signals`):
 - `entry_ask` (mig 030) — best ask captured once while OPEN (set-once, `resolved=FALSE`, leak-free).
-- `entry_ask_at` / `entry_ask_mid` (mig 032) — WHEN the ask was captured and the mid at the SAME
-  instant. Together they (a) **prove decision-time** (`entry_ask_at ≈ first_detected_at`) and
-  (b) **measure the real haircut** (`entry_ask − entry_ask_mid`), replacing the `EXEC_HAIRCUT` guess.
+- `entry_ask_at` / `entry_ask_mid` (mig 032) — WHEN the ask was captured and the mid observed in the
+  SAME pass (the /markets mid + /book ask are ~sub-second apart, two endpoints — not one tick).
+  Together they (a) **time-stamp the capture** (`entry_ask_at − first_detected_at` = the capture lag)
+  and (b) **measure the real haircut** (`entry_ask − entry_ask_mid`), replacing the `EXEC_HAIRCUT` guess.
 
-Decision-time discipline: the ask is captured in the SAME housekeeping pass that first sets
-`initial_market_price`, so `entry_ask_mid == initial_market_price` and both come from one moment.
+First-price discipline: the ask is captured in the SAME housekeeping pass that first sets
+`initial_market_price`, so `entry_ask_mid == initial_market_price` and both come from one pass.
 If that first pass is capped/empty-book, a **lagged fallback** captures on a later pass — visible as
-`entry_ask_at − first_detected_at` (the capture-lag histogram), so the realized ROI can filter to
-decision-time-only rows (within `REALIZED_DECISION_LAG_SECS`).
+`entry_ask_at − first_detected_at`, so the REALIZED ROI can filter to first-pass rows (within
+`REALIZED_DECISION_LAG_SECS`, a wall-clock proxy for `first_price` provenance — see audit #2).
 
-History: capture was default-OFF (`CAPTURE_ENTRY_ASK=false`) and, when enabled, LAGGED — the only
-site was the housekeeping snapshot loop, which grabbed whatever ask existed whenever it next ran, not
-the ask paired with the decision-time mid. The decision-time capture + `entry_ask_at`/`entry_ask_mid`
-tagging (mig 032) fixed both: the headline realized ROI now rests on a measured, decision-time ask.
-When `entry_ask` is NULL (capture off / empty book / pre-032 row) the query falls back to
+History: capture was default-OFF (`CAPTURE_ENTRY_ASK=false`) and, when enabled, LAGGED (housekeeping
+grabbed whatever ask existed whenever it next ran, not the ask paired with the first-observed mid).
+The first-price capture + `entry_ask_at`/`entry_ask_mid` tagging (mig 032) pairs the ask with its mid.
+The realized ROI **will rest on a measured ask as decision-time coverage accrues** — mig 032 does NO
+backfill, so on freshly-captured rows only; until coverage is high the realized column is directional
+(small, liquidity-selected N) and is NOT the same cohort as the blended `honest_roi` (see the board
+note). When `entry_ask` is NULL (capture off / empty book / pre-032 row) the query falls back to
 `initial_market_price + EXEC_HAIRCUT` — never a crash or a dropped signal.
 
 ## Storage efficiency

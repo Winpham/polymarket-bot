@@ -366,10 +366,14 @@ pub struct CopyTradingConfig {
     pub entry_ask_decision_max_per_cycle: usize,
 
     /// Max seconds between first detection and ask capture for a capture to count
-    /// as DECISION-TIME in the realized-vs-modeled honest panel (`entry_ask_at −
-    /// first_detected_at ≤ this`). Housekeeping runs every 5 min, so 900s (15 min)
-    /// admits the first few passes as decision-time and excludes hours-late lagged
-    /// captures from the headline realized ROI.
+    /// toward the REALIZED (vs blended) honest ROI (`entry_ask_at − first_detected_at
+    /// ≤ this`). A housekeeping pass over the whole open backlog is ~10-15 min (120ms/
+    /// condition), so 900s (15 min) admits roughly the first pass and excludes hours-
+    /// late backlog captures. This wall-clock cutoff is a proxy for the code's
+    /// `first_price` provenance and can diverge from it near the edge (audit #2 —
+    /// keying the realized cohort off provenance is the cleaner fix, deferred). Tune
+    /// from the `consensus_entry_ask_capture_lag_seconds` histogram (e.g. p95 of
+    /// first-price captures) rather than assuming.
     #[config(env = "REALIZED_DECISION_LAG_SECS", default = 900.0)]
     pub realized_decision_lag_secs: f64,
 

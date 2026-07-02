@@ -745,7 +745,8 @@ impl PgPortfolio {
                         COUNT(*) FILTER (WHERE entry_ask IS NOT NULL AND entry_ask_at IS NOT NULL \
                             AND EXTRACT(EPOCH FROM (entry_ask_at - first_detected_at)) <= $3) AS decision_rows, \
                         percentile_cont(0.5) WITHIN GROUP (ORDER BY (entry_ask - entry_ask_mid)) \
-                            FILTER (WHERE entry_ask IS NOT NULL AND entry_ask_mid IS NOT NULL) AS median_haircut, \
+                            FILTER (WHERE entry_ask IS NOT NULL AND entry_ask_mid IS NOT NULL \
+                                AND EXTRACT(EPOCH FROM (entry_ask_at - first_detected_at)) <= $3) AS median_haircut, \
                         percentile_cont(0.5) WITHIN GROUP (ORDER BY total_usd) AS median_sharp_usd, \
                         AVG((EXTRACT(EPOCH FROM (resolved_at - first_detected_at)) / 3600.0)::double precision) AS avg_hours_to_resolve, \
                         GREATEST((EXTRACT(EPOCH FROM (MAX(resolved_at) - MIN(resolved_at))) / 86400.0)::double precision, 1.0) AS span_days \
@@ -757,7 +758,7 @@ impl PgPortfolio {
                  SELECT strategy, COALESCE(event_slug, condition_id) AS ev, \
                         (outcome_won::int)::double precision AS w, entry_ask AS entry \
                  FROM consensus_signals \
-                 WHERE resolved AND strategy <> '_blind' \
+                 WHERE resolved AND strategy <> '_blind' AND initial_market_price IS NOT NULL \
                    AND entry_ask IS NOT NULL AND entry_ask_at IS NOT NULL \
                    AND EXTRACT(EPOCH FROM (entry_ask_at - first_detected_at)) <= $3 \
              ), \
@@ -1642,9 +1643,11 @@ pub struct HonestPnl {
     /// Fraction of resolved rows with a DECISION-TIME real ask (`entry_ask_at −
     /// first_detected_at ≤ decision_lag`). The REALIZED ROI rests on these.
     pub decision_coverage: Option<f64>,
-    /// Median REAL execution haircut `entry_ask − entry_ask_mid` over captured rows
-    /// — the measured spread that replaces the assumed `EXEC_HAIRCUT`. `None` if
-    /// nothing captured yet.
+    /// Median REAL execution haircut `entry_ask − entry_ask_mid` over the
+    /// DECISION-TIME cohort only (same rows as `realized_roi`) — the measured spread
+    /// that replaces the assumed `EXEC_HAIRCUT`, per-strategy. `None` if no
+    /// decision-time ask captured yet. (Lagged captures are excluded so the spread
+    /// isn't measured against an hours-late mid.)
     pub median_haircut: Option<f64>,
     /// Distinct EVENTS with a decision-time real ask — the realized sample size (the
     /// N the realized corrected bound uses). `None`/0 ⇒ no realized ROI yet.
@@ -3070,10 +3073,12 @@ mod honest_pnl_it {
             r.realized_roi,
             want_rz
         );
-        // median real haircut over all 3 captured (0.04, 0.02, 0.09) = 0.04.
+        // median real haircut over the DECISION-TIME cohort only (ev1=0.04, ev2=0.02;
+        // ev3=0.09 is LAGGED → excluded) → median{0.04,0.02} = 0.03. (Audit #6: the
+        // haircut must match the realized cohort, not blend in hours-late spreads.)
         assert!(
-            (r.median_haircut.unwrap() - 0.04).abs() < 1e-6,
-            "median real haircut {:?} want 0.04 (vs assumed 0.01)",
+            (r.median_haircut.unwrap() - 0.03).abs() < 1e-6,
+            "decision-time median haircut {:?} want 0.03 (vs assumed 0.01)",
             r.median_haircut
         );
         // Modeled honest_roi uses COALESCE(entry_ask,…) = the ask on ALL 3 (incl. the

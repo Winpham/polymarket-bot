@@ -242,11 +242,14 @@ pub fn record_consensus_prefetch(duration: std::time::Duration) {
 }
 
 /// Record a captured executable entry ask (honest-tracker instrumentation).
-/// `decision` = captured on the first-price pass (decision-time, `entry_ask_mid`
-/// == `initial_market_price`) vs a lagged backlog capture. `spread` =
+/// `decision` = captured on the first-price pass (`entry_ask_mid` ==
+/// `initial_market_price`) vs a lagged backlog capture. `spread` =
 /// `entry_ask − entry_ask_mid` (the REAL execution haircut, replacing the guess).
-/// `lag_secs` = `entry_ask_at − first_detected_at` (proves how decision-time the
-/// capture was). Never on the live alert path.
+/// `lag_secs` = `entry_ask_at − first_detected_at`. Never on the live alert path.
+/// NB (audit #2, KNOWN GAP): this `kind` uses the code's `first_price` provenance,
+/// while the board's REALIZED-ROI cohort uses a wall-clock `lag ≤ REALIZED_DECISION_
+/// LAG_SECS` filter — so `kind=decision` here and the realized cohort can diverge
+/// near the window edge. Reconciling them (key the SQL off provenance) is deferred.
 pub fn record_entry_ask_capture(decision: bool, spread: f64, lag_secs: f64) {
     let kind = if decision { "decision" } else { "lagged" };
     counter!("consensus_entry_ask_captured_total", "kind" => kind).increment(1);
