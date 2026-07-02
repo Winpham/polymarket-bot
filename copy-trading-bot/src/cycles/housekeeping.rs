@@ -1,4 +1,5 @@
 use anyhow::{Context, Result};
+use chrono::Utc;
 use std::time::Duration;
 
 use crate::config::CopyTradingConfig;
@@ -118,7 +119,11 @@ pub async fn housekeeping_cycle(
     let mut snapshots = 0usize;
     let mut fills_resolved = 0u64;
     // Phase 2: bounded real book-ask capture (only when CAPTURE_ENTRY_ASK is on).
+    // Decision-time (first-price pass) captures use their own budget so a lagged
+    // backlog can't starve them; `asks_captured` counts lagged fallback captures.
     let mut asks_captured = 0usize;
+    let mut decision_asks_captured = 0usize;
+    let mut entry_ask_capped = false;
     // Phase 3: paper equity ledger scope (empty = every non-blind strategy) + count.
     let ledger_set: std::collections::HashSet<&str> = cfg
         .ledger_strategies
@@ -181,7 +186,9 @@ pub async fn housekeeping_cycle(
                     // Skip the `_blind` benchmark population (we only need its
                     // resolution, not a per-signal chart) to bound snapshot volume.
                     None if sig.strategy != "_blind" => {
-                        if let Err(e) = portfolio
+                        // `first_price` = this pass FIRST-SET initial_market_price →
+                        // the decision-time moment for the paired ask capture below.
+                        let first_price = match portfolio
                             .snapshot_consensus_signal(
                                 sig.id,
                                 sig.net_count,
@@ -191,44 +198,82 @@ pub async fn housekeeping_cycle(
                             )
                             .await
                         {
-                            tracing::warn!(err = %e, signal_id = sig.id, "snapshot failed");
-                        } else {
-                            snapshots += 1;
-                        }
-                        // Decision-time executable-ask capture (Phase 1; only when
+                            Ok(fp) => {
+                                snapshots += 1;
+                                fp
+                            }
+                            Err(e) => {
+                                tracing::warn!(err = %e, signal_id = sig.id, "snapshot failed");
+                                false
+                            }
+                        };
+                        // Executable-ask capture (Phase 1–2; only when
                         // CAPTURE_ENTRY_ASK is on). Bound to the mid we JUST observed
                         // (`price`), so the ask and its paired mid come from ONE
-                        // moment: on the first pass this is the same mid frozen into
-                        // `initial_market_price`, making the capture decision-time
+                        // moment. On the first-price pass this mid is the same value
+                        // frozen into `initial_market_price` → a DECISION-TIME capture
                         // (housekeeping runs every 5 min, so within minutes of first
-                        // detection). If this pass is capped or the /book is empty, a
-                        // later pass captures as a LAGGED fallback — its lag is
-                        // visible as `entry_ask_at − first_detected_at`, so realized
-                        // ROI can filter to decision-time-only rows. Set-once,
-                        // resolved-guarded, best-effort: a failure just leaves
-                        // entry_ask NULL and the honest query falls back to
+                        // detection). Decision-time captures get their OWN per-cycle
+                        // budget so a lagged backlog can never starve them; lagged
+                        // (later/capped/empty-book) captures use the original budget
+                        // and are distinguished by `entry_ask_at − first_detected_at`.
+                        // Set-once, resolved-guarded, best-effort: a failure just
+                        // leaves entry_ask NULL and the honest query falls back to
                         // mid+haircut. NEVER touches the live alert path — pure
                         // measurement (records what the market WAS asking, no order).
                         if cfg.capture_entry_ask
                             && sig.entry_ask.is_none()
-                            && asks_captured < cfg.entry_ask_max_per_cycle
                             && let Some(mid) = price
                             && let Some(tid) = market.outcome_token_id(sig.outcome_index)
                         {
-                            tokio::time::sleep(Duration::from_millis(80)).await;
-                            match crate::data::models::fetch_best_ask(http, tid).await {
-                                Ok(Some(ask)) => {
-                                    match portfolio.set_entry_ask_decision(sig.id, ask, mid).await {
-                                        Ok(true) => asks_captured += 1,
-                                        Ok(false) => {}
-                                        Err(e) => tracing::warn!(
-                                            err = %e, signal_id = sig.id, "set_entry_ask_decision failed"
-                                        ),
-                                    }
+                            let within_budget = if first_price {
+                                decision_asks_captured < cfg.entry_ask_decision_max_per_cycle
+                            } else {
+                                asks_captured < cfg.entry_ask_max_per_cycle
+                            };
+                            if !within_budget {
+                                if !entry_ask_capped {
+                                    entry_ask_capped = true;
+                                    crate::metrics::record_entry_ask_capped(first_price);
+                                    tracing::info!(
+                                        decision = first_price,
+                                        "entry_ask capture hit per-cycle budget; remaining signals settle on later cycles"
+                                    );
                                 }
-                                Ok(None) => {} // empty book — retry next cycle (lagged)
-                                Err(e) => {
-                                    tracing::warn!(err = %e, signal_id = sig.id, "fetch_best_ask failed")
+                            } else {
+                                tokio::time::sleep(Duration::from_millis(80)).await;
+                                match crate::data::models::fetch_best_ask(http, tid).await {
+                                    Ok(Some(ask)) => {
+                                        match portfolio
+                                            .set_entry_ask_decision(sig.id, ask, mid)
+                                            .await
+                                        {
+                                            Ok(true) => {
+                                                if first_price {
+                                                    decision_asks_captured += 1;
+                                                } else {
+                                                    asks_captured += 1;
+                                                }
+                                                let lag = (Utc::now() - sig.first_detected_at)
+                                                    .num_seconds()
+                                                    as f64;
+                                                crate::metrics::record_entry_ask_capture(
+                                                    first_price,
+                                                    ask - mid,
+                                                    lag,
+                                                );
+                                            }
+                                            Ok(false) => {}
+                                            Err(e) => tracing::warn!(
+                                                err = %e, signal_id = sig.id, "set_entry_ask_decision failed"
+                                            ),
+                                        }
+                                    }
+                                    Ok(None) => {} // empty book — retry next cycle (lagged)
+                                    Err(e) => {
+                                        crate::metrics::record_entry_ask_fetch_failed();
+                                        tracing::warn!(err = %e, signal_id = sig.id, "fetch_best_ask failed")
+                                    }
                                 }
                             }
                         }
@@ -255,8 +300,12 @@ pub async fn housekeeping_cycle(
     if snapshots > 0 {
         tracing::info!(snapshots, "Consensus trajectory snapshots recorded");
     }
-    if asks_captured > 0 {
-        tracing::info!(asks_captured, "Honest tracker: real book-asks captured");
+    if asks_captured > 0 || decision_asks_captured > 0 {
+        tracing::info!(
+            decision_asks_captured,
+            lagged_asks_captured = asks_captured,
+            "Honest tracker: real book-asks captured (decision-time + lagged)"
+        );
     }
     if ledger_appends > 0 {
         tracing::info!(

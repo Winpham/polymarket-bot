@@ -208,6 +208,33 @@ pub fn record_consensus_prefetch(duration: std::time::Duration) {
     histogram!("consensus_prefetch_seconds").record(duration.as_secs_f64());
 }
 
+/// Record a captured executable entry ask (honest-tracker instrumentation).
+/// `decision` = captured on the first-price pass (decision-time, `entry_ask_mid`
+/// == `initial_market_price`) vs a lagged backlog capture. `spread` =
+/// `entry_ask − entry_ask_mid` (the REAL execution haircut, replacing the guess).
+/// `lag_secs` = `entry_ask_at − first_detected_at` (proves how decision-time the
+/// capture was). Never on the live alert path.
+pub fn record_entry_ask_capture(decision: bool, spread: f64, lag_secs: f64) {
+    let kind = if decision { "decision" } else { "lagged" };
+    counter!("consensus_entry_ask_captured_total", "kind" => kind).increment(1);
+    histogram!("consensus_entry_ask_spread").record(spread);
+    histogram!("consensus_entry_ask_capture_lag_seconds").record(lag_secs.max(0.0));
+}
+
+/// Record a failed `/book` fetch during entry-ask capture. Best-effort: this
+/// NEVER blocks the alert path — the signal stays alive with a NULL ask and the
+/// honest query falls back to mid+haircut.
+pub fn record_entry_ask_fetch_failed() {
+    counter!("consensus_entry_ask_fetch_failed_total").increment(1);
+}
+
+/// Record that entry-ask capture hit its per-cycle budget (`decision` vs lagged),
+/// so remaining signals settle on later cycles. Surfaces silent truncation.
+pub fn record_entry_ask_capped(decision: bool) {
+    let kind = if decision { "decision" } else { "lagged" };
+    counter!("consensus_entry_ask_capped_total", "kind" => kind).increment(1);
+}
+
 /// Process-global multi-outcome (non-binary) skip count, mirrored alongside the
 /// Prometheus counter so the in-process board can read it back (Prometheus
 /// counters aren't readable here). These strict markets have no single

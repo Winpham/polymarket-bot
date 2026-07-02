@@ -134,6 +134,9 @@ pub struct UnresolvedConsensus {
     /// Real executable ask already captured while open (Phase 2). `Some` ⇒ skip
     /// re-fetching the book for this signal.
     pub entry_ask: Option<f64>,
+    /// When the signal was first detected — the decision-time anchor. Used to
+    /// meter the capture lag (`entry_ask_at − first_detected_at`).
+    pub first_detected_at: DateTime<Utc>,
 }
 
 impl PgPortfolio {
@@ -355,7 +358,7 @@ impl PgPortfolio {
     pub async fn unresolved_consensus_signals(&self) -> Result<Vec<UnresolvedConsensus>> {
         let rows: Vec<UnresolvedConsensus> = sqlx::query_as(
             "SELECT id, strategy, condition_id, COALESCE(slug, '') AS slug, outcome_index, \
-                    mean_price, net_count, n_backers, is_sports, entry_ask \
+                    mean_price, net_count, n_backers, is_sports, entry_ask, first_detected_at \
              FROM consensus_signals WHERE resolved = FALSE",
         )
         .fetch_all(&self.pool)
@@ -393,6 +396,12 @@ impl PgPortfolio {
     /// the consensus state (net/backers) changed or the price moved ≥0.5¢ since
     /// the last snapshot. Stable markets don't accumulate identical rows, so the
     /// time-series stays compact while preserving every real move.
+    ///
+    /// Returns `true` iff this call FIRST-SET `initial_market_price` (the signal's
+    /// decision-time mid) — i.e. this is the first live price the signal ever saw.
+    /// The housekeeping capture uses it to tag a decision-time ask (paired with the
+    /// same mid) vs a lagged fallback. `false` when the price was already set or
+    /// `market_price` is `None`.
     pub async fn snapshot_consensus_signal(
         &self,
         signal_id: i32,
@@ -400,7 +409,7 @@ impl PgPortfolio {
         n_backers: i32,
         mean_entry: f64,
         market_price: Option<f64>,
-    ) -> Result<()> {
+    ) -> Result<bool> {
         sqlx::query(
             "INSERT INTO consensus_snapshots \
                (signal_id, net_count, n_backers, mean_entry, market_price) \
@@ -422,21 +431,30 @@ impl PgPortfolio {
         .await
         .context("snapshot_consensus_signal (insert)")?;
 
-        // Latest price always; initial price only the first time we see one.
+        // Latest price always; initial price only the first time we see one. The
+        // `before` CTE captures the pre-update value so we can report whether THIS
+        // call first-set `initial_market_price` (the decision-time moment).
+        let mut first_price = false;
         if let Some(price) = market_price {
-            sqlx::query(
-                "UPDATE consensus_signals \
+            first_price = sqlx::query_scalar::<_, bool>(
+                "WITH before AS ( \
+                     SELECT initial_market_price AS prev FROM consensus_signals WHERE id = $1 \
+                 ) \
+                 UPDATE consensus_signals c \
                  SET last_market_price = $2, \
-                     initial_market_price = COALESCE(initial_market_price, $2) \
-                 WHERE id = $1",
+                     initial_market_price = COALESCE(c.initial_market_price, $2) \
+                 FROM before \
+                 WHERE c.id = $1 \
+                 RETURNING (before.prev IS NULL)",
             )
             .bind(signal_id)
             .bind(price)
-            .execute(&self.pool)
+            .fetch_optional(&self.pool)
             .await
-            .context("snapshot_consensus_signal (price)")?;
+            .context("snapshot_consensus_signal (price)")?
+            .unwrap_or(false);
         }
-        Ok(())
+        Ok(first_price)
     }
 
     /// Capture the real executable best ASK for a signal ONCE while it is open
@@ -2432,6 +2450,71 @@ mod honest_pnl_it {
             .await
             .unwrap();
         println!("set_entry_ask_decision_it: ask+at+mid set-once + resolved-guard — OK");
+    }
+
+    #[tokio::test]
+    #[ignore = "requires a live Postgres at $DATABASE_URL with migrations applied"]
+    async fn snapshot_reports_first_price_exactly_once() {
+        let url = std::env::var("DATABASE_URL").expect("DATABASE_URL must be set");
+        let pool = sqlx::PgPool::connect(&url).await.expect("connect");
+        let pf = PgPortfolio::new(pool).await.expect("portfolio");
+        pf.run_migrations().await.expect("migrations");
+        sqlx::query("DELETE FROM consensus_signals WHERE condition_id LIKE 'hpfp_%'")
+            .execute(&pf.pool)
+            .await
+            .unwrap();
+
+        // OPEN signal with NO initial_market_price yet.
+        let (id,): (i32,) = sqlx::query_as(
+            "INSERT INTO consensus_signals \
+               (strategy, condition_id, outcome_index, event_slug, n_backers, n_opposers, \
+                net_count, net_quality, mean_price, price_std, recency_mins, total_usd, \
+                score, tier, resolved, first_detected_at) \
+             VALUES ('hp_fp','hpfp_c1',0,'hpfp_ev',5,0,5,5.0,0.50,0.02,10,2000,1.0,'WATCH', \
+                     FALSE, NOW()) RETURNING id",
+        )
+        .fetch_one(&pf.pool)
+        .await
+        .unwrap();
+
+        // First price seen → first_price = true (this is the decision-time moment).
+        assert!(
+            pf.snapshot_consensus_signal(id, 5, 5, 0.50, Some(0.90))
+                .await
+                .unwrap(),
+            "first live price first-sets initial_market_price (decision-time)"
+        );
+        // Later prices → false (initial_market_price already frozen).
+        assert!(
+            !pf.snapshot_consensus_signal(id, 6, 6, 0.50, Some(0.93))
+                .await
+                .unwrap(),
+            "a later price does not re-set initial_market_price"
+        );
+        // No price → false (nothing to set).
+        assert!(
+            !pf.snapshot_consensus_signal(id, 7, 7, 0.50, None)
+                .await
+                .unwrap(),
+            "no market price ⇒ not a first-price event"
+        );
+
+        // initial_market_price stuck at the FIRST value; last_market_price moved.
+        let (ip, lp): (Option<f64>, Option<f64>) = sqlx::query_as(
+            "SELECT initial_market_price, last_market_price FROM consensus_signals WHERE id = $1",
+        )
+        .bind(id)
+        .fetch_one(&pf.pool)
+        .await
+        .unwrap();
+        assert_eq!(ip, Some(0.90), "initial_market_price frozen at first price");
+        assert_eq!(lp, Some(0.93), "last_market_price follows the latest price");
+
+        sqlx::query("DELETE FROM consensus_signals WHERE condition_id LIKE 'hpfp_%'")
+            .execute(&pf.pool)
+            .await
+            .unwrap();
+        println!("snapshot_first_price_it: first_price true once, then false — OK");
     }
 
     /// Insert a RESOLVED consensus signal with an explicit resolution day-offset.
