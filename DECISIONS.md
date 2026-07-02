@@ -496,3 +496,50 @@ MANDATORY before any real-money pilot.
 Pillar-1 headline; conservative grain binds → hold), K3 (conditional-on-edge on every P(profit);
 no "guaranteed"), K4 (nothing live changed — instruments + docs + a *proposed* SE convention only).
 **Rollback:** git-revert the merge; delete reports/{effective_n,edge_orthogonality,portfolio_constructor}.json.
+
+## D19 — Reliability effectiveness: the tradeoff quantified, the live leak, the forward go/no-go (2026-07-02, entry 17)
+
+Branch `feat/reliability-effectiveness` (worktree off `main` 577f4c1, tag
+`pre-reliability-effectiveness-20260702`). Three self-testing paper-only instruments answering
+"did the reliability program (D15–D17) work, what is the risk/profitability tradeoff as a NUMBER,
+and how do we run it better." No Rust, zero migrations, nothing live changed. **Convergent with
+the concurrent D18 bad-days stress test** (both independently conclude ⅛-Kelly over-sizes →
+de-lever). Full write-up: reports/entries/17.
+
+**Honest effectiveness verdict:** realized risk reduction ≈ 0, realized profitability change ≈ 0 —
+the D15–D17 program changed NOTHING live. Its value is epistemic/decision-risk (stopped reading a
+real edge as dead; proved no free diversification; named the true wall). The biggest realized-P&L
+lever is not another instrument — it is the live alert leak (below).
+
+**D19-a — the tradeoff, quantified (`scripts/reliability_tradeoff.py`, self-test PASS).** A
+transparent decision model: two worlds mixed by persistence probability π (persists λ=1 / fades
+λ∈{¼,0}), forward model forecasts a SHARP fall market (advantage = FALL_BLIND≈0 + λ·skill; summer
+soft edge excluded as non-persistent per entry-15), so a skill-fade genuinely loses (removes the
+no-losing-slate artifact). Three postures × ⅛-Kelly-capped × 30-day horizon; WAIT/PILOT run the
+D17 cert test after a 12-day accrual window. **Numbers:** waiting ~12d forgoes **−1.22 log-growth**
+if the edge is real; AVOIDS **+0.83** (BET_NOW 99% P(loss), −57% bankroll) if it fully fades.
+Break-even persistence prob **5% / 42% / 63%** (partial fade / full fade fair market / full fade
+overpriced fall). **PILOT (tiny during wait, full after cert) dominates** — caps the fade tail,
+keeps most upside — and DE-LEVERING it resolves the D18 over-sizing. π is an INPUT (your belief),
+not estimated; the model prices tradeoff STRUCTURE, not a forecast.
+
+**D19-b — system readiness (`scripts/system_readiness.py`, self-test PASS).** (1) Accrual ETA:
+favorite is **~6 days from the 10 independent-cluster persistence floor** (~2026-07-08) — waiting
+is a DATED plan. (2) The orthogonal lever: `trust_weighted` fires **2.5× favorite** (~9 days to
+floor) → fast power IF real (the profitability upside with a timeline). (3) **THE LIVE LEAK:**
+effective alerting = `strict` ONLY (−EV after costs, entry-10 DODGE) while favorite/elite stay
+SILENT — anyone acting on alerts follows the WRONG signal. Fix = the pending D12 config (Tue's go);
+this is the single highest realized-P&L action available.
+
+**D19-c — forward persistence tracker (`scripts/persistence_tracker.py`, self-test PASS).** The
+leakage-free go/no-go the wall waits on: split favorite at a cutoff into IN (discovery) / OUT
+(forward), read the edge on OUT rows ONLY via the reconciled convention (cluster-robust SE +
+independent-cluster-COUNT floor, D17-a). TEMPORAL complement to entry-15's SPATIAL sport_edge_tracker.
+Live: OUT-of-sample surplus **+19.2%** (incl. NEW-regime MLB **+20.3%**) but only **2 forward
+clusters** → **VERDICT PENDING** (honest on 4 days; favorable early signal). Flips to PERSISTS/
+REFUTED at the date D19-b computes.
+
+**Recommendations (priority):** (1) fix the live alert leak (pending Tue's go — biggest P&L lever);
+(2) de-lever the band-5 Kelly then PILOT (convergent with D18); (3) watch trust_weighted; (4) re-run
+persistence_tracker + system_readiness at the ~6-day floor and post-WC/Wimbledon. **Rollback:**
+git-revert the merge; delete reports/{reliability_tradeoff,system_readiness,persistence_tracker}.json.

@@ -1,0 +1,148 @@
+{
+ "fall_blind": 0.0,
+ "0.2": {
+  "BET_NOW": {
+   "median_log_growth": 0.14556690297503383,
+   "mean_log_growth": 0.6916284484238814,
+   "p_loss": 0.0115,
+   "p_maxdd_over_30": 0.0,
+   "p5_log_growth": 0.03516082814933982
+  },
+  "WAIT": {
+   "median_log_growth": 0.0,
+   "mean_log_growth": 0.3516406717618451,
+   "p_loss": 0.00025,
+   "p_maxdd_over_30": 0.0,
+   "p5_log_growth": 0.0
+  },
+  "PILOT": {
+   "median_log_growth": 0.01604316290720092,
+   "mean_log_growth": 0.42150333283549934,
+   "p_loss": 0.06,
+   "p_maxdd_over_30": 0.0,
+   "p5_log_growth": -0.0010819738742805026
+  }
+ },
+ "0.35": {
+  "BET_NOW": {
+   "median_log_growth": 0.16999283118061054,
+   "mean_log_growth": 1.1523306576536703,
+   "p_loss": 0.0105,
+   "p_maxdd_over_30": 0.0,
+   "p5_log_growth": 0.04093796449223184
+  },
+  "WAIT": {
+   "median_log_growth": 0.0,
+   "mean_log_growth": 0.6379586230434092,
+   "p_loss": 0.00025,
+   "p_maxdd_over_30": 0.0,
+   "p5_log_growth": 0.0
+  },
+  "PILOT": {
+   "median_log_growth": 0.02003853447535982,
+   "mean_log_growth": 0.75441727969867,
+   "p_loss": 0.048,
+   "p_maxdd_over_30": 0.0,
+   "p5_log_growth": 0.0001886263658201365
+  }
+ },
+ "0.5": {
+  "BET_NOW": {
+   "median_log_growth": 2.168001665214982,
+   "mean_log_growth": 1.6047468422183877,
+   "p_loss": 0.00875,
+   "p_maxdd_over_30": 0.0,
+   "p5_log_growth": 0.04940895419278014
+  },
+  "WAIT": {
+   "median_log_growth": 0.973169950778348,
+   "mean_log_growth": 0.9213323739702537,
+   "p_loss": 0.00025,
+   "p_maxdd_over_30": 0.0,
+   "p5_log_growth": 0.0
+  },
+  "PILOT": {
+   "median_log_growth": 1.2469727203409509,
+   "mean_log_growth": 1.0832197161933599,
+   "p_loss": 0.03775,
+   "p_maxdd_over_30": 0.0,
+   "p5_log_growth": 0.0016336189113864402
+  }
+ },
+ "0.65": {
+  "BET_NOW": {
+   "median_log_growth": 2.85432013572561,
+   "mean_log_growth": 2.0709898527866684,
+   "p_loss": 0.006,
+   "p_maxdd_over_30": 0.0,
+   "p5_log_growth": 0.06403695967358419
+  },
+  "WAIT": {
+   "median_log_growth": 1.6438513995169768,
+   "mean_log_growth": 1.210468393086503,
+   "p_loss": 0.00025,
+   "p_maxdd_over_30": 0.0,
+   "p5_log_growth": 0.0
+  },
+  "PILOT": {
+   "median_log_growth": 1.9747365226926146,
+   "mean_log_growth": 1.4196143224908822,
+   "p_loss": 0.0255,
+   "p_maxdd_over_30": 0.0,
+   "p5_log_growth": 0.0037370216490618642
+  }
+ },
+ "0.8": {
+  "BET_NOW": {
+   "median_log_growth": 2.9863084822296786,
+   "mean_log_growth": 2.5054717484655145,
+   "p_loss": 0.0025,
+   "p_maxdd_over_30": 0.0,
+   "p5_log_growth": 0.08887817876235252
+  },
+  "WAIT": {
+   "median_log_growth": 1.7607468985856827,
+   "mean_log_growth": 1.4817399844564125,
+   "p_loss": 0.0,
+   "p_maxdd_over_30": 0.0,
+   "p5_log_growth": 0.0
+  },
+  "PILOT": {
+   "median_log_growth": 2.072913721047982,
+   "mean_log_growth": 1.7347107842804361,
+   "p_loss": 0.01375,
+   "p_maxdd_over_30": 0.0,
+   "p5_log_growth": 0.007732393217220461
+  }
+ },
+ "0.95": {
+  "BET_NOW": {
+   "median_log_growth": 3.0353959814162335,
+   "mean_log_growth": 2.9128639547318502,
+   "p_loss": 0.0005,
+   "p_maxdd_over_30": 0.0,
+   "p5_log_growth": 0.24624199611832637
+  },
+  "WAIT": {
+   "median_log_growth": 1.8057080278184048,
+   "mean_log_growth": 1.7350766218724398,
+   "p_loss": 0.0,
+   "p_maxdd_over_30": 0.0,
+   "p5_log_growth": 0.0
+  },
+  "PILOT": {
+   "median_log_growth": 2.13323008009377,
+   "mean_log_growth": 2.0293313700438667,
+   "p_loss": 0.00375,
+   "p_maxdd_over_30": 0.0,
+   "p5_log_growth": 0.03153014421059904
+  }
+ },
+ "break_even_pi": {
+  "fade_0.25_fallblind_0": 0.05,
+  "fade_0.0_fallblind_0": 0.417,
+  "fade_0.0_fallblind_-0.02": 0.634
+ },
+ "cost_of_waiting_if_real": 1.223037857355249,
+ "loss_avoided_if_fake": 0.830908577856795
+}
