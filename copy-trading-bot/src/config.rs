@@ -294,6 +294,14 @@ pub struct CopyTradingConfig {
     #[config(env = "ENTRY_ASK_DECISION_MAX_PER_CYCLE", default = 40)]
     pub entry_ask_decision_max_per_cycle: usize,
 
+    /// Max seconds between first detection and ask capture for a capture to count
+    /// as DECISION-TIME in the realized-vs-modeled honest panel (`entry_ask_at −
+    /// first_detected_at ≤ this`). Housekeeping runs every 5 min, so 900s (15 min)
+    /// admits the first few passes as decision-time and excludes hours-late lagged
+    /// captures from the headline realized ROI.
+    #[config(env = "REALIZED_DECISION_LAG_SECS", default = 900.0)]
+    pub realized_decision_lag_secs: f64,
+
     /// Comma-separated strategies the PAPER equity ledger tracks. Empty = every
     /// non-`_blind` strategy (the whole tracked family). Appends one paper bet at
     /// each resolution; PAPER only, this system NEVER places real money.

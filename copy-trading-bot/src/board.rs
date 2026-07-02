@@ -9,9 +9,10 @@ use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpListener;
 
 use crate::scanner::enrich::family;
-use crate::scanner::promotion::{PromotionParams, promotion_verdict};
+use crate::scanner::promotion::{PromotionParams, promotion_verdict, surplus_bounds};
 use crate::scanner::trader_trust::{TraderTrust, TrustVerdict, trust_verdict};
 use crate::storage::postgres::PgPortfolio;
+use polymarket_common::storage::consensus::HonestPnl;
 
 /// Read-only honest-P&L tracker parameters threaded to the board (never touches
 /// the live path). `exec_haircut` + `fee_pct` define the realizable entry price
@@ -28,6 +29,9 @@ pub struct HonestBoardParams {
     pub pilot_min_regimes: i64,
     pub regime_frac: f64,
     pub min_liquidity_usd: f64,
+    /// Max `entry_ask_at − first_detected_at` (secs) for a capture to count as
+    /// decision-time in the REALIZED (vs modeled) honest ROI column.
+    pub realized_decision_lag_secs: f64,
 }
 
 impl HonestBoardParams {
@@ -213,7 +217,11 @@ fn sparkline(series: &[f64]) -> String {
 /// and the PAPER equity sparkline + max drawdown. Realizable, not flattering.
 async fn render_honest(portfolio: &PgPortfolio, honest: HonestBoardParams) -> String {
     let rows = match portfolio
-        .honest_pnl_by_strategy(honest.exec_haircut, honest.fee_pct)
+        .honest_pnl_by_strategy(
+            honest.exec_haircut,
+            honest.fee_pct,
+            honest.realized_decision_lag_secs,
+        )
         .await
     {
         Ok(r) if r.iter().any(|x| x.resolved > 0) => r,
@@ -226,6 +234,28 @@ async fn render_honest(portfolio: &PgPortfolio, honest: HonestBoardParams) -> St
     let th = honest.thresholds();
     // Shared verdict machinery (identical to the digest — they can't drift).
     let verdicts = crate::scanner::honest::verdicts_by_strategy(&rows, &segs, &th);
+
+    // REALIZED corrected lower bound per strategy — the belief-blind gate's exact
+    // z/SE machinery (same as the modeled verdict), but computed on the MEASURED
+    // decision-time real-ask ROI (`realized_roi` over `realized_events`). Bonferroni
+    // family = strategies-with-resolved-rows per family, identical to the modeled
+    // verdict, so the two LBs are apples-to-apples.
+    let mut fam_n: std::collections::HashMap<&str, usize> = std::collections::HashMap::new();
+    for r in rows.iter().filter(|r| r.resolved > 0) {
+        *fam_n.entry(family(&r.strategy)).or_default() += 1;
+    }
+    let realized_params = PromotionParams {
+        min_events: th.min_events,
+        margin: th.min_pilot_roi,
+        alpha: th.alpha,
+    };
+    let realized_lb = |r: &HonestPnl| -> Option<f64> {
+        let n = r.realized_events.filter(|&n| n > 0)?;
+        let roi = r.realized_roi?;
+        let nf = fam_n.get(family(&r.strategy)).copied().unwrap_or(1);
+        let (lb, _) = surplus_bounds(n, roi, r.realized_roi_sd, nf, &realized_params);
+        Some(lb)
+    };
 
     // Build (row, verdict, capacity, ledger-stats), then sort GO-first / LB desc.
     let mut items = Vec::new();
@@ -263,7 +293,10 @@ async fn render_honest(portfolio: &PgPortfolio, honest: HonestBoardParams) -> St
          <p class=sub>Outcome vs the mid we saw while OPEN (CLV), net of the execution haircut — \
          the edge we could actually realize. Event-clustered, multi-regime. Paper only, NO real money.</p>\
          <table><thead><tr><th>pilot</th><th>strategy</th><th class=r>events (N)</th>\
-         <th class=r>honest ROI</th><th class=r>corrected LB</th><th class=r>regimes+</th>\
+         <th class=r>honest ROI<br><span class=muted>(modeled)</span></th>\
+         <th class=r>realized ROI<br><span class=muted>(real ask)</span></th>\
+         <th class=r>corrected LB<br><span class=muted>(modeled)</span></th>\
+         <th class=r>realized LB</th><th class=r>regimes+</th>\
          <th class=r>CLV</th><th class=r>sharp edge</th><th class=r>stake</th>\
          <th class=r>proj $/wk</th><th>paper equity</th><th class=r>max DD</th>\
          </tr></thead><tbody>",
@@ -288,22 +321,44 @@ async fn render_honest(portfolio: &PgPortfolio, honest: HonestBoardParams) -> St
             ),
             None => ("—".into(), "—".into(), String::new()),
         };
+        let rroi = realized_lb(r); // realized corrected LB (None ⇒ no real-ask data)
+        // Measured real haircut vs the assumed EXEC_HAIRCUT — the whole point.
+        let haircut_txt = r
+            .median_haircut
+            .map(|h| {
+                format!(
+                    "real haircut {:+.1}¢ (assumed {:.1}¢)",
+                    h * 100.0,
+                    honest.exec_haircut * 100.0
+                )
+            })
+            .unwrap_or_else(|| "real haircut n/a (no ask captured)".into());
         let tip = format!(
-            "{}  ·  working capital ≈ ${:.0}  ·  real-ask coverage {}  ·  paper equity {}",
+            "{}  ·  working capital ≈ ${:.0}  ·  real-ask coverage {}  ·  decision-time coverage {}  ·  {}  ·  paper equity {}",
             verdict.reason,
             cap.working_capital,
             r.ask_coverage
                 .map(|c| format!("{:.0}%", c * 100.0))
                 .unwrap_or_else(|| "0% (heuristic haircut)".into()),
+            r.decision_coverage
+                .map(|c| format!("{:.0}% (N={})", c * 100.0, r.realized_events.unwrap_or(0)))
+                .unwrap_or_else(|| "0%".into()),
+            haircut_txt,
             if equity.is_empty() {
                 "no bets".into()
             } else {
                 equity
             },
         );
+        let rrcls = match r.realized_roi {
+            Some(v) if v > 0.0 => "pos",
+            Some(_) => "neg",
+            None => "muted",
+        };
         out.push_str(&format!(
             "<tr title=\"{reason}\"><td class={mcls}>{marker}</td><td class=mono>{strat}</td>\
-             <td class=r>{ev}</td><td class=\"r {hrcls}\">{hroi}</td><td class=r>{lb}</td>\
+             <td class=r>{ev}</td><td class=\"r {hrcls}\">{hroi}</td>\
+             <td class=\"r {rrcls}\">{rroi_v}</td><td class=r>{lb}</td><td class=r>{rlb}</td>\
              <td class=r>{rp}/{rt}</td><td class=r>{clv}</td><td class=\"r muted\">{sharp}</td>\
              <td class=\"r muted\">${stake:.0}</td><td class=\"r muted\">${projwk:.0}</td>\
              <td class=mono>{spark}</td><td class=\"r muted\">{dd}</td></tr>",
@@ -311,7 +366,9 @@ async fn render_honest(portfolio: &PgPortfolio, honest: HonestBoardParams) -> St
             strat = r.strategy,
             ev = r.distinct_events,
             hroi = pct(r.honest_roi),
+            rroi_v = pct(r.realized_roi),
             lb = pct(verdict.corrected_lower_bound),
+            rlb = pct(rroi),
             rp = sv.regimes_positive,
             rt = sv.regimes_total,
             clv = pct(r.clv_share),
@@ -322,9 +379,13 @@ async fn render_honest(portfolio: &PgPortfolio, honest: HonestBoardParams) -> St
     }
     out.push_str(&format!(
         "</tbody></table>\
-         <p class=note><b>honest ROI</b> = event-clustered `AVG((outcome − entry)/entry − fee)` where \
-         <b>entry = captured mid + {hc:.0}¢ haircut</b> (or the real book ask where captured) — the realizable \
-         per-$ edge (NOT the sharps' fill). <b>corrected LB</b> = Bonferroni-corrected 1-sided lower bound. \
+         <p class=note><b>honest ROI (modeled)</b> = event-clustered `AVG((outcome − entry)/entry − fee)` with \
+         <b>entry = captured mid + {hc:.0}¢ assumed haircut</b> — the realizable per-$ edge (NOT the sharps' fill). \
+         <b>realized ROI (real ask)</b> = the SAME formula but entry = the REAL decision-time book ask \
+         (`entry_ask`, captured within the decision-time window), over just those rows — the MEASURED edge, \
+         no haircut assumption. When realized &lt; modeled, the assumed haircut was too kind (the tooltip shows \
+         the measured real haircut vs assumed, and decision-time coverage). Both LBs are Bonferroni-corrected \
+         1-sided lower bounds on their own ROI. “—” = no real decision-time ask captured yet. \
          ✅ GO requires ALL: LB &gt; {bar:+.0}%, N ≥ {ev} events, ≥{regfrac:.0}% of day-regimes positive \
          (≥{minreg}), and liquidity ≥ ${liq:.0}. Conservative by design — a false GO risks real money, so the \
          default is HOLD (hover a row for the binding reason + working capital). <b>sharp edge</b> = outcome − \
@@ -539,6 +600,7 @@ mod tests {
                 pilot_min_regimes: 5,
                 regime_frac: 0.7,
                 min_liquidity_usd: 2000.0,
+                realized_decision_lag_secs: 900.0,
             },
         )
         .await;
@@ -627,6 +689,7 @@ mod tests {
             pilot_min_regimes: 5,
             regime_frac: 0.7,
             min_liquidity_usd: 2000.0,
+            realized_decision_lag_secs: 900.0,
         };
         let html = render(&pf, 0.0, params).await;
         assert!(

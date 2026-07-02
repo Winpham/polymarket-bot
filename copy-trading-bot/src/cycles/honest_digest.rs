@@ -31,7 +31,11 @@ pub async fn maybe_push(portfolio: &PgPortfolio, ntfy: Option<&Ntfy>, cfg: &Copy
     let Some(ntfy) = ntfy else { return };
 
     let rows = match portfolio
-        .honest_pnl_by_strategy(cfg.exec_haircut, cfg.fee_pct)
+        .honest_pnl_by_strategy(
+            cfg.exec_haircut,
+            cfg.fee_pct,
+            cfg.realized_decision_lag_secs,
+        )
         .await
     {
         Ok(r) => r,

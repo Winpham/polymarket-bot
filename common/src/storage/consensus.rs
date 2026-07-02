@@ -638,6 +638,7 @@ impl PgPortfolio {
         &self,
         exec_haircut: f64,
         fee_pct: f64,
+        decision_lag_secs: f64,
     ) -> Result<Vec<HonestPnl>> {
         let rows: Vec<HonestPnl> = sqlx::query_as(
             "WITH base AS ( \
@@ -673,24 +674,49 @@ impl PgPortfolio {
              liq AS ( \
                  SELECT strategy, COUNT(*) AS resolved, \
                         COUNT(*) FILTER (WHERE entry_ask IS NOT NULL) AS ask_rows, \
+                        COUNT(*) FILTER (WHERE entry_ask IS NOT NULL AND entry_ask_at IS NOT NULL \
+                            AND EXTRACT(EPOCH FROM (entry_ask_at - first_detected_at)) <= $3) AS decision_rows, \
+                        percentile_cont(0.5) WITHIN GROUP (ORDER BY (entry_ask - entry_ask_mid)) \
+                            FILTER (WHERE entry_ask IS NOT NULL AND entry_ask_mid IS NOT NULL) AS median_haircut, \
                         percentile_cont(0.5) WITHIN GROUP (ORDER BY total_usd) AS median_sharp_usd, \
                         AVG((EXTRACT(EPOCH FROM (resolved_at - first_detected_at)) / 3600.0)::double precision) AS avg_hours_to_resolve, \
                         GREATEST((EXTRACT(EPOCH FROM (MAX(resolved_at) - MIN(resolved_at))) / 86400.0)::double precision, 1.0) AS span_days \
                  FROM consensus_signals \
                  WHERE resolved AND initial_market_price IS NOT NULL AND strategy <> '_blind' \
                  GROUP BY strategy \
+             ), \
+             base_r AS ( \
+                 SELECT strategy, COALESCE(event_slug, condition_id) AS ev, \
+                        (outcome_won::int)::double precision AS w, entry_ask AS entry \
+                 FROM consensus_signals \
+                 WHERE resolved AND strategy <> '_blind' \
+                   AND entry_ask IS NOT NULL AND entry_ask_at IS NOT NULL \
+                   AND EXTRACT(EPOCH FROM (entry_ask_at - first_detected_at)) <= $3 \
+             ), \
+             evt_r AS ( \
+                 SELECT strategy, ev, AVG((w - entry) / NULLIF(entry, 0) - $2) AS ev_rroi \
+                 FROM base_r GROUP BY strategy, ev \
+             ), \
+             agg_r AS ( \
+                 SELECT strategy, COUNT(*) AS realized_events, AVG(ev_rroi) AS realized_roi, \
+                        STDDEV_SAMP(ev_rroi) AS realized_roi_sd \
+                 FROM evt_r GROUP BY strategy \
              ) \
              SELECT a.strategy, l.resolved, a.distinct_events, a.hit_rate, \
                     a.clv_share, a.clv_roi, a.honest_edge_share, a.honest_roi, a.honest_roi_sd, \
                     l.median_sharp_usd, l.avg_hours_to_resolve, \
                     (a.distinct_events::double precision / l.span_days) AS bets_per_day, \
                     a.sharp_edge, \
-                    (l.ask_rows::double precision / NULLIF(l.resolved, 0)) AS ask_coverage \
-             FROM agg a JOIN liq l USING (strategy) \
+                    (l.ask_rows::double precision / NULLIF(l.resolved, 0)) AS ask_coverage, \
+                    (l.decision_rows::double precision / NULLIF(l.resolved, 0)) AS decision_coverage, \
+                    l.median_haircut, \
+                    r.realized_events, r.realized_roi, r.realized_roi_sd \
+             FROM agg a JOIN liq l USING (strategy) LEFT JOIN agg_r r USING (strategy) \
              ORDER BY a.honest_roi DESC NULLS LAST",
         )
         .bind(exec_haircut)
         .bind(fee_pct)
+        .bind(decision_lag_secs)
         .fetch_all(&self.pool)
         .await
         .context("honest_pnl_by_strategy")?;
@@ -1464,6 +1490,21 @@ pub struct HonestPnl {
     /// Fraction of resolved rows with a REAL captured `entry_ask` (Phase 2). The
     /// rest fall back to the mid+haircut heuristic; `None`/0 = all heuristic.
     pub ask_coverage: Option<f64>,
+    /// Fraction of resolved rows with a DECISION-TIME real ask (`entry_ask_at −
+    /// first_detected_at ≤ decision_lag`). The REALIZED ROI rests on these.
+    pub decision_coverage: Option<f64>,
+    /// Median REAL execution haircut `entry_ask − entry_ask_mid` over captured rows
+    /// — the measured spread that replaces the assumed `EXEC_HAIRCUT`. `None` if
+    /// nothing captured yet.
+    pub median_haircut: Option<f64>,
+    /// Distinct EVENTS with a decision-time real ask — the realized sample size (the
+    /// N the realized corrected bound uses). `None`/0 ⇒ no realized ROI yet.
+    pub realized_events: Option<i64>,
+    /// Event-clustered honest ROI using ONLY decision-time real asks (`entry =
+    /// entry_ask`) — the MEASURED realizable ROI, vs the MODELED `honest_roi`.
+    pub realized_roi: Option<f64>,
+    /// Std-dev of per-EVENT realized ROI — feeds the realized corrected lower bound.
+    pub realized_roi_sd: Option<f64>,
 }
 
 /// One (strategy × segment) honest-ROI cell for the regime/band/horizon breakdown.
@@ -2240,7 +2281,7 @@ mod honest_pnl_it {
         // A `_blind` row that MUST be excluded from the instrument.
         seed(&pf, "_blind", "hp_c4", "hp_ev3", 0.30, 0.30, 5000.0, true).await;
 
-        let rows = pf.honest_pnl_by_strategy(0.01, 0.02).await.unwrap();
+        let rows = pf.honest_pnl_by_strategy(0.01, 0.02, 900.0).await.unwrap();
         assert!(
             rows.iter().all(|r| r.strategy != "_blind"),
             "the blind baseline is never a tracked strategy"
@@ -2353,7 +2394,7 @@ mod honest_pnl_it {
 
         // The honest query PREFERS the real ask: entry = 0.55 (not mid+haircut 0.51).
         // honest_roi = (1 − 0.55)/0.55 − 0.02 = 0.79818 ; ask_coverage = 100%.
-        let rows = pf.honest_pnl_by_strategy(0.01, 0.02).await.unwrap();
+        let rows = pf.honest_pnl_by_strategy(0.01, 0.02, 900.0).await.unwrap();
         let r = rows.iter().find(|r| r.strategy == "hp_ask").unwrap();
         assert!(
             (r.honest_roi.unwrap() - 0.798_18).abs() < 1e-3,
@@ -2515,6 +2556,108 @@ mod honest_pnl_it {
             .await
             .unwrap();
         println!("snapshot_first_price_it: first_price true once, then false — OK");
+    }
+
+    #[tokio::test]
+    #[ignore = "requires a live Postgres at $DATABASE_URL with migrations applied"]
+    async fn realized_vs_modeled_split_and_haircut() {
+        let url = std::env::var("DATABASE_URL").expect("DATABASE_URL must be set");
+        let pool = sqlx::PgPool::connect(&url).await.expect("connect");
+        let pf = PgPortfolio::new(pool).await.expect("portfolio");
+        pf.run_migrations().await.expect("migrations");
+        sqlx::query("DELETE FROM consensus_signals WHERE condition_id LIKE 'hprz_%'")
+            .execute(&pf.pool)
+            .await
+            .unwrap();
+
+        // 3 resolved WINS, all p0=0.90. Real asks captured with different lags:
+        //   ev1: ask 0.94, +60s  → decision-time
+        //   ev2: ask 0.92, +120s → decision-time
+        //   ev3: ask 0.99, +2h   → LAGGED (excluded from realized, counts in coverage)
+        for (i, ask, lag_secs) in [(1, 0.94, 60i64), (2, 0.92, 120), (3, 0.99, 7200)] {
+            sqlx::query(
+                "INSERT INTO consensus_signals \
+                   (strategy, condition_id, outcome_index, event_slug, n_backers, n_opposers, \
+                    net_count, net_quality, mean_price, price_std, recency_mins, total_usd, \
+                    score, tier, initial_market_price, resolved, outcome_won, \
+                    first_detected_at, resolved_at, entry_ask, entry_ask_mid, entry_ask_at) \
+                 VALUES ('rz', $1, 0, $2, 5,0,5,5.0,0.80,0.02,10,2000,1.0,'WATCH', \
+                         0.90, TRUE, TRUE, NOW() - INTERVAL '1 day', NOW() - INTERVAL '20 hours', \
+                         $3, 0.90, (NOW() - INTERVAL '1 day') + ($4 || ' seconds')::interval)",
+            )
+            .bind(format!("hprz_c{i}"))
+            .bind(format!("hprz_ev{i}"))
+            .bind(ask)
+            .bind(lag_secs.to_string())
+            .execute(&pf.pool)
+            .await
+            .unwrap();
+        }
+
+        // decision_lag = 900s ⇒ ev1+ev2 are decision-time, ev3 is lagged.
+        let rows = pf.honest_pnl_by_strategy(0.01, 0.02, 900.0).await.unwrap();
+        let r = rows.iter().find(|r| r.strategy == "rz").unwrap();
+
+        assert_eq!(r.resolved, 3, "3 resolved rows");
+        assert!(
+            (r.ask_coverage.unwrap() - 1.0).abs() < 1e-9,
+            "all 3 have a real ask ⇒ 100% ask coverage"
+        );
+        assert!(
+            (r.decision_coverage.unwrap() - 2.0 / 3.0).abs() < 1e-6,
+            "2/3 decision-time (ev3 lagged): {:?}",
+            r.decision_coverage
+        );
+        assert_eq!(
+            r.realized_events,
+            Some(2),
+            "realized uses 2 decision events"
+        );
+        // realized_roi = mean of ev1,ev2: ((1-.94)/.94-.02 + (1-.92)/.92-.02)/2
+        let want_rz = (((1.0 - 0.94) / 0.94 - 0.02) + ((1.0 - 0.92) / 0.92 - 0.02)) / 2.0;
+        assert!(
+            (r.realized_roi.unwrap() - want_rz).abs() < 1e-6,
+            "realized_roi={:?} want {:.6} (decision-time asks only)",
+            r.realized_roi,
+            want_rz
+        );
+        // median real haircut over all 3 captured (0.04, 0.02, 0.09) = 0.04.
+        assert!(
+            (r.median_haircut.unwrap() - 0.04).abs() < 1e-6,
+            "median real haircut {:?} want 0.04 (vs assumed 0.01)",
+            r.median_haircut
+        );
+        // Modeled honest_roi uses COALESCE(entry_ask,…) = the ask on ALL 3 (incl. the
+        // lagged ev3), so it differs from the decision-time-only realized number.
+        let want_modeled = (((1.0 - 0.94) / 0.94 - 0.02)
+            + ((1.0 - 0.92) / 0.92 - 0.02)
+            + ((1.0 - 0.99) / 0.99 - 0.02))
+            / 3.0;
+        assert!(
+            (r.honest_roi.unwrap() - want_modeled).abs() < 1e-6,
+            "modeled honest_roi={:?} want {:.6}",
+            r.honest_roi,
+            want_modeled
+        );
+        assert!(
+            r.realized_roi.unwrap() > r.honest_roi.unwrap(),
+            "here decision-time realized ({:.4}) beats the ask-blended modeled ({:.4}) \
+             because the lagged ev3 ask (0.99) drags the modeled down",
+            r.realized_roi.unwrap(),
+            r.honest_roi.unwrap()
+        );
+
+        sqlx::query("DELETE FROM consensus_signals WHERE condition_id LIKE 'hprz_%'")
+            .execute(&pf.pool)
+            .await
+            .unwrap();
+        println!(
+            "realized_vs_modeled_it: realized={:.4} modeled={:.4} decision_cov={:.2} haircut={:.3} — OK",
+            r.realized_roi.unwrap(),
+            r.honest_roi.unwrap(),
+            r.decision_coverage.unwrap(),
+            r.median_haircut.unwrap(),
+        );
     }
 
     /// Insert a RESOLVED consensus signal with an explicit resolution day-offset.
