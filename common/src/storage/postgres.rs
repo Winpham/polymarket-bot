@@ -1638,6 +1638,9 @@ pub struct FollowedTrader {
     pub added_at: DateTime<Utc>,
     pub last_checked_at: Option<DateTime<Utc>>,
     pub active: bool,
+    /// Votes in consensus (rank ≤ cutoff or manual). Deep candidates are FALSE:
+    /// polled + archived, but excluded from backer/opposer counts.
+    pub consensus_eligible: bool,
 }
 
 /// An event row already persisted to `copy_trade_events`.
@@ -1684,6 +1687,7 @@ pub(super) struct FollowedTraderRow {
     added_at: DateTime<Utc>,
     last_checked_at: Option<DateTime<Utc>>,
     active: bool,
+    consensus_eligible: bool,
 }
 
 impl FollowedTraderRow {
@@ -1700,6 +1704,7 @@ impl FollowedTraderRow {
             added_at: self.added_at,
             last_checked_at: self.last_checked_at,
             active: self.active,
+            consensus_eligible: self.consensus_eligible,
         }
     }
 }

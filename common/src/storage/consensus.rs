@@ -984,10 +984,19 @@ impl PgPortfolio {
     /// Load all window fill atoms at or after `since` (the trailing window) for
     /// rebuilding MarketBooks off the indexed DB read instead of the network.
     pub async fn load_window_votes(&self, since: DateTime<Utc>) -> Result<Vec<WindowVote>> {
+        // Consensus non-regression seam: only `consensus_eligible` traders' votes
+        // enter the book. Deep (ineligible) captured votes are still stored in the
+        // window (for the shadow study) but excluded from backer/opposer counts.
+        // COALESCE default TRUE ⇒ a wallet absent from followed_traders still counts
+        // exactly as before, so at the top-40 default (no ineligible rows) this
+        // filter is a no-op and the emitted signals are byte-for-byte unchanged.
         let rows: Vec<WindowVote> = sqlx::query_as(
-            "SELECT trader_wallet, name, rank, pnl, quality, condition_id, outcome_index, \
-                    outcome, title, slug, event_slug, is_sports, price, size_usd, ts \
-             FROM consensus_vote_window WHERE ts >= $1",
+            "SELECT cw.trader_wallet, cw.name, cw.rank, cw.pnl, cw.quality, cw.condition_id, \
+                    cw.outcome_index, cw.outcome, cw.title, cw.slug, cw.event_slug, \
+                    cw.is_sports, cw.price, cw.size_usd, cw.ts \
+             FROM consensus_vote_window cw \
+             LEFT JOIN followed_traders ft ON LOWER(ft.proxy_wallet) = cw.trader_wallet \
+             WHERE cw.ts >= $1 AND COALESCE(ft.consensus_eligible, TRUE) = TRUE",
         )
         .bind(since)
         .fetch_all(&self.pool)
@@ -1120,7 +1129,8 @@ impl PgPortfolio {
                     tf.event_slug, tf.is_sports, tf.price, tf.size_usd, tf.ts \
              FROM trader_fills tf \
              LEFT JOIN followed_traders ft ON LOWER(ft.proxy_wallet) = tf.wallet \
-             WHERE tf.side = 'BUY' AND tf.ts >= $1",
+             WHERE tf.side = 'BUY' AND tf.ts >= $1 \
+               AND COALESCE(ft.consensus_eligible, TRUE) = TRUE",
         )
         .bind(since)
         .fetch_all(&self.pool)
@@ -1863,6 +1873,170 @@ mod trader_fills_it {
             .execute(&pf.pool)
             .await
             .unwrap();
+    }
+
+    /// PHASE 3 NON-REGRESSION (storage level): `load_window_votes` and
+    /// `load_buy_fills_since` — the two book sources — return ONLY eligible traders'
+    /// votes, while every vote (deep included) stays captured in the window/archive.
+    /// Because book-building is a deterministic function of the loaded votes, an
+    /// identical loaded set ⇒ identical books ⇒ identical emitted signals; so
+    /// widening the tracked universe changes nothing the engine acts on until a deep
+    /// trader is earned in. The signal-level half is proven in
+    /// `copy_trading_bot::…::deep_pool_excluded_from_signals_shadow_differs`.
+    #[tokio::test]
+    #[ignore = "requires a live Postgres at $DATABASE_URL with migrations applied"]
+    async fn eligibility_gate_load_is_byte_for_byte() {
+        let url = std::env::var("DATABASE_URL").expect("DATABASE_URL must be set");
+        let pool = sqlx::PgPool::connect(&url).await.expect("connect");
+        let pf = PgPortfolio::new(pool).await.expect("portfolio");
+        pf.run_migrations().await.expect("migrations (incl. 032)");
+
+        let elig = ["0xelig_a", "0xelig_b", "0xelig_c"];
+        let deep = ["0xdeepv_a", "0xdeepv_b", "0xdeepv_c"];
+        let cond = "0xgatecond";
+        for w in elig.iter().chain(deep.iter()) {
+            sqlx::query("DELETE FROM followed_traders WHERE proxy_wallet = $1")
+                .bind(w)
+                .execute(&pf.pool)
+                .await
+                .unwrap();
+        }
+        sqlx::query("DELETE FROM consensus_vote_window WHERE condition_id = $1")
+            .bind(cond)
+            .execute(&pf.pool)
+            .await
+            .unwrap();
+        sqlx::query("DELETE FROM trader_fills WHERE condition_id = $1")
+            .bind(cond)
+            .execute(&pf.pool)
+            .await
+            .unwrap();
+
+        // Wallets stored lowercased to match window/fill casing (LOWER-join).
+        for (i, w) in elig.iter().enumerate() {
+            pf.upsert_tracked_trader(&LeaderboardTraderUpsert {
+                wallet: (*w).into(),
+                username: None,
+                rank: Some(i as i32 + 5),
+                pnl: None,
+                volume: None,
+                periods: "WEEK".into(),
+                consensus_eligible: true,
+            })
+            .await
+            .unwrap();
+        }
+        for (i, w) in deep.iter().enumerate() {
+            pf.upsert_tracked_trader(&LeaderboardTraderUpsert {
+                wallet: (*w).into(),
+                username: None,
+                rank: Some(i as i32 + 120),
+                pnl: None,
+                volume: None,
+                periods: "WEEK".into(),
+                consensus_eligible: false,
+            })
+            .await
+            .unwrap();
+        }
+
+        let now = Utc::now();
+        let ts = now - chrono::Duration::minutes(10);
+        let mkv = |w: &str| WindowVote {
+            trader_wallet: w.into(),
+            name: w.into(),
+            rank: Some(9),
+            pnl: None,
+            quality: 1.0,
+            condition_id: cond.into(),
+            outcome_index: 0,
+            outcome: "Yes".into(),
+            title: "t".into(),
+            slug: "s".into(),
+            event_slug: None,
+            is_sports: false,
+            price: 0.5,
+            size_usd: 1000.0,
+            ts,
+        };
+        let votes: Vec<WindowVote> = elig.iter().chain(deep.iter()).map(|w| mkv(w)).collect();
+        pf.insert_window_votes(&votes).await.unwrap();
+
+        let since = now - chrono::Duration::hours(1);
+        let mut loaded: Vec<String> = pf
+            .load_window_votes(since)
+            .await
+            .unwrap()
+            .into_iter()
+            .filter(|v| v.condition_id == cond)
+            .map(|v| v.trader_wallet)
+            .collect();
+        loaded.sort();
+        assert_eq!(
+            loaded, elig,
+            "window book source returns eligible votes only; deep is filtered"
+        );
+
+        // All 6 votes ARE captured — the gate is at load (voting), not at capture.
+        let (total,): (i64,) =
+            sqlx::query_as("SELECT COUNT(*) FROM consensus_vote_window WHERE condition_id = $1")
+                .bind(cond)
+                .fetch_one(&pf.pool)
+                .await
+                .unwrap();
+        assert_eq!(
+            total, 6,
+            "deep votes stay captured for the shadow/profile pass"
+        );
+
+        // The non-default fills book source filters identically.
+        let mkf = |w: &str| NewTraderFill {
+            wallet: w.into(),
+            tx_hash: Some(format!("0x{w}buy")),
+            condition_id: cond.into(),
+            outcome_index: 0,
+            outcome: "Yes".into(),
+            side: "BUY".into(),
+            price: 0.5,
+            size_usd: 1000.0,
+            title: "t".into(),
+            slug: "s".into(),
+            event_slug: None,
+            is_sports: false,
+            sport: None,
+            ts,
+        };
+        let fills: Vec<NewTraderFill> = elig.iter().chain(deep.iter()).map(|w| mkf(w)).collect();
+        pf.insert_trader_fills(&fills).await.unwrap();
+        let mut floaded: Vec<String> = pf
+            .load_buy_fills_since(since)
+            .await
+            .unwrap()
+            .into_iter()
+            .filter(|v| v.condition_id == cond)
+            .map(|v| v.trader_wallet)
+            .collect();
+        floaded.sort();
+        assert_eq!(floaded, elig, "fills book source also excludes deep");
+
+        // Cleanup.
+        sqlx::query("DELETE FROM consensus_vote_window WHERE condition_id = $1")
+            .bind(cond)
+            .execute(&pf.pool)
+            .await
+            .unwrap();
+        sqlx::query("DELETE FROM trader_fills WHERE condition_id = $1")
+            .bind(cond)
+            .execute(&pf.pool)
+            .await
+            .unwrap();
+        for w in elig.iter().chain(deep.iter()) {
+            sqlx::query("DELETE FROM followed_traders WHERE proxy_wallet = $1")
+                .bind(w)
+                .execute(&pf.pool)
+                .await
+                .unwrap();
+        }
     }
 
     #[tokio::test]

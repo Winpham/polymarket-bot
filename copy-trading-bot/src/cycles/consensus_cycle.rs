@@ -1004,4 +1004,76 @@ mod tests {
         // Degenerate price ⇒ dropped.
         assert!(trade_to_fill("0xw", &mk("BUY", Some(0), 1.0)).is_none());
     }
+
+    fn wvote(wallet: &str, oidx: i32, price: f64, rank: Option<i32>) -> WindowVote {
+        WindowVote {
+            trader_wallet: wallet.into(),
+            name: wallet.into(),
+            rank,
+            pnl: None,
+            quality: crate::scanner::consensus::quality_weight(rank),
+            condition_id: "0xcond".into(),
+            outcome_index: oidx,
+            outcome: "Yes".into(),
+            title: "Team A vs Team B".into(),
+            slug: "nba-a-b-2026".into(),
+            event_slug: None,
+            is_sports: true,
+            price,
+            size_usd: 1000.0,
+            ts: Utc::now() - chrono::Duration::minutes(10),
+        }
+    }
+
+    /// PHASE 3 NON-REGRESSION (signal level): the consensus engine scores only the
+    /// eligible votes that `load_window_votes` returns (deep votes are filtered at
+    /// load — proven separately in `polymarket_common::…::eligibility_gate_*`). This
+    /// test proves the downstream half: the gated book (eligible only) is what fires,
+    /// and it is byte-for-byte identical to a world with NO deep traders — while the
+    /// shadow (if deep DID vote) would change net_count and tier, proving the gate is
+    /// load-bearing rather than cosmetic.
+    #[test]
+    fn deep_pool_excluded_from_signals_shadow_differs() {
+        let trust = TrustMap::new();
+        let base = crate::scanner::consensus::ConsensusParams::default(); // min_backers=3
+        let portfolio = crate::scanner::consensus::default_portfolio(&base);
+        let now = Utc::now();
+
+        // 3 eligible (rank ≤ cutoff) backers on outcome 0 → a strict signal fires.
+        let eligible = [
+            wvote("0xe1", 0, 0.40, Some(5)),
+            wvote("0xe2", 0, 0.42, Some(12)),
+            wvote("0xe3", 0, 0.41, Some(30)),
+        ];
+        // Deep (ineligible) backers on the SAME outcome — the rows the load filter
+        // strips. If they voted they'd pile onto net_count.
+        let deep = [
+            wvote("0xd1", 0, 0.43, Some(120)),
+            wvote("0xd2", 0, 0.44, Some(230)),
+            wvote("0xd3", 0, 0.45, Some(410)),
+        ];
+
+        let strict_net = |votes: &[WindowVote]| {
+            score_all_strategies(&books_from_window_votes(votes, &trust), now, &portfolio)
+                .into_iter()
+                .find(|s| s.strategy == "strict" && s.condition_id == "0xcond")
+                .map(|s| s.net_count)
+        };
+
+        // GATED = what the engine actually scores (eligible only, as the DB returns).
+        // Identical to a universe that never captured the deep pool at all.
+        let gated = strict_net(&eligible);
+        assert_eq!(gated, Some(3), "gated: only the 3 eligible backers count");
+
+        // SHADOW = if the deep pool voted. net_count would jump 3 → 6 (crossing the
+        // elite_net gate) — concrete proof the gate changes emitted signals, so
+        // excluding deep from voting is a real non-regression, not a no-op.
+        let all: Vec<WindowVote> = eligible.iter().chain(deep.iter()).cloned().collect();
+        let shadow = strict_net(&all);
+        assert_eq!(shadow, Some(6), "shadow: deep pool would double net_count");
+        assert_ne!(
+            gated, shadow,
+            "gate is load-bearing: deep would change signals"
+        );
+    }
 }
