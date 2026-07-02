@@ -457,6 +457,30 @@ impl PgPortfolio {
         Ok(res.rows_affected() > 0)
     }
 
+    /// Capture the real executable best ASK ONCE while open **together with its
+    /// provenance** (Phase 1): `entry_ask_at = NOW()` (WHEN it was captured) and
+    /// `entry_ask_mid = $mid` (the CLOB mid at the SAME instant). Same set-once +
+    /// `resolved = FALSE` guard as [`set_entry_ask`] — never overwritten, never
+    /// written post-resolution (leak-free). `mid` must be the mid observed in the
+    /// same pass as `ask`, so `entry_ask − entry_ask_mid` is the real haircut and
+    /// `entry_ask_at ≈ first_detected_at` proves a decision-time capture. Returns
+    /// whether a value was newly written (no-op if already set). PAPER/measurement
+    /// only — records what the market WAS asking; never places an order.
+    pub async fn set_entry_ask_decision(&self, signal_id: i32, ask: f64, mid: f64) -> Result<bool> {
+        let res = sqlx::query(
+            "UPDATE consensus_signals \
+             SET entry_ask = $2, entry_ask_at = NOW(), entry_ask_mid = $3 \
+             WHERE id = $1 AND entry_ask IS NULL AND resolved = FALSE",
+        )
+        .bind(signal_id)
+        .bind(ask)
+        .bind(mid)
+        .execute(&self.pool)
+        .await
+        .context("set_entry_ask_decision")?;
+        Ok(res.rows_affected() > 0)
+    }
+
     /// The full trajectory of a signal — its "stock chart": consensus state +
     /// live price over time. Used by `/signal` and CLV/drift analysis.
     pub async fn consensus_trajectory(&self, signal_id: i32) -> Result<Vec<ConsensusSnapshot>> {
@@ -2328,6 +2352,86 @@ mod honest_pnl_it {
             .await
             .unwrap();
         println!("entry_ask_it: set-once + resolved-guard + query-prefers-ask — OK");
+    }
+
+    #[tokio::test]
+    #[ignore = "requires a live Postgres at $DATABASE_URL with migrations applied"]
+    async fn set_entry_ask_decision_records_provenance_once() {
+        let url = std::env::var("DATABASE_URL").expect("DATABASE_URL must be set");
+        let pool = sqlx::PgPool::connect(&url).await.expect("connect");
+        let pf = PgPortfolio::new(pool).await.expect("portfolio");
+        pf.run_migrations().await.expect("migrations");
+        sqlx::query("DELETE FROM consensus_signals WHERE condition_id LIKE 'hpdec_%'")
+            .execute(&pf.pool)
+            .await
+            .unwrap();
+
+        // OPEN signal, no ask yet, detected 2h ago.
+        let (id,): (i32,) = sqlx::query_as(
+            "INSERT INTO consensus_signals \
+               (strategy, condition_id, outcome_index, event_slug, n_backers, n_opposers, \
+                net_count, net_quality, mean_price, price_std, recency_mins, total_usd, \
+                score, tier, initial_market_price, resolved, first_detected_at) \
+             VALUES ('hp_dec','hpdec_c1',0,'hpdec_ev',5,0,5,5.0,0.50,0.02,10,2000,1.0,'WATCH', \
+                     0.90, FALSE, NOW() - INTERVAL '2 hours') RETURNING id",
+        )
+        .fetch_one(&pf.pool)
+        .await
+        .unwrap();
+
+        // First decision capture writes ask + at + mid together.
+        assert!(
+            pf.set_entry_ask_decision(id, 0.92, 0.90).await.unwrap(),
+            "first decision capture written"
+        );
+        // Set-once: a later capture (even different values) is a no-op.
+        assert!(
+            !pf.set_entry_ask_decision(id, 0.99, 0.95).await.unwrap(),
+            "second capture never overwrites the decision-time provenance"
+        );
+        let (ask, mid, has_at): (Option<f64>, Option<f64>, bool) = sqlx::query_as(
+            "SELECT entry_ask, entry_ask_mid, (entry_ask_at IS NOT NULL) \
+             FROM consensus_signals WHERE id = $1",
+        )
+        .bind(id)
+        .fetch_one(&pf.pool)
+        .await
+        .unwrap();
+        assert_eq!(ask, Some(0.92), "entry_ask is the first captured ask");
+        assert_eq!(mid, Some(0.90), "entry_ask_mid is the paired mid");
+        assert!(has_at, "entry_ask_at stamped at capture");
+
+        // Post-resolution the decision capture is refused (leak-free).
+        sqlx::query(
+            "UPDATE consensus_signals SET resolved = TRUE, outcome_won = TRUE, resolved_at = NOW() \
+             WHERE id = $1",
+        )
+        .bind(id)
+        .execute(&pf.pool)
+        .await
+        .unwrap();
+        // A fresh open row proves resolved-guard is what blocks (not just set-once).
+        let (id2,): (i32,) = sqlx::query_as(
+            "INSERT INTO consensus_signals \
+               (strategy, condition_id, outcome_index, event_slug, n_backers, n_opposers, \
+                net_count, net_quality, mean_price, price_std, recency_mins, total_usd, \
+                score, tier, initial_market_price, resolved, outcome_won, first_detected_at, resolved_at) \
+             VALUES ('hp_dec','hpdec_c2',0,'hpdec_ev2',5,0,5,5.0,0.50,0.02,10,2000,1.0,'WATCH', \
+                     0.90, TRUE, TRUE, NOW() - INTERVAL '2 hours', NOW()) RETURNING id",
+        )
+        .fetch_one(&pf.pool)
+        .await
+        .unwrap();
+        assert!(
+            !pf.set_entry_ask_decision(id2, 0.10, 0.11).await.unwrap(),
+            "resolved rows are never touched (leak-free)"
+        );
+
+        sqlx::query("DELETE FROM consensus_signals WHERE condition_id LIKE 'hpdec_%'")
+            .execute(&pf.pool)
+            .await
+            .unwrap();
+        println!("set_entry_ask_decision_it: ask+at+mid set-once + resolved-guard — OK");
     }
 
     /// Insert a RESOLVED consensus signal with an explicit resolution day-offset.

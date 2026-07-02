@@ -195,26 +195,38 @@ pub async fn housekeeping_cycle(
                         } else {
                             snapshots += 1;
                         }
-                        // Phase 2: capture the REAL executable ask ONCE while open,
-                        // so the honest tracker uses the market ask (not mid+haircut)
-                        // where captured. Bounded per cycle; best-effort (a failure
-                        // just leaves entry_ask NULL → the query falls back). Never
-                        // touches the live path — pure honest-tracker instrumentation.
+                        // Decision-time executable-ask capture (Phase 1; only when
+                        // CAPTURE_ENTRY_ASK is on). Bound to the mid we JUST observed
+                        // (`price`), so the ask and its paired mid come from ONE
+                        // moment: on the first pass this is the same mid frozen into
+                        // `initial_market_price`, making the capture decision-time
+                        // (housekeeping runs every 5 min, so within minutes of first
+                        // detection). If this pass is capped or the /book is empty, a
+                        // later pass captures as a LAGGED fallback — its lag is
+                        // visible as `entry_ask_at − first_detected_at`, so realized
+                        // ROI can filter to decision-time-only rows. Set-once,
+                        // resolved-guarded, best-effort: a failure just leaves
+                        // entry_ask NULL and the honest query falls back to
+                        // mid+haircut. NEVER touches the live alert path — pure
+                        // measurement (records what the market WAS asking, no order).
                         if cfg.capture_entry_ask
                             && sig.entry_ask.is_none()
                             && asks_captured < cfg.entry_ask_max_per_cycle
+                            && let Some(mid) = price
                             && let Some(tid) = market.outcome_token_id(sig.outcome_index)
                         {
                             tokio::time::sleep(Duration::from_millis(80)).await;
                             match crate::data::models::fetch_best_ask(http, tid).await {
-                                Ok(Some(ask)) => match portfolio.set_entry_ask(sig.id, ask).await {
-                                    Ok(true) => asks_captured += 1,
-                                    Ok(false) => {}
-                                    Err(e) => tracing::warn!(
-                                        err = %e, signal_id = sig.id, "set_entry_ask failed"
-                                    ),
-                                },
-                                Ok(None) => {} // empty book — retry next cycle
+                                Ok(Some(ask)) => {
+                                    match portfolio.set_entry_ask_decision(sig.id, ask, mid).await {
+                                        Ok(true) => asks_captured += 1,
+                                        Ok(false) => {}
+                                        Err(e) => tracing::warn!(
+                                            err = %e, signal_id = sig.id, "set_entry_ask_decision failed"
+                                        ),
+                                    }
+                                }
+                                Ok(None) => {} // empty book — retry next cycle (lagged)
                                 Err(e) => {
                                     tracing::warn!(err = %e, signal_id = sig.id, "fetch_best_ask failed")
                                 }
