@@ -325,15 +325,19 @@ pub async fn fetch_best_ask(http: &reqwest::Client, token_id: &str) -> Result<Op
     let text = resp.text().await?;
     let book: ClobBook = serde_json::from_str(&text)
         .with_context(|| format!("failed to parse CLOB book token={token_id}"))?;
-    // Asks may be returned in any order; the best ask for a buyer is the lowest
-    // price. Ignore any level whose price doesn't parse or sits outside (0,1].
-    let best = book
-        .asks
+    Ok(best_ask_price(&book))
+}
+
+/// The best (lowest) executable ask a buyer could hit, or `None` on an empty /
+/// unusable book. Asks may be returned in any order; ignore any level whose
+/// price doesn't parse or sits outside (0,1]. Pure selection extracted verbatim
+/// from [`fetch_best_ask`] so the /book-shape contract stays unit-testable.
+fn best_ask_price(book: &ClobBook) -> Option<f64> {
+    book.asks
         .iter()
         .filter_map(|l| l.price.parse::<f64>().ok())
         .filter(|p| *p > 0.0 && *p <= 1.0)
-        .min_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
-    Ok(best)
+        .min_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal))
 }
 
 /// Fetch the CLOB market for a `condition_id`. Robust resolution + live price.
@@ -453,5 +457,70 @@ mod consensus_resolution_tests {
         assert_eq!(m.resolved_outcome_won(5), None);
         assert_eq!(m.resolved_outcome_won(-1), None);
         assert_eq!(market(None).resolved_outcome_won(0), None);
+    }
+
+    // --- Entry-ask capture: /book shape + selection contract (Phase 0) -------
+
+    #[test]
+    fn best_ask_selects_lowest_valid_and_rejects_junk() {
+        use super::{ClobBook, best_ask_price};
+        let book: ClobBook = serde_json::from_str(
+            r#"{"asks":[{"price":"0.95"},{"price":"0.90"},{"price":"0.93"}]}"#,
+        )
+        .unwrap();
+        // Best ask for a BUYER is the LOWEST offer.
+        assert_eq!(best_ask_price(&book), Some(0.90));
+
+        // Empty book → None (caller falls back to mid+haircut).
+        let empty: ClobBook = serde_json::from_str(r#"{"asks":[]}"#).unwrap();
+        assert_eq!(best_ask_price(&empty), None);
+        // Missing `asks` key defaults to empty → None (shape drift tolerated).
+        let missing: ClobBook = serde_json::from_str(r#"{}"#).unwrap();
+        assert_eq!(best_ask_price(&missing), None);
+
+        // Out-of-range / unparseable levels are ignored; lone valid one wins.
+        let junk: ClobBook = serde_json::from_str(
+            r#"{"asks":[{"price":"0"},{"price":"1.5"},{"price":"abc"},{"price":"0.42"}]}"#,
+        )
+        .unwrap();
+        assert_eq!(best_ask_price(&junk), Some(0.42));
+        // A price of exactly 1.0 is a valid (certain) ask.
+        let one: ClobBook = serde_json::from_str(r#"{"asks":[{"price":"1"}]}"#).unwrap();
+        assert_eq!(best_ask_price(&one), Some(1.0));
+    }
+
+    /// Live probe against the real CLOB `/book` endpoint — confirms the shape
+    /// hasn't drifted and `fetch_best_ask` returns a plausible ask. Ignored by
+    /// default (network). Run with a real open token:
+    ///   POLY_PROBE_TOKEN=<token_id> cargo test -p polymarket-common \
+    ///     fetch_best_ask_live_probe -- --ignored --nocapture
+    #[tokio::test]
+    #[ignore = "hits the live CLOB /book endpoint; needs POLY_PROBE_TOKEN"]
+    async fn fetch_best_ask_live_probe() {
+        use super::fetch_best_ask;
+        let http = reqwest::Client::new();
+
+        // A bogus token has no book → Ok(None) (never a crash / never a price).
+        let bogus = fetch_best_ask(&http, "0xdeadbeefnotarealtoken").await;
+        match bogus {
+            Ok(v) => {
+                assert!(v.is_none(), "bogus token should have no ask, got {v:?}");
+                eprintln!("bogus token → {v:?} (expected None)");
+            }
+            Err(e) => eprintln!("bogus token → transient Err (acceptable): {e}"),
+        }
+
+        // A known open token (from env) must return a plausible ask in (0,1].
+        if let Ok(tid) = std::env::var("POLY_PROBE_TOKEN") {
+            let ask = fetch_best_ask(&http, &tid)
+                .await
+                .expect("live /book fetch should not error for a real token");
+            eprintln!("POLY_PROBE_TOKEN {tid} → best ask {ask:?}");
+            if let Some(p) = ask {
+                assert!(p > 0.0 && p <= 1.0, "ask {p} outside (0,1] — shape drift?");
+            }
+        } else {
+            eprintln!("set POLY_PROBE_TOKEN=<open token_id> to probe a real ask");
+        }
     }
 }

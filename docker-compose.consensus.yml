@@ -61,7 +61,9 @@ services:
       REGIME_FRAC: ${REGIME_FRAC:-0.7}                        # fraction of regimes that must be positive
       MIN_LIQUIDITY_USD: ${MIN_LIQUIDITY_USD:-2000.0}         # liquidity floor (median sharp $) for a GO
       CAPTURE_ENTRY_ASK: ${CAPTURE_ENTRY_ASK:-false}          # capture real CLOB best-ask (else mid+haircut)
-      ENTRY_ASK_MAX_PER_CYCLE: ${ENTRY_ASK_MAX_PER_CYCLE:-40} # cap book-ask fetches/cycle
+      ENTRY_ASK_MAX_PER_CYCLE: ${ENTRY_ASK_MAX_PER_CYCLE:-40} # cap LAGGED backlog book-ask fetches/cycle
+      ENTRY_ASK_DECISION_MAX_PER_CYCLE: ${ENTRY_ASK_DECISION_MAX_PER_CYCLE:-40} # cap DECISION-TIME (first-price) fetches/cycle
+      REALIZED_DECISION_LAG_SECS: ${REALIZED_DECISION_LAG_SECS:-900.0} # entry_ask_at−first_detected_at ≤ this ⇒ decision-time (realized ROI)
       LEDGER_STRATEGIES: ${LEDGER_STRATEGIES:-}               # paper ledger scope (empty = all non-blind)
       HONEST_DIGEST: ${HONEST_DIGEST:-false}                  # opt-in phone digest (material-change only)
       HONEST_MAX_DRAWDOWN_USD: ${HONEST_MAX_DRAWDOWN_USD:-500.0} # paper-drawdown breach floor for the digest

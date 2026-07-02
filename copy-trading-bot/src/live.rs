@@ -107,6 +107,7 @@ pub async fn run_live(cfg: Arc<CopyTradingConfig>) -> Result<()> {
             pilot_min_regimes: cfg.pilot_min_regimes,
             regime_frac: cfg.regime_frac,
             min_liquidity_usd: cfg.min_liquidity_usd,
+            realized_decision_lag_secs: cfg.realized_decision_lag_secs,
         };
         tokio::spawn(async move {
             crate::board::serve(bd_portfolio, port, capture_margin, honest).await
