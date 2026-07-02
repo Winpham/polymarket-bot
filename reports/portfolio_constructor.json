@@ -1,0 +1,94 @@
+{
+ "menu": [
+  "favorite",
+  "elite_fresh_fav"
+ ],
+ "book": [
+  "favorite"
+ ],
+ "contrib": {
+  "favorite": {
+   "n_events": 96,
+   "independent_added": 96
+  },
+  "elite_fresh_fav": {
+   "n_events": 39,
+   "independent_added": 0
+  }
+ },
+ "n_eff_day": 58.64649047538034,
+ "sizing": {
+  "policy": "kelly_eighth_capped",
+  "recommendation_detail": {
+   "frozen_max_growth_pick": "kelly_quarter",
+   "ceiling_slack": true,
+   "conservative_default": "kelly_eighth_capped",
+   "honest_recommendation": "kelly_eighth_capped"
+  },
+  "kelly_by_band": {
+   "4": 0.0288,
+   "5": 0.5645
+  },
+  "cells": {
+   "100": {
+    "median_pnl": 141.63371320381748,
+    "p5_pnl": 81.53080434276178,
+    "p_profit": 1.0,
+    "p_maxdd_over_30pct": 0.0,
+    "p_ruin": 0.0,
+    "median_log_growth_per_100ev": 0.13246031827958243,
+    "extrapolation_beyond_n_eff": true
+   },
+   "300": {
+    "median_pnl": 471.1247203719422,
+    "p5_pnl": 335.18140007593973,
+    "p_profit": 1.0,
+    "p_maxdd_over_30pct": 0.0,
+    "p_ruin": 0.0,
+    "median_log_growth_per_100ev": 0.12867574136346227,
+    "extrapolation_beyond_n_eff": true
+   },
+   "1000": {
+    "median_pnl": 2579.9803334778308,
+    "p5_pnl": 1982.850031751082,
+    "p_profit": 1.0,
+    "p_maxdd_over_30pct": 0.0,
+    "p_ruin": 0.0,
+    "median_log_growth_per_100ev": 0.12753573069554114,
+    "extrapolation_beyond_n_eff": true
+   }
+  }
+ },
+ "independence_price": {
+  "1_independent_regimes": {
+   "p_loss": 0.0,
+   "sd_pnl": 220.9,
+   "median_pnl": 959.3,
+   "p5_pnl": 626.2
+  },
+  "2_independent_regimes": {
+   "p_loss": 0.0,
+   "sd_pnl": 232.2,
+   "median_pnl": 960.0,
+   "p5_pnl": 615.5,
+   "p_loss_reduction_vs_prev": 0.0,
+   "sd_reduction_frac_vs_prev": -0.0512
+  },
+  "3_independent_regimes": {
+   "p_loss": 0.0,
+   "sd_pnl": 234.5,
+   "median_pnl": 953.6,
+   "p5_pnl": 592.4,
+   "p_loss_reduction_vs_prev": 0.0,
+   "sd_reduction_frac_vs_prev": -0.0098
+  },
+  "4_independent_regimes": {
+   "p_loss": 0.0,
+   "sd_pnl": 241.4,
+   "median_pnl": 965.5,
+   "p5_pnl": 579.3,
+   "p_loss_reduction_vs_prev": 0.0,
+   "sd_reduction_frac_vs_prev": -0.0294
+  }
+ }
+}
