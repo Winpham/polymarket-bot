@@ -263,6 +263,20 @@ pub async fn consensus_cycle(
         &cfg.consensus_alert_watch_for,
         &strategies,
     );
+    // Config-typo guard: an alert-set name that matches no ACTIVE strategy can
+    // never push — with an override set, one typo would silently kill all
+    // alerts. Warn loudly every cycle rather than fail (alerts are best-effort).
+    {
+        let known: std::collections::HashSet<&str> = strategies.iter().map(|d| d.name).collect();
+        for name in alerting.iter().chain(watch_for.iter()) {
+            if !known.contains(name.as_str()) {
+                tracing::warn!(
+                    strategy = %name,
+                    "alert config names an unknown/inactive strategy — it will NEVER push (typo?)"
+                );
+            }
+        }
+    }
     let signals = score_all_strategies(&book_vec, now, &strategies);
 
     // Enricher seam: silent cross-check arms re-emit `strict` picks under new
