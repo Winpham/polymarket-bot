@@ -348,7 +348,9 @@ async fn render(portfolio: &PgPortfolio, capture_margin: f64, honest: HonestBoar
         .await
         .unwrap_or_default();
     let tracked = portfolio.count_tracked_traders().await.unwrap_or(0);
+    let (hot, deep) = portfolio.count_tracked_split().await.unwrap_or((0, 0));
     let n429 = polymarket_common::metrics::data_api_429_count();
+    let (poll_n, poll_ms) = polymarket_common::metrics::consensus_last_poll();
     // Phase 0 (capture margin): gate arms at the bar a *follower* actually captures —
     // `slippage_pct + fee_pct` — not the sharp's own edge (margin 0). Only edges whose
     // Bonferroni lower bound clears the fees+slippage cushion render ✅. This raises the
@@ -467,7 +469,7 @@ async fn render(portfolio: &PgPortfolio, capture_margin: f64, honest: HonestBoar
          .accrual{{background:#11151b;border:1px solid #1c2128;border-radius:8px;padding:10px 12px;font-size:13px;color:#c3cad6;margin:0 0 18px}}\
          </style></head><body>\
          <h1>🤝 Consensus scoreboard</h1>\
-         <p class=sub>Tracking {tracked} top traders · {n} strategies forward · data-api 429s: {n429} · auto-refresh 30s</p>\
+         <p class=sub>Tracking {tracked} traders ({hot} hot · {deep} deep) · {n} strategies forward · last poll: {poll_n} in {poll_ms}ms · data-api 429s: {n429} · auto-refresh 30s</p>\
          {body}\
          <p class=note><b>surplus</b> = edge over the band-matched blind baseline (favorite-longshot-neutralized) — \
          the real signal. <b>lower bound</b> = Bonferroni-corrected 1-sided bound. ✅ = passes the belief-blind \

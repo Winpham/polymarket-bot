@@ -9,12 +9,20 @@ use chrono::{DateTime, Utc};
 use futures_util::future::join_all;
 use reqwest::Client;
 use serde::Deserialize;
+use std::sync::Arc;
 use std::time::Duration;
+use tokio::sync::Semaphore;
 
 use crate::storage::postgres::{NewCopyTradeEvent, PgPortfolio};
 
 /// Trades older than this are skipped — price has likely moved too far.
 const STALE_TRADE_SECS: i64 = 300; // 5 minutes
+
+/// Max concurrent `/activity` polls in the legacy `detect_new_trades` fan-out.
+/// Mirrors the consensus cycle's `CONSENSUS_MAX_CONCURRENCY` default so widening
+/// the tracked universe can never turn `COPY_TRADE_ENABLED=true` into a burst of
+/// hundreds of simultaneous requests (429 storm). Strict hardening, depth-agnostic.
+const COPY_TRADE_MAX_CONCURRENCY: usize = 8;
 
 const DATA_API: &str = "https://data-api.polymarket.com";
 /// Default HTTP timeout for all data-API calls.
@@ -617,7 +625,10 @@ impl CopyTraderMonitor {
 
         tracing::info!(count = traders.len(), "Polling active traders");
 
-        // Poll all traders concurrently.
+        // Poll all traders concurrently, but BOUNDED by a semaphore so a large
+        // tracked universe can't burst hundreds of simultaneous /activity requests
+        // into the data-api (429 storm). Mirrors the consensus-cycle fan-out.
+        let sem = Arc::new(Semaphore::new(COPY_TRADE_MAX_CONCURRENCY.max(1)));
         let poll_futures = traders.iter().map(|trader| {
             let since = trader
                 .last_checked_at
@@ -633,7 +644,9 @@ impl CopyTraderMonitor {
                 since = %since.format("%Y-%m-%d %H:%M"),
                 "Polling trader"
             );
+            let sem = Arc::clone(&sem);
             async move {
+                let _permit = sem.acquire_owned().await;
                 let result = self.poll_trader_activity(&trader.proxy_wallet, since).await;
                 (trader, name, result)
             }
@@ -966,6 +979,52 @@ mod tests {
         assert_eq!(merged.len(), 3, "capped at depth");
         assert_eq!(merged[2].wallet, "0xc");
         assert_eq!(merged[2].rank, 3);
+    }
+
+    /// SCALE-GATE MEASUREMENT (Phase 2): poll a real depth-200 universe through the
+    /// same semaphore-bounded fan-out the consensus cycle uses, and report the
+    /// wall-clock + 429 count. This is the regression surface — if this stays well
+    /// inside the ~120s cycle window with zero 429s, the semaphore alone is the
+    /// poll-cadence budget and no cadence tiering is needed.
+    #[tokio::test]
+    #[ignore] // hits real API ~200 times; run explicitly to read the number
+    async fn measure_deep_poll_load_live() {
+        let http = Client::new();
+        let universe = fetch_leaderboard_paged(&http, "WEEK", 200).await.unwrap();
+        let wallets: Vec<String> = universe.iter().map(|e| e.wallet.clone()).collect();
+        let n = wallets.len();
+        let monitor = CopyTraderMonitor::new(http);
+        let since = Utc::now() - chrono::Duration::hours(48);
+
+        let before_429 = crate::metrics::data_api_429_count();
+        let t0 = std::time::Instant::now();
+        let sem = Arc::new(Semaphore::new(COPY_TRADE_MAX_CONCURRENCY.max(1)));
+        let polls = wallets.iter().map(|w| {
+            let sem = Arc::clone(&sem);
+            let monitor = &monitor;
+            async move {
+                let _permit = sem.acquire_owned().await;
+                monitor.poll_trader_activity(w, since).await.is_ok()
+            }
+        });
+        let results = join_all(polls).await;
+        let elapsed = t0.elapsed();
+        let ok = results.iter().filter(|r| **r).count();
+        let n429 = crate::metrics::data_api_429_count() - before_429;
+
+        println!(
+            "SCALE-GATE: polled {n} deep traders @ concurrency {COPY_TRADE_MAX_CONCURRENCY} in \
+             {:.1}s ({ok} ok, {} failed), data-api 429s: {n429}",
+            elapsed.as_secs_f64(),
+            n - ok,
+        );
+        // The fan-out must clear the universe well inside a ~120s consensus cycle.
+        assert!(
+            elapsed.as_secs() < 120,
+            "depth-200 poll fan-out took {:.1}s — approaching the cycle window; \
+             cadence tiering would be required",
+            elapsed.as_secs_f64()
+        );
     }
 
     #[tokio::test]

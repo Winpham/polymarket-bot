@@ -242,11 +242,16 @@ pub async fn consensus_cycle(
     // L1: incremental delta ingestion + off-network book assembly (default), or
     // the legacy poll-the-whole-window path. Both assemble identical books via
     // `books_from_window_votes`, so the live `strict` behavior is non-regressive.
+    let t_ingest = std::time::Instant::now();
     let (book_vec, polled_ok) = if cfg.consensus_incremental {
         ingest_incremental(portfolio, monitor, &traders, now, window_start, cfg, trust).await?
     } else {
         ingest_legacy(monitor, &traders, window_start, cfg, trust).await
     };
+    // Poll-cadence budget: record the fan-out size + wall-clock so the scale gate
+    // can see whether widening the universe keeps 429 rate ≈ 0 and latency inside
+    // the cycle (the semaphore-bounded fan-out is the regression surface).
+    crate::metrics::record_consensus_poll(polled_ok as u64, t_ingest.elapsed());
 
     // Serialize the raw vote atoms ONCE per (market, outcome) — strategy-agnostic.
     // Stored on every signal so a strategy invented later can be replayed over it.

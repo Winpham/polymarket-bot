@@ -201,6 +201,31 @@ pub fn data_api_429_count() -> u64 {
     DATA_API_429.load(std::sync::atomic::Ordering::Relaxed)
 }
 
+/// Last consensus cycle's poll fan-out size and wall-clock (ms), mirrored to
+/// readable atomics so the board scale-gate can show whether the fan-out at the
+/// current tracked depth stays comfortably inside the cycle window.
+static LAST_POLL_COUNT: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+static LAST_POLL_LATENCY_MS: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+
+/// Record the poll fan-out cost of one consensus cycle: how many traders were
+/// polled and how long the (semaphore-bounded) ingest took. This is the depth
+/// regression surface — the scale gate reads it to decide if cadence tiering is
+/// needed or the semaphore alone suffices.
+pub fn record_consensus_poll(polled: u64, dur: std::time::Duration) {
+    gauge!("consensus_poll_count").set(polled as f64);
+    histogram!("consensus_poll_latency_seconds").record(dur.as_secs_f64());
+    LAST_POLL_COUNT.store(polled, std::sync::atomic::Ordering::Relaxed);
+    LAST_POLL_LATENCY_MS.store(dur.as_millis() as u64, std::sync::atomic::Ordering::Relaxed);
+}
+
+/// `(polled, latency_ms)` from the most recent consensus cycle (for the board).
+pub fn consensus_last_poll() -> (u64, u64) {
+    (
+        LAST_POLL_COUNT.load(std::sync::atomic::Ordering::Relaxed),
+        LAST_POLL_LATENCY_MS.load(std::sync::atomic::Ordering::Relaxed),
+    )
+}
+
 /// Forward feature-log rows flushed this cycle (the `market_resid` accrual rate).
 pub fn record_market_feature_log_rows(n: u64) {
     counter!("market_feature_log_rows_total").increment(n);
