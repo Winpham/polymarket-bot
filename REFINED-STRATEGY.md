@@ -28,8 +28,16 @@ consensus on them *lost* badly (band 1: 76 bets, 3.9% hit, −$5,821 at $100 fla
    record's two DODGE cells; the favorite side of the same streams is positive.
 2. **Follow the consensus — that's the +6-11 pt edge** over betting favorites blindly. It is
    information, not just the favorite-longshot bias.
-3. **Size flat-SHARES (or ¼-Kelly), NEVER flat-dollar.** Flat-$ turned `strict` from +$571
-   (flat-shares) into −$4,584 by over-exposing to longshots. This single choice flips the P&L sign.
+3. **Size flat-SHARES (or fractional Kelly), NEVER flat-dollar.** Flat-$ turned `strict` from
+   +$571 (flat-shares) into −$4,584 by over-exposing to longshots. This single choice flips the
+   P&L sign. *Sharpened by the risk engine (entry 12, `scripts/risk_engine.py`):* the
+   pre-registered default is **⅛-Kelly per band (SE-shrunk) with exposure caps**
+   (`kelly_eighth_capped`), NOT ¼-Kelly — because on a 4-day record with no losing slate the
+   drawdown ceiling is SLACK (it cannot price a drawdown that hasn't occurred), so a
+   construction-bounded policy is the only honest choice until an adverse regime accrues; ¼-Kelly
+   earns its aggression only then. The per-band SE-shrunk Kelly also auto-zeroes losing bands
+   (strict bands 1–3 → f=0), reproducing the DODGE map from sizing alone. Flat-$ reproduced the
+   sign flip (strict P(ruin) 45.6% vs flat-shares +EV) — the anchor still holds.
 4. **Act in real-time, within a few minutes of fire.** The consensus is fully formed at fire
    (~3 backers, stable — it does NOT grow), and the edge is front-loaded (a ~1-1.5pt follower tax
    from the sharps' fill to our first observable mid; further drift beyond that is what speed

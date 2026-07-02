@@ -360,3 +360,48 @@ elite_fresh_fav (97% WC+Wimbledon) goes near-silent. ONE breadth action PROPOSED
 applied, no gate touched): add DAY to TRACK_PERIODS to shorten rotation lag — but the honest
 recommendation is HOLD (self-heals) and instead WATCH elite_fresh_fav across the WC final as
 the higher-value measurement. Rollback: git-revert the merge; delete reports/map/ (artifacts).
+
+## D15 — Diversification & risk engine: the risk constitution, and why P(profit)=100% is not a promise
+
+**The run (2026-07-02, `feat/diversification-risk`, reports/entries/12):** two read-only,
+paper-only instruments — `scripts/portfolio_concentration.py` (how few independent bets the
+record holds) and `scripts/risk_engine.py` (a frozen sizing menu × block-bootstrap Monte
+Carlo). Nothing promoted, zero migrations. Reuses `selection_null.py`'s band/regime/fetch
+so the statistic is byte-identical to the gate.
+
+**Concentration finding.** `elite_fresh_fav` is **100% nested inside `favorite`** (union =
+95 = favorite alone) → it adds **0 independent bets**; a {favorite, eff} "portfolio" is
+just favorite — never double-count. favorite holds **~52–95 effective independent bets**
+(regime-grain floor 52; block-bootstrap CI floor 51; ICC_slate ≈ 0 on baseline-adjusted
+residuals, ICC_match 0.079). The over-reliance number: favorite's profit is **~2.7
+effective tournaments, 51% from Wimbledon-tennis + 17% WC** — NOT "89% World Cup" (that is
+the fleet's *volume* mix, not the winner's P&L); both tournaments expire within weeks.
+
+**Why the honest recommendation is `kelly_eighth_capped`, not the frozen max-growth pick.**
+The block bootstrap of a 4-day record where **every slate was net-positive** cannot draw a
+losing path → P(profit)=100% and the drawdown ceiling is **SLACK** (even quarter-Kelly
+shows P(maxDD>30%)≈0). "Max growth under a non-binding ceiling" degenerates to "bet as hard
+as the menu allows" (the +$1.35M H=1000 median is that artifact). So the actionable
+recommendation is the **structurally-capped ⅛-Kelly** — drawdown bounded by construction
+(≤1/event, ≤3/slate, ≤40%/regime, −5-unit daily stop), not by a bootstrap blind to adverse
+regimes. Quarter-Kelly earns its aggression only once a losing regime accrues and the
+ceiling can bind. **Sizing must be flat-SHARES / fractional-Kelly, never flat-$:** the
+control policy reproduced the sign flip (strict flat-$ P(ruin) 45.6% vs flat-shares +EV),
+and the per-band SE-shrunk Kelly auto-zeroed strict's losing bands (f=0 on bands 1–3) —
+reproducing the slice-study DODGE map from sizing discipline alone.
+
+**Why these ceilings (frozen before simulation).** P(maxDD>30%)≤10% with maxDD peak-
+relative (standard, bounded); ruin = bankroll ≤20% of B. ⅛ (not ¼) Kelly leaves headroom
+for the edge being smaller than measured — the edge-haircut stress shows favorite turns
+negative only below ~¼ of the measured edge (λ=0 = costs-only = −$67), but N_eff≈50–95
+means the edge estimate itself is loose. Every P(profit) is CONDITIONAL on the measured
+edge persisting (D7's job); if the edge is zero, every policy loses to costs — this engine
+sizes an edge, it does not create one, and it does not manufacture diversification (an
+extra independent regime buys ~0 variance reduction at favorite's ~0 within-slate
+correlation — breadth's value is volume-linear, pricing the sibling breadth run's lever).
+
+**What would change it (accrual triggers, re-run the engine at each):** after the WC final
+AND Wimbledon (first real adverse-regime test — the ceiling may finally bind); +300 fleet
+or +50 favorite events (tightens N_eff + the edge estimate); and MANDATORY before any
+real-money pilot. The recommendation is PRE-REGISTERED for that hypothetical day, not
+standing — it changes nothing live now (K4).
