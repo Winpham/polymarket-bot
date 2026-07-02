@@ -99,3 +99,16 @@ power-limited at 280 traders, as anticipated.
 **Nothing was promoted that didn't clear the gate — and today nothing cleared
 it. The pipeline that lets tomorrow's clearers in is now live, shadow-first,
 and reversible.** Paper only; NO real money.
+
+## Live deploy verification (2026-07-02 08:06 PT, main 46c2e3e)
+| check | result |
+|---|---|
+| autoupdater | detected HEAD advance 08:04:57 → **deploy OK 08:06:03** |
+| migrations | 035 applied cleanly (no checksum issue; container healthy) |
+| trust map | "Earned-trust map refreshed traders=282" — hourly task live |
+| cycle | 281 traders polled · **strategies=20** (core 14 + 5 trust/tail arms + strict_retuned) · 4,822 signals · **alerts_sent=0** (all new arms silent) |
+| board | "Earned deep sharps (shadow-first)" panel + ⤴ markers + observatory render; EARN_DEEP_SHARPS shown OFF |
+| non-regression | earned_eligible all FALSE ⇒ the OR filter is a proven no-op; strict alert config untouched |
+
+New arms appear on the scoreboard as their signals resolve (they upsert from
+cycle one but the table filters to resolved > 0).
