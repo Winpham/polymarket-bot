@@ -307,3 +307,56 @@ unrecoverable. Verified via throwaway-PG `atfire_shape_it` (initial values survi
 drifted re-upsert); `scoreboard_at_fire_it` still green; behavior-neutral (nothing reads
 the new columns yet). `slice_study.py` prefers the initial columns and auto-uncaps a
 drift dimension once ≥95% of a cell's rows carry at-fire values.
+
+## D14 — Adaptive slice overlay: the map as a living state machine (entry 11)
+
+The entry-10 slice map was a FROZEN PRIORITIZE/NEUTRAL/DODGE table. D14 makes it a LIVING
+map, per the owner's binding directive **no permanent cuts** — the DODGE cells might not be
+unprofitable forever (the residue is tournament-mix-dependent), so the map must rehabilitate
+a cell the moment the evidence stops binding, always at the bar, in BOTH directions.
+
+**What shipped (paper-only, virtual, belief-blind — no live-behavior change, K3):**
+`scripts/map_state.py` (the versioned append-only state machine) + `scripts/map_checkpoint.py`
+(the checkpoint runner, importing `slice_study.py` as a library — CLI byte-identical). Map
+versions are git-tracked JSON artifacts under `reports/map/` (v001.json + manifest.json with
+sha256), **not a migration** — immutable history + effective-from lookup with zero DB state.
+
+**Design decisions (why):**
+- **Virtual-first** (the shadow-first house pattern, deep-edge precedent): `fleet_mapped` is
+  a replay-scored view, costing ONE hypothesis slot; the Rust arm is EARNED only after it
+  clears a forward success bar at a real checkpoint (K3). Unearned surfaces are not built.
+- **Asymmetric entry/exit windows:** ENTER on the WHOLE record (power — don't cut on thin
+  data), EXIT/rehab on the RECENT window (adaptivity — leave when the recent world changes).
+  Frozen, deliberate.
+- **Anti-silence + hysteresis:** silence (N_recent < 20) HOLDS state + flags STALE, never
+  rehabilitates on absence; two consecutive flips FREEZE at NEUTRAL + flag THRASH (sticky) —
+  noise must not steer (calibration discipline: plateau fine, thrash not).
+- **Adaptive means re-reading, NOT re-tuning:** the procedure (thresholds, windows, FDR-q)
+  is frozen; only the data grows. No checkpoint refit — that was explicitly rejected.
+- **Judgment = paired lift over parent + excluded-pick counterfactual on FORWARD rows only**
+  (a signal is judged by the map effective when it fired; no retroactive re-mapping). Success
+  ⇔ excluded P&L < 0 ∧ paired lift > 0 at 95% on ≥30 forward excluded events; excluded P&L
+  > 0 at 95% ⇒ REFUTED-for-regime ⇒ the map rehabilitates by its own rules (a SUCCESS of the
+  design). Retro-replay on pre-run data is CIRCULAR ⇒ descriptive only, never gates.
+
+**What would earn the Rust arm:** `fleet_mapped` clearing its forward success bar at a real
+checkpoint, then a second D7-grade forward certification before `alerting` could ever flip.
+The stream keeps firing on everything (DODGE cells included) forever — the overlay is a VIEW.
+
+**First live read (checkpoint #1, mostly-null as expected):** map v1 = 11 PRIORITIZE, 2 DODGE
+(strict/tennis, strict/moneyline); 1 accrual-driven transition (favorite/band3 0.65-0.80 →
+PRIORITIZE); overlay PENDING (0/30 forward excluded — the 30-floor arrives in ~1 day of live
+firing, K1: historical excluded accrual 44.8/day); both nominations NOT DUE. The marquee
+forward test: the coarse `strict/moneyline` DODGE (retro-replay shows it dumps profitable MLB
++3.6% alongside the tennis −23.7% residue) should REHABILITATE once the post-WC stream turns
+MLB-moneyline-dominated — exactly what the adaptive design exists to catch.
+
+**Market breadth (read-only audit, same run):** breadth is EMERGENT/DATA-DRIVEN, not
+code-blocked — the only alerting strategy `strict` runs SportsMode::Include (all categories),
+the leaderboard is global category-blind PnL with a 6h drop-grace, crypto's no-fire is sharps
+never agreeing one-sided (2,395 blind events → 0 strict), not a filter. Post-WC forecast:
+strict survives ~15/day (MLB is the daily bridge → Oct), favorite thins to ~4/day,
+elite_fresh_fav (97% WC+Wimbledon) goes near-silent. ONE breadth action PROPOSED (not
+applied, no gate touched): add DAY to TRACK_PERIODS to shorten rotation lag — but the honest
+recommendation is HOLD (self-heals) and instead WATCH elite_fresh_fav across the WC final as
+the higher-value measurement. Rollback: git-revert the merge; delete reports/map/ (artifacts).
