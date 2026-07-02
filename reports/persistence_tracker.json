@@ -1,0 +1,56 @@
+{
+ "cutoff": "2026-07-01",
+ "in_sample": {
+  "n_events": 48,
+  "n_clusters": 2,
+  "surplus": 0.08748219050448064,
+  "lb": 0.07586423756406122,
+  "hi": 0.09910014344490006,
+  "regimes": {
+   "soccer": {
+    "n": 10,
+    "surplus": 0.0768940494428717
+   },
+   "tennis": {
+    "n": 33,
+    "surplus": 0.06803643883766855
+   },
+   "other": {
+    "n": 3,
+    "surplus": 0.19537928696757337
+   },
+   "mlb": {
+    "n": 2,
+    "surplus": 0.29943215362028597
+   }
+  }
+ },
+ "out_of_sample": {
+  "n_events": 26,
+  "n_clusters": 2,
+  "surplus": 0.19202612210802267,
+  "lb": 0.16183909005770764,
+  "hi": 0.2222131541583377,
+  "regimes": {
+   "soccer": {
+    "n": 1,
+    "surplus": 0.056350803364164266
+   },
+   "tennis": {
+    "n": 15,
+    "surplus": 0.2101068981854037
+   },
+   "mlb": {
+    "n": 7,
+    "surplus": 0.2026537108766262
+   },
+   "other": {
+    "n": 3,
+    "surplus": 0.12204964084232879
+   }
+  },
+  "new_regimes": []
+ },
+ "verdict": "PENDING",
+ "why": "only 2 independent OUT-of-sample clusters (< 10 floor) \u2014 need ~8 more days of forward firing"
+}
