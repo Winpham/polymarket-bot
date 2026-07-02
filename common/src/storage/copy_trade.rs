@@ -53,7 +53,7 @@ impl PgPortfolio {
     pub async fn get_active_traders(&self) -> Result<Vec<FollowedTrader>> {
         let rows: Vec<FollowedTraderRow> = sqlx::query_as(
             "SELECT id, proxy_wallet, username, source, rank, pnl, volume, win_rate, \
-                    added_at, last_checked_at, active, consensus_eligible \
+                    added_at, last_checked_at, active, consensus_eligible, earned_eligible \
              FROM followed_traders \
              WHERE active = TRUE \
              ORDER BY rank ASC NULLS LAST",
@@ -143,7 +143,7 @@ impl PgPortfolio {
     pub async fn get_trader_by_wallet(&self, wallet: &str) -> Result<Option<FollowedTrader>> {
         let row: Option<FollowedTraderRow> = sqlx::query_as(
             "SELECT id, proxy_wallet, username, source, rank, pnl, volume, win_rate, \
-                    added_at, last_checked_at, active, consensus_eligible \
+                    added_at, last_checked_at, active, consensus_eligible, earned_eligible \
              FROM followed_traders WHERE proxy_wallet = $1",
         )
         .bind(wallet)

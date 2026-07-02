@@ -53,15 +53,20 @@ fn params_from_cfg(cfg: &CopyTradingConfig) -> ConsensusParams {
         },
         weight_mode: crate::scanner::consensus::WeightMode::Quality,
         trusted_only: false,
+        cross_cohort_cutoff: None,
+        certified_only: false,
     }
 }
 
-/// Per-vote earned quality + trust flag from the cached trust map. Untracked /
-/// INDETERMINATE ⇒ `quality_weight(rank)` fallback (never 0) so trust-weighting
-/// can't silently zero a new trader; `trusted` defaults true when untracked so
-/// `trusted_only` doesn't drop brand-new traders. Shrink-toward-0 lives HERE
-/// (regularizing the continuous multiplier), never at the verdict.
-fn earned_quality(trust: &TrustMap, wallet: &str, rank: Option<i32>) -> (f64, bool) {
+/// Per-vote earned quality + trust flags from the cached trust map:
+/// `(earned_quality, trusted, certified)`. Untracked / INDETERMINATE ⇒
+/// `quality_weight(rank)` fallback (never 0) so trust-weighting can't silently
+/// zero a new trader; `trusted` defaults true when untracked so `trusted_only`
+/// doesn't drop brand-new traders; `certified` is the STRICT flag (Phase 3 tail
+/// arms) — true ONLY for a gate-Trusted verdict, false when untracked
+/// (fail-closed). Shrink-toward-0 lives HERE (regularizing the continuous
+/// multiplier), never at the verdict.
+fn earned_quality(trust: &TrustMap, wallet: &str, rank: Option<i32>) -> (f64, bool, bool) {
     let qw = quality_weight(rank);
     match trust.get(wallet) {
         Some(t) => {
@@ -72,9 +77,10 @@ fn earned_quality(trust: &TrustMap, wallet: &str, rank: Option<i32>) -> (f64, bo
                 TrustVerdict::Avoid => (1.0 + t.upper_bound * damp).clamp(0.5, 1.0),
                 TrustVerdict::Indeterminate => qw,
             };
-            (earned, matches!(t.verdict, TrustVerdict::Trusted))
+            let certified = matches!(t.verdict, TrustVerdict::Trusted);
+            (earned, certified, certified)
         }
-        None => (qw, true),
+        None => (qw, true, false),
     }
 }
 
@@ -510,8 +516,10 @@ fn trade_to_window_vote(
 /// Assemble per-market books from window fill atoms. The SINGLE book builder,
 /// shared by both ingestion paths so they produce identical books. Mirrors the
 /// legacy assembly: wallet lower-cased for distinctness, label/title/sport set by
-/// the first atom seen for a `(condition, outcome)`.
-fn books_from_window_votes(votes: &[WindowVote], trust: &TrustMap) -> Vec<MarketBook> {
+/// the first atom seen for a `(condition, outcome)`. `pub(crate)` so the
+/// read-only shadow study (`scanner::earned`, board) builds its A/B books with
+/// the IDENTICAL assembly rather than a parallel one.
+pub(crate) fn books_from_window_votes(votes: &[WindowVote], trust: &TrustMap) -> Vec<MarketBook> {
     let mut books: HashMap<String, MarketBook> = HashMap::new();
     for v in votes {
         let book = books.entry(v.condition_id.clone()).or_insert_with(|| {
@@ -526,7 +534,7 @@ fn books_from_window_votes(votes: &[WindowVote], trust: &TrustMap) -> Vec<Market
         // Earned trust rides on the vote (cached map). Defaults preserve incumbent
         // behavior: an empty/absent map ⇒ earned_quality == quality_weight(rank),
         // trusted == true, so every non-trust strategy is byte-identical.
-        let (eq, trusted) = earned_quality(trust, &v.trader_wallet, v.rank);
+        let (eq, trusted, certified) = earned_quality(trust, &v.trader_wallet, v.rank);
         book.add_vote(
             v.outcome_index,
             v.outcome.clone(),
@@ -538,6 +546,7 @@ fn books_from_window_votes(votes: &[WindowVote], trust: &TrustMap) -> Vec<Market
                 quality: v.quality,
                 earned_quality: eq,
                 trusted,
+                certified,
                 price: v.price,
                 size_usd: v.size_usd,
                 ts: v.ts,
@@ -840,14 +849,20 @@ async fn build_market_features(
 }
 
 /// The active strategy portfolio: the full default set, optionally narrowed by
-/// the `CONSENSUS_STRATEGIES` allowlist (empty = all).
-fn active_portfolio(cfg: &CopyTradingConfig) -> Vec<StrategyDef> {
+/// the `CONSENSUS_STRATEGIES` allowlist (empty = all). `pub(crate)` so the
+/// board's read-only shadow study scores the IDENTICAL portfolio the cycle runs.
+pub(crate) fn active_portfolio(cfg: &CopyTradingConfig) -> Vec<StrategyDef> {
     let base = params_from_cfg(cfg);
     let mut all = default_portfolio(&base);
     // Earned-trust arms are registered ONLY when CONSENSUS_TRUST_ARMS is on;
     // off ⇒ not appended ⇒ the portfolio is byte-identical to today.
     if cfg.consensus_trust_arms {
-        all.extend(trust_arms(&base));
+        all.extend(trust_arms(&base, cfg.track_consensus_rank_cutoff));
+    }
+    // Re-tuned strict-thresholds variant (Phase 2): registered only when the
+    // CONSENSUS_RETUNED spec parses; silent; empty default = not registered.
+    if let Some(t) = crate::scanner::consensus::parse_retuned(&cfg.consensus_retuned) {
+        all.push(crate::scanner::consensus::retuned_arm(&base, t));
     }
     let filter = cfg.consensus_strategies.trim();
     if filter.is_empty() {

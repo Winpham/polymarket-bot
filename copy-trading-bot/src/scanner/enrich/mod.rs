@@ -345,6 +345,10 @@ pub fn family(strategy: &str) -> &'static str {
         "bayes_anchor",
         "trust_weighted",
         "trusted_only",
+        "cross_cohort",
+        "strict_retuned",
+        "sharp_tail_fresh",
+        "sharp_tail",
     ];
     if EXPERIMENTAL.contains(&strategy) {
         "experimental"

@@ -81,6 +81,14 @@ services:
       CONSENSUS_ALERT_STRATEGIES: ${CONSENSUS_ALERT_STRATEGIES:-}   # empty = built-in flags (strict only)
       CONSENSUS_ALERT_WATCH_FOR: ${CONSENSUS_ALERT_WATCH_FOR:-}     # empty = WATCH never pushes
       CONSENSUS_ALERT_CROSS_DEDUP_MINS: ${CONSENSUS_ALERT_CROSS_DEDUP_MINS:-60} # one push per market across strategies
+      # --- deep-pool edge run (feat/deep-edge): earned deep-sharp eligibility +
+      #     trust/tail arms. ALL default to today's behavior when unset. The trust
+      #     arms are SILENT (never alert); EARN_DEEP_SHARPS=false keeps promotion
+      #     report-only ("promotable" on the board, no eligibility flips). ---
+      CONSENSUS_TRUST_ARMS: ${CONSENSUS_TRUST_ARMS:-false}   # register trust/cross-cohort/tail arms + hourly trust map
+      TRUST_REFRESH_MINS: ${TRUST_REFRESH_MINS:-60}          # trust-map (and earn-pass) cadence
+      EARN_DEEP_SHARPS: ${EARN_DEEP_SHARPS:-false}           # flip earned_eligible for gate-Trusted deep sharps
+      CONSENSUS_RETUNED: ${CONSENSUS_RETUNED:-}              # "min_backers,strong_net,elite_net" silent strict variant
       # --- dense early-life capture (decay Phase 0): sub-5-min trajectory for
       #     fresh actionable signals; OFF = loop never spawned. ---
       DENSE_CAPTURE: ${DENSE_CAPTURE:-false}

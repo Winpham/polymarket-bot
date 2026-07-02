@@ -235,17 +235,37 @@ pub struct CopyTradingConfig {
     #[config(env = "CONSENSUS_ARM_RESID", default = false)]
     pub consensus_arm_resid: bool,
 
-    /// Enable the earned-trust consensus arms (`trust_weighted`, `trusted_only`).
-    /// Default OFF: when off they aren't registered (portfolio byte-identical) and
-    /// the trust-map refresh task is skipped. They're silent + judged in the
-    /// experimental family; live `strict` is non-regressive (tiering = net_count).
+    /// Enable the earned-trust consensus arms (`trust_weighted`, `trusted_only`,
+    /// `cross_cohort`). Default OFF: when off they aren't registered (portfolio
+    /// byte-identical) and the trust-map refresh task is skipped. They're silent +
+    /// judged in the experimental family; live `strict` is non-regressive
+    /// (tiering = net_count).
     #[config(env = "CONSENSUS_TRUST_ARMS", default = false)]
     pub consensus_trust_arms: bool,
+
+    /// Re-tuned `strict` thresholds variant, `"min_backers,strong_net,elite_net"`
+    /// (e.g. "4,5,8"). Deep-pool edge run, Phase 2: a WIDER eligible voter set
+    /// inflates net_count, so selectivity must be re-chosen — as a SILENT
+    /// forward-tracked arm (`strict_retuned`), never by moving `strict` itself.
+    /// Empty (default) or unparseable ⇒ the arm isn't registered; portfolio
+    /// byte-identical to today.
+    #[config(env = "CONSENSUS_RETUNED", default = "")]
+    pub consensus_retuned: String,
 
     /// How often (minutes) to refresh the cached earned-trust map. Trust inputs
     /// change ~daily as markets resolve, so this is slow — NOT per 1-min cycle.
     #[config(env = "TRUST_REFRESH_MINS", default = 60)]
     pub trust_refresh_mins: u64,
+
+    /// EARN deep sharps into consensus (deep-pool edge run, Phase 0). Default OFF:
+    /// the promotion pass only REPORTS (board: "⤴ promotable" + shadow impact) and
+    /// no eligibility changes. When ON, the slow trust-refresh task durably flips
+    /// `followed_traders.earned_eligible = TRUE` for deep (rank > cutoff) traders
+    /// whose belief-blind `trust_verdict` is Trusted — the ONLY path by which a
+    /// deep trader starts voting. Flipping the flag back off stops NEW promotions
+    /// but does not revoke recorded ones (revocation is a deliberate manual act).
+    #[config(env = "EARN_DEEP_SHARPS", default = false)]
+    pub earn_deep_sharps: bool,
 
     /// Path to the consensus logistic model JSON (consensus_train.py output).
     #[config(env = "CONSENSUS_WIN_MODEL_PATH", default = "model/consensus_win.json")]

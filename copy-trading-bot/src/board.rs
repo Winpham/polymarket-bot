@@ -50,6 +50,19 @@ impl HonestBoardParams {
     }
 }
 
+/// Read-only shadow-study params (deep-pool edge run, Phase 0): what the ACTIVE
+/// portfolio would emit if the certified deep sharps voted. `portfolio` is the
+/// same set the live cycle scores (built once via `active_portfolio`), so the
+/// A/B is against the real thing, not a reconstruction.
+#[derive(Clone)]
+pub struct ShadowBoardParams {
+    pub window_hours: i64,
+    pub portfolio: Vec<crate::scanner::consensus::StrategyDef>,
+    /// Whether EARN_DEEP_SHARPS is on (display only — the flip happens in the
+    /// slow trust-refresh task, never here).
+    pub earn_flag_on: bool,
+}
+
 /// Serve the board on `0.0.0.0:port` forever. Best-effort; logs and retries binds.
 pub async fn serve(
     portfolio: Arc<PgPortfolio>,
@@ -57,6 +70,7 @@ pub async fn serve(
     capture_margin: f64,
     honest: HonestBoardParams,
     cohort_bands: String,
+    shadow: ShadowBoardParams,
 ) {
     let listener = match TcpListener::bind(("0.0.0.0", port)).await {
         Ok(l) => l,
@@ -76,6 +90,7 @@ pub async fn serve(
         };
         let pf = Arc::clone(&portfolio);
         let bands_spec = cohort_bands.clone();
+        let shadow = shadow.clone();
         tokio::spawn(async move {
             // Read the request line and parse the cohort filter/sort from the query
             // string (?cohort=…&sort=…) so the observatory can be sliced by URL.
@@ -89,6 +104,7 @@ pub async fn serve(
                 &bands_spec,
                 &cohort_tok,
                 &sort_tok,
+                &shadow,
             )
             .await;
             let resp = format!(
@@ -147,6 +163,8 @@ struct CohortRow {
     band_index: usize,
     band_label: String,
     trusted: bool,
+    /// Durably earned into consensus (`earned_eligible`) — the deliberate flip.
+    earned: bool,
     t: TraderTrust,
     gaps: i32,
 }
@@ -175,12 +193,15 @@ async fn cohort_scoreboard(
         Ok(t) => t,
         Err(_) => return Vec::new(),
     };
-    // lower-cased wallet → rank, for leaderboard (ranked) traders only.
-    let mut rank_of: std::collections::HashMap<String, Option<i32>> =
+    // lower-cased wallet → (rank, earned), for leaderboard (ranked) traders only.
+    let mut rank_of: std::collections::HashMap<String, (Option<i32>, bool)> =
         std::collections::HashMap::new();
     for tr in &traders {
         if tr.source == "leaderboard" {
-            rank_of.insert(tr.proxy_wallet.to_lowercase(), tr.rank);
+            rank_of.insert(
+                tr.proxy_wallet.to_lowercase(),
+                (tr.rank, tr.earned_eligible),
+            );
         }
     }
     let scores = match crate::scanner::trader_trust::cached_slice_scores(
@@ -200,7 +221,7 @@ async fn cohort_scoreboard(
     }
     let mut rows = Vec::new();
     for (wallet, slices) in by {
-        let rank = match rank_of.get(&wallet) {
+        let (rank, earned) = match rank_of.get(&wallet) {
             Some(r) => *r,    // tracked leaderboard trader
             None => continue, // manual / untracked — not a cohort member
         };
@@ -215,6 +236,7 @@ async fn cohort_scoreboard(
             band_index: band.index,
             band_label: band.label.clone(),
             trusted: band.trusted,
+            earned,
             gaps: gaps.get(&t.wallet).copied().unwrap_or(0),
             t,
         });
@@ -336,6 +358,10 @@ async fn render_cohort(
         }
         within += 1;
         let (marker, scls) = match r.t.verdict {
+            // A gate-clearing CANDIDATE (non-trusted band) is a promotable lead:
+            // "⤴" until the deliberate earn flip records it, then "🗳 earned-in".
+            TrustVerdict::Trusted if !r.trusted && r.earned => ("✅🗳", "pos"),
+            TrustVerdict::Trusted if !r.trusted => ("✅⤴", "pos"),
             TrustVerdict::Trusted => ("✅", "pos"),
             TrustVerdict::Avoid => ("⛔", "neg"),
             TrustVerdict::Indeterminate => ("⏸", "muted"),
@@ -366,8 +392,219 @@ async fn render_cohort(
     out.push_str(
         "<p class=note>Cohort = a rank slice of the <b>identical</b> belief-blind analytics used \
          for the trusted table (no separate gate). <b>#</b> = most-profitable-within-band rank. \
-         A candidate showing ✅ has cleared the same bar the top-50 face over ≥30 resolved events \
-         — a lead, never an automatic promotion. Slice with <code>?cohort=trusted|top250|band2|all</code>.</p>",
+         A candidate showing ✅⤴ has cleared the same bar the top-50 face over ≥30 resolved events \
+         — a <b>promotable</b> lead (see the earned-sharps panel above); ✅🗳 = deliberately earned \
+         in and now voting. Never automatic. Slice with \
+         <code>?cohort=trusted|top250|band2|all</code>.</p>",
+    );
+    out
+}
+
+/// Process-global TTL cache for the earned-sharps/shadow panel: the shadow study
+/// loads the whole trailing vote window and scores it twice under every strategy,
+/// which is far too heavy for the 30s board auto-refresh. Its inputs move on the
+/// resolution/trust cadence (~hourly), so a 5-minute cache is ample.
+static EARNED_CACHE: std::sync::OnceLock<tokio::sync::Mutex<Option<(std::time::Instant, String)>>> =
+    std::sync::OnceLock::new();
+
+/// Drop the board's process-global caches (earned panel + the slice cache it and
+/// the trust table read). Live tests render seeded fixtures in one process; a
+/// prior test's cached HTML/aggregation within its TTL would leak into the next
+/// render otherwise. No production caller.
+#[cfg(test)]
+async fn invalidate_board_caches() {
+    if let Some(cell) = EARNED_CACHE.get() {
+        *cell.lock().await = None;
+    }
+    crate::scanner::trader_trust::invalidate_slice_cache().await;
+}
+
+/// Deep-sharp promotion pass + SHADOW consensus impact (deep-pool edge run,
+/// Phase 0). Read-only: lists which deep traders clear the belief-blind gate
+/// ("⤴ promotable"), and measures what the ACTIVE portfolio WOULD emit right now
+/// if the not-yet-earned certified sharps voted — live vs shadow tier counts,
+/// would-be-new signals, tier upgrades, net_count deltas. Nothing here alerts or
+/// mutates eligibility; the earn flip lives in the flag-gated trust-refresh task.
+async fn render_earned(portfolio: &PgPortfolio, shadow: &ShadowBoardParams) -> String {
+    let cell = EARNED_CACHE.get_or_init(|| tokio::sync::Mutex::new(None));
+    let mut g = cell.lock().await;
+    if let Some((at, html)) = g.as_ref()
+        && at.elapsed() < std::time::Duration::from_secs(300)
+    {
+        return html.clone();
+    }
+    let html = render_earned_uncached(portfolio, shadow).await;
+    *g = Some((std::time::Instant::now(), html.clone()));
+    html
+}
+
+async fn render_earned_uncached(portfolio: &PgPortfolio, shadow: &ShadowBoardParams) -> String {
+    use crate::scanner::earned::{deep_sharp_pass, promotable_deep_sharps, shadow_impact};
+
+    let Ok(traders) = portfolio.get_active_traders().await else {
+        return String::new();
+    };
+    let scores = match crate::scanner::trader_trust::cached_slice_scores(
+        portfolio,
+        std::time::Duration::from_secs(30),
+    )
+    .await
+    {
+        Ok(s) if !s.is_empty() => s,
+        _ => return String::new(),
+    };
+    // The same trust map the earn pass uses (verdict per lower-cased wallet).
+    let mut by: std::collections::HashMap<String, Vec<_>> = std::collections::HashMap::new();
+    for s in scores {
+        by.entry(s.wallet.clone()).or_default().push(s);
+    }
+    let trust: crate::cycles::consensus_cycle::TrustMap = by
+        .into_iter()
+        .map(|(w, slices)| (w, trust_verdict(&slices)))
+        .collect();
+
+    let pass = deep_sharp_pass(&traders, &trust);
+    if pass.is_empty() {
+        return String::new(); // no profiled deep traders yet — nothing to report
+    }
+    let promo = promotable_deep_sharps(&pass);
+    let n_promotable = promo.iter().filter(|d| !d.earned).count();
+    let n_earned = pass.iter().filter(|d| d.earned).count();
+    let n_indet = pass
+        .iter()
+        .filter(|d| matches!(d.trust.verdict, TrustVerdict::Indeterminate))
+        .count();
+    let flag_txt = if shadow.earn_flag_on {
+        "<b class=pos>ON</b> — gate-clearers are earned in at the next trust refresh"
+    } else {
+        "<b>OFF</b> — report-only; nothing flips until EARN_DEEP_SHARPS=true"
+    };
+
+    let mut out = format!(
+        "<h1 style='margin-top:34px'>⤴ Earned deep sharps (shadow-first)</h1>\
+         <p class=sub>Deep traders (past the voting cutoff) judged by the SAME belief-blind gate \
+         as everything else. Promotion is durable (`earned_eligible`) and flag-gated. \
+         EARN_DEEP_SHARPS: {flag_txt}.</p>\
+         <p class=exp>⤴ promotable: <b>{n_promotable}</b> · 🗳 earned-in: <b>{n_earned}</b> · \
+         ⏸ still accruing: <b>{n_indet}</b> (of {} profiled deep traders)</p>",
+        pass.len(),
+    );
+
+    // The pass table: gate-clearers first, then closest-to-the-floor.
+    out.push_str(
+        "<table><thead><tr><th>status</th><th>wallet</th><th class=r>rank</th>\
+         <th class=r>events (N)</th><th class=r>surplus</th><th class=r>bound</th>\
+         </tr></thead><tbody>",
+    );
+    for d in pass.iter().take(15) {
+        let (status, scls) = match d.trust.verdict {
+            TrustVerdict::Trusted if d.earned => ("🗳 earned-in", "pos"),
+            TrustVerdict::Trusted => ("⤴ promotable", "pos"),
+            TrustVerdict::Indeterminate => ("⏸ accruing", "muted"),
+            TrustVerdict::Avoid => ("⛔ avoid", "neg"),
+        };
+        let bound = match d.trust.verdict {
+            TrustVerdict::Avoid => pct(Some(d.trust.upper_bound)),
+            TrustVerdict::Trusted => pct(Some(d.trust.lower_bound)),
+            TrustVerdict::Indeterminate => "—".into(),
+        };
+        let short: String = d.wallet.chars().take(12).collect();
+        let rank = d.rank.map(|x| x.to_string()).unwrap_or_else(|| "—".into());
+        out.push_str(&format!(
+            "<tr><td class={scls}>{status}</td><td class=mono>{short}…</td><td class=r>{rank}</td>\
+             <td class=r>{ev}</td><td class=\"r {scls}\">{surplus}</td><td class=r>{bound}</td></tr>",
+            ev = d.trust.n_events,
+            surplus = pct(Some(d.trust.surplus)),
+        ));
+    }
+    out.push_str("</tbody></table>");
+
+    // SHADOW impact — only when there are certified-but-not-earned sharps to add.
+    let shadow_voters: std::collections::HashSet<String> = promo
+        .iter()
+        .filter(|d| !d.earned)
+        .map(|d| d.wallet.to_lowercase())
+        .collect();
+    if shadow_voters.is_empty() {
+        out.push_str(
+            "<p class=note>Shadow impact: no certified-but-unearned deep sharp yet — the live \
+             signal and the shadow signal are identical by construction.</p>",
+        );
+        return out;
+    }
+    let since = chrono::Utc::now() - chrono::Duration::hours(shadow.window_hours);
+    let live_votes = portfolio.load_window_votes(since).await.unwrap_or_default();
+    let excl = portfolio
+        .load_excluded_window_votes(since)
+        .await
+        .unwrap_or_default();
+    let added: Vec<_> = excl
+        .into_iter()
+        .filter(|v| shadow_voters.contains(&v.trader_wallet))
+        .collect();
+    let shadow_votes: Vec<_> = live_votes.iter().chain(added.iter()).cloned().collect();
+    let live_books = crate::cycles::consensus_cycle::books_from_window_votes(&live_votes, &trust);
+    let shadow_books =
+        crate::cycles::consensus_cycle::books_from_window_votes(&shadow_votes, &trust);
+    let now = chrono::Utc::now();
+    let impact = shadow_impact(
+        &live_books,
+        &shadow_books,
+        &shadow.portfolio,
+        now,
+        shadow_voters.len(),
+        added.len(),
+    );
+
+    out.push_str(&format!(
+        "<p class=band><b>Shadow impact</b> — {} certified sharp(s) would add {} window votes. \
+         Live vs would-be, over the current {}h window:</p>",
+        impact.voters, impact.votes_added, shadow.window_hours
+    ));
+    out.push_str(
+        "<table><thead><tr><th>strategy</th><th class=r>live W/S/E</th>\
+         <th class=r>shadow W/S/E</th><th class=r>new signals</th>\
+         <th class=r>tier upgrades</th><th class=r>Δnet</th></tr></thead><tbody>",
+    );
+    for s in impact
+        .strategies
+        .iter()
+        .filter(|s| {
+            s.strategy == "strict"
+                || s.new_signals > 0
+                || s.tier_upgrades > 0
+                || s.net_count_delta != 0
+        })
+        .take(12)
+    {
+        let differs = s.live_tiers != s.shadow_tiers
+            || s.new_signals > 0
+            || s.tier_upgrades > 0
+            || s.net_count_delta != 0;
+        let cls = if differs { "pos" } else { "muted" };
+        out.push_str(&format!(
+            "<tr><td class=mono>{}</td><td class=r>{}/{}/{}</td>\
+             <td class=\"r {cls}\">{}/{}/{}</td><td class=r>{}</td><td class=r>{}</td>\
+             <td class=r>{:+}</td></tr>",
+            s.strategy,
+            s.live_tiers.0,
+            s.live_tiers.1,
+            s.live_tiers.2,
+            s.shadow_tiers.0,
+            s.shadow_tiers.1,
+            s.shadow_tiers.2,
+            s.new_signals,
+            s.tier_upgrades,
+            s.net_count_delta,
+        ));
+    }
+    out.push_str(
+        "</tbody></table>\
+         <p class=note>W/S/E = WATCH/STRONG/ELITE signal counts this window. <b>shadow</b> = the \
+         identical books + scorer with the certified deep sharps' captured-but-excluded votes let \
+         in — a measurement of what earning them in WOULD change, computed read-only beside the \
+         live path (which stays byte-for-byte until the deliberate flip). STRONG/ELITE are the \
+         alert-class tiers.</p>",
     );
     out
 }
@@ -734,6 +971,7 @@ async fn render(
     cohort_bands: &str,
     cohort_tok: &str,
     sort_tok: &str,
+    shadow: &ShadowBoardParams,
 ) -> String {
     let rows = portfolio
         .consensus_scoreboard_by_strategy()
@@ -877,6 +1115,10 @@ async fn render(
     // --- Earned trader trust ("who to actually follow") ---
     body.push_str(&render_trust(portfolio).await);
 
+    // --- Earned deep sharps: promotion pass + read-only shadow impact (Phase 0
+    //     of the deep-pool edge run). Never alerts; the flip is flag-gated. ---
+    body.push_str(&render_earned(portfolio, shadow).await);
+
     // --- Deep-pool observatory: the SAME per-trader verification stack, sliced by
     //     rank cohort (top-50 / top-250 / all / per-band), sortable by profit,
     //     clearly labeled EXPERIMENTAL and segregated from the trusted view above. ---
@@ -917,6 +1159,18 @@ async fn render(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Shadow params for the live render tests: the default portfolio, default
+    /// window, flag off — the report-only configuration.
+    fn test_shadow() -> ShadowBoardParams {
+        ShadowBoardParams {
+            window_hours: 48,
+            portfolio: crate::scanner::consensus::default_portfolio(
+                &crate::scanner::consensus::ConsensusParams::default(),
+            ),
+            earn_flag_on: false,
+        }
+    }
 
     // Live: seed a resolved fill population, render the board, assert the trust
     // table appears with a Trusted trader. `#[ignore]`d (needs $DATABASE_URL):
@@ -960,6 +1214,7 @@ mod tests {
             }
         }
 
+        invalidate_board_caches().await;
         let html = render(
             &pf,
             0.0,
@@ -978,6 +1233,7 @@ mod tests {
             "40,100,250,500",
             "all",
             "profit",
+            &test_shadow(),
         )
         .await;
         assert!(html.contains("Trader trust"), "trust table rendered");
@@ -1053,6 +1309,7 @@ mod tests {
         .await
         .unwrap();
 
+        invalidate_board_caches().await;
         let html = render(
             &pf,
             0.0,
@@ -1071,6 +1328,7 @@ mod tests {
             "40,100,250,500",
             "all",
             "profit",
+            &test_shadow(),
         )
         .await;
         assert!(
@@ -1186,7 +1444,17 @@ mod tests {
             min_liquidity_usd: 2000.0,
             realized_decision_lag_secs: 900.0,
         };
-        let html = render(&pf, 0.0, params, "40,100,250,500", "all", "profit").await;
+        invalidate_board_caches().await;
+        let html = render(
+            &pf,
+            0.0,
+            params,
+            "40,100,250,500",
+            "all",
+            "profit",
+            &test_shadow(),
+        )
+        .await;
         assert!(
             html.contains("Honest P&amp;L (realizable"),
             "honest panel renders"
