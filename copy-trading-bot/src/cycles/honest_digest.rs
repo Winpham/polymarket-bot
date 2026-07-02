@@ -54,7 +54,7 @@ pub async fn maybe_push(portfolio: &PgPortfolio, ntfy: Option<&Ntfy>, cfg: &Copy
     let mut snaps: Vec<DigestSnapshot> = Vec::new();
     for (strategy, sv) in &verdicts {
         let max_drawdown = portfolio
-            .ledger_stats(strategy)
+            .ledger_stats(strategy, cfg.fee_pct)
             .await
             .ok()
             .flatten()

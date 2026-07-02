@@ -794,7 +794,10 @@ impl PgPortfolio {
     /// Per (strategy × segment) honest-ROI + event count for the regime/band/
     /// horizon breakdown (read-only). Segments: `day` (day-regime = the persistence
     /// axis the pilot verdict keys on), `band` (`width_bucket(p0)`), `horizon`
-    /// (`same_day` if resolved <24h after first detection else `multi_day`). Same
+    /// (`same_day` if resolved <24h after first detection else `multi_day`), and
+    /// `sport` (the true disjointness axis — event_slug prefix → crypto/tennis/
+    /// soccer/mlb/cs2/other; this mapping deliberately mirrors
+    /// `scripts/selection_null.py::REGIMES` — change both together). Same
     /// event-clustering + leak-free discipline as `honest_pnl_by_strategy`.
     pub async fn honest_pnl_segments(
         &self,
@@ -806,7 +809,7 @@ impl PgPortfolio {
                  SELECT strategy, COALESCE(event_slug, condition_id) AS ev, \
                         (outcome_won::int)::double precision AS w, \
                         COALESCE(entry_ask, initial_market_price + $1) AS entry, \
-                        initial_market_price AS p0, resolved_at, \
+                        initial_market_price AS p0, resolved_at, event_slug, \
                         EXTRACT(EPOCH FROM (resolved_at - first_detected_at)) / 3600.0 AS hrs \
                  FROM consensus_signals \
                  WHERE resolved AND initial_market_price IS NOT NULL AND strategy <> '_blind' \
@@ -816,7 +819,13 @@ impl PgPortfolio {
                         (w - entry) / NULLIF(entry, 0) - $2 AS honest_roi, \
                         to_char(date_trunc('day', resolved_at), 'YYYY-MM-DD') AS day_key, \
                         width_bucket(p0, 0.0, 1.0, 5)::text AS band_key, \
-                        CASE WHEN hrs < 24 THEN 'same_day' ELSE 'multi_day' END AS horizon_key \
+                        CASE WHEN hrs < 24 THEN 'same_day' ELSE 'multi_day' END AS horizon_key, \
+                        CASE WHEN event_slug ~ '^(btc|eth|sol|xrp|bnb|doge|hype|bitcoin|ethereum)' THEN 'crypto' \
+                             WHEN event_slug ~ '^(atp|wta|itf)' THEN 'tennis' \
+                             WHEN event_slug LIKE 'fifwc%' THEN 'soccer' \
+                             WHEN event_slug LIKE 'mlb%' THEN 'mlb' \
+                             WHEN event_slug LIKE 'cs%' THEN 'cs2' \
+                             ELSE 'other' END AS sport_key \
                  FROM base \
              ), \
              u AS ( \
@@ -825,6 +834,8 @@ impl PgPortfolio {
                  SELECT strategy, 'band' AS seg_kind, band_key    AS seg_key, ev, honest_roi FROM sig \
                  UNION ALL \
                  SELECT strategy, 'horizon' AS seg_kind, horizon_key AS seg_key, ev, honest_roi FROM sig \
+                 UNION ALL \
+                 SELECT strategy, 'sport' AS seg_kind, sport_key   AS seg_key, ev, honest_roi FROM sig \
              ), \
              evt AS ( \
                  SELECT strategy, seg_kind, seg_key, ev, AVG(honest_roi) AS ev_hroi \
@@ -913,9 +924,9 @@ impl PgPortfolio {
     /// daily-returns Sharpe-like ratio, win rate, bet count, and ROI on turnover.
     /// Computed in Rust from the ordered ledger so the SQL stays a plain fetch.
     /// `None` if the strategy has no paper bets yet.
-    pub async fn ledger_stats(&self, strategy: &str) -> Result<Option<LedgerStats>> {
-        let rows: Vec<(DateTime<Utc>, f64, f64, bool)> = sqlx::query_as(
-            "SELECT resolved_at, stake, pnl, outcome_won \
+    pub async fn ledger_stats(&self, strategy: &str, fee_pct: f64) -> Result<Option<LedgerStats>> {
+        let rows: Vec<(DateTime<Utc>, f64, f64, bool, f64)> = sqlx::query_as(
+            "SELECT resolved_at, stake, pnl, outcome_won, entry \
              FROM honest_paper_ledger WHERE strategy = $1 ORDER BY resolved_at, id",
         )
         .bind(strategy)
@@ -925,7 +936,7 @@ impl PgPortfolio {
         if rows.is_empty() {
             return Ok(None);
         }
-        Ok(Some(LedgerStats::from_rows(&rows)))
+        Ok(Some(LedgerStats::from_rows(&rows, fee_pct)))
     }
 
     // --- L1: incremental polling vote-window store (migration 025) ---
@@ -1620,16 +1631,30 @@ pub struct LedgerStats {
     pub sharpe: f64,
     /// Cumulative-equity points for the sparkline (in resolution order).
     pub curve: Vec<f64>,
+    /// Cumulative P&L under FLAT-SHARES sizing (stake number read as a share
+    /// count): `Σ stake×(won − entry) − fee×stake×entry`. REFINED-STRATEGY
+    /// rule 3: flat-$ over-exposes to longshots and can flip a winning
+    /// strategy's sign; showing both makes the sizing discipline visible.
+    pub total_pnl_shares: f64,
 }
 
 impl LedgerStats {
     /// Compute the track record from ledger rows ordered by resolution
     /// `(resolved_at, stake, pnl, outcome_won)`.
-    fn from_rows(rows: &[(DateTime<Utc>, f64, f64, bool)]) -> Self {
+    fn from_rows(rows: &[(DateTime<Utc>, f64, f64, bool, f64)], fee_pct: f64) -> Self {
         let bets = rows.len() as i64;
         let turnover: f64 = rows.iter().map(|r| r.1).sum();
         let total_pnl: f64 = rows.iter().map(|r| r.2).sum();
         let wins = rows.iter().filter(|r| r.3).count() as f64;
+        // FLAT-SHARES track: the stake number read as a SHARE count, so a $100
+        // flat-$ bet becomes 100 shares. Same fills, same entries — only the
+        // sizing discipline differs (REFINED-STRATEGY rule 3).
+        let total_pnl_shares: f64 = rows
+            .iter()
+            .map(|(_, stake, _, won, entry)| {
+                stake * ((*won as i32) as f64 - entry) - fee_pct * stake * entry
+            })
+            .sum();
         // Running equity → curve, peak, max drawdown.
         let mut equity = 0.0;
         let mut peak = f64::NEG_INFINITY;
@@ -1676,6 +1701,7 @@ impl LedgerStats {
             max_drawdown,
             sharpe,
             curve,
+            total_pnl_shares,
         }
     }
 }
@@ -3087,9 +3113,18 @@ mod honest_pnl_it {
         assert!((curve[1].1 - (-7.922)).abs() < 0.01);
         assert!((curve[2].1 - 86.156).abs() < 0.01);
 
-        let s = pf.ledger_stats("hp_led").await.unwrap().expect("stats");
+        let s = pf
+            .ledger_stats("hp_led", 0.02)
+            .await
+            .unwrap()
+            .expect("stats");
         assert_eq!(s.bets, 3);
         assert!((s.total_pnl - 86.156).abs() < 0.01, "final equity");
+        assert!(
+            s.total_pnl_shares.is_finite() && s.total_pnl_shares != 0.0,
+            "flat-shares track computed: {}",
+            s.total_pnl_shares
+        );
         assert!((s.turnover - 300.0).abs() < 1e-6);
         assert!((s.win_rate - 2.0 / 3.0).abs() < 1e-6);
         // Peak +94.078 then trough −7.922 → max drawdown 102.0.
