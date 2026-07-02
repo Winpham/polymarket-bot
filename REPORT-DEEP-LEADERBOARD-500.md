@@ -32,7 +32,7 @@ into **`main`**. Because every new flag defaults to today's behavior, merging is
   offset pages, paced 150ms, 429-as-Err (no silent truncation), dedup by wallet, global
   PnL-descending rank. Unit-tested (contiguous rank, dedup, depth cap) + real-API live test.
 - **P1** depth wiring + provenance — `TRACK_DEPTH` (default 40) selects the paged fetch
-  when > 50; migration 032 adds `followed_traders.consensus_eligible BOOLEAN DEFAULT TRUE`;
+  when > 50; migration 033 adds `followed_traders.consensus_eligible BOOLEAN DEFAULT TRUE`;
   upsert sets `eligible = rank ≤ TRACK_CONSENSUS_RANK_CUTOFF`, source-aware (manual follows
   never de-eligibled). Board/metrics show the hot/deep split. Live-verified on throwaway PG:
   depth=200 → 50/150 (then 40/160 after the cutoff correction), idempotent, churn-correct.

@@ -1859,7 +1859,7 @@ mod trader_fills_it {
         let pf = PgPortfolio::new(pool).await.expect("portfolio");
         pf.run_migrations()
             .await
-            .expect("migrations (incl. 032 consensus_eligible)");
+            .expect("migrations (incl. 033 consensus_eligible)");
 
         // Isolate: clear any synthetic rows from a prior run.
         sqlx::query("DELETE FROM followed_traders WHERE proxy_wallet LIKE '0xdeep\\_%'")
@@ -1972,7 +1972,7 @@ mod trader_fills_it {
         let url = std::env::var("DATABASE_URL").expect("DATABASE_URL must be set");
         let pool = sqlx::PgPool::connect(&url).await.expect("connect");
         let pf = PgPortfolio::new(pool).await.expect("portfolio");
-        pf.run_migrations().await.expect("migrations (incl. 032)");
+        pf.run_migrations().await.expect("migrations (incl. 033)");
 
         let elig = ["0xelig_a", "0xelig_b", "0xelig_c"];
         let deep = ["0xdeepv_a", "0xdeepv_b", "0xdeepv_c"];
