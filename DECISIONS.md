@@ -405,13 +405,13 @@ AND Wimbledon (first real adverse-regime test — the ceiling may finally bind);
 or +50 favorite events (tightens N_eff + the edge estimate); and MANDATORY before any
 real-money pilot. The recommendation is PRE-REGISTERED for that hypothetical day, not
 standing — it changes nothing live now (K4).
-## D14 — Truth audit: the favorite edge survived attack; "+3.33% eligible" is stale (2026-07-02, entry 11)
+## D16 — Truth audit: the favorite edge survived attack; "+3.33% eligible" is stale (2026-07-02, entry 13)
 
 Branch `feat/truth-audit` (worktree off `main` cab11bc, tag `pre-truth-audit-20260702`). Six
 pre-registered attacks (A–F) on the `favorite`/`elite_fresh_fav` edge, each run ONCE, kill-or-clear.
 Self-testing instruments committed: `scripts/{superkey,rekey_headline,grading_verify,exit_study,
 latency_anatomy,capture_completeness,adversarial_battery}.py` (every one has a PASSING self-test that
-recovers an injected effect AND reads flat on a null fixture). Full write-up: reports/entries/11.
+recovers an injected effect AND reads flat on a null fixture). Full write-up: reports/entries/13.
 
 **What survived (favorite is the real edge).** A: sharps rarely exit (4.8%), mostly profit-taking;
 mirror-exit is −$96 → holding vindicated, no nomination. B: no in-poll-window latency sensitivity
@@ -422,7 +422,7 @@ event_slug inflated N by ~29%) favorite surplus RISES to **+12.5%** over 70 matc
 **p=0.0000 (z 4.35)**. F: favorite passes all five (mirror symmetric, placebo flat, both split-halves
 positive, fills real). The favorite consensus-selection edge is REAL and attack-hardened.
 
-**D14-a — the "favorite gate LB +3.33% → eligible" (D6/D7) is STALE.** D6/D7 computed the surplus SE
+**D16-a — the "favorite gate LB +3.33% → eligible" (D6/D7) is STALE.** D6/D7 computed the surplus SE
 over event-N (95). Commit **5b83d33** ("harden gate", 6 h AFTER D6's 13e758e, both on `main`) correctly
 deflated the scoreboard SE to distinct event-DAYS (Moulton within-day). Under the CURRENT code the
 scoreboard LB for favorite is **≈ −23%** on only 4 correlated event-days — nothing certifies on 4 days
@@ -432,7 +432,7 @@ board and the pilot gate disagree by construction. **Action deferred (crosses bo
 parallel-session regions): reconcile the two SE conventions before any GO is read.** D7's stated
 "eligible" is superseded; the honest status is "real edge, not yet certifiable on 4 days".
 
-**D14-b — elite_fresh_fav downgraded from co-equal.** At match-level it falls to **N=27 < the 30-event
+**D16-b — elite_fresh_fav downgraded from co-equal.** At match-level it falls to **N=27 < the 30-event
 floor** (E-2), and its global-band surplus carries a **+2.6% (band×day×regime) composition premium**
 (F2 — a sharper null than D7's band×day; elite is 100% band-5 soccer/tennis). Its pure within-regime
 selection is the smaller rule-(c) number (soccer +5.9%, tennis +8.1% vs regime×band). If ever promoted,

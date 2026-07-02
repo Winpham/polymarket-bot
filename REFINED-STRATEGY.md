@@ -97,7 +97,7 @@ The engine is NOT a raw count. Levels, simplest→richest, each gated by the bel
   is the daily bridge → Oct), favorite thins to ~4/day, elite_fresh_fav (97% WC+Wimbledon)
   goes near-silent. Breadth is bought by more MARKETS via rotation, never by loosening gates.
 
-## Truth-audit hardening (2026-07-02, entry 11 / DECISIONS D14)
+## Truth-audit hardening (2026-07-02, entry 13 / DECISIONS D16)
 Six pre-registered attacks on `favorite`/`elite_fresh_fav`, each run once. **The favorite
 selection edge SURVIVED** — at honest MATCH-level clustering (event_slug had inflated N by ~29%)
 surplus RISES to **+12.5%** over 70 matches, selection-null **p=0.0000 (z 4.35)**; grading is
