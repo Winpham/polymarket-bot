@@ -148,7 +148,7 @@ pub struct CopyTradingConfig {
     pub consensus_alert_cross_dedup_mins: i64,
 
     /// Dense early-life capture (decay run Phase 0): record a ~45s-spaced mid
-    /// + executable best-ask for the first minutes of fresh signals so the
+    /// and executable best-ask for the first minutes of fresh signals so the
     /// latency-decay analysis can resolve a 1-5 minute action window. OFF by
     /// default — the loop is never spawned; live path byte-identical.
     #[config(env = "DENSE_CAPTURE", default = false)]
