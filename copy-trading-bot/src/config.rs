@@ -58,7 +58,11 @@ pub struct CopyTradingConfig {
     /// Rank cutoff at/under which a tracked trader is `consensus_eligible` (votes in
     /// consensus). Deep traders (rank > cutoff) are captured but excluded from
     /// backer/opposer counts — depth is a candidate pool, not automatic trust.
-    #[config(env = "TRACK_CONSENSUS_RANK_CUTOFF", default = 50)]
+    /// Defaults to `track_top_n` (40) = today's exact voter set, so flipping ONLY
+    /// TRACK_DEPTH widens CAPTURE without changing a single consensus signal (the
+    /// byte-for-byte non-regression contract). Raise it only to deliberately admit
+    /// more voters.
+    #[config(env = "TRACK_CONSENSUS_RANK_CUTOFF", default = 40)]
     pub track_consensus_rank_cutoff: i32,
 
     /// Comma-separated leaderboard periods to union (DAY,WEEK,MONTH,ALL).
