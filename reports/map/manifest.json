@@ -1,0 +1,11 @@
+[
+ {
+  "version": 1,
+  "effective_from": "2026-07-02T16:45:00Z",
+  "file": "v001.json",
+  "sha256": "ccdb0af3c9706df0c5470ea17504ed83e15830db8e132ec4ef05464e698e4671",
+  "checkpoint_index": 1,
+  "n_transitions": 13,
+  "n_dodge": 2
+ }
+]
