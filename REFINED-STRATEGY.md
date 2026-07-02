@@ -97,8 +97,23 @@ The engine is NOT a raw count. Levels, simplest→richest, each gated by the bel
   is the daily bridge → Oct), favorite thins to ~4/day, elite_fresh_fav (97% WC+Wimbledon)
   goes near-silent. Breadth is bought by more MARKETS via rotation, never by loosening gates.
 
+## Truth-audit hardening (2026-07-02, entry 11 / DECISIONS D14)
+Six pre-registered attacks on `favorite`/`elite_fresh_fav`, each run once. **The favorite
+selection edge SURVIVED** — at honest MATCH-level clustering (event_slug had inflated N by ~29%)
+surplus RISES to **+12.5%** over 70 matches, selection-null **p=0.0000 (z 4.35)**; grading is
+0/305-mismatch vs Gamma UMA; the mirror is symmetric, the placebo flat, both time-halves positive,
+the fills real; it is not latency-fragile and capture is 97.6%. Two things it did NOT survive:
+- **The "+3.33% eligible" LB is STALE.** The current scoreboard SE deflates to distinct event-DAYS
+  (commit 5b83d33, post-D6); on 4 correlated event-days favorite's LB is ≈ −23%. **Nothing certifies
+  on 4 days — the wall is ACCRUAL of independent event-days, not the point estimate.** (The old
+  event-N LB +4.5% is what `honest.rs` still uses; reconcile before any GO.)
+- **elite_fresh_fav is materially weaker:** N=27 < the 30-event floor at match level, and +2.6% of
+  its surplus is (band×day×regime) composition, not selection. Treat `favorite` as the primary edge;
+  gate elite on the regime×band baseline if ever promoted.
+
 ## Honest status & posture
-- **Certified/bankable today: nothing.** One tournament, ~89% World Cup soccer.
+- **Certified/bankable today: nothing.** One tournament, ~89% World Cup soccer. The favorite edge is
+  real and attack-hardened, but 4 correlated event-days cannot clear the day-deflated SE — accrual-gated.
 - **Best paper result (one weekend, $100 flat):** favorites-only ≈ +$900-1,300; naive full-feed
   flat-$ LOSES (−$4,447 strict). Sane sizing is mandatory.
 - **Posture:** keep accruing across the World Cup ending + other sports; re-run the as-of pre-flight
