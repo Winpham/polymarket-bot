@@ -510,8 +510,10 @@ fn trade_to_window_vote(
 /// Assemble per-market books from window fill atoms. The SINGLE book builder,
 /// shared by both ingestion paths so they produce identical books. Mirrors the
 /// legacy assembly: wallet lower-cased for distinctness, label/title/sport set by
-/// the first atom seen for a `(condition, outcome)`.
-fn books_from_window_votes(votes: &[WindowVote], trust: &TrustMap) -> Vec<MarketBook> {
+/// the first atom seen for a `(condition, outcome)`. `pub(crate)` so the
+/// read-only shadow study (`scanner::earned`, board) builds its A/B books with
+/// the IDENTICAL assembly rather than a parallel one.
+pub(crate) fn books_from_window_votes(votes: &[WindowVote], trust: &TrustMap) -> Vec<MarketBook> {
     let mut books: HashMap<String, MarketBook> = HashMap::new();
     for v in votes {
         let book = books.entry(v.condition_id.clone()).or_insert_with(|| {
@@ -840,8 +842,9 @@ async fn build_market_features(
 }
 
 /// The active strategy portfolio: the full default set, optionally narrowed by
-/// the `CONSENSUS_STRATEGIES` allowlist (empty = all).
-fn active_portfolio(cfg: &CopyTradingConfig) -> Vec<StrategyDef> {
+/// the `CONSENSUS_STRATEGIES` allowlist (empty = all). `pub(crate)` so the
+/// board's read-only shadow study scores the IDENTICAL portfolio the cycle runs.
+pub(crate) fn active_portfolio(cfg: &CopyTradingConfig) -> Vec<StrategyDef> {
     let base = params_from_cfg(cfg);
     let mut all = default_portfolio(&base);
     // Earned-trust arms are registered ONLY when CONSENSUS_TRUST_ARMS is on;

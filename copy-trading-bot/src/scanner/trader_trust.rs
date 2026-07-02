@@ -50,6 +50,16 @@ pub async fn cached_slice_scores(
     Ok(fresh)
 }
 
+/// Drop the process-global slice cache. Live test suites seed fresh fills and
+/// render in ONE process — without this, a prior test's cached aggregation
+/// (within the TTL) leaks into the next test's render. Test-only by design.
+#[cfg(test)]
+pub async fn invalidate_slice_cache() {
+    if let Some(cell) = SLICE_CACHE.get() {
+        *cell.lock().await = None;
+    }
+}
+
 /// The earned-trust verdict for one wallet.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TrustVerdict {

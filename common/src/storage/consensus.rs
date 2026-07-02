@@ -146,7 +146,9 @@ impl PgPortfolio {
     // --- Tracked-trader universe (auto-follow) ---
 
     /// Upsert one leaderboard trader, marking it active and seen-now.
-    /// Does not clobber a manually-followed row's `source`.
+    /// Does not clobber a manually-followed row's `source`. Deliberately never
+    /// mentions `earned_eligible` (migration 035): an EARNED promotion is durable
+    /// across every leaderboard refresh and rank churn by construction.
     pub async fn upsert_tracked_trader(&self, t: &LeaderboardTraderUpsert) -> Result<()> {
         sqlx::query(
             "INSERT INTO followed_traders \
@@ -1169,25 +1171,76 @@ impl PgPortfolio {
     /// Load all window fill atoms at or after `since` (the trailing window) for
     /// rebuilding MarketBooks off the indexed DB read instead of the network.
     pub async fn load_window_votes(&self, since: DateTime<Utc>) -> Result<Vec<WindowVote>> {
-        // Consensus non-regression seam: only `consensus_eligible` traders' votes
-        // enter the book. Deep (ineligible) captured votes are still stored in the
-        // window (for the shadow study) but excluded from backer/opposer counts.
-        // COALESCE default TRUE ⇒ a wallet absent from followed_traders still counts
-        // exactly as before, so at the top-40 default (no ineligible rows) this
-        // filter is a no-op and the emitted signals are byte-for-byte unchanged.
+        // Consensus non-regression seam: only eligible traders' votes enter the
+        // book — rank-derived (`consensus_eligible`) OR deliberately EARNED at the
+        // belief-blind gate (`earned_eligible`, migration 035; default FALSE makes
+        // the OR a no-op until a promotion is recorded). Deep (ineligible) captured
+        // votes are still stored in the window (for the shadow study) but excluded
+        // from backer/opposer counts. COALESCE default TRUE ⇒ a wallet absent from
+        // followed_traders still counts exactly as before, so at the top-40 default
+        // (no ineligible rows) this filter is a no-op and the emitted signals are
+        // byte-for-byte unchanged.
         let rows: Vec<WindowVote> = sqlx::query_as(
             "SELECT cw.trader_wallet, cw.name, cw.rank, cw.pnl, cw.quality, cw.condition_id, \
                     cw.outcome_index, cw.outcome, cw.title, cw.slug, cw.event_slug, \
                     cw.is_sports, cw.price, cw.size_usd, cw.ts \
              FROM consensus_vote_window cw \
              LEFT JOIN followed_traders ft ON LOWER(ft.proxy_wallet) = cw.trader_wallet \
-             WHERE cw.ts >= $1 AND COALESCE(ft.consensus_eligible, TRUE) = TRUE",
+             WHERE cw.ts >= $1 \
+               AND COALESCE(ft.consensus_eligible OR ft.earned_eligible, TRUE) = TRUE",
         )
         .bind(since)
         .fetch_all(&self.pool)
         .await
         .context("load_window_votes")?;
         Ok(rows)
+    }
+
+    /// Load the window fill atoms at or after `since` from traders the eligibility
+    /// gate currently EXCLUDES (tracked, but neither rank-eligible nor earned).
+    /// This is the read-only SHADOW feed: everything a certified deep sharp WOULD
+    /// contribute if earned in, kept strictly out of the live book source above.
+    /// Complementary by construction — a vote is returned by exactly one of
+    /// `load_window_votes` / this (untracked wallets count as eligible there).
+    pub async fn load_excluded_window_votes(
+        &self,
+        since: DateTime<Utc>,
+    ) -> Result<Vec<WindowVote>> {
+        let rows: Vec<WindowVote> = sqlx::query_as(
+            "SELECT cw.trader_wallet, cw.name, cw.rank, cw.pnl, cw.quality, cw.condition_id, \
+                    cw.outcome_index, cw.outcome, cw.title, cw.slug, cw.event_slug, \
+                    cw.is_sports, cw.price, cw.size_usd, cw.ts \
+             FROM consensus_vote_window cw \
+             JOIN followed_traders ft ON LOWER(ft.proxy_wallet) = cw.trader_wallet \
+             WHERE cw.ts >= $1 \
+               AND NOT (ft.consensus_eligible OR ft.earned_eligible)",
+        )
+        .bind(since)
+        .fetch_all(&self.pool)
+        .await
+        .context("load_excluded_window_votes")?;
+        Ok(rows)
+    }
+
+    /// Record an EARNED promotion: flip `earned_eligible` on for the given tracked
+    /// wallets (exact `proxy_wallet` match). Idempotent — already-earned rows are
+    /// untouched; returns how many rows newly flipped. Called only by the
+    /// flag-gated (EARN_DEEP_SHARPS) promotion pass for gate-Trusted deep traders;
+    /// never from the leaderboard refresh. There is deliberately NO automatic
+    /// un-earn — revocation is a manual act.
+    pub async fn set_earned_eligible(&self, wallets: &[String]) -> Result<u64> {
+        if wallets.is_empty() {
+            return Ok(0);
+        }
+        let res = sqlx::query(
+            "UPDATE followed_traders SET earned_eligible = TRUE \
+             WHERE proxy_wallet = ANY($1) AND NOT earned_eligible",
+        )
+        .bind(wallets)
+        .execute(&self.pool)
+        .await
+        .context("set_earned_eligible")?;
+        Ok(res.rows_affected())
     }
 
     /// Drop window atoms older than `cutoff`. Returns the number pruned.
@@ -1315,7 +1368,7 @@ impl PgPortfolio {
              FROM trader_fills tf \
              LEFT JOIN followed_traders ft ON LOWER(ft.proxy_wallet) = tf.wallet \
              WHERE tf.side = 'BUY' AND tf.ts >= $1 \
-               AND COALESCE(ft.consensus_eligible, TRUE) = TRUE",
+               AND COALESCE(ft.consensus_eligible OR ft.earned_eligible, TRUE) = TRUE",
         )
         .bind(since)
         .fetch_all(&self.pool)
@@ -2262,6 +2315,100 @@ mod trader_fills_it {
             .collect();
         floaded.sort();
         assert_eq!(floaded, elig, "fills book source also excludes deep");
+
+        // --- EARNED eligibility (migration 035): the deliberate promotion path ---
+        // The shadow feed returns exactly the excluded (deep, unearned) votes.
+        let mut shadowed: Vec<String> = pf
+            .load_excluded_window_votes(since)
+            .await
+            .unwrap()
+            .into_iter()
+            .filter(|v| v.condition_id == cond)
+            .map(|v| v.trader_wallet)
+            .collect();
+        shadowed.sort();
+        assert_eq!(shadowed, deep, "shadow feed = the complementary deep votes");
+
+        // Earn ONE deep trader in. Idempotent: second call flips nothing.
+        let flipped = pf
+            .set_earned_eligible(&["0xdeepv_a".to_string()])
+            .await
+            .unwrap();
+        assert_eq!(flipped, 1, "one row newly earned");
+        let again = pf
+            .set_earned_eligible(&["0xdeepv_a".to_string()])
+            .await
+            .unwrap();
+        assert_eq!(again, 0, "earn is idempotent");
+
+        // Both book sources now count the earned trader; the other deep stay out.
+        let expect_earned = ["0xdeepv_a", "0xelig_a", "0xelig_b", "0xelig_c"];
+        let mut loaded2: Vec<String> = pf
+            .load_window_votes(since)
+            .await
+            .unwrap()
+            .into_iter()
+            .filter(|v| v.condition_id == cond)
+            .map(|v| v.trader_wallet)
+            .collect();
+        loaded2.sort();
+        assert_eq!(loaded2, expect_earned, "earned deep trader votes (window)");
+        let mut floaded2: Vec<String> = pf
+            .load_buy_fills_since(since)
+            .await
+            .unwrap()
+            .into_iter()
+            .filter(|v| v.condition_id == cond)
+            .map(|v| v.trader_wallet)
+            .collect();
+        floaded2.sort();
+        assert_eq!(floaded2, expect_earned, "earned deep trader votes (fills)");
+        // …and it left the shadow feed (complementary by construction).
+        let shadowed2: Vec<String> = pf
+            .load_excluded_window_votes(since)
+            .await
+            .unwrap()
+            .into_iter()
+            .filter(|v| v.condition_id == cond)
+            .map(|v| v.trader_wallet)
+            .collect();
+        assert!(
+            !shadowed2.contains(&"0xdeepv_a".to_string()),
+            "earned trader is no longer excluded"
+        );
+
+        // DURABILITY: a leaderboard refresh (rank churn, still deep) must NOT
+        // clobber the earned promotion — the upsert never touches the column.
+        pf.upsert_tracked_trader(&LeaderboardTraderUpsert {
+            wallet: "0xdeepv_a".into(),
+            username: None,
+            rank: Some(199),
+            pnl: None,
+            volume: None,
+            periods: "WEEK,MONTH".into(),
+            consensus_eligible: false,
+        })
+        .await
+        .unwrap();
+        let (ce, ee): (bool, bool) = sqlx::query_as(
+            "SELECT consensus_eligible, earned_eligible FROM followed_traders \
+             WHERE proxy_wallet = '0xdeepv_a'",
+        )
+        .fetch_one(&pf.pool)
+        .await
+        .unwrap();
+        assert!(!ce, "rank-derived flag still FALSE (rank 199 > cutoff)");
+        assert!(ee, "EARNED flag survives the leaderboard refresh");
+        let mut loaded3: Vec<String> = pf
+            .load_window_votes(since)
+            .await
+            .unwrap()
+            .into_iter()
+            .filter(|v| v.condition_id == cond)
+            .map(|v| v.trader_wallet)
+            .collect();
+        loaded3.sort();
+        assert_eq!(loaded3, expect_earned, "still voting after rank churn");
 
         // Cleanup.
         sqlx::query("DELETE FROM consensus_vote_window WHERE condition_id = $1")

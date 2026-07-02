@@ -247,6 +247,16 @@ pub struct CopyTradingConfig {
     #[config(env = "TRUST_REFRESH_MINS", default = 60)]
     pub trust_refresh_mins: u64,
 
+    /// EARN deep sharps into consensus (deep-pool edge run, Phase 0). Default OFF:
+    /// the promotion pass only REPORTS (board: "⤴ promotable" + shadow impact) and
+    /// no eligibility changes. When ON, the slow trust-refresh task durably flips
+    /// `followed_traders.earned_eligible = TRUE` for deep (rank > cutoff) traders
+    /// whose belief-blind `trust_verdict` is Trusted — the ONLY path by which a
+    /// deep trader starts voting. Flipping the flag back off stops NEW promotions
+    /// but does not revoke recorded ones (revocation is a deliberate manual act).
+    #[config(env = "EARN_DEEP_SHARPS", default = false)]
+    pub earn_deep_sharps: bool,
+
     /// Path to the consensus logistic model JSON (consensus_train.py output).
     #[config(env = "CONSENSUS_WIN_MODEL_PATH", default = "model/consensus_win.json")]
     pub consensus_win_model_path: String,

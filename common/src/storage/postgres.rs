@@ -1641,6 +1641,10 @@ pub struct FollowedTrader {
     /// Votes in consensus (rank ≤ cutoff or manual). Deep candidates are FALSE:
     /// polled + archived, but excluded from backer/opposer counts.
     pub consensus_eligible: bool,
+    /// Durable EARNED eligibility (migration 035): flipped only by the deliberate,
+    /// flag-gated (EARN_DEEP_SHARPS) promotion pass for gate-Trusted deep traders;
+    /// never touched by the leaderboard refresh. Votes iff either flag is set.
+    pub earned_eligible: bool,
 }
 
 /// An event row already persisted to `copy_trade_events`.
@@ -1688,6 +1692,7 @@ pub(super) struct FollowedTraderRow {
     last_checked_at: Option<DateTime<Utc>>,
     active: bool,
     consensus_eligible: bool,
+    earned_eligible: bool,
 }
 
 impl FollowedTraderRow {
@@ -1705,6 +1710,7 @@ impl FollowedTraderRow {
             last_checked_at: self.last_checked_at,
             active: self.active,
             consensus_eligible: self.consensus_eligible,
+            earned_eligible: self.earned_eligible,
         }
     }
 }

@@ -110,8 +110,23 @@ pub async fn run_live(cfg: Arc<CopyTradingConfig>) -> Result<()> {
             realized_decision_lag_secs: cfg.realized_decision_lag_secs,
         };
         let cohort_bands = cfg.track_cohort_bands.clone();
+        // Shadow-study params (deep-pool edge run, Phase 0): the board diffs what
+        // the ACTIVE portfolio would emit if certified deep sharps voted. Read-only.
+        let shadow = crate::board::ShadowBoardParams {
+            window_hours: cfg.consensus_window_hours,
+            portfolio: crate::cycles::consensus_cycle::active_portfolio(&cfg),
+            earn_flag_on: cfg.earn_deep_sharps,
+        };
         tokio::spawn(async move {
-            crate::board::serve(bd_portfolio, port, capture_margin, honest, cohort_bands).await
+            crate::board::serve(
+                bd_portfolio,
+                port,
+                capture_margin,
+                honest,
+                cohort_bands,
+                shadow,
+            )
+            .await
         });
     }
 
@@ -302,15 +317,53 @@ pub async fn run_live(cfg: Arc<CopyTradingConfig>) -> Result<()> {
         let tp = Arc::clone(&portfolio);
         let tcfg = Arc::clone(&cfg);
         tokio::spawn(async move {
-            if !tcfg.consensus_trust_arms {
-                tracing::info!("Trust arms off — earned-trust map refresh disabled");
+            if !tcfg.consensus_trust_arms && !tcfg.earn_deep_sharps {
+                tracing::info!(
+                    "Trust arms + earn-deep-sharps off — earned-trust map refresh disabled"
+                );
                 return;
             }
             loop {
                 let m = crate::cycles::consensus_cycle::compute_trust_map(&tp).await;
                 let n = m.len();
-                *tm.write().await = m;
+                // The shared map feeds the trust ARMS' earned_quality — only
+                // publish it when those arms are on, so EARN_DEEP_SHARPS alone
+                // leaves every live book byte-identical.
+                if tcfg.consensus_trust_arms {
+                    *tm.write().await = m.clone();
+                }
                 tracing::info!(traders = n, "Earned-trust map refreshed");
+
+                // Flag-gated EARN pass (deep-pool edge run, Phase 0): durably flip
+                // `earned_eligible` for deep traders whose belief-blind verdict is
+                // Trusted. Never touches rank-eligible traders; idempotent; logs
+                // every flip (the deliberate promotion record).
+                if tcfg.earn_deep_sharps {
+                    match tp.get_active_traders().await {
+                        Ok(traders) => {
+                            let pass = crate::scanner::earned::deep_sharp_pass(&traders, &m);
+                            let to_earn: Vec<String> =
+                                crate::scanner::earned::promotable_deep_sharps(&pass)
+                                    .into_iter()
+                                    .filter(|d| !d.earned)
+                                    .map(|d| d.wallet.clone())
+                                    .collect();
+                            if !to_earn.is_empty() {
+                                match tp.set_earned_eligible(&to_earn).await {
+                                    Ok(flipped) => tracing::info!(
+                                        flipped,
+                                        wallets = ?to_earn,
+                                        "EARN_DEEP_SHARPS: certified deep sharps earned into consensus"
+                                    ),
+                                    Err(e) => {
+                                        tracing::warn!(err = %e, "set_earned_eligible failed")
+                                    }
+                                }
+                            }
+                        }
+                        Err(e) => tracing::warn!(err = %e, "earn pass: get_active_traders failed"),
+                    }
+                }
                 tokio::time::sleep(Duration::from_secs(tcfg.trust_refresh_mins * 60)).await;
             }
         });
