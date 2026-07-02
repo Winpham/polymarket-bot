@@ -258,11 +258,11 @@ pub async fn consensus_cycle(
     let atoms = atom_log(&book_vec);
 
     let strategies = active_portfolio(cfg);
-    let alerting: std::collections::HashSet<&str> = strategies
-        .iter()
-        .filter(|d| d.alerting)
-        .map(|d| d.name)
-        .collect();
+    let (alerting, watch_for) = alert_sets(
+        &cfg.consensus_alert_strategies,
+        &cfg.consensus_alert_watch_for,
+        &strategies,
+    );
     let signals = score_all_strategies(&book_vec, now, &strategies);
 
     // Enricher seam: silent cross-check arms re-emit `strict` picks under new
@@ -339,8 +339,12 @@ pub async fn consensus_cycle(
             }
         }
 
-        // Only the alerting strategy(ies) push Telegram; only STRONG / ELITE.
-        if !alerting.contains(sig.strategy.as_str()) || sig.tier == Tier::Watch {
+        // Only the alerting strategy(ies) push; STRONG/ELITE always qualify,
+        // WATCH only for strategies in the watch_for allowlist (the certified
+        // winners fire mostly at net=3 = WATCH; see DECISIONS D10).
+        if !alerting.contains(sig.strategy.as_str())
+            || (sig.tier == Tier::Watch && !watch_for.contains(sig.strategy.as_str()))
+        {
             continue;
         }
 
@@ -357,13 +361,44 @@ pub async fn consensus_cycle(
             continue;
         }
 
-        let msg = format_consensus_alert(sig);
+        // Cross-STRATEGY dedup: overlapping winners (e.g. favorite ∩
+        // elite_fresh_fav ∩ strict) produce ONE push per (market, outcome).
+        // Same-strategy re-alerts are exempt (the helper excludes them), so a
+        // single-alerting-strategy config behaves exactly as before. Fail-open:
+        // a DB error never suppresses an alert.
+        if cfg.consensus_alert_cross_dedup_mins > 0
+            && portfolio
+                .recent_alert_by_other_strategy(
+                    &sig.condition_id,
+                    sig.outcome_index,
+                    &sig.strategy,
+                    cfg.consensus_alert_cross_dedup_mins,
+                )
+                .await
+                .unwrap_or(false)
+        {
+            tracing::debug!(
+                strategy = %sig.strategy,
+                cond = %sig.condition_id,
+                "alert suppressed: another strategy already pushed this market"
+            );
+            continue;
+        }
+
+        // Tag which strategy fired on non-strict pushes; strict's message stays
+        // byte-identical to the incumbent format.
+        let mut msg = format_consensus_alert(sig);
+        if sig.strategy != "strict" {
+            msg.push_str(&format!("\nstrategy: {}", sig.strategy));
+        }
         broadcast(notifier, portfolio, &msg).await;
-        // Phone push via the user's brainstem ntfy channel.
+        // Phone push via the user's brainstem ntfy channel. WATCH-tier winner
+        // pushes ride at a lower priority than STRONG/ELITE.
         if let Some(n) = ntfy {
             let (priority, tag) = match sig.tier {
                 Tier::Elite => (5u8, "fire"),
-                _ => (4u8, "green_circle"),
+                Tier::Strong => (4u8, "green_circle"),
+                Tier::Watch => (3u8, "large_blue_circle"),
             };
             let title = format!(
                 "{} {} consensus — BUY {}",
@@ -812,6 +847,37 @@ fn active_portfolio(cfg: &CopyTradingConfig) -> Vec<StrategyDef> {
     all.into_iter().filter(|d| allow.contains(d.name)).collect()
 }
 
+/// The alert sets: (strategies that push, strategies whose WATCH-tier fires
+/// also push). `CONSENSUS_ALERT_STRATEGIES` overrides the portfolio's built-in
+/// alerting flags when non-empty; `CONSENSUS_ALERT_WATCH_FOR` opts strategies
+/// into WATCH-tier pushes. Both empty ⇒ byte-identical to the incumbent
+/// behavior (`strict` only, STRONG/ELITE only).
+fn alert_sets(
+    alert_override_csv: &str,
+    watch_for_csv: &str,
+    defs: &[StrategyDef],
+) -> (
+    std::collections::HashSet<String>,
+    std::collections::HashSet<String>,
+) {
+    let csv = |s: &str| -> std::collections::HashSet<String> {
+        s.split(',')
+            .map(|x| x.trim().to_string())
+            .filter(|x| !x.is_empty())
+            .collect()
+    };
+    let overridden = csv(alert_override_csv);
+    let alerting = if overridden.is_empty() {
+        defs.iter()
+            .filter(|d| d.alerting)
+            .map(|d| d.name.to_string())
+            .collect()
+    } else {
+        overridden
+    };
+    (alerting, csv(watch_for_csv))
+}
+
 /// Serialize the raw vote atoms for every observed `(condition_id, outcome_index)`.
 /// Strategy-agnostic, computed once per cycle, reused across all strategies.
 fn atom_log(books: &[MarketBook]) -> std::collections::HashMap<(String, i32), serde_json::Value> {
@@ -952,6 +1018,31 @@ fn truncate(s: &str, max: usize) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn alert_sets_default_is_builtin_flags_and_no_watch() {
+        let base = crate::scanner::consensus::ConsensusParams::default();
+        let defs = crate::scanner::consensus::default_portfolio(&base);
+        let (alerting, watch) = alert_sets("", "", &defs);
+        // Byte-identical incumbent behavior: strict only, WATCH never pushes.
+        assert_eq!(alerting.len(), 1, "only one built-in alerting strategy");
+        assert!(alerting.contains("strict"));
+        assert!(watch.is_empty());
+    }
+
+    #[test]
+    fn alert_sets_override_and_watch_allowlist() {
+        let base = crate::scanner::consensus::ConsensusParams::default();
+        let defs = crate::scanner::consensus::default_portfolio(&base);
+        let (alerting, watch) = alert_sets(
+            "strict, favorite, elite_fresh_fav",
+            "favorite,elite_fresh_fav",
+            &defs,
+        );
+        assert_eq!(alerting.len(), 3);
+        assert!(alerting.contains("favorite") && alerting.contains("elite_fresh_fav"));
+        assert!(watch.contains("favorite") && !watch.contains("strict"));
+    }
 
     #[test]
     fn sport_bucket_classifies_known_domains() {

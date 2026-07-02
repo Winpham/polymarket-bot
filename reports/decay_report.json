@@ -1,0 +1,231 @@
+{
+ "label": "live",
+ "grid_mins": [
+  1.0,
+  2.0,
+  3.0,
+  5.0,
+  10.0,
+  15.0,
+  30.0,
+  60.0
+ ],
+ "min_survivors": 20,
+ "dense_points": 0,
+ "strategies": {
+  "elite_fresh_fav": {
+   "n_signals": 64,
+   "fire_edge": 0.08728038847117794,
+   "structural_tax": 0.013098904103295948,
+   "curve": [
+    {
+     "tau_mins": 1.0,
+     "n_events": 1,
+     "published": false
+    },
+    {
+     "tau_mins": 2.0,
+     "n_events": 2,
+     "published": false
+    },
+    {
+     "tau_mins": 3.0,
+     "n_events": 6,
+     "published": false
+    },
+    {
+     "tau_mins": 5.0,
+     "n_events": 17,
+     "published": false
+    },
+    {
+     "tau_mins": 10.0,
+     "n_events": 31,
+     "published": true,
+     "delta": -0.00038387096774194113,
+     "ci_lo": -0.007981370967741935,
+     "ci_hi": 0.0064559677419354635,
+     "placebo": -0.00018575268817204403
+    },
+    {
+     "tau_mins": 15.0,
+     "n_events": 35,
+     "published": true,
+     "delta": -0.003422857142857151,
+     "ci_lo": -0.011959285714285723,
+     "ci_hi": 0.004289285714285686,
+     "placebo": 0.016011360544217684
+    },
+    {
+     "tau_mins": 30.0,
+     "n_events": 37,
+     "published": true,
+     "delta": -0.015242567567567571,
+     "ci_lo": -0.03646405968468469,
+     "ci_hi": 0.004176126126126099,
+     "placebo": -0.020931756756756768
+    },
+    {
+     "tau_mins": 60.0,
+     "n_events": 32,
+     "published": true,
+     "delta": 0.0032218749999999973,
+     "ci_lo": -0.04034804687500001,
+     "ci_hi": 0.05307401041666663,
+     "placebo": -0.0072005208333333365
+    }
+   ],
+   "speed_budget_mins": null,
+   "edge_loss_tolerance": 0.25,
+   "verdict": "no material decay measured on this grid \u2014 manual is fine"
+  },
+  "favorite": {
+   "n_signals": 149,
+   "fire_edge": 0.0819676913803496,
+   "structural_tax": 0.021139471523590133,
+   "curve": [
+    {
+     "tau_mins": 1.0,
+     "n_events": 6,
+     "published": false
+    },
+    {
+     "tau_mins": 2.0,
+     "n_events": 4,
+     "published": false
+    },
+    {
+     "tau_mins": 3.0,
+     "n_events": 12,
+     "published": false
+    },
+    {
+     "tau_mins": 5.0,
+     "n_events": 28,
+     "published": true,
+     "delta": 0.0,
+     "ci_lo": 0.0,
+     "ci_hi": 0.0,
+     "placebo": 0.0192142857142857
+    },
+    {
+     "tau_mins": 10.0,
+     "n_events": 63,
+     "published": true,
+     "delta": 0.003306878306878305,
+     "ci_lo": -0.002757142857142859,
+     "ci_hi": 0.009937962962962952,
+     "placebo": -0.01238783068783069
+    },
+    {
+     "tau_mins": 15.0,
+     "n_events": 73,
+     "published": true,
+     "delta": -0.002184246575342465,
+     "ci_lo": -0.00983698630136986,
+     "ci_hi": 0.005329828767123279,
+     "placebo": -0.002303669275929555
+    },
+    {
+     "tau_mins": 30.0,
+     "n_events": 72,
+     "published": true,
+     "delta": 7.118055555555774e-05,
+     "ci_lo": -0.025750289351851845,
+     "ci_hi": 0.029843041087962888,
+     "placebo": -0.01952342923280423
+    },
+    {
+     "tau_mins": 60.0,
+     "n_events": 64,
+     "published": true,
+     "delta": -0.025862760416666665,
+     "ci_lo": -0.06010885091145833,
+     "ci_hi": 0.011564052734374983,
+     "placebo": -0.007874739583333337
+    }
+   ],
+   "speed_budget_mins": 53.78709439803389,
+   "edge_loss_tolerance": 0.25,
+   "verdict": "manual is fine (budget 53.8m \u2265 3m)"
+  },
+  "strict": {
+   "n_signals": 517,
+   "fire_edge": 0.036984767213482476,
+   "structural_tax": 0.007866460356036145,
+   "curve": [
+    {
+     "tau_mins": 1.0,
+     "n_events": 13,
+     "published": false
+    },
+    {
+     "tau_mins": 2.0,
+     "n_events": 21,
+     "published": true,
+     "delta": 0.0,
+     "ci_lo": 0.0,
+     "ci_hi": 0.0,
+     "placebo": 0.002369047619047617
+    },
+    {
+     "tau_mins": 3.0,
+     "n_events": 39,
+     "published": true,
+     "delta": 0.0,
+     "ci_lo": 0.0,
+     "ci_hi": 0.0,
+     "placebo": 0.00892735042735043
+    },
+    {
+     "tau_mins": 5.0,
+     "n_events": 85,
+     "published": true,
+     "delta": 0.0,
+     "ci_lo": 0.0,
+     "ci_hi": 0.0,
+     "placebo": -0.05886147058823528
+    },
+    {
+     "tau_mins": 10.0,
+     "n_events": 156,
+     "published": true,
+     "delta": 4.629629629629508e-05,
+     "ci_lo": -0.004131450320512822,
+     "ci_hi": 0.004037397613960109,
+     "placebo": -0.009321805740555742
+    },
+    {
+     "tau_mins": 15.0,
+     "n_events": 184,
+     "published": true,
+     "delta": 0.0008300950257471997,
+     "ci_lo": -0.006172895141543241,
+     "ci_hi": 0.007979345213210694,
+     "placebo": 0.013264178095987561
+    },
+    {
+     "tau_mins": 30.0,
+     "n_events": 177,
+     "published": true,
+     "delta": 0.00585365233249082,
+     "ci_lo": -0.011523349648325347,
+     "ci_hi": 0.02410003044262889,
+     "placebo": -0.004867631298301783
+    },
+    {
+     "tau_mins": 60.0,
+     "n_events": 170,
+     "published": true,
+     "delta": -0.01257906650539003,
+     "ci_lo": -0.04152134836813515,
+     "ci_hi": 0.016710260021432777,
+     "placebo": -0.011064787793905446
+    }
+   ],
+   "speed_budget_mins": 54.57561079621624,
+   "edge_loss_tolerance": 0.25,
+   "verdict": "manual is fine (budget 54.6m \u2265 3m)"
+  }
+ }
+}
