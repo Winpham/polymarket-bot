@@ -569,12 +569,24 @@ mod tests {
             min_events: 1,
             ..PromotionParams::default()
         };
-        let split = promotion_verdict(arm.distinct_events, arm.surplus, arm.surplus_sd, exp_n, &pp);
+        // Selection null Some(0.0) so the null precondition passes and this test
+        // exercises the Bonferroni family-split on the lower bound (its subject).
+        let split = promotion_verdict(
+            arm.distinct_events,
+            arm.distinct_days,
+            arm.surplus,
+            arm.surplus_sd,
+            exp_n,
+            Some(0.0),
+            &pp,
+        );
         let pooled = promotion_verdict(
             arm.distinct_events,
+            arm.distinct_days,
             arm.surplus,
             arm.surplus_sd,
             rows.len(),
+            Some(0.0),
             &pp,
         );
         if let (Some(a), Some(b)) = (split.lower_bound, pooled.lower_bound) {

@@ -10,7 +10,9 @@ use tokio::net::TcpListener;
 
 use crate::scanner::cohort::{CohortFilter, band_of, parse_bands};
 use crate::scanner::enrich::family;
-use crate::scanner::promotion::{PromotionParams, promotion_verdict, surplus_bounds};
+use crate::scanner::promotion::{
+    PromotionParams, promotion_verdict, selection_null_p_for, surplus_bounds,
+};
 use crate::scanner::trader_trust::{TraderTrust, TrustVerdict, trust_verdict};
 use crate::storage::postgres::PgPortfolio;
 use polymarket_common::storage::consensus::HonestPnl;
@@ -774,7 +776,15 @@ async fn render(
         .find(|r| r.strategy == "market_resid" && r.resolved > 0)
         .map(|r| {
             let fn_exp = fam_n.get("experimental").copied().unwrap_or(1);
-            let v = promotion_verdict(r.distinct_events, r.surplus, r.surplus_sd, fn_exp, &pp);
+            let v = promotion_verdict(
+                r.distinct_events,
+                r.distinct_days,
+                r.surplus,
+                r.surplus_sd,
+                fn_exp,
+                selection_null_p_for(&r.strategy),
+                &pp,
+            );
             if v.promotable {
                 format!("✅ PROMOTABLE (LB {})", pct(v.lower_bound))
             } else {
@@ -805,8 +815,31 @@ async fn render(
         for r in rows.iter().filter(|r| r.resolved > 0) {
             let hr = r.won as f64 / r.resolved as f64 * 100.0;
             let n = fam_n.get(family(&r.strategy)).copied().unwrap_or(1);
-            let v = promotion_verdict(r.distinct_events, r.surplus, r.surplus_sd, n, &pp);
-            let gate = if v.promotable { "✅" } else { "⏳" };
+            let v = promotion_verdict(
+                r.distinct_events,
+                r.distinct_days,
+                r.surplus,
+                r.surplus_sd,
+                n,
+                selection_null_p_for(&r.strategy),
+                &pp,
+            );
+            // Held reason surfaced honestly (uses the gate's structured fields):
+            // a missing/failing selection-matched null gets a distinct marker,
+            // and the events cell shows the cluster-deflated effective N (event-
+            // days) whenever within-day correlation shrank it below the raw N.
+            let gate = if v.promotable {
+                "✅"
+            } else if !v.selection_null_ok {
+                "⏳ null"
+            } else {
+                "⏳"
+            };
+            let ev_cell = if v.effective_n < r.distinct_events {
+                format!("{} ({}d)", r.distinct_events, v.effective_n)
+            } else {
+                r.distinct_events.to_string()
+            };
             let scls = match r.surplus {
                 Some(s) if s > 0.0 => "pos",
                 Some(_) => "neg",
@@ -827,7 +860,7 @@ async fn render(
                  <td class=\"r {clvcls}\">{clv}</td><td class=\"r muted\">{lag}</td></tr>",
                 strat = r.strategy,
                 fam = family(&r.strategy),
-                ev = r.distinct_events,
+                ev = ev_cell,
                 surplus = pct(r.surplus),
                 lb = pct(v.lower_bound),
                 edge = pct(r.edge),

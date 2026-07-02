@@ -634,6 +634,7 @@ impl PgPortfolio {
             "WITH adv AS ( \
                  SELECT strategy, COALESCE(event_slug, condition_id) AS ev, resolved, outcome_won, \
                         width_bucket(COALESCE(initial_mean_price, mean_price), 0.0, 1.0, 5) AS band, \
+                        (first_detected_at AT TIME ZONE 'UTC')::date AS day, \
                         (outcome_won::int)::double precision \
                           - COALESCE(initial_mean_price, mean_price) AS a \
                  FROM consensus_signals \
@@ -643,17 +644,18 @@ impl PgPortfolio {
                  FROM adv WHERE strategy = '_blind' AND resolved GROUP BY band \
              ), \
              sig AS ( \
-                 SELECT v.strategy, v.ev, v.resolved, v.outcome_won, v.a, \
+                 SELECT v.strategy, v.ev, v.day, v.resolved, v.outcome_won, v.a, \
                         v.a - COALESCE(b.blind_edge, 0) AS surplus \
                  FROM adv v LEFT JOIN blind b USING (band) WHERE v.strategy <> '_blind' \
              ), \
              evt AS ( \
-                 SELECT strategy, ev, AVG(surplus) AS ev_surplus \
+                 SELECT strategy, ev, AVG(surplus) AS ev_surplus, MIN(day) AS ev_day \
                  FROM sig WHERE resolved GROUP BY strategy, ev \
              ), \
              es AS ( \
                  SELECT strategy, COUNT(*) AS n_events, AVG(ev_surplus) AS surplus, \
-                        STDDEV_SAMP(ev_surplus) AS surplus_sd FROM evt GROUP BY strategy \
+                        STDDEV_SAMP(ev_surplus) AS surplus_sd, \
+                        COUNT(DISTINCT ev_day) AS distinct_days FROM evt GROUP BY strategy \
              ), \
              clv_evt AS ( \
                  SELECT strategy, COALESCE(event_slug, condition_id) AS ev, \
@@ -670,6 +672,7 @@ impl PgPortfolio {
              SELECT s.strategy, \
                     COUNT(*) FILTER (WHERE s.resolved)                   AS resolved, \
                     COALESCE(es.n_events, 0)                             AS distinct_events, \
+                    COALESCE(es.distinct_days, 0)                        AS distinct_days, \
                     COUNT(*) FILTER (WHERE s.resolved AND s.outcome_won) AS won, \
                     AVG(s.a) FILTER (WHERE s.resolved)                   AS edge, \
                     es.surplus                                          AS surplus, \
@@ -678,7 +681,7 @@ impl PgPortfolio {
                     clv.capture_lag                                     AS capture_lag \
              FROM sig s LEFT JOIN es ON es.strategy = s.strategy \
                         LEFT JOIN clv ON clv.strategy = s.strategy \
-             GROUP BY s.strategy, es.n_events, es.surplus, es.surplus_sd, clv.our_clv, clv.capture_lag \
+             GROUP BY s.strategy, es.n_events, es.distinct_days, es.surplus, es.surplus_sd, clv.our_clv, clv.capture_lag \
              ORDER BY es.surplus DESC NULLS LAST",
         )
         .fetch_all(&self.pool)
@@ -1414,26 +1417,27 @@ impl PgPortfolio {
                               v.a - COALESCE(b.blind_edge, 0) AS s \
                        FROM adv v LEFT JOIN blind b USING (band) ), \
              tagged AS ( \
-                 SELECT wallet, 'overall'::text AS slice_kind, ''::text AS slice_key, ev, a, s, won FROM surp \
+                 SELECT wallet, 'overall'::text AS slice_kind, ''::text AS slice_key, ev, a, s, won, ts FROM surp \
                  UNION ALL \
-                 SELECT wallet, 'sport', sport, ev, a, s, won FROM surp \
+                 SELECT wallet, 'sport', sport, ev, a, s, won, ts FROM surp \
                  UNION ALL \
-                 SELECT wallet, 'band', 'b' || band::text, ev, a, s, won FROM surp \
+                 SELECT wallet, 'band', 'b' || band::text, ev, a, s, won, ts FROM surp \
                  UNION ALL \
-                 SELECT wallet, 'recency7d', '7d', ev, a, s, won FROM surp \
+                 SELECT wallet, 'recency7d', '7d', ev, a, s, won, ts FROM surp \
                    WHERE ts >= NOW() - INTERVAL '7 days' \
                  UNION ALL \
-                 SELECT wallet, 'recency30d', '30d', ev, a, s, won FROM surp \
+                 SELECT wallet, 'recency30d', '30d', ev, a, s, won, ts FROM surp \
                    WHERE ts >= NOW() - INTERVAL '30 days' \
              ), \
              evl AS ( \
                  SELECT wallet, slice_kind, slice_key, ev, \
                         AVG(s) AS ev_surplus, AVG(a) AS ev_adv, AVG(won) AS ev_hit, \
-                        COUNT(*) AS ev_rows \
+                        COUNT(*) AS ev_rows, MIN((ts AT TIME ZONE 'UTC')::date) AS ev_day \
                  FROM tagged GROUP BY wallet, slice_kind, slice_key, ev \
              ) \
              SELECT wallet, slice_kind, slice_key, \
                     COUNT(DISTINCT ev)        AS n_events, \
+                    COUNT(DISTINCT ev_day)    AS n_days, \
                     SUM(ev_rows)::bigint      AS n_resolved, \
                     AVG(ev_surplus)           AS surplus, \
                     STDDEV_SAMP(ev_surplus)   AS surplus_sd, \
@@ -1484,20 +1488,21 @@ impl PgPortfolio {
                               v.a - COALESCE(b.blind_edge, 0) AS s \
                        FROM adv v LEFT JOIN blind b USING (band) ), \
              tagged AS ( \
-                 SELECT wallet, 'overall'::text AS slice_kind, ''::text AS slice_key, ev, a, s, won FROM surp \
+                 SELECT wallet, 'overall'::text AS slice_kind, ''::text AS slice_key, ev, a, s, won, ts FROM surp \
                  UNION ALL \
-                 SELECT wallet, 'sport', sport, ev, a, s, won FROM surp \
+                 SELECT wallet, 'sport', sport, ev, a, s, won, ts FROM surp \
                  UNION ALL \
-                 SELECT wallet, 'band', 'b' || band::text, ev, a, s, won FROM surp \
+                 SELECT wallet, 'band', 'b' || band::text, ev, a, s, won, ts FROM surp \
              ), \
              evl AS ( \
                  SELECT wallet, slice_kind, slice_key, ev, \
                         AVG(s) AS ev_surplus, AVG(a) AS ev_adv, AVG(won) AS ev_hit, \
-                        COUNT(*) AS ev_rows \
+                        COUNT(*) AS ev_rows, MIN((ts AT TIME ZONE 'UTC')::date) AS ev_day \
                  FROM tagged GROUP BY wallet, slice_kind, slice_key, ev \
              ) \
              SELECT wallet, slice_kind, slice_key, \
                     COUNT(DISTINCT ev)        AS n_events, \
+                    COUNT(DISTINCT ev_day)    AS n_days, \
                     SUM(ev_rows)::bigint      AS n_resolved, \
                     AVG(ev_surplus)           AS surplus, \
                     STDDEV_SAMP(ev_surplus)   AS surplus_sd, \
@@ -1584,6 +1589,13 @@ pub struct StrategyScore {
     pub resolved: i64,
     /// Distinct resolved EVENTS — the honest (de-correlated) sample size.
     pub distinct_events: i64,
+    /// Distinct resolved event-DAYS (UTC date of first detection) — the
+    /// within-day-correlation deflator for the promotion gate's effective N.
+    /// A correlated same-weekend cluster of events collapses to few days, so a
+    /// single World-Cup weekend can no longer clear the bar on its own. A NULL
+    /// `first_detected_at` counts toward fewer days ⇒ effective N degrades
+    /// toward 1 (fail-closed).
+    pub distinct_days: i64,
     /// Resolved signals whose consensus outcome won.
     pub won: i64,
     /// Mean realized edge vs the AT-FIRE entry:
@@ -1793,6 +1805,11 @@ pub struct TraderSliceStat {
     pub slice_key: String,
     /// Distinct `COALESCE(event_slug, condition_id)` — the gate's de-correlated N.
     pub n_events: i64,
+    /// Distinct fill-DAYS (UTC date of `ts`) in this slice — the within-day-
+    /// correlation deflator for the trust gate's effective N (so one correlated
+    /// weekend of fills can't clear the bar). Fewer days ⇒ effective N degrades
+    /// toward 1 (fail-closed).
+    pub n_days: i64,
     /// Resolved BUY fills in this slice (rows, not events).
     pub n_resolved: i64,
     /// Event-clustered AVG of `(advantage − band_blind)` — the favorite-longshot-
