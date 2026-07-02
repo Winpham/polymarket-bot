@@ -8,6 +8,7 @@ use std::sync::Arc;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpListener;
 
+use crate::scanner::cohort::{CohortFilter, band_of, parse_bands};
 use crate::scanner::enrich::family;
 use crate::scanner::promotion::{PromotionParams, promotion_verdict, surplus_bounds};
 use crate::scanner::trader_trust::{TraderTrust, TrustVerdict, trust_verdict};
@@ -53,6 +54,7 @@ pub async fn serve(
     port: u16,
     capture_margin: f64,
     honest: HonestBoardParams,
+    cohort_bands: String,
 ) {
     let listener = match TcpListener::bind(("0.0.0.0", port)).await {
         Ok(l) => l,
@@ -71,11 +73,22 @@ pub async fn serve(
             }
         };
         let pf = Arc::clone(&portfolio);
+        let bands_spec = cohort_bands.clone();
         tokio::spawn(async move {
-            // Drain the request line (we serve the same page for any GET).
+            // Read the request line and parse the cohort filter/sort from the query
+            // string (?cohort=…&sort=…) so the observatory can be sliced by URL.
             let mut buf = [0u8; 1024];
-            let _ = socket.read(&mut buf).await;
-            let html = render(&pf, capture_margin, honest).await;
+            let n = socket.read(&mut buf).await.unwrap_or(0);
+            let (cohort_tok, sort_tok) = parse_cohort_query(&buf[..n]);
+            let html = render(
+                &pf,
+                capture_margin,
+                honest,
+                &bands_spec,
+                &cohort_tok,
+                &sort_tok,
+            )
+            .await;
             let resp = format!(
                 "HTTP/1.1 200 OK\r\nContent-Type: text/html; charset=utf-8\r\n\
                  Content-Length: {}\r\nConnection: close\r\n\r\n{}",
@@ -100,36 +113,74 @@ fn html_escape(s: &str) -> String {
         .replace('"', "&quot;")
 }
 
-/// Phase 4 (deep leaderboard): "who's efficient below the whales." Runs the SAME
-/// belief-blind trust gate (`trust_verdict`) over the CAPTURED deep pool (rank >
-/// cutoff, `consensus_eligible = FALSE` — profiled but not voting) and surfaces
-/// any deep trader whose forward-measured surplus clears the gate. Read-only; NO
-/// new gate, and nothing here promotes — a deep trader earns a consensus vote only
-/// by a deliberate human flip. Renders only when a deep pool is actually tracked,
-/// and an honest NULL until it accrues resolved history.
-async fn render_deep_efficiency(portfolio: &PgPortfolio) -> String {
-    let traders = match portfolio.get_active_traders().await {
-        Ok(t) => t,
-        Err(_) => return String::new(),
-    };
-    // Provenance for the depth question: lower-cased wallet → (rank, eligible),
-    // leaderboard rows only (manual follows aren't part of hot-vs-deep).
-    let mut prov: std::collections::HashMap<String, (Option<i32>, bool)> =
-        std::collections::HashMap::new();
-    for t in &traders {
-        if t.source == "leaderboard" {
-            prov.insert(
-                t.proxy_wallet.to_lowercase(),
-                (t.rank, t.consensus_eligible),
-            );
+/// Extract the cohort `?cohort=…&sort=…` tokens from a raw HTTP request buffer.
+/// Defaults: `cohort=all`, `sort=profit` ("most profitable within each band"
+/// first). No deps — parse the first request line's target query string.
+fn parse_cohort_query(buf: &[u8]) -> (String, String) {
+    let text = String::from_utf8_lossy(buf);
+    let target = text
+        .lines()
+        .next()
+        .and_then(|l| l.split_whitespace().nth(1)) // "GET <target> HTTP/1.1"
+        .unwrap_or("/");
+    let query = target.split_once('?').map(|(_, q)| q).unwrap_or("");
+    let (mut cohort, mut sort) = ("all".to_string(), "profit".to_string());
+    for kv in query.split('&') {
+        if let Some((k, v)) = kv.split_once('=') {
+            match k {
+                "cohort" => cohort = v.to_string(),
+                "sort" => sort = v.to_string(),
+                _ => {}
+            }
         }
     }
-    // No deep (ineligible) traders ⇒ depth widening isn't on ⇒ nothing to render
-    // (keeps the board byte-identical at the top-40 default).
-    if !prov.values().any(|(_, eligible)| !*eligible) {
-        return String::new();
-    }
+    (cohort, sort)
+}
 
+/// One assembled cohort row: a tracked leaderboard trader with its rank band and
+/// earned-trust verdict — the per-trader verification record, cohort-tagged.
+struct CohortRow {
+    wallet: String,
+    rank: Option<i32>,
+    band_index: usize,
+    band_label: String,
+    trusted: bool,
+    t: TraderTrust,
+    gaps: i32,
+}
+
+/// The stable trust sort key (mirrors `render_trust`): Trusted first (by lower
+/// bound), then Indeterminate (by surplus), then Avoid.
+fn trust_key(t: &TraderTrust) -> f64 {
+    match t.verdict {
+        TrustVerdict::Trusted => 10.0 + t.lower_bound,
+        TrustVerdict::Indeterminate => t.surplus,
+        TrustVerdict::Avoid => -10.0 + t.surplus,
+    }
+}
+
+/// Assemble the per-trader verification records across the WHOLE tracked
+/// leaderboard universe, each tagged with its rank band. Reuses the exact same
+/// belief-blind machinery as the trusted top-50 view (`trust_verdict` over the
+/// event-clustered archive) — no new gate — so a cohort is just a rank slice of
+/// the identical analytics. Only traders with a resolved profile (n_events > 0)
+/// are included; `bands` comes from `parse_bands`.
+async fn cohort_scoreboard(
+    portfolio: &PgPortfolio,
+    bands: &[crate::scanner::cohort::Band],
+) -> Vec<CohortRow> {
+    let traders = match portfolio.get_active_traders().await {
+        Ok(t) => t,
+        Err(_) => return Vec::new(),
+    };
+    // lower-cased wallet → rank, for leaderboard (ranked) traders only.
+    let mut rank_of: std::collections::HashMap<String, Option<i32>> =
+        std::collections::HashMap::new();
+    for tr in &traders {
+        if tr.source == "leaderboard" {
+            rank_of.insert(tr.proxy_wallet.to_lowercase(), tr.rank);
+        }
+    }
     let scores = match crate::scanner::trader_trust::cached_slice_scores(
         portfolio,
         std::time::Duration::from_secs(30),
@@ -137,70 +188,151 @@ async fn render_deep_efficiency(portfolio: &PgPortfolio) -> String {
     .await
     {
         Ok(s) => s,
-        Err(_) => return String::new(),
+        Err(_) => return Vec::new(),
     };
+    let gaps = portfolio.capture_gaps().await.unwrap_or_default();
+
     let mut by: std::collections::HashMap<String, Vec<_>> = std::collections::HashMap::new();
     for s in scores {
         by.entry(s.wallet.clone()).or_default().push(s);
     }
-
-    struct DeepRow {
-        wallet: String,
-        rank: Option<i32>,
-        t: TraderTrust,
-    }
-    let mut deep_rows: Vec<DeepRow> = Vec::new();
-    let (mut hot_certified, mut deep_profiled, mut deep_certified) = (0usize, 0usize, 0usize);
-    for (w, slices) in by {
-        let (rank, eligible) = match prov.get(&w) {
-            Some(x) => *x,
-            None => continue, // manual / untracked — not part of the depth question
+    let mut rows = Vec::new();
+    for (wallet, slices) in by {
+        let rank = match rank_of.get(&wallet) {
+            Some(r) => *r,    // tracked leaderboard trader
+            None => continue, // manual / untracked — not a cohort member
         };
         let t = trust_verdict(&slices);
         if t.n_events == 0 {
             continue;
         }
-        if eligible {
-            if matches!(t.verdict, TrustVerdict::Trusted) {
-                hot_certified += 1;
-            }
-        } else {
-            deep_profiled += 1;
-            if matches!(t.verdict, TrustVerdict::Trusted) {
-                deep_certified += 1;
-            }
-            deep_rows.push(DeepRow { wallet: w, rank, t });
-        }
+        let band = band_of(rank, bands);
+        rows.push(CohortRow {
+            wallet,
+            rank,
+            band_index: band.index,
+            band_label: band.label.clone(),
+            trusted: band.trusted,
+            gaps: gaps.get(&t.wallet).copied().unwrap_or(0),
+            t,
+        });
+    }
+    rows
+}
+
+/// Deep-pool OBSERVATORY: the same per-trader verification stack as the trusted
+/// top-50 table, but sliced by rank cohort (`?cohort=all|trusted|top250|band3`)
+/// and sorted (`?sort=profit|rank`), grouped by band with a within-band
+/// profitability rank. Clearly labeled EXPERIMENTAL for non-trusted bands and
+/// **never alerts** — a candidate earns a vote only by a deliberate human flip.
+async fn render_cohort(
+    portfolio: &PgPortfolio,
+    cohort_bands: &str,
+    cohort_tok: &str,
+    sort_tok: &str,
+) -> String {
+    let bands = parse_bands(cohort_bands);
+    let all_rows = cohort_scoreboard(portfolio, &bands).await;
+    // Nothing profiled yet across the universe → render nothing (keeps the board
+    // clean until fills resolve; the trusted table above says the same).
+    if all_rows.is_empty() {
+        return String::new();
     }
 
-    // Deep pool tracked but NO resolved history yet — the honest NULL.
-    if deep_profiled == 0 {
-        return String::from(
-            "<h1 style='margin-top:34px'>🔎 Efficient below the whales</h1>\
-             <p class=sub>Deep pool (rank &gt; cutoff) is captured but has no resolved history \
-             yet — the efficiency verdict pends forward accrual. NULL for now, by construction.</p>",
-        );
-    }
+    let filter = CohortFilter::parse(cohort_tok);
+    let by_profit = !sort_tok.eq_ignore_ascii_case("rank");
 
-    let key = |t: &TraderTrust| match t.verdict {
-        TrustVerdict::Trusted => 10.0 + t.lower_bound,
-        TrustVerdict::Indeterminate => t.surplus,
-        TrustVerdict::Avoid => -10.0 + t.surplus,
+    // Filter chips: all + one per band. Active chip highlighted.
+    let mut chips = String::new();
+    let chip = |tok: &str, label: &str, active: bool| {
+        let cls = if active { "chip chipon" } else { "chip" };
+        format!("<a class=\"{cls}\" href=\"/?cohort={tok}&sort={sort_tok}\">{label}</a>")
     };
-    deep_rows.sort_by(|a, b| {
-        key(&b.t)
-            .partial_cmp(&key(&a.t))
-            .unwrap_or(std::cmp::Ordering::Equal)
+    chips.push_str(&chip("all", "all", matches!(filter, CohortFilter::All)));
+    for b in &bands {
+        let tok = format!("band{}", b.index);
+        let active = matches!(filter, CohortFilter::Band(i) if i == b.index)
+            || (b.trusted && matches!(filter, CohortFilter::Trusted));
+        let label = if b.trusted {
+            format!("{} ✓trusted", b.label)
+        } else {
+            b.label.clone()
+        };
+        chips.push_str(&chip(&tok, &label, active));
+    }
+    // Sort toggle.
+    let sort_alt = if by_profit { "rank" } else { "profit" };
+    let sort_chip = format!(
+        "<a class=chip href=\"/?cohort={cohort_tok}&sort={sort_alt}\">sort: {} ⇄</a>",
+        if by_profit { "profit" } else { "rank" }
+    );
+
+    // Select + group by band.
+    let mut selected: Vec<&CohortRow> = all_rows
+        .iter()
+        .filter(|r| filter.matches(r.rank, &bands))
+        .collect();
+    // Sort: band first, then within-band by profit (default) or rank.
+    selected.sort_by(|a, b| {
+        a.band_index.cmp(&b.band_index).then_with(|| {
+            if by_profit {
+                trust_key(&b.t)
+                    .partial_cmp(&trust_key(&a.t))
+                    .unwrap_or(std::cmp::Ordering::Equal)
+            } else {
+                a.rank.unwrap_or(i32::MAX).cmp(&b.rank.unwrap_or(i32::MAX))
+            }
+        })
     });
 
-    let mut out = format!(
-        "<h1 style='margin-top:34px'>🔎 Efficient below the whales</h1>\
-         <p class=sub>Deep pool profiled: {deep_profiled} · certified (Trusted): {deep_certified} · \
-         top-50 certified: {hot_certified}. Same belief-blind gate; nothing here promotes.</p>\
-         <table><thead><tr><th>trust</th><th>wallet</th><th class=r>lb rank</th>\
-         <th class=r>events (N)</th><th class=r>surplus</th><th class=r>bound</th></tr></thead><tbody>",
+    let n_trusted = all_rows.iter().filter(|r| r.trusted).count();
+    let n_cand = all_rows.len() - n_trusted;
+    let n_cand_certified = all_rows
+        .iter()
+        .filter(|r| !r.trusted && matches!(r.t.verdict, TrustVerdict::Trusted))
+        .count();
+
+    let mut out = String::from(
+        "<h1 style='margin-top:34px'>🔎 Deep-pool observatory</h1>\
+         <p class=sub>The same belief-blind per-trader verification as the trusted table above, \
+         sliced by rank cohort. Filter/group below.</p>",
     );
-    for r in deep_rows.iter().take(25) {
+    out.push_str(&format!(
+        "<p class=exp>⚠ <b>EXPERIMENTAL — candidates, not trusted.</b> Bands past the trusted \
+         top-{trusted_hi} are traders we now capture &amp; profile but that have NOT earned a \
+         vote — they may be noisy and this section <b>never alerts</b>. Certified candidates \
+         (✅ below the trusted band) are just leads to promote by a deliberate human flip. \
+         Profiled: {n_trusted} trusted · {n_cand} candidates ({n_cand_certified} already ✅).</p>",
+        trusted_hi = bands.first().and_then(|b| b.hi).unwrap_or(40),
+    ));
+    out.push_str(&format!("<p>{chips} · {sort_chip}</p>"));
+
+    // Render grouped by band, with a within-band profitability rank.
+    let mut cur_band: Option<usize> = None;
+    let mut within = 0usize;
+    let mut open = false;
+    for r in &selected {
+        if cur_band != Some(r.band_index) {
+            if open {
+                out.push_str("</tbody></table>");
+            }
+            cur_band = Some(r.band_index);
+            within = 0;
+            let tag = if r.trusted {
+                " <span class=exptag>· trusted</span>".to_string()
+            } else {
+                " <span class=exptag>· ⚠ candidate</span>".to_string()
+            };
+            out.push_str(&format!(
+                "<p class=band><b>rank {}</b>{tag}</p>\
+                 <table><thead><tr><th class=r>#</th><th>trust</th><th>wallet</th>\
+                 <th class=r>rank</th><th class=r>events (N)</th><th class=r>surplus</th>\
+                 <th class=r>bound</th><th>capture</th></tr></thead><tbody>",
+                r.band_label,
+            ));
+            open = true;
+        }
+        within += 1;
         let (marker, scls) = match r.t.verdict {
             TrustVerdict::Trusted => ("✅", "pos"),
             TrustVerdict::Avoid => ("⛔", "neg"),
@@ -213,19 +345,27 @@ async fn render_deep_efficiency(portfolio: &PgPortfolio) -> String {
         };
         let rank = r.rank.map(|x| x.to_string()).unwrap_or_else(|| "—".into());
         let short: String = r.wallet.chars().take(12).collect();
+        let cap = if r.gaps > 0 {
+            format!("⚠ {} gaps", r.gaps)
+        } else {
+            "✓".to_string()
+        };
         out.push_str(&format!(
-            "<tr><td>{marker}</td><td class=mono>{short}…</td><td class=r>{rank}</td>\
-             <td class=r>{ev}</td><td class=\"r {scls}\">{surplus}</td><td class=r>{bound}</td></tr>",
+            "<tr><td class=r>{within}</td><td>{marker}</td><td class=mono>{short}…</td>\
+             <td class=r>{rank}</td><td class=r>{ev}</td><td class=\"r {scls}\">{surplus}</td>\
+             <td class=r>{bound}</td><td class=muted>{cap}</td></tr>",
             ev = r.t.n_events,
             surplus = pct(Some(r.t.surplus)),
         ));
     }
+    if open {
+        out.push_str("</tbody></table>");
+    }
     out.push_str(
-        "</tbody></table>\
-         <p class=note>The deep pool is a CANDIDATE universe, not trust. A ✅ here means a \
-         sub-whale trader's forward surplus clears the same gate the top-50 face — a candidate to \
-         earn a consensus vote, by a deliberate human flip, never automatically. An empty/all-⏸ \
-         list is an honest finding: depth 51+ carries no certified edge the top-50 lacked (yet).</p>",
+        "<p class=note>Cohort = a rank slice of the <b>identical</b> belief-blind analytics used \
+         for the trusted table (no separate gate). <b>#</b> = most-profitable-within-band rank. \
+         A candidate showing ✅ has cleared the same bar the top-50 face over ≥30 resolved events \
+         — a lead, never an automatic promotion. Slice with <code>?cohort=trusted|top250|band2|all</code>.</p>",
     );
     out
 }
@@ -533,7 +673,14 @@ async fn render_honest(portfolio: &PgPortfolio, honest: HonestBoardParams) -> St
     out
 }
 
-async fn render(portfolio: &PgPortfolio, capture_margin: f64, honest: HonestBoardParams) -> String {
+async fn render(
+    portfolio: &PgPortfolio,
+    capture_margin: f64,
+    honest: HonestBoardParams,
+    cohort_bands: &str,
+    cohort_tok: &str,
+    sort_tok: &str,
+) -> String {
     let rows = portfolio
         .consensus_scoreboard_by_strategy()
         .await
@@ -645,8 +792,10 @@ async fn render(portfolio: &PgPortfolio, capture_margin: f64, honest: HonestBoar
     // --- Earned trader trust ("who to actually follow") ---
     body.push_str(&render_trust(portfolio).await);
 
-    // --- Deep-pool efficiency ("who's efficient below the whales") ---
-    body.push_str(&render_deep_efficiency(portfolio).await);
+    // --- Deep-pool observatory: the SAME per-trader verification stack, sliced by
+    //     rank cohort (top-50 / top-250 / all / per-band), sortable by profit,
+    //     clearly labeled EXPERIMENTAL and segregated from the trusted view above. ---
+    body.push_str(&render_cohort(portfolio, cohort_bands, cohort_tok, sort_tok).await);
 
     format!(
         "<!doctype html><html><head><meta charset=utf-8>\
@@ -661,6 +810,10 @@ async fn render(portfolio: &PgPortfolio, capture_margin: f64, honest: HonestBoar
          .pos{{color:#3fb950}} .neg{{color:#f85149}} .muted{{color:#8a93a3}}\
          .note{{color:#8a93a3;font-size:12px;margin-top:18px;border-top:1px solid #1c2128;padding-top:14px}}\
          .accrual{{background:#11151b;border:1px solid #1c2128;border-radius:8px;padding:10px 12px;font-size:13px;color:#c3cad6;margin:0 0 18px}}\
+         .exp{{background:#241a0d;border:1px solid #4a3a1a;border-radius:8px;padding:10px 12px;font-size:13px;color:#e0b155;margin:0 0 14px}}\
+         .chip{{display:inline-block;padding:3px 10px;margin:0 6px 6px 0;border:1px solid #2a3038;border-radius:14px;font-size:12px;color:#8a93a3;text-decoration:none}}\
+         .chip:hover{{border-color:#3a424c;color:#c3cad6}} .chipon{{background:#1c2f22;border-color:#2ea043;color:#3fb950}}\
+         .band{{font-size:14px;margin:18px 0 4px;color:#c3cad6}} .exptag{{color:#e0b155;font-size:11px}}\
          </style></head><body>\
          <h1>🤝 Consensus scoreboard</h1>\
          <p class=sub>Tracking {tracked} traders ({hot} hot · {deep} deep) · {n} strategies forward · last poll: {poll_n} in {poll_ms}ms · data-api 429s: {n429} · auto-refresh 30s</p>\
@@ -737,6 +890,9 @@ mod tests {
                 min_liquidity_usd: 2000.0,
                 realized_decision_lag_secs: 900.0,
             },
+            "40,100,250,500",
+            "all",
+            "profit",
         )
         .await;
         assert!(html.contains("Trader trust"), "trust table rendered");
@@ -827,18 +983,28 @@ mod tests {
                 min_liquidity_usd: 2000.0,
                 realized_decision_lag_secs: 900.0,
             },
+            "40,100,250,500",
+            "all",
+            "profit",
         )
         .await;
         assert!(
-            html.contains("Efficient below the whales"),
-            "deep-efficiency panel renders once a deep pool is tracked"
+            html.contains("Deep-pool observatory"),
+            "cohort observatory renders once a deep pool is tracked"
+        );
+        assert!(
+            html.contains("EXPERIMENTAL"),
+            "candidates are clearly labeled experimental"
         );
         assert!(html.contains("de_deep"), "the deep sharp is surfaced");
+        // The deep trader (rank 120) lands in the 101-250 band, not the trusted band.
         assert!(
-            html.contains("Deep pool profiled:"),
-            "the hot/deep aggregate verdict line renders"
+            html.contains("rank 101-250"),
+            "deep trader grouped into its rank band"
         );
-        println!("board_deep_efficiency_render: deep sharp surfaced under the trust gate — OK");
+        println!(
+            "board_deep_efficiency_render: deep sharp surfaced in the cohort observatory — OK"
+        );
 
         sqlx::query("DELETE FROM trader_fills WHERE wallet LIKE 'de\\_%'")
             .execute(&pool)
@@ -858,6 +1024,24 @@ mod tests {
         assert_eq!(s.chars().count(), 3);
         assert!(s.starts_with('▁'), "min → lowest block: {s}");
         assert!(s.ends_with('█'), "max → highest block: {s}");
+    }
+
+    // Cohort query parsing is pure — unit-test the URL slicing without a DB.
+    #[test]
+    fn parse_cohort_query_extracts_tokens() {
+        let (c, s) = parse_cohort_query(b"GET /?cohort=top250&sort=rank HTTP/1.1\r\nHost: x\r\n");
+        assert_eq!((c.as_str(), s.as_str()), ("top250", "rank"));
+        // Defaults when absent.
+        let (c, s) = parse_cohort_query(b"GET / HTTP/1.1\r\n");
+        assert_eq!((c.as_str(), s.as_str()), ("all", "profit"));
+        // Order-independent + ignores unknown params.
+        let (c, s) = parse_cohort_query(b"GET /?x=1&sort=profit&cohort=band2 HTTP/1.1\r\n");
+        assert_eq!((c.as_str(), s.as_str()), ("band2", "profit"));
+        // Empty/garbage buffer → defaults, never panics.
+        assert_eq!(
+            parse_cohort_query(b""),
+            ("all".to_string(), "profit".to_string())
+        );
     }
 
     // Live: seed resolved consensus signals + a paper ledger, render the board,
@@ -917,7 +1101,7 @@ mod tests {
             min_liquidity_usd: 2000.0,
             realized_decision_lag_secs: 900.0,
         };
-        let html = render(&pf, 0.0, params).await;
+        let html = render(&pf, 0.0, params, "40,100,250,500", "all", "profit").await;
         assert!(
             html.contains("Honest P&amp;L (realizable"),
             "honest panel renders"

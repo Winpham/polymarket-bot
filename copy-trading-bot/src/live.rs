@@ -109,8 +109,9 @@ pub async fn run_live(cfg: Arc<CopyTradingConfig>) -> Result<()> {
             min_liquidity_usd: cfg.min_liquidity_usd,
             realized_decision_lag_secs: cfg.realized_decision_lag_secs,
         };
+        let cohort_bands = cfg.track_cohort_bands.clone();
         tokio::spawn(async move {
-            crate::board::serve(bd_portfolio, port, capture_margin, honest).await
+            crate::board::serve(bd_portfolio, port, capture_margin, honest, cohort_bands).await
         });
     }
 
