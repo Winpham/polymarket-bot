@@ -4,3 +4,8 @@ target/
 .env
 portfolio_state.json
 .git/
+# Local dev worktrees (coord/ isolated branches). Each carries its own multi-GB
+# target/ dir; without this the build context balloons to >10GB and the transfer
+# stalls the deploy. Keep them out of the image build entirely.
+wt/
+dogfood-tmp/
