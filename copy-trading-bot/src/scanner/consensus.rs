@@ -45,7 +45,15 @@ pub struct TraderVote {
     pub earned_quality: f64,
     /// Whether this trader is gate-Trusted (Phase 4). Only `trusted_only`
     /// strategies read it; defaults to `true` so it drops nothing elsewhere.
+    /// NB: deliberately lenient — an UNPROFILED/untracked trader counts `true`
+    /// (so `trusted_only` never drops brand-new traders).
     pub trusted: bool,
+    /// STRICT certification (deep-pool edge run, Phase 3): `true` ONLY for a
+    /// trader whose `trust_verdict` is Trusted — an unprofiled/untracked trader
+    /// is `false` (fail-closed), unlike `trusted`. Read only by
+    /// `certified_only` strategies (the tail-the-sharp arms), so everything
+    /// else is byte-identical regardless of its value.
+    pub certified: bool,
     /// Entry price the trader paid for this outcome, in (0,1).
     pub price: f64,
     /// USD size of the fill (`usdcSize`).
@@ -162,6 +170,10 @@ pub struct ConsensusParams {
     /// this arm emits nothing until then — silent by construction. Default
     /// `None` = no-op (incumbent behavior).
     pub cross_cohort_cutoff: Option<i32>,
+    /// Count only STRICTLY certified backers/opposers (Phase 3 tail arms):
+    /// unlike `trusted_only`, an unprofiled trader does NOT count. Default
+    /// `false` = no-op (the field is never read).
+    pub certified_only: bool,
 }
 
 impl Default for ConsensusParams {
@@ -181,6 +193,7 @@ impl Default for ConsensusParams {
             weight_mode: WeightMode::Quality,
             trusted_only: false,
             cross_cohort_cutoff: None,
+            certified_only: false,
         }
     }
 }
@@ -333,7 +346,9 @@ pub fn score_market(
     // front so two-sided detection, backers, opposers, and the price/size/recency
     // aggregation all see a consistent trusted-only view. With default votes
     // (`trusted == true`) this drops nothing.
-    let keep = |v: &TraderVote| !params.trusted_only || v.trusted;
+    let keep = |v: &TraderVote| {
+        (!params.trusted_only || v.trusted) && (!params.certified_only || v.certified)
+    };
 
     // Identify two-sided wallets (present on >1 outcome) — dropped as MMs.
     let mut wallet_outcomes: HashMap<&str, HashSet<i32>> = HashMap::new();
@@ -444,7 +459,7 @@ pub fn score_market(
             let has_whale = backers.values().filter_map(|v| v.rank).any(|r| r <= cut);
             let has_deep_sharp = backers
                 .values()
-                .any(|v| v.trusted && v.rank.is_some_and(|r| r > cut));
+                .any(|v| v.certified && v.rank.is_some_and(|r| r > cut));
             if !(has_whale && has_deep_sharp) {
                 continue;
             }
@@ -750,6 +765,41 @@ pub fn trust_arms(base: &ConsensusParams, cohort_cutoff: i32) -> Vec<StrategyDef
             },
             alerting: false,
         },
+        // Tail-the-sharp (deep-pool edge run, Phase 3): one CERTIFIED trader's
+        // entry is itself a signal. min_backers 1 + strictly-certified votes only
+        // (`certified_only` — unprofiled traders never count, unlike
+        // `trusted_only`); the opposer/price-coherence gates are meaningless for
+        // a single-trader follow, so they're wide open. The signal upsert stamps
+        // decision-time (`first_detected_at` + captured mid/ask), so the honest
+        // panel measures the FOLLOWER's realizable ROI/CLV/capture-lag, and the
+        // backers field records WHICH sharp — the per-trader executable track
+        // record (scripts/tail_records.py). Two horizons, same selection:
+        //  - sharp_tail_fresh: entries ≤3h old — the actionable follow; its CLV
+        //    vs the arm below measures the freshness premium;
+        //  - sharp_tail: the full-window lagged follow (the control).
+        StrategyDef {
+            name: "sharp_tail_fresh",
+            params: ConsensusParams {
+                min_backers: 1,
+                max_opposers: usize::MAX,
+                max_price_std: 1.0,
+                max_age_mins: 180,
+                certified_only: true,
+                ..base.clone()
+            },
+            alerting: false,
+        },
+        StrategyDef {
+            name: "sharp_tail",
+            params: ConsensusParams {
+                min_backers: 1,
+                max_opposers: usize::MAX,
+                max_price_std: 1.0,
+                certified_only: true,
+                ..base.clone()
+            },
+            alerting: false,
+        },
     ]
 }
 
@@ -812,6 +862,7 @@ mod tests {
             quality: quality_weight(rank),
             earned_quality: quality_weight(rank),
             trusted: true,
+            certified: true,
             price,
             size_usd: 1000.0,
             ts: now - Duration::minutes(age_mins),
@@ -1158,12 +1209,127 @@ mod tests {
             "trust arms must NOT be in the default portfolio"
         );
         let arms = trust_arms(&base, 40);
-        assert_eq!(arms.len(), 3);
+        assert_eq!(arms.len(), 5);
         assert!(arms.iter().all(|d| !d.alerting), "trust arms never alert");
         assert!(arms.iter().any(|d| d.name == "trust_weighted"));
         assert!(arms.iter().any(|d| d.name == "trusted_only"));
         let cc = arms.iter().find(|d| d.name == "cross_cohort").unwrap();
         assert_eq!(cc.params.cross_cohort_cutoff, Some(40));
+        // Phase 3 tail arms: single-certified-backer follows, strictly gated.
+        for name in ["sharp_tail_fresh", "sharp_tail"] {
+            let t = arms.iter().find(|d| d.name == name).unwrap();
+            assert_eq!(t.params.min_backers, 1);
+            assert!(t.params.certified_only);
+        }
+        assert_eq!(
+            arms.iter()
+                .find(|d| d.name == "sharp_tail_fresh")
+                .unwrap()
+                .params
+                .max_age_mins,
+            180
+        );
+    }
+
+    // --- Phase 3 (deep-pool edge run): tail-the-sharp ---
+
+    #[test]
+    fn certified_only_counts_strictly_certified_backers() {
+        let now = Utc::now();
+        let mk = |w: &str, trusted: bool, certified: bool| TraderVote {
+            wallet: w.into(),
+            name: w.into(),
+            rank: Some(120),
+            pnl: None,
+            quality: 1.0,
+            earned_quality: 1.0,
+            trusted,
+            certified,
+            price: 0.50,
+            size_usd: 1000.0,
+            ts: now - Duration::minutes(30),
+        };
+        let base = ConsensusParams::default();
+        let tail = trust_arms(&base, 40)
+            .into_iter()
+            .find(|d| d.name == "sharp_tail_fresh")
+            .unwrap()
+            .params;
+
+        // One CERTIFIED sharp's entry fires the tail arm.
+        let mut b = MarketBook::new("0xc", "t", "s", None, false);
+        b.add_vote(0, "Yes", mk("cert", true, true));
+        let sigs = score_market(&b, now, &tail);
+        assert_eq!(sigs.len(), 1, "a single certified entry is a tail signal");
+        assert_eq!(sigs[0].n_backers, 1);
+
+        // An UNPROFILED trader (trusted defaults true, certified false) does NOT
+        // fire the tail arm — the exact hole `trusted_only` leaves open.
+        let mut b2 = MarketBook::new("0xc2", "t", "s", None, false);
+        b2.add_vote(0, "Yes", mk("newbie", true, false));
+        assert!(
+            score_market(&b2, now, &tail).is_empty(),
+            "unprofiled traders never fire a tail signal"
+        );
+        // …but the same book under plain trusted_only WOULD count it (min_backers
+        // permitting) — proving certified_only is the strictly tighter gate.
+        let loose = ConsensusParams {
+            min_backers: 1,
+            trusted_only: true,
+            ..ConsensusParams::default()
+        };
+        assert_eq!(score_market(&b2, now, &loose).len(), 1);
+
+        // Default params never read `certified`: identical books, one with all
+        // votes certified and one with none, score byte-identically.
+        let mut c1 = MarketBook::new("0xc3", "t", "s", None, false);
+        let mut c2 = MarketBook::new("0xc3", "t", "s", None, false);
+        for w in ["wa", "wb", "wc"] {
+            c1.add_vote(0, "Yes", mk(w, true, true));
+            c2.add_vote(0, "Yes", mk(w, true, false));
+        }
+        let s1 = score_market(&c1, now, &ConsensusParams::default());
+        let s2 = score_market(&c2, now, &ConsensusParams::default());
+        assert_eq!(s1.len(), s2.len());
+        assert_eq!(s1[0].net_count, s2[0].net_count);
+        assert!((s1[0].score - s2[0].score).abs() < 1e-12);
+    }
+
+    #[test]
+    fn tail_arms_ignore_opposers_and_dispersion() {
+        // A single-trader follow must not be vetoed by market disagreement gates:
+        // 3 certified opposers + wild price spread still leave the tail signal up.
+        let now = Utc::now();
+        let mk = |w: &str, _oidx: i32, price: f64| TraderVote {
+            wallet: w.into(),
+            name: w.into(),
+            rank: Some(120),
+            pnl: None,
+            quality: 1.0,
+            earned_quality: 1.0,
+            trusted: true,
+            certified: true,
+            price,
+            size_usd: 1000.0,
+            ts: now - Duration::minutes(10),
+        };
+        let base = ConsensusParams::default();
+        let tail = trust_arms(&base, 40)
+            .into_iter()
+            .find(|d| d.name == "sharp_tail")
+            .unwrap()
+            .params;
+        let mut b = MarketBook::new("0xc", "t", "s", None, false);
+        b.add_vote(0, "Yes", mk("sharp", 0, 0.50));
+        for (w, p) in [("o1", 0.20), ("o2", 0.55), ("o3", 0.90)] {
+            b.add_vote(1, "No", mk(w, 1, p));
+        }
+        let sigs = score_market(&b, now, &tail);
+        // BOTH sides fire as tail signals (each is a certified follow) — the
+        // strict default would have rejected the No side for dispersion and both
+        // for opposer count.
+        assert_eq!(sigs.len(), 2, "{sigs:?}");
+        assert!(score_market(&b, now, &base).is_empty());
     }
 
     // --- Phase 2 (deep-pool edge run): cross-cohort conviction + re-tune ---
@@ -1179,6 +1345,7 @@ mod tests {
             quality: quality_weight(rank),
             earned_quality: quality_weight(rank),
             trusted,
+            certified: trusted,
             price: 0.50,
             size_usd: 1000.0,
             ts: now - Duration::minutes(5),
@@ -1276,6 +1443,7 @@ mod tests {
                     quality: 1.5,
                     earned_quality: 1.5,
                     trusted: true,
+                    certified: true,
                     price: 0.5,
                     size_usd: 1000.0,
                     ts: now,
@@ -1325,6 +1493,7 @@ mod tests {
             quality: 1.0,
             earned_quality: 1.0,
             trusted,
+            certified: trusted,
             price: 0.50,
             size_usd: 1000.0,
             ts: now,

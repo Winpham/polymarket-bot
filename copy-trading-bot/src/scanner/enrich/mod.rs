@@ -347,6 +347,8 @@ pub fn family(strategy: &str) -> &'static str {
         "trusted_only",
         "cross_cohort",
         "strict_retuned",
+        "sharp_tail_fresh",
+        "sharp_tail",
     ];
     if EXPERIMENTAL.contains(&strategy) {
         "experimental"

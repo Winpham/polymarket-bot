@@ -54,15 +54,19 @@ fn params_from_cfg(cfg: &CopyTradingConfig) -> ConsensusParams {
         weight_mode: crate::scanner::consensus::WeightMode::Quality,
         trusted_only: false,
         cross_cohort_cutoff: None,
+        certified_only: false,
     }
 }
 
-/// Per-vote earned quality + trust flag from the cached trust map. Untracked /
-/// INDETERMINATE ⇒ `quality_weight(rank)` fallback (never 0) so trust-weighting
-/// can't silently zero a new trader; `trusted` defaults true when untracked so
-/// `trusted_only` doesn't drop brand-new traders. Shrink-toward-0 lives HERE
-/// (regularizing the continuous multiplier), never at the verdict.
-fn earned_quality(trust: &TrustMap, wallet: &str, rank: Option<i32>) -> (f64, bool) {
+/// Per-vote earned quality + trust flags from the cached trust map:
+/// `(earned_quality, trusted, certified)`. Untracked / INDETERMINATE ⇒
+/// `quality_weight(rank)` fallback (never 0) so trust-weighting can't silently
+/// zero a new trader; `trusted` defaults true when untracked so `trusted_only`
+/// doesn't drop brand-new traders; `certified` is the STRICT flag (Phase 3 tail
+/// arms) — true ONLY for a gate-Trusted verdict, false when untracked
+/// (fail-closed). Shrink-toward-0 lives HERE (regularizing the continuous
+/// multiplier), never at the verdict.
+fn earned_quality(trust: &TrustMap, wallet: &str, rank: Option<i32>) -> (f64, bool, bool) {
     let qw = quality_weight(rank);
     match trust.get(wallet) {
         Some(t) => {
@@ -73,9 +77,10 @@ fn earned_quality(trust: &TrustMap, wallet: &str, rank: Option<i32>) -> (f64, bo
                 TrustVerdict::Avoid => (1.0 + t.upper_bound * damp).clamp(0.5, 1.0),
                 TrustVerdict::Indeterminate => qw,
             };
-            (earned, matches!(t.verdict, TrustVerdict::Trusted))
+            let certified = matches!(t.verdict, TrustVerdict::Trusted);
+            (earned, certified, certified)
         }
-        None => (qw, true),
+        None => (qw, true, false),
     }
 }
 
@@ -529,7 +534,7 @@ pub(crate) fn books_from_window_votes(votes: &[WindowVote], trust: &TrustMap) ->
         // Earned trust rides on the vote (cached map). Defaults preserve incumbent
         // behavior: an empty/absent map ⇒ earned_quality == quality_weight(rank),
         // trusted == true, so every non-trust strategy is byte-identical.
-        let (eq, trusted) = earned_quality(trust, &v.trader_wallet, v.rank);
+        let (eq, trusted, certified) = earned_quality(trust, &v.trader_wallet, v.rank);
         book.add_vote(
             v.outcome_index,
             v.outcome.clone(),
@@ -541,6 +546,7 @@ pub(crate) fn books_from_window_votes(votes: &[WindowVote], trust: &TrustMap) ->
                 quality: v.quality,
                 earned_quality: eq,
                 trusted,
+                certified,
                 price: v.price,
                 size_usd: v.size_usd,
                 ts: v.ts,
