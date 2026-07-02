@@ -8,7 +8,7 @@ resamples the real correlation structure and does not fake diversification that 
 there. Read-only, paper-only, changes nothing live. Reuses selection_null.py machinery
 (band/regime/fetch) so the statistic is byte-identical to the gate's.
 
-The battery (pre-registered — see reports/entries/2026-07-02-11-diversification-risk.md):
+The battery (pre-registered — see reports/entries/2026-07-02-12-diversification-risk.md):
 
   ICC per grain   intraclass correlation of event-level advantage residuals, clustered by
                   (a) MATCH  = slug with the market suffix stripped (fifwc-bra-jpn-DATE):

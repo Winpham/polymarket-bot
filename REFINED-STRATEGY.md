@@ -30,7 +30,7 @@ consensus on them *lost* badly (band 1: 76 bets, 3.9% hit, −$5,821 at $100 fla
    information, not just the favorite-longshot bias.
 3. **Size flat-SHARES (or fractional Kelly), NEVER flat-dollar.** Flat-$ turned `strict` from
    +$571 (flat-shares) into −$4,584 by over-exposing to longshots. This single choice flips the
-   P&L sign. *Sharpened by the risk engine (entry 11, `scripts/risk_engine.py`):* the
+   P&L sign. *Sharpened by the risk engine (entry 12, `scripts/risk_engine.py`):* the
    pre-registered default is **⅛-Kelly per band (SE-shrunk) with exposure caps**
    (`kelly_eighth_capped`), NOT ¼-Kelly — because on a 4-day record with no losing slate the
    drawdown ceiling is SLACK (it cannot price a drawdown that hasn't occurred), so a

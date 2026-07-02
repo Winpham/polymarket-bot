@@ -361,9 +361,9 @@ applied, no gate touched): add DAY to TRACK_PERIODS to shorten rotation lag — 
 recommendation is HOLD (self-heals) and instead WATCH elite_fresh_fav across the WC final as
 the higher-value measurement. Rollback: git-revert the merge; delete reports/map/ (artifacts).
 
-## D14 — Diversification & risk engine: the risk constitution, and why P(profit)=100% is not a promise
+## D15 — Diversification & risk engine: the risk constitution, and why P(profit)=100% is not a promise
 
-**The run (2026-07-02, `feat/diversification-risk`, reports/entries/11):** two read-only,
+**The run (2026-07-02, `feat/diversification-risk`, reports/entries/12):** two read-only,
 paper-only instruments — `scripts/portfolio_concentration.py` (how few independent bets the
 record holds) and `scripts/risk_engine.py` (a frozen sizing menu × block-bootstrap Monte
 Carlo). Nothing promoted, zero migrations. Reuses `selection_null.py`'s band/regime/fetch

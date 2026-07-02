@@ -1,4 +1,6 @@
-# Entry 11 — Diversification & Risk Engine: concentration measured, sizing optimized, P(profit) made real
+# Entry 12 — Diversification & Risk Engine: concentration measured, sizing optimized, P(profit) made real
+
+> Entry 11 was taken by the concurrent adaptive-overlay run (merged first); this is entry 12.
 
 **Date:** 2026-07-02 · **Branch:** `feat/diversification-risk` (worktree off `main`, tag
 `pre-diversification-risk-run-20260702`) · **Status:** paper-only, read-only, nothing

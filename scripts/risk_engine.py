@@ -17,7 +17,7 @@ THREE THINGS THIS ENGINE IS NOT (binding, K3):
   3. It is NOT applied to anything. The recommended policy is PRE-REGISTERED for the
      hypothetical day D7 + pilot floors + Tue ever say real money — not switched on here.
 
-METHOD (pre-registered — reports/entries/2026-07-02-11-diversification-risk.md):
+METHOD (pre-registered — reports/entries/2026-07-02-12-diversification-risk.md):
   * Pick stream = a strategy's resolved picks, event-clustered (one bet per event, fire
     order), at-fire entry (D6), measured costs (0.5¢ haircut + 2% fee).
   * Kelly inputs are PER-BAND with SE shrinkage (never per-market fitting): full Kelly on
