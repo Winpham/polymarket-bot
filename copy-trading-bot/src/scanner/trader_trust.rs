@@ -17,7 +17,7 @@
 
 use polymarket_common::storage::consensus::TraderSliceStat;
 
-use crate::scanner::promotion::{PromotionParams, surplus_bounds};
+use crate::scanner::promotion::{PromotionParams, TrustParams, surplus_bounds};
 use crate::storage::postgres::PgPortfolio;
 
 /// Process-global TTL cache of the fleet's slice scores. `trader_slice_scores` is
@@ -116,7 +116,10 @@ pub struct TraderTrust {
 /// bound clears the real cost cushion (`DEFAULT_PROMOTION_MARGIN`), NOT a
 /// literal-zero baseline — closing the "Trusted vs 0 baseline" false-promote.
 pub fn trust_verdict(slices: &[TraderSliceStat]) -> TraderTrust {
-    trust_verdict_with(slices, &PromotionParams::default())
+    // Trust/specialist floor is 25 (FORGE_PLAN Item 1 / GAP-3) — a DISTINCT knob
+    // from the real-money pilot floor (honest::PilotThresholds{min_events:50}),
+    // which builds its own PromotionParams and is unaffected by this.
+    trust_verdict_with(slices, &TrustParams::default().into_promotion())
 }
 
 /// As [`trust_verdict`] but with explicit thresholds (used by tests).
@@ -294,6 +297,65 @@ mod tests {
         assert!(
             t.lower_bound > 0.0,
             "beats blind by a hair: lo={}",
+            t.lower_bound
+        );
+        assert_eq!(
+            t.verdict,
+            TrustVerdict::Indeterminate,
+            "lo={}",
+            t.lower_bound
+        );
+    }
+
+    #[test]
+    fn trust_floor_is_25_pilot_floor_still_50() {
+        // The specialist/trust floor dropped 30→25 (FORGE_PLAN Item 1 / GAP-3),
+        // but the real-money pilot floor is a physically DIFFERENT struct and
+        // stays at 50 — the two floors are independent by construction.
+        use crate::scanner::honest::PilotThresholds;
+        use crate::scanner::promotion::TrustParams;
+        assert_eq!(TrustParams::default().min_events, 25);
+        assert_eq!(PilotThresholds::default().min_events, 50);
+        // And trust_verdict now admits a 25-event slice that the old 30 floor
+        // would have rejected on N alone: this wallet has a real (non-zero)
+        // computed bound rather than the floored early-return's 0.0.
+        let slices = vec![slice_days(
+            "w",
+            "overall",
+            "",
+            25,
+            25,
+            Some(0.10),
+            Some(0.06),
+        )];
+        let t = trust_verdict(&slices);
+        assert_ne!(t.lower_bound, 0.0, "25-event slice reached evaluation");
+    }
+
+    #[test]
+    fn hairline_25_event_slice_reads_indeterminate() {
+        // FORGE_PLAN Item 1 concrete verdict: exactly 25 distinct events, +0.04
+        // surplus, sd 0.10, 12 distinct days, ~6 sibling cells (Bonferroni).
+        // Floor-25 ADMITS it (a real bound is computed, not the floored 0.0),
+        // but the widened CI (eff_n=12 ⇒ se≈0.029) leaves lo≈−0.036 < the 3%
+        // margin ⇒ still Indeterminate. 25 widens *eligibility*, not *false trust*.
+        let mut slices = vec![slice_days(
+            "w",
+            "overall",
+            "",
+            25,
+            12,
+            Some(0.04),
+            Some(0.10),
+        )];
+        for s in ["nba", "mlb", "nfl", "soccer", "tennis"] {
+            slices.push(slice_days("w", "sport", s, 25, 12, Some(0.02), Some(0.10)));
+        }
+        let t = trust_verdict(&slices);
+        assert_eq!(t.n_events, 25);
+        assert!(
+            t.lower_bound < 0.0,
+            "admitted + evaluated (not floored 0.0): lo={}",
             t.lower_bound
         );
         assert_eq!(

@@ -117,6 +117,47 @@ impl Default for PromotionParams {
     }
 }
 
+/// Thresholds for the **trader-trust / specialist** verdict (`trust_verdict`).
+///
+/// A DISTINCT type from [`PromotionParams`], NOT an alias: the trust/specialist
+/// floor (`min_events: 25`) must be lowerable WITHOUT touching the real-money
+/// pilot floor (`honest::PilotThresholds { min_events: 50 }`), which builds its
+/// own [`PromotionParams`]. Lowering 30→25 here widens *eligibility for a
+/// verdict* only — the margin, Bonferroni denominator, and selection-null
+/// discipline are unchanged, so a 25-event hairline slice still reads
+/// `Indeterminate` (its widened CI is the point). See FORGE_PLAN Item 1 / GAP-3.
+#[derive(Debug, Clone)]
+pub struct TrustParams {
+    /// Minimum distinct resolved EVENTS before a wallet's slice gets a verdict.
+    pub min_events: i64,
+    /// Surplus margin the lower bound must clear (same cost cushion as promotion).
+    pub margin: f64,
+    /// Family-wise significance before the wallet's per-slice Bonferroni split.
+    pub alpha: f64,
+}
+
+impl Default for TrustParams {
+    fn default() -> Self {
+        Self {
+            min_events: 25,
+            margin: DEFAULT_PROMOTION_MARGIN,
+            alpha: 0.05,
+        }
+    }
+}
+
+impl TrustParams {
+    /// Adapter so `trust_verdict_with` reuses the EXACT `surplus_bounds`
+    /// machinery — no new estimator, `probit` stays private.
+    pub fn into_promotion(self) -> PromotionParams {
+        PromotionParams {
+            min_events: self.min_events,
+            margin: self.margin,
+            alpha: self.alpha,
+        }
+    }
+}
+
 /// The gate's verdict for one strategy.
 #[derive(Debug, Clone)]
 pub struct PromotionVerdict {

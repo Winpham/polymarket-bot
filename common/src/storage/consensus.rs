@@ -119,6 +119,9 @@ pub struct NewTraderFill {
     pub event_slug: Option<String>,
     pub is_sports: bool,
     pub sport: Option<String>,
+    /// FROZEN bet-structure bucket (`moneyline|spread|totals|prop|other`);
+    /// `None` ⇒ read as `'other'`. Appended after `sport` (never reordered).
+    pub bet_type: Option<String>,
     pub ts: DateTime<Utc>,
 }
 
@@ -1281,16 +1284,17 @@ impl PgPortfolio {
         let event_slug: Vec<Option<&str>> = fills.iter().map(|f| f.event_slug.as_deref()).collect();
         let is_sports: Vec<bool> = fills.iter().map(|f| f.is_sports).collect();
         let sport: Vec<Option<&str>> = fills.iter().map(|f| f.sport.as_deref()).collect();
+        let bet_type: Vec<Option<&str>> = fills.iter().map(|f| f.bet_type.as_deref()).collect();
         let ts: Vec<DateTime<Utc>> = fills.iter().map(|f| f.ts).collect();
 
         let res = sqlx::query(
             "INSERT INTO trader_fills \
                (wallet, tx_hash, condition_id, outcome_index, outcome, side, price, \
-                size_usd, title, slug, event_slug, is_sports, sport, ts) \
+                size_usd, title, slug, event_slug, is_sports, sport, bet_type, ts) \
              SELECT * FROM UNNEST( \
                $1::text[], $2::text[], $3::text[], $4::int4[], $5::text[], $6::text[], \
                $7::float8[], $8::float8[], $9::text[], $10::text[], $11::text[], \
-               $12::bool[], $13::text[], $14::timestamptz[]) \
+               $12::bool[], $13::text[], $14::text[], $15::timestamptz[]) \
              ON CONFLICT DO NOTHING",
         )
         .bind(&wallet)
@@ -1306,6 +1310,7 @@ impl PgPortfolio {
         .bind(&event_slug)
         .bind(&is_sports)
         .bind(&sport)
+        .bind(&bet_type)
         .bind(&ts)
         .execute(&self.pool)
         .await
@@ -1455,7 +1460,15 @@ impl PgPortfolio {
     /// `COALESCE(event_slug, condition_id)` level first, then across events — so
     /// correlated outcomes of one event count once (the within-match leak fix).
     /// `n_events` is the gate's N; `surplus_sd` is the std-dev over events.
-    /// Slices: `overall`, `sport`, `band` (b1..b5), `recency7d`, `recency30d`.
+    /// Slices: `overall`, `sport`, `band` (b1..b5), `bettype`
+    /// (`moneyline|spread|totals|prop|other`), `recency7d`, `recency30d`.
+    ///
+    /// The blind baseline is a **favorite-residual cell-blind** (FORGE_PLAN Item 2):
+    /// surplus = advantage − `AVG(advantage)` over the fleet in the SAME `(sport,
+    /// band)` cell, cascading to the incumbent per-`band` blind then 0 when a
+    /// `(sport,band)` cell is thin/absent. Because `favorite` IS the band region
+    /// 0.65–0.98, blinding within `(sport,band)` subtracts favorite-loading AT the
+    /// verdict — a wallet that merely rides a sport's favorites reads ≈0 surplus.
     pub async fn trader_slice_scores(&self) -> Result<Vec<TraderSliceStat>> {
         let rows: Vec<TraderSliceStat> = sqlx::query_as(
             "WITH adv AS ( \
@@ -1463,20 +1476,26 @@ impl PgPortfolio {
                         width_bucket(price, 0.0, 1.0, 5) AS band, \
                         (outcome_won::int)::double precision - price AS a, \
                         (outcome_won::int)::double precision AS won, \
-                        COALESCE(sport, 'other') AS sport, ts \
+                        COALESCE(sport, 'other') AS sport, \
+                        COALESCE(bet_type, 'other') AS bettype, ts \
                  FROM trader_fills \
                  WHERE resolved AND side = 'BUY' AND outcome_won IS NOT NULL \
              ), \
-             blind AS ( SELECT band, AVG(a) AS blind_edge FROM adv GROUP BY band ), \
-             surp AS ( SELECT v.wallet, v.ev, v.band, v.a, v.won, v.sport, v.ts, \
-                              v.a - COALESCE(b.blind_edge, 0) AS s \
-                       FROM adv v LEFT JOIN blind b USING (band) ), \
+             blind_cell AS ( SELECT sport, band, AVG(a) AS blind_edge FROM adv GROUP BY sport, band ), \
+             blind_band AS ( SELECT band, AVG(a) AS blind_edge FROM adv GROUP BY band ), \
+             surp AS ( SELECT v.wallet, v.ev, v.band, v.a, v.won, v.sport, v.bettype, v.ts, \
+                              v.a - COALESCE(bc.blind_edge, bb.blind_edge, 0) AS s \
+                       FROM adv v \
+                       LEFT JOIN blind_cell bc USING (sport, band) \
+                       LEFT JOIN blind_band bb USING (band) ), \
              tagged AS ( \
                  SELECT wallet, 'overall'::text AS slice_kind, ''::text AS slice_key, ev, a, s, won, ts FROM surp \
                  UNION ALL \
                  SELECT wallet, 'sport', sport, ev, a, s, won, ts FROM surp \
                  UNION ALL \
                  SELECT wallet, 'band', 'b' || band::text, ev, a, s, won, ts FROM surp \
+                 UNION ALL \
+                 SELECT wallet, 'bettype', bettype, ev, a, s, won, ts FROM surp \
                  UNION ALL \
                  SELECT wallet, 'recency7d', '7d', ev, a, s, won, ts FROM surp \
                    WHERE ts >= NOW() - INTERVAL '7 days' \
@@ -1515,8 +1534,10 @@ impl PgPortfolio {
     /// FITS or MINES on history (edge-pool temperature, coalition mining).
     ///
     /// The `recency7d`/`recency30d` slices are intentionally dropped — "7d before the
-    /// cut" is ambiguous under a walk-forward split; only `overall`/`sport`/`band`
-    /// (the slices arms consume) are emitted.
+    /// cut" is ambiguous under a walk-forward split; only `overall`/`sport`/`band`/
+    /// `bettype` (the slices arms consume) are emitted. The favorite-residual
+    /// cell-blind cascade (`(sport,band)` → `band` → 0) is applied here too, bounded
+    /// by the `resolved_at < cut` predicate so the blind itself is leak-free.
     ///
     /// NOTE (DECISIONS.md D1): on the *current backfilled archive*, `resolved_at` is a
     /// bulk-ingest stamp (all in 2026-06/07), so `resolved_at < cut` is degenerate for
@@ -1533,21 +1554,27 @@ impl PgPortfolio {
                         width_bucket(price, 0.0, 1.0, 5) AS band, \
                         (outcome_won::int)::double precision - price AS a, \
                         (outcome_won::int)::double precision AS won, \
-                        COALESCE(sport, 'other') AS sport, ts \
+                        COALESCE(sport, 'other') AS sport, \
+                        COALESCE(bet_type, 'other') AS bettype, ts \
                  FROM trader_fills \
                  WHERE resolved AND side = 'BUY' AND outcome_won IS NOT NULL \
                    AND resolved_at IS NOT NULL AND resolved_at < $1 \
              ), \
-             blind AS ( SELECT band, AVG(a) AS blind_edge FROM adv GROUP BY band ), \
-             surp AS ( SELECT v.wallet, v.ev, v.band, v.a, v.won, v.sport, v.ts, \
-                              v.a - COALESCE(b.blind_edge, 0) AS s \
-                       FROM adv v LEFT JOIN blind b USING (band) ), \
+             blind_cell AS ( SELECT sport, band, AVG(a) AS blind_edge FROM adv GROUP BY sport, band ), \
+             blind_band AS ( SELECT band, AVG(a) AS blind_edge FROM adv GROUP BY band ), \
+             surp AS ( SELECT v.wallet, v.ev, v.band, v.a, v.won, v.sport, v.bettype, v.ts, \
+                              v.a - COALESCE(bc.blind_edge, bb.blind_edge, 0) AS s \
+                       FROM adv v \
+                       LEFT JOIN blind_cell bc USING (sport, band) \
+                       LEFT JOIN blind_band bb USING (band) ), \
              tagged AS ( \
                  SELECT wallet, 'overall'::text AS slice_kind, ''::text AS slice_key, ev, a, s, won, ts FROM surp \
                  UNION ALL \
                  SELECT wallet, 'sport', sport, ev, a, s, won, ts FROM surp \
                  UNION ALL \
                  SELECT wallet, 'band', 'b' || band::text, ev, a, s, won, ts FROM surp \
+                 UNION ALL \
+                 SELECT wallet, 'bettype', bettype, ev, a, s, won, ts FROM surp \
              ), \
              evl AS ( \
                  SELECT wallet, slice_kind, slice_key, ev, \
@@ -1854,7 +1881,7 @@ pub struct DenseCandidate {
 #[derive(Debug, Clone, sqlx::FromRow)]
 pub struct TraderSliceStat {
     pub wallet: String,
-    /// 'overall' | 'sport' | 'band' | 'recency7d' | 'recency30d'.
+    /// 'overall' | 'sport' | 'band' | 'bettype' | 'recency7d' | 'recency30d'.
     pub slice_kind: String,
     /// '' | 'nba' | 'b3' | '7d' …
     pub slice_key: String,
@@ -2063,6 +2090,7 @@ mod trader_fills_it {
             event_slug: Some("nba-x".into()),
             is_sports: true,
             sport: Some("nba".into()),
+            bet_type: Some("spread".into()),
             ts: Utc::now() - chrono::Duration::hours(1),
         }
     }
@@ -2303,6 +2331,7 @@ mod trader_fills_it {
             event_slug: None,
             is_sports: false,
             sport: None,
+            bet_type: None,
             ts,
         };
         let fills: Vec<NewTraderFill> = elig.iter().chain(deep.iter()).map(|w| mkf(w)).collect();
