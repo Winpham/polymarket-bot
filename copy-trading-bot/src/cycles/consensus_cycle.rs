@@ -303,7 +303,7 @@ fn bet_type_bucket(title: &str, slug: &str) -> String {
 /// degenerate. `wallet_lc` is the lower-cased wallet (matches the window path's
 /// distinctness convention and `load_buy_fills_since`'s join). `sport`/`is_sports`
 /// are frozen here — the single source of truth for the trust slices (P2).
-fn trade_to_fill(wallet_lc: &str, tr: &TraderTrade) -> Option<NewTraderFill> {
+pub(crate) fn trade_to_fill(wallet_lc: &str, tr: &TraderTrade) -> Option<NewTraderFill> {
     let oidx = tr.outcome_index?;
     if !(tr.price > 0.0 && tr.price < 1.0) {
         return None;

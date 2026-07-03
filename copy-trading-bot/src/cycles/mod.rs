@@ -1,3 +1,4 @@
+pub mod backfill;
 pub mod consensus_cycle;
 pub mod copy_trade;
 pub mod dense_capture;

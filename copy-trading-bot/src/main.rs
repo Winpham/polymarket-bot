@@ -43,5 +43,29 @@ async fn main() -> Result<()> {
     dotenvy::dotenv().ok();
 
     let cfg = CopyTradingConfig::load()?;
+
+    // Separate one-shot modes, selected by arg. The container's default no-arg
+    // invocation runs the live loop unchanged (deploy-safe). `backfill [0xWALLET]`
+    // — an optional wallet arg restricts to a single wallet (verify mode).
+    let args: Vec<String> = std::env::args().collect();
+    if args.iter().any(|a| a == "backfill") {
+        use crate::storage::postgres::PgPortfolio;
+        // `backfill [dry] [0xWALLET]` — `dry` fetches + maps + logs but writes nothing
+        // and runs no migrations; a `0x…` arg restricts to a single wallet.
+        let dry = args.iter().any(|a| a == "dry");
+        let only = args.iter().find(|a| a.starts_with("0x")).cloned();
+        let pool = sqlx::PgPool::connect(&cfg.database_url).await?;
+        let portfolio = PgPortfolio::new(pool).await?;
+        if !dry {
+            portfolio.run_migrations().await?;
+        }
+        let monitor = crate::scanner::copy_trader::CopyTraderMonitor::new(
+            reqwest::Client::builder()
+                .timeout(std::time::Duration::from_secs(15))
+                .build()?,
+        );
+        return cycles::backfill::run(&portfolio, &monitor, only.as_deref(), dry).await;
+    }
+
     live::run_live(Arc::new(cfg)).await
 }
