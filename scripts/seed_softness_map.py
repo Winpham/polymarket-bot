@@ -110,7 +110,7 @@ def make_version(prev, res, effective=EFFECTIVE):
     whole.update(build_whole(res))          # new dim adds keys; no collision with prior dims
     cp = (prev or {}).get("checkpoint_index", 0) + 1
     return ms.step(prev, whole, whole, checkpoint_idx=cp, effective_from=effective,
-                   meta={"source": "softness_map.py (entry 20 — softness×skill map)",
+                   meta={"source": "softness_map.py (entry 21 — softness×skill map)",
                          "dimension": DIM,
                          "note": "category × market-type × band; softness folded into "
                                  "metrics via documented verdict-preserving crosswalk"})

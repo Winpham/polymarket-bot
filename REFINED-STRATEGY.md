@@ -184,6 +184,26 @@ nothing promoted. Corrects the correlation UNIT D15 got wrong.
   (an adverse correlated day) is what the record lacks. Real money waits on ≥K adverse correlated
   days across ≥5 non-expiring regimes (months), per D18/D19 — not more WC weekends.
 
+## Softness × Skill steering (2026-07-03, entry 21 / DECISIONS D24)
+The favorite edge lives in the SOFT pockets and bleeds in the sharp ones. The `category ×
+market-type × band` map separates **softness** (opportunity size, blind-pool-knowable),
+**skill** (the edge, over the matched blind baseline), and **realizable ROI** (bankable, at
+0.5¢+2%). Binding cell verdicts today:
+- **DODGE `mlb / deriv / 0.60–0.80`** — softness −10.5% (CI ub −0.5%): sharp, base rate bleeds.
+  Do not concentrate favorite-following on low-band MLB totals. (MLB/tennis derivatives are
+  directionally sharp; only this low-band cell certifies today.)
+- **Soft ≠ bankable (K2):** `soccer/deriv/0.80–0.90` is reliably soft (+9.3%) but its consensus
+  skill is realizable-ROI-LB negative → **NEUTRAL**, not a bet. Same for `tennis/main/0.60–0.80`.
+- **Nothing is PRIORITIZED** — soccer/tennis are the only skilled candidates and neither clears the
+  cost margin under FDR on ~5 correlated days (INDETERMINATE-by-power, not refuted). The map is a
+  forward ORDERING (governed by `map_state` v002), not a certified bet.
+- **Where to watch:** esports is the softest non-summer venue (deriv +9.0%) and fires a little —
+  the top harvest frontier; **politics/elections** is a year-round soft frontier ramping to the
+  Nov-2026 midterms; fall sports (NFL Sept, NBA Oct) as they season. Re-read per cell at skill
+  N→20 fires / +7 days / in-season.
+- **Never-fire (K4):** crypto/other/econ have soft blind favorites but the consensus never fires
+  there (sharps don't agree one-sided) — softness observations, not steerable arms.
+
 ## Honest status & posture
 - **Certified/bankable today: nothing.** One tournament, ~89% World Cup soccer. The favorite edge is
   real and attack-hardened, but 4 correlated event-days cannot clear the day-deflated SE — accrual-gated.
