@@ -77,7 +77,16 @@ The engine is NOT a raw count. Levels, simplest→richest, each gated by the bel
    `WeightMode::Quality`)*
 3. **earned-trust-weighted** — per-wallet earned edge from the trust map. *(`WeightMode::TrustWeighted`)*
 4. **trusted-only** — count only gate-Certified wallets, per-slice / per-sport. *(`trusted_only`;
-   the as-of run: **0 wallets certify on one weekend** → this is data-starved, not disproven.)*
+   the as-of run: **0 wallets certify on one weekend** → data-starved, not disproven. The DEEP
+   historical mine (entry 20, `scripts/specialist_mining.py`, D23) confirms it on the far larger
+   `trader_fills` record + at OUR price: **0 copyable specialists certify** over 56 (wallet×sport)
+   cells. Follow-set stays ∅; `CONSENSUS_TRUST_ARMS` stays OFF. Two hard rules this bought:
+   **(a) judge any follow-set at OUR realizable entry after the follower tax, per sport, over
+   sport×band blind — NEVER by global PnL; (b) exclude market-makers FIRST — 59% of the ≥30-match
+   "top" wallets are two-sided book-makers you cannot tail.** The sharpest daily market (MLB) has
+   the HIGHEST tax (~3¢), which alone ate 83% of its one genuine directional wallet's edge — the
+   sharp-market copyability wall. The real (uncertifiable, power-limited) directional signal sits
+   in SOCCER, not the sharp markets; NBA/NFL are calendar-blocked → auto-onboard Sept/Oct.)*
 5. **RELATIONAL (research track — NOT built):** pairwise affinity ("A agrees with B"), **conditional
    accuracy** ("A is X% right *when B also backs*"), top-N co-agreement, disagreement penalties.
    This is the sophisticated frontier and likely the real prize — but it's ~N² parameters and
