@@ -1,0 +1,64 @@
+{
+  "dedup_mins": 60,
+  "alert_volume_today": {
+    "strict": {
+      "n_alerts": 243,
+      "first": "2026-06-29",
+      "last": "2026-07-03",
+      "days": 5
+    }
+  },
+  "winners_silent": {
+    "favorite": {
+      "fired": 251,
+      "resolved": 232,
+      "self_alerts": 0,
+      "covered_by_strict": 26,
+      "net_new_leaked": 225,
+      "net_new_resolved": 206,
+      "net_new_wr": 0.937,
+      "leak_pnl_realizable": 1802.0,
+      "tiers": {
+        "WATCH": 244,
+        "STRONG": 2,
+        "ELITE": 5
+      }
+    },
+    "elite_fresh_fav": {
+      "fired": 83,
+      "resolved": 74,
+      "self_alerts": 0,
+      "covered_by_strict": 10,
+      "net_new_leaked": 73,
+      "net_new_resolved": 64,
+      "net_new_wr": 0.969,
+      "leak_pnl_realizable": 319.0,
+      "tiers": {
+        "WATCH": 75,
+        "ELITE": 8
+      }
+    }
+  },
+  "leak_total": {
+    "net_new_leaked_signals": 298,
+    "net_new_resolved": 270,
+    "leak_pnl_realizable_per_100": 2122.0,
+    "strict_alerted_pnl_realizable_per_100": 1052.0
+  },
+  "spam_check": {
+    "n_days": 5,
+    "strict_alerts_per_day": 48.6,
+    "net_new_alerts_per_day": 59.6,
+    "volume_multiplier": 2.23,
+    "dedup_intact": true
+  },
+  "fix": {
+    "code_change_needed": false,
+    "mechanism": "CONSENSUS_ALERT_STRATEGIES + CONSENSUS_ALERT_WATCH_FOR env override (config.rs L141-148), default OFF, already implemented (D12); never deployed",
+    "proposed_env": {
+      "CONSENSUS_ALERT_STRATEGIES": "strict,favorite,elite_fresh_fav",
+      "CONSENSUS_ALERT_WATCH_FOR": "favorite,elite_fresh_fav"
+    },
+    "decision_owner": "Tue (live alert flip) \u2014 this run PROPOSES + STOPS"
+  }
+}
