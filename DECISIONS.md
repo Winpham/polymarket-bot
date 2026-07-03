@@ -696,3 +696,59 @@ should be stopped (Tue's alert flip). **Rollback:** git-revert the merge; the ne
 (`scripts/{clv_lambda,corr_risk_delever,alert_leak_shadow,pilot_shadow}.py`,
 `copy-trading-bot/src/pilot.rs`, the `mod pilot;` line, `reports/*.json`, the four entries) are all
 additive.
+
+## D23 — Forward Truth: measure λ (apparatus), map the realer thesis, board the distance to money (2026-07-03)
+
+Branch `feat/forward-truth` (worktree off `main` 643886e, tag `pre-forward-truth-2026-07-03`). Tue's
+directive after D22: "fix everything + a long autonomous run to solve the 3 things" — (1) we're far
+from money and now know WHY (truth was the bottleneck), (2) turn on dense capture to measure λ,
+(3) don't be a lazy copycat — pivot toward softness × specialists × copyability-at-our-price. Four
+self-testing paper-only instruments + the deploy (Tue's hand). Full write-ups: reports/entries/
+2026-07-03-{clv-monitor, readiness-ledger, copyability, softness-map}.md.
+
+**THE META-FINDING (ties all three together): the binding constraint everywhere is ACCRUAL, not
+analysis.** CLV empty (dense off), decision-time asks thin (favorite n=5), persistence 5 WC-heavy
+clusters, specialists <30 events. We have world-class instruments and a data desert. So the run built
+the APPARATUS that turns accrual into truth, and did the analysis the current record CAN support.
+
+**WS-1 · forward CLV/λ monitor (`clv_monitor.py`) — the self-running truth loop for goal (2).** Wraps
+`clv_lambda`, adds the temporal/state dimension (EMPTY→ACCRUING→MEASURED) + a floor verdict (does λ̂'s
+CI_lo clear the 0.25 pilot floor?), append-only accrual log. Today: **EMPTY** (coverage 0%). Once dense
+capture runs, it emits a trustworthy λ̂ weekly and flips to MEASURED/CLEARS-or-BELOW. Anti-laundering
+self-test: a high *proxy* λ̂ at 0% coverage must NOT read CLEARS.
+
+**WS-2 · readiness ledger (`readiness_ledger.py`) — goal (1) made measurable.** Fuses every gate into
+one board. Verdict: **GO gates 2/4 met (sizing ⅟₁₂-Kelly, power-on-count); edge_reality INDETERMINATE,
+persistence NOT_MET. Real-money eligible = FALSE. BINDING CONSTRAINT = PERSISTENCE (months,
+non-expiring regimes) — the timeline governor no modeling shortens. Nearest lever = deploy dense
+capture** (unblocks λ measurement). This is the honest distance-to-money, tracked and re-readable.
+
+**WS-3 · copyability-at-our-price (`copyability.py`) — half the copycat critique, answered.** Favorites
+are **~69% copyable at our price** (spread 2.6¢ at band5 + fee eats ~1/3; modeled realizable +7.3%).
+**Copyability is NOT the binding constraint for favorites** — they're liquid and fillable; the killers
+are edge-REALITY (λ≈0.15, mostly FLB bias) and persistence. Longshots/strict erode more (32%),
+consistent with skip-longshots. Direct @ask read INDETERMINATE (favorite n=5) — modeled bound stated.
+
+**WS-4 · market-softness map (`softness_map.py`) — the realer thesis, tested; goal (3).** On the RICH
+blind universe (10,106 rows / ~5,116 events), the generic favorite-longshot curve is confirmed
+(b1 −2.3% → b4 +2.2%), but only **ONE cell survives BH-FDR: `soccer/directional/band5` — FADE the heavy
+favorite, net +8.2%, z −4.57, p=0.000** — and a suggestive cluster of same-direction fades (soccer
+total b5, mlb spread b4, cs2 dir b3). **The strongest exploitable mispricing is the OPPOSITE of
+copy-tailing: fade overhyped favorites, don't tail sharps into them.** Caveat: WC-concentrated, one FDR
+cell → a real LEAD, not a bankable edge (same persistence wall). Self-caught correctness fix: the first
+cut was one-sided and would have missed every NO-side/fade signal; fixed to two-sided.
+
+**THE PIVOT READ (goal 3, synthesized).** The copycat critique resolves cleanly: fillability is fine
+(WS-3, 69%); the problem is *what* we copy — tailing sharps into favorites rides a bias (λ low, WS-A),
+while the data's strongest signal is fading overhyped favorites (WS-4). Both point AWAY from naive
+copy-consensus. **But nothing is bankable** — the fade is one WC-heavy FDR cell; persistence governs.
+The honest posture: keep the copy-consensus paper track accruing, run the forward monitors, and treat
+the FADE thesis as the pre-registered forward watch-list — pivot resources only if it persists
+post-tournament AND λ stays low.
+
+**LIVE CHANGE: Option B (dense capture + winners-alert flip) authorized by Tue but BLOCKED by the
+auto-mode safety guard** (correctly — a live-alerting flip on the prod stack is reserved for Tue's
+direct hand). It is a `.env.consensus` edit + `scripts/consensus-autoupdate.sh` Tue runs himself
+(commands in the run log). Until then the readiness ledger's `operational` gate stays NOT_MET and CLV
+stays EMPTY. **Rollback:** git-revert the merge; all new files are additive
+(`scripts/{clv_monitor,readiness_ledger,copyability,softness_map}.py`, `reports/*.json`, 4 entries).
