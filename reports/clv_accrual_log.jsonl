@@ -1,0 +1,1 @@
+{"ts": "2026-07-03T18:03:30Z", "strategy": "favorite", "n_positions": 235, "n_events": 115, "trajectory_coverage": 0.0, "state": "EMPTY", "lambda_hat": 0.16703076558252195, "lambda_ci": [0.08252928278284676, 0.3601334525438536], "lambda_trustworthy": false, "null_p": 0.0, "clv_explained_frac": 0.16703076558252195, "floor_min_lambda": 0.25, "floor_verdict": "n/a"}
