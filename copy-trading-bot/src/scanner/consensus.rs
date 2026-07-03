@@ -43,6 +43,12 @@ pub struct TraderVote {
     /// INDETERMINATE (never 0). Only `WeightMode::TrustWeighted` reads this, so it
     /// defaults to `quality` and leaves every other mode byte-identical.
     pub earned_quality: f64,
+    /// Per-CELL earned quality (FORGE_PLAN Item 3): `earned_quality` shrunk toward
+    /// the trader's cell-specific multiplier for THIS market's sport by
+    /// `N_cell/(N_cell+K)`. Only `WeightMode::CellPooled` reads it; defaults to
+    /// `earned_quality` (⇒ `CellPooled` == `TrustWeighted` when pooling is off or
+    /// the trader has no cell data), leaving every other mode byte-identical.
+    pub cell_earned_quality: f64,
     /// Whether this trader is gate-Trusted (Phase 4). Only `trusted_only`
     /// strategies read it; defaults to `true` so it drops nothing elsewhere.
     /// NB: deliberately lenient — an UNPROFILED/untracked trader counts `true`
@@ -128,6 +134,12 @@ pub enum WeightMode {
     /// Rank by summed EARNED-trust quality of the backers (Phase 4). Tiering
     /// still keys on `net_count`, so this changes only the composite ranking.
     TrustWeighted,
+    /// Rank by summed POOLED per-cell earned quality of the backers (FORGE_PLAN
+    /// Item 3): each vote weighted by the trader's edge in THIS market's sport
+    /// cell, partial-pooled toward their overall multiplier. Tiering still keys on
+    /// `net_count`. With `cell_earned_quality == earned_quality` (pooling off) this
+    /// is identical to `TrustWeighted`.
+    CellPooled,
 }
 
 /// Tunable thresholds for the scorer. Defaults mirror `CONSENSUS-ENGINE-PLAN.md`.
@@ -479,6 +491,9 @@ pub fn score_market(
             // votes (earned_quality == quality_weight(rank)) this equals the raw
             // backer quality; tiering still keys on net_count.
             WeightMode::TrustWeighted => backers.values().map(|v| v.earned_quality).sum(),
+            // Summed POOLED per-cell earned quality (FORGE_PLAN Item 3). Equals
+            // TrustWeighted when cell_earned_quality defaults to earned_quality.
+            WeightMode::CellPooled => backers.values().map(|v| v.cell_earned_quality).sum(),
         };
         let score = base * (0.5 + 0.5 * coherence) * (0.6 + 0.4 * freshness) * (1.0 + 0.02 * money);
 
@@ -803,6 +818,24 @@ pub fn trust_arms(base: &ConsensusParams, cohort_cutoff: i32) -> Vec<StrategyDef
     ]
 }
 
+/// The pooled per-cell specialist arm (FORGE_PLAN Item 3): rank by summed POOLED
+/// per-cell earned quality (`WeightMode::CellPooled`) — each vote weighted by the
+/// trader's edge in THIS market's sport cell, partial-pooled toward their overall
+/// multiplier. Silent, EXPERIMENTAL, registered only when `SLICE_POOLED` is on.
+/// With pooling off it never registers; with it on but no cell data it reproduces
+/// `trust_weighted` (fail-closed) — the arm is ONE hypothesis (does pooled per-cell
+/// weighting beat wallet-level forward), never a per-cell selection.
+pub fn slice_sport_tail(base: &ConsensusParams) -> StrategyDef {
+    StrategyDef {
+        name: "slice_sport_tail",
+        params: ConsensusParams {
+            weight_mode: WeightMode::CellPooled,
+            ..base.clone()
+        },
+        alerting: false,
+    }
+}
+
 /// Parse the `CONSENSUS_RETUNED` spec — `"min_backers,strong_net,elite_net"` —
 /// into the re-tuned threshold triple. Empty/garbage ⇒ `None` (arm not
 /// registered; live portfolio unchanged). The re-tune exists because a WIDER
@@ -861,6 +894,7 @@ mod tests {
             pnl: None,
             quality: quality_weight(rank),
             earned_quality: quality_weight(rank),
+            cell_earned_quality: quality_weight(rank),
             trusted: true,
             certified: true,
             price,
@@ -1231,6 +1265,53 @@ mod tests {
         );
     }
 
+    #[test]
+    fn slice_arm_registered_separately_and_silent() {
+        // FORGE_PLAN Item 3: the pooled per-cell arm is NOT in the default
+        // portfolio (appended only when SLICE_POOLED is on), is silent, and ranks
+        // by the pooled per-cell weight.
+        let base = ConsensusParams::default();
+        assert!(
+            !default_portfolio(&base)
+                .iter()
+                .any(|d| d.name == "slice_sport_tail"),
+            "slice arm must NOT be in the default portfolio"
+        );
+        let arm = slice_sport_tail(&base);
+        assert_eq!(arm.name, "slice_sport_tail");
+        assert!(!arm.alerting, "the slice arm never alerts");
+        assert_eq!(arm.params.weight_mode, WeightMode::CellPooled);
+    }
+
+    #[test]
+    fn cellpooled_equals_trustweighted_when_cell_eq_defaults() {
+        // With default votes (cell_earned_quality == earned_quality), CellPooled
+        // and TrustWeighted produce the identical score — the byte-identical
+        // fail-closed property (FORGE_PLAN Item 3).
+        let now = Utc::now();
+        let b = book_with(
+            now,
+            vec![
+                (0, "wa", Some(5), 0.50, 10),
+                (0, "wb", Some(20), 0.51, 20),
+                (0, "wc", Some(30), 0.49, 30),
+            ],
+        );
+        let base = ConsensusParams::default();
+        let tw = ConsensusParams {
+            weight_mode: WeightMode::TrustWeighted,
+            ..base.clone()
+        };
+        let cp = ConsensusParams {
+            weight_mode: WeightMode::CellPooled,
+            ..base.clone()
+        };
+        let a = score_market(&b, now, &tw);
+        let c = score_market(&b, now, &cp);
+        assert_eq!(a.len(), c.len());
+        assert!((a[0].score - c[0].score).abs() < 1e-12);
+    }
+
     // --- Phase 3 (deep-pool edge run): tail-the-sharp ---
 
     #[test]
@@ -1243,6 +1324,7 @@ mod tests {
             pnl: None,
             quality: 1.0,
             earned_quality: 1.0,
+            cell_earned_quality: 1.0,
             trusted,
             certified,
             price: 0.50,
@@ -1307,6 +1389,7 @@ mod tests {
             pnl: None,
             quality: 1.0,
             earned_quality: 1.0,
+            cell_earned_quality: 1.0,
             trusted: true,
             certified: true,
             price,
@@ -1344,6 +1427,7 @@ mod tests {
             pnl: None,
             quality: quality_weight(rank),
             earned_quality: quality_weight(rank),
+            cell_earned_quality: quality_weight(rank),
             trusted,
             certified: trusted,
             price: 0.50,
@@ -1442,6 +1526,7 @@ mod tests {
                     pnl: None,
                     quality: 1.5,
                     earned_quality: 1.5,
+                    cell_earned_quality: 1.5,
                     trusted: true,
                     certified: true,
                     price: 0.5,
@@ -1492,6 +1577,7 @@ mod tests {
             pnl: None,
             quality: 1.0,
             earned_quality: 1.0,
+            cell_earned_quality: 1.0,
             trusted,
             certified: trusted,
             price: 0.50,

@@ -349,6 +349,7 @@ pub fn family(strategy: &str) -> &'static str {
         "strict_retuned",
         "sharp_tail_fresh",
         "sharp_tail",
+        "slice_sport_tail",
     ];
     if EXPERIMENTAL.contains(&strategy) {
         "experimental"
@@ -367,6 +368,9 @@ mod tests {
         assert_eq!(family("favorite_tail"), "core");
         assert_eq!(family("consensus_ens"), "experimental");
         assert_eq!(family("market_veto"), "experimental");
+        // The pooled per-cell specialist arm must NOT land in the core Bonferroni
+        // family (FORGE_PLAN Item 3) — else it tightens strict's bar.
+        assert_eq!(family("slice_sport_tail"), "experimental");
     }
 
     #[test]

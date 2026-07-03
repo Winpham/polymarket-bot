@@ -324,7 +324,8 @@ pub async fn run_live(cfg: Arc<CopyTradingConfig>) -> Result<()> {
                 return;
             }
             loop {
-                let m = crate::cycles::consensus_cycle::compute_trust_map(&tp).await;
+                let m =
+                    crate::cycles::consensus_cycle::compute_trust_map(&tp, tcfg.slice_pooled).await;
                 let n = m.len();
                 // The shared map feeds the trust ARMS' earned_quality — only
                 // publish it when those arms are on, so EARN_DEEP_SHARPS alone
