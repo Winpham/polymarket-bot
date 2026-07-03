@@ -1,0 +1,62 @@
+{
+  "meta": {
+    "fee": 0.02,
+    "follower_tax": 0.013,
+    "decision_lag_s": 900,
+    "band_spreads": {
+      "1": 0.012,
+      "2": 0.0075,
+      "3": 0.0186,
+      "4": 0.0071,
+      "5": 0.0258
+    },
+    "band_spread_n": {
+      "1": 70,
+      "2": 71,
+      "3": 82,
+      "4": 65,
+      "5": 46
+    }
+  },
+  "strategies": [
+    {
+      "strategy": "favorite",
+      "n_events": 115,
+      "avg_price": 0.8195399771688071,
+      "band": 5,
+      "paper_edge": 0.10621879162039158,
+      "realizable_at_ask_direct": 0.0040000000000000036,
+      "ask_coverage": 5,
+      "band_spread": 0.025780434782608705,
+      "modeled_realizable_net": 0.07329716083032423,
+      "copyability_frac": 0.690058319362888,
+      "ask_indeterminate": true
+    },
+    {
+      "strategy": "elite_fresh_fav",
+      "n_events": 48,
+      "avg_price": 0.8874063550129957,
+      "band": 5,
+      "paper_edge": 0.08705162310731539,
+      "realizable_at_ask_direct": -0.20333333333333334,
+      "ask_coverage": 3,
+      "band_spread": 0.025780434782608705,
+      "modeled_realizable_net": 0.043181135900724636,
+      "copyability_frac": 0.49604056029480176,
+      "ask_indeterminate": true
+    },
+    {
+      "strategy": "strict",
+      "n_events": 271,
+      "avg_price": 0.5000445332831801,
+      "band": 3,
+      "paper_edge": 0.036329867542043676,
+      "realizable_at_ask_direct": -0.059295634920634895,
+      "ask_coverage": 21,
+      "band_spread": 0.01859268292682923,
+      "modeled_realizable_net": 0.0117270988660925,
+      "copyability_frac": 0.3227949799850223,
+      "ask_indeterminate": true
+    }
+  ]
+}
