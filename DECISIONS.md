@@ -638,3 +638,61 @@ levers: **(1) de-lever the Kelly fraction (⅒–⅟₁₆, first-order, per D18
 market-type-aware directional cap** for the rare stacked-game catastrophe — NOT D20's blunt ≤3/game.
 **Rollback:** git-revert the merge; delete `scripts/corr_risk_verify.py` + `reports/corr_risk_verify.json`.
 D20's instruments remain; this corrects its interpretation.
+
+## D22 — Edge Truth & Levers: MEASURE λ (don't assume it), pin the de-lever, stop the alert leak, ready the pilot (2026-07-03)
+
+Branch `feat/edge-truth` (worktree off `main` 2c0fcd2, tag `pre-edge-truth-2026-07-03`). Four
+paper-only/shadow workstreams; nothing armed, no migrations, live behaviour byte-identical. Full
+write-ups: reports/entries/2026-07-03-{clv-lambda, delever-fraction, alert-leak, pilot-harness}.md.
+**Two decisions are Tue's and STOP here: (i) flip favorite/elite alerts live; (ii) commit real money
+to the pilot.** This run built, verified, and shipped everything else.
+
+**WS-A · λ is INDETERMINATE-BY-DATA, and the weak proxy points LOW (`scripts/clv_lambda.py`).** The
+proper CLV instrument — `signal_price_trajectory` — is **globally empty (0 rows)**: dense capture
+(`DENSE_CAPTURE`, default OFF, `live.rs:227`) has never run. So the true λ cannot be measured today
+(K1). The only proxy, `mean_price` drift, is positive and BEATS the selection-matched null (favorite
+mean CLV **+0.0172**, z 3.51, **p=0.0000**) — some of the edge IS information the market began to
+confirm — but it explains only **~15% of the surplus** (λ̂ **0.151**, CI [0.076, 0.296]), and the
+proxy is confounded UPWARD (it's the consensus mean, not a market close). Net: **no high-λ evidence;
+the available read is weakly ANTI a high λ** (λ̂≈0.15 sits below the λ=0.25 profitability floor, D21).
+This is a genuine negative, not laundered. **Structural fix (PROPOSED, benign, paper-only):** set
+`DENSE_CAPTURE=true` + `DENSE_STRATEGIES` incl. favorite/elite; after ~2 weeks the same instrument
+emits a REAL λ̂ from true closing mids. CLV shortens the epistemic wait; it does not replace the
+persistence gate (D7).
+
+**WS-B · de-lever fraction PINNED at ⅟₁₂-Kelly (`scripts/corr_risk_delever.py`).** k-sweep under the
+adverse t-copula+heterogeneous model (reuses D21's simulator). Growth-per-fractional-CVaR is a **flat
+plateau across ⅛–⅟₁₆ (0.77–0.79)** — no sharp optimum; picking k is choosing an absolute risk level.
+The **binding constraint is the feasibility cap P(maxDD>25%) ≤ 10% at λ=0.5**, which rules out ¼
+(41%) and ⅙ (14%). **Knee = ⅟₁₂** (OBJ-max feasible, p95 DD 18%); **⅟₁₆** is the conservative default
+given WS-A's low λ̂; **flat-shares stays the floor** if λ≈0. ¼-Kelly is off the table until λ is
+measured ≥ ~0.75. Converges with D18/D19 (⅒–⅟₁₆) and D21 (flat floor). PROPOSED into REFINED-STRATEGY
+rule 3, not applied.
+
+**WS-C · the alert leak is real and costs ≈ +$2,122 (`scripts/alert_leak_shadow.py`).** Empirically:
+the ONLY strategy that has ever pushed an alert is `strict` (243 alerts); `favorite`/`elite_fresh_fav`
+carry `alerting:false` and have fired **334 signals / 0 alerts**. After cross-strategy dedup (±60min),
+**298 net-new winner-alerts** (WR ~94%) would surface — worth **+$2,122 realizable** (per $100/bet)
+that an alert-follower currently cannot see, while the surfaced `strict` stream (which contains the
+losing DODGE residue) realized +$1,052. Enabling is **2.23× volume** (sane), **dedup intact**. **The
+fix needs NO code** — the default-OFF D12 env override already exists
+(`CONSENSUS_ALERT_STRATEGIES`/`_WATCH_FOR`, `config.rs:141-148`) and was never deployed. **PROPOSE +
+STOP:** flipping alerts live is Tue's call; this run merges only the shadow instrument + evidence.
+
+**WS-D · the pilot harness is built, unarmed, and self-vetoes today (`copy-trading-bot/src/pilot.rs`
++ `scripts/pilot_shadow.py`).** Self-contained module (⅟₁₂-Kelly sizing, four latching kill-switches,
+CLV/honest-P&L ledger), **NOT wired into `live.rs`** (daemon byte-identical), place path **provably
+unreachable by two locks** (unarmed⇒`NotArmed`; even armed⇒`NoPlacer`, the bot is paper-only) — 10
+unit tests green incl. `master_off_halts_from_birth`. The shadow replay's honest outcome: the **edge-
+degradation kill-switch self-vetoes** (WS-A λ̂≈0.15 < the 0.25 floor ⇒ 0 bets); counterfactuals show
+the machinery, incl. the day-stop firing under aggressive λ=1 sizing (validating WS-B's low k).
+**PROPOSE + STOP:** real money awaits `PILOT_ARMED=1` + master-on + λ above floor + persistence (D7) —
+all Tue's, none met.
+
+**What changed live: NOTHING.** The net epistemic move: λ turned from an ASSUMPTION into a
+(proxy) MEASUREMENT that is small and INDETERMINATE — the honest headline is that the next dollar of
+work should buy TRUTH (turn on dense capture) before more modeling, and the free realized-P&L leak
+should be stopped (Tue's alert flip). **Rollback:** git-revert the merge; the new files
+(`scripts/{clv_lambda,corr_risk_delever,alert_leak_shadow,pilot_shadow}.py`,
+`copy-trading-bot/src/pilot.rs`, the `mod pilot;` line, `reports/*.json`, the four entries) are all
+additive.

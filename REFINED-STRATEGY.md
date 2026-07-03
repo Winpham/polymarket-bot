@@ -49,6 +49,13 @@ consensus on them *lost* badly (band 1: 76 bets, 3.9% hit, −$5,821 at $100 fla
    — keep the near-independent totals/exact-score (+EV ballast), bound only the DIRECTIONAL units/
    game (this Pareto-beats a blunt count cap). All PROPOSED, not applied. The whole trade-off is
    **conditional on the edge δ** (shuffle-invariant ⇒ its reality is the selection-null's job, D16).
+   *De-lever fraction PINNED (2026-07-03, entry `2026-07-03-delever-fraction.md`,
+   `scripts/corr_risk_delever.py`, D22):* the k-sweep under the adverse t-copula+heterogeneous
+   model gives a **flat growth-per-CVaR plateau across ⅛–⅟₁₆**; the binding constraint is the
+   **P(maxDD>25%) ≤ 10%** cap, which rules out ¼ (41%) and ⅙ (14%). **Proposed default: ⅟₁₂-Kelly**
+   (the OBJ-max feasible knee, p95 DD 18%), with **⅟₁₆** as the conservative default given WS-A's
+   low λ̂≈0.15, and **flat-shares as the floor** if λ≈0. ¼-Kelly stays off the table until λ is
+   MEASURED ≥ ~0.75. Still PROPOSED, still conditional on δ.
 4. **Act in real-time, within a few minutes of fire.** The consensus is fully formed at fire
    (~3 backers, stable — it does NOT grow), and the edge is front-loaded (a ~1-1.5pt follower tax
    from the sharps' fill to our first observable mid; further drift beyond that is what speed
@@ -171,6 +178,16 @@ nothing promoted. Corrects the correlation UNIT D15 got wrong.
 ## Honest status & posture
 - **Certified/bankable today: nothing.** One tournament, ~89% World Cup soccer. The favorite edge is
   real and attack-hardened, but 4 correlated event-days cannot clear the day-deflated SE — accrual-gated.
+- **λ is now MEASURED (weakly), not just assumed (2026-07-03, entry `clv-lambda`, D22).** The proper
+  CLV instrument (`signal_price_trajectory`) is **empty — dense capture never ran** — so true λ is
+  INDETERMINATE-BY-DATA. The best available proxy (`mean_price` drift) is positive and beats the
+  selection-matched null (p=0.0000) but explains only **~15% of the surplus** (λ̂≈**0.15**, wide CI) —
+  weakly ANTI a high λ. **Next dollar of work = turn on `DENSE_CAPTURE` (paper-only) so real CLV
+  accrues and λ̂ becomes trustworthy**, before more modeling. `scripts/clv_lambda.py` switches from
+  proxy to trajectory automatically once coverage exists.
+- **The winners fire SILENTLY (2026-07-03, entry `alert-leak`, D22).** favorite/elite = 334 signals /
+  0 alerts; only `strict` (the DODGE-containing stream) is surfaced. ≈ **+$2,122 realizable leaked**;
+  the fix is a default-OFF env flip (D12, already implemented) — **Tue's live-flip decision.**
 - **Best paper result (one weekend, $100 flat):** favorites-only ≈ +$900-1,300; naive full-feed
   flat-$ LOSES (−$4,447 strict). Sane sizing is mandatory.
 - **Posture:** keep accruing across the World Cup ending + other sports; re-run the as-of pre-flight

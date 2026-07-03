@@ -17,6 +17,8 @@ mod board;
 mod config;
 mod cycles;
 mod live;
+// WS-D: unarmed pilot harness (default-OFF, places nothing, NOT wired into `live`). See pilot.rs.
+mod pilot;
 mod scanner;
 
 use anyhow::Result;
