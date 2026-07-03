@@ -87,6 +87,10 @@ pub async fn run(
                 tracing::warn!(wallet = %wallet_lc, err = %e, "backfill: wallet failed, skipping");
             }
         }
+        // Inter-wallet pacing: the live consensus bot polls the SAME data-api
+        // concurrently, so keep the backfill's sustained rate low to avoid drawing
+        // a throttle (403) that would also hurt live polling.
+        tokio::time::sleep(std::time::Duration::from_millis(400)).await;
     }
     tracing::info!(
         wallets = traders.len(),
