@@ -863,3 +863,38 @@ direct hand). It is a `.env.consensus` edit + `scripts/consensus-autoupdate.sh` 
 (commands in the run log). Until then the readiness ledger's `operational` gate stays NOT_MET and CLV
 stays EMPTY. **Rollback:** git-revert the merge; all new files are additive
 (`scripts/{clv_monitor,readiness_ledger,copyability,softness_map}.py`, `reports/*.json`, 4 entries).
+
+---
+
+## D26 — Market-making Stage-0: falsified on the visible market, parked (2026-07-03, entry mm-rung0)
+
+Branch `feat/mm-rung0` (worktree off `main` 50fafc3, tag `pre-mm-rung0-20260703`). Instrument
+`scripts/mm_rung0.py` (self-testing 3/3). Blueprint `run-prompts/RUN-MARKET-MAKING.FORGE_PLAN.md` (4-agent
+forge: diagnose → dual-design → reality-check, load-bearing API facts verified live). Analysis only — no
+capture, no Rust, no order placement, no capital.
+
+**Why we looked:** D23 found 59% of "top" wallets are two-sided market-makers, uncopyable by taking; their
+edge is the maker SPREAD on churn (one wallet churned $36.6M, break-even-to-losing on resolution holds).
+The only way to capture it is to BE a maker. The forge pressure-tested that pivot.
+
+**Forge verdict: do NOT pivot to MM** — from-scratch (ZERO signing/wallet infra), pro-dominated, reward-
+compressed, legally-gated microstructure business whose one differentiated angle ("informed MM") is
+downstream of a directional edge certified at exactly zero (λ̂≈0.15 < profit floor). The dominant move is
+the config flip `DENSE_CAPTURE=true` (measure λ — serves the real favorite edge AND the MM thesis at once).
+MM earns at most a $0 Stage-0 measurement, gated on one question. **Tue answered: live Polymarket deployment
+is off the table (US-person ToS)** ⇒ Rungs 1–2 unactionable; the free Rung 0 read is terminal.
+
+**Rung 0 (reward vs hazard, existing data):** taker-quoted half-spread best-niche **median 0.50¢** (nothing
+>~1¢) vs adverse mid-drift **mean 6.5¢ / within-10-min 6.5¢** ⇒ net −6.2¢, **hazard 13× the reward on every
+visible niche**. The one bullish signal de-biases away: round-tripper's +7.76¢ is measured only on the 47%
+it SOLD (winning half); the 53% HELD won 37% — that unsold remainder is the hidden adverse selection; the
+other three flagged wallets never round-trip (0 sells) and hold to a sub-coinflip win-rate.
+
+**Decision (binding): KILL + PARK.** Market-making is falsified on the visible market and legally unfieldable;
+it is a settled NULL, not a missed opportunity. No further Stage-0 rungs, no build, no capital. If Tue's legal
+posture ever changes, the blueprint's Rungs 1–2 (retrospective `/prices-history` hazard, then a forward
+`/book`+trade-tape poll — both verified Python-only, no Rust) are the ready $0 path. **Done independently:**
+`DENSE_CAPTURE` flipped ON in `.env.consensus` (ops, not git-tracked) so a real λ̂ accrues for the favorite
+edge (D22's "next dollar buys truth"); reversible via `DENSE_CAPTURE=false` + container recreate. Standing
+posture unchanged — accrue the favorite edge to its floor; no real money. **Rollback:** git-revert the merge
+(additive: `scripts/mm_rung0.py`, the entry, this D26; the forge docs live loose in run-prompts/).
