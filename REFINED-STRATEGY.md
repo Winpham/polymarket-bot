@@ -77,7 +77,16 @@ The engine is NOT a raw count. Levels, simplest→richest, each gated by the bel
    `WeightMode::Quality`)*
 3. **earned-trust-weighted** — per-wallet earned edge from the trust map. *(`WeightMode::TrustWeighted`)*
 4. **trusted-only** — count only gate-Certified wallets, per-slice / per-sport. *(`trusted_only`;
-   the as-of run: **0 wallets certify on one weekend** → this is data-starved, not disproven.)*
+   the as-of run: **0 wallets certify on one weekend** → data-starved, not disproven. The DEEP
+   historical mine (entry 20, `scripts/specialist_mining.py`, D23) confirms it on the far larger
+   `trader_fills` record + at OUR price: **0 copyable specialists certify** over 56 (wallet×sport)
+   cells. Follow-set stays ∅; `CONSENSUS_TRUST_ARMS` stays OFF. Two hard rules this bought:
+   **(a) judge any follow-set at OUR realizable entry after the follower tax, per sport, over
+   sport×band blind — NEVER by global PnL; (b) exclude market-makers FIRST — 59% of the ≥30-match
+   "top" wallets are two-sided book-makers you cannot tail.** The sharpest daily market (MLB) has
+   the HIGHEST tax (~3¢), which alone ate 83% of its one genuine directional wallet's edge — the
+   sharp-market copyability wall. The real (uncertifiable, power-limited) directional signal sits
+   in SOCCER, not the sharp markets; NBA/NFL are calendar-blocked → auto-onboard Sept/Oct.)*
 5. **RELATIONAL (research track — NOT built):** pairwise affinity ("A agrees with B"), **conditional
    accuracy** ("A is X% right *when B also backs*"), top-N co-agreement, disagreement penalties.
    This is the sophisticated frontier and likely the real prize — but it's ~N² parameters and
@@ -174,6 +183,26 @@ nothing promoted. Corrects the correlation UNIT D15 got wrong.
   at λ=0 it loses to costs. 4 benign days cannot distinguish λ=1 from λ=0.25 — the separating event
   (an adverse correlated day) is what the record lacks. Real money waits on ≥K adverse correlated
   days across ≥5 non-expiring regimes (months), per D18/D19 — not more WC weekends.
+
+## Softness × Skill steering (2026-07-03, entry 21 / DECISIONS D24)
+The favorite edge lives in the SOFT pockets and bleeds in the sharp ones. The `category ×
+market-type × band` map separates **softness** (opportunity size, blind-pool-knowable),
+**skill** (the edge, over the matched blind baseline), and **realizable ROI** (bankable, at
+0.5¢+2%). Binding cell verdicts today:
+- **DODGE `mlb / deriv / 0.60–0.80`** — softness −10.5% (CI ub −0.5%): sharp, base rate bleeds.
+  Do not concentrate favorite-following on low-band MLB totals. (MLB/tennis derivatives are
+  directionally sharp; only this low-band cell certifies today.)
+- **Soft ≠ bankable (K2):** `soccer/deriv/0.80–0.90` is reliably soft (+9.3%) but its consensus
+  skill is realizable-ROI-LB negative → **NEUTRAL**, not a bet. Same for `tennis/main/0.60–0.80`.
+- **Nothing is PRIORITIZED** — soccer/tennis are the only skilled candidates and neither clears the
+  cost margin under FDR on ~5 correlated days (INDETERMINATE-by-power, not refuted). The map is a
+  forward ORDERING (governed by `map_state` v002), not a certified bet.
+- **Where to watch:** esports is the softest non-summer venue (deriv +9.0%) and fires a little —
+  the top harvest frontier; **politics/elections** is a year-round soft frontier ramping to the
+  Nov-2026 midterms; fall sports (NFL Sept, NBA Oct) as they season. Re-read per cell at skill
+  N→20 fires / +7 days / in-season.
+- **Never-fire (K4):** crypto/other/econ have soft blind favorites but the consensus never fires
+  there (sharps don't agree one-sided) — softness observations, not steerable arms.
 
 ## Honest status & posture
 - **Certified/bankable today: nothing.** One tournament, ~89% World Cup soccer. The favorite edge is

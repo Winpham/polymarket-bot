@@ -697,6 +697,108 @@ should be stopped (Tue's alert flip). **Rollback:** git-revert the merge; the ne
 `copy-trading-bot/src/pilot.rs`, the `mod pilot;` line, `reports/*.json`, the four entries) are all
 additive.
 
+---
+
+## D23 — Specialist mining + copyability gate: the deep record + our-price test both say NULL (2026-07-03, entry 20)
+
+Branch `feat/specialist-mining` (worktree off `main` 643886e, tag `pre-specialist-mining-20260703`).
+Instrument `scripts/specialist_mining.py`, self-testing (K1 battery 8/8 green). Paper/analysis only —
+no migration, no env flip, no arm switched on, live behavior byte-identical.
+
+**The question this run asked that congregation (D2) did not.** D2 certified per-sport specialists on
+the 4-day FORWARD consensus record → 0, correctly (one WC weekend). This run mines the far deeper
+historical `trader_fills` resolved record on the slug event-date axis (D1; MLB 41k fills/78 wallets/20
+dates) AND judges **COPYABILITY at OUR realizable entry** after the measured follower tax + classifies
+each wallet's profit **mechanism**. A null after THAT is a new finding, not a re-run.
+
+**The verdict (belief-blind, at OUR price), over the 56 (wallet×sport) cells clearing the ≥30-match
+floor across 6 sports:** CERTIFIED copyable specialists = **0** at BOTH the event-N SE and the
+day-deflated SE. Decomposed:
+- **0 clear even at their own untaxed price** at event-N — the binding wall is power / independent-
+  event accrual, not the point estimate (reproduces Item-7 "32 clear +3% point, 0 clear the LB", now
+  on the copyability axis). The tax is a SECOND killer stacked on top, specifically in MLB.
+- **K4 dominant — 33/56 (59%) are market-makers / price-improvers**, structurally uncopyable: crypto
+  up-down 6/8 two-sided on 77–100% of markets; tennis 13/19 on 39–98%; MLB's two highest-surplus
+  wallets (+10.5%, +8.8%@them) both ≥32% two-sided. A raw-PnL leaderboard sends us straight at these;
+  you cannot tail a wallet that books both sides. (In-play/late entries are NOT separable — `ts`/
+  `resolved_at` are backfill stamps, D1 — reported as a limitation.)
+- **The copyability tax is real and worst where the market is sharpest.** MLB (the one daily,
+  non-tournament, deep market) has the HIGHEST measured follower tax **~3¢** (executable ask, n=149) —
+  the sharp book prices the sharps' info fastest, so the delayed taker pays most. It ate **83%** of the
+  one genuine MLB directional wallet's edge (+3.6%@them → +0.6%@us); K2 fired for 8 cells (real@theirs,
+  ≤0@ours). Soccer/tennis taxes are ~0 and noisy; conservative verdict floors the tax at the ~1.3¢
+  truth-audit chase (D16 F5). Asymmetric (specialist-chase) framing is primary but does NOT drive the
+  0-count.
+- **Where the real directional signal is: SOCCER, not the sharp markets — and it's uncertifiable.**
+  Two soccer wallets (0xe9a6ed2e4d, 0x56f0321917) have genuine +10–11% surplus that survives the tax
+  and are not market-makers (~0% two-sided, verified vs raw SQL) — but LB < 3% even at event-N
+  (N=41–58, high variance), only 11–19 WC dates (day-deflation → −9% to −12%), selection-null p
+  0.17–0.22 ≫ 0.01. Point estimate, not evidence. The "0 certified" is robust to the 30% two-sided
+  threshold: MLB's single best wallet, even if trusted despite 34% two-sidedness, clears event-N
+  (LB +3.1%) but the day-deflation on 4 dates sinks it (−8.2%). Accrual wall, not exclusion.
+
+**Kill criteria:** K1 PASS; K2 fired (8 cells, tax reported); **K3** — the certified follow-set is
+∅ so there is no treatment arm to beat blind global tailing forward (reported loudly; the incumbent
+stands unchallenged today); **K4** fired and dominant. Per the pre-registered rule, a per-sport
+specialist edge that dies at our price or a market-maker-dominated sport is a valid honest null — a
+successful run.
+
+**Decision (binding).** Blind global leaderboard tailing has NO certified per-sport replacement today.
+`CONSENSUS_TRUST_ARMS` stays **false**, `trusted_only` stays OFF — nothing earned the arm (proposed
+values live only in entry 20; no env touched). Follow the mission's rule going forward: **judge any
+future follow-set at OUR price after the tax, per sport, over sport×band blind — never by global PnL,
+and exclude market-makers first.** Re-run `specialist_mining.py` after each accrual block; promote
+nothing until a cell clears `lo_day > 3%` on ≥2 disjoint cuts AND selection-null p ≤ 0.01. Watch-list:
+the two soccer wallets (post-WC accrual), the tax-killed MLB sharp (denser at-open capture would cut
+the ~3¢ tax), MLB the fastest-growing floor cell (re-read at +20 dates), NBA/NFL auto-onboard Sept/Oct
+(calendar-blocked, no shortcut), politics toward the midterms. **Rollback:** git-revert the merge; all
+additive (`scripts/specialist_mining.py`, `reports/entries/2026-07-03-20-specialist-mining.md`, this
+entry, the REFINED-STRATEGY block).
+
+---
+
+## D24 — Softness × Skill map: aim the edge, don't invent one (2026-07-03, entry 21)
+
+**The move.** Built the `category × market-type × band` **softness×skill map** that steers the *same*
+generic favorite edge toward the soft pockets and DODGES the sharp ones — no new signal, just aim.
+Three numbers are kept strictly separate per cell: **softness** (event-clustered blind-favorite edge,
+entry≥0.60 — opportunity size, knowable from the blind pool alone with far less data than a P&L
+verdict), **skill** (surplus over the matched category×band blind baseline — the edge), **realizable
+ROI** (at measured 0.5¢+2% costs — the bankable number). Instruments: `market_taxonomy.py`
+(category incl. politics/esports/econ + main|deriv, self-test PASS), `softness_map.py` (the map,
+K1 self-test PASS), `seed_softness_map.py` (map as new `catmix` dimension in the `map_state` store,
+**v002**), `overlay_lift.py` (silent forward overlay + watch-list).
+
+**What the map says (honest, ugly-first).**
+- **0 PRIORITIZE, 0 FDR survivors** (5-cell skill family, min p=0.052). Skill is INDETERMINATE-by-
+  power — the D16 accrual wall, not a refutation. The map orders nothing to bet today.
+- **DODGE `mlb/deriv/0.60–0.80`** — softness −10.5% (CI ub −0.5%), certified on the *blind pool alone*
+  (121 favorites). Low-band MLB totals bleed the base rate past the ~3% capture cost.
+- **K2 downgrades bind:** `soccer/deriv/0.80–0.90` is reliably **soft (+9.3%)** yet realizable-ROI LB
+  is **−7.0%** → NEUTRAL, not PRIORITIZE. Soft ≠ bankable, stated per cell.
+- **Coverage (K4):** only **soccer (174 fires) + tennis (52)** fire the consensus enough to measure
+  skill; mlb/esports/nba/politics are data-starved; **crypto/other/econ NEVER fire** (softness
+  observations, not arms — no Bonferroni slot).
+- **New findings:** esports is the softest well-populated non-summer venue (deriv +9.0%); MLB-props
+  sharpness is concentrated in the LOW band while heavy-favorite MLB totals are mildly soft (+4.6%) —
+  the sport-level −5.1% hid both. Politics is a year-round soft frontier (92 blind favs, 3 days,
+  2 fires) ramping to the Nov-2026 midterms.
+- **Overlay (K3):** virtual, forward-only. Retrospective lift is −0.8% *because* the DODGE cell's 4
+  actual fires won (+42.7%, N=4) — which is exactly why the map is pre-registered on the reliable
+  large-sample softness and judged forward. Forward lift today = INDETERMINATE (0 post-map events);
+  the overlay orders nothing yet and EARNS a Rust arm only if forward paired lift clears the bar.
+
+**Reconciliation.** The (category×market-type) softness rollup matches the per-sport tracker (entry 15)
+within sampling noise on same-sign cells (tennis moneyline +3.2% vs +2.7%; tennis handicaps −5.3%;
+mlb props −7.7% vs −5.1%; soccer props +5.2% vs +3.3%) — the map is that tracker, refined and extended
+past sports.
+
+**What changed live: NOTHING.** No migration, no Rust, no env flip, no alert change. Additive:
+`scripts/{market_taxonomy,softness_map,seed_softness_map,overlay_lift}.py`,
+`reports/softness_map.json`, `reports/map/v002.json` + manifest, this entry. **Rollback:** git-revert
+the merge. **Deliverable:** a map of WHERE the edge can be harvested — softness, skill, and
+bankability stated plainly per cell, sports and beyond.
+
 ## D25 — Forward Truth: measure λ (apparatus), map the realer thesis, board the distance to money (2026-07-03)
 
 Branch `feat/forward-truth` (worktree off `main` 643886e, tag `pre-forward-truth-2026-07-03`). Tue's
