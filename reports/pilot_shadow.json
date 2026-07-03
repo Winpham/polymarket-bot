@@ -1,0 +1,53 @@
+{
+  "meta": {
+    "n": 232,
+    "wr": 0.931,
+    "delta": 0.112,
+    "lambda_hat": 0.1514247277080749,
+    "config": {
+      "bankroll": 500.0,
+      "delever_k": 0.08333333333333333,
+      "day_stop_loss_frac": 0.05,
+      "max_drawdown_frac": 0.15,
+      "min_lambda": 0.25
+    }
+  },
+  "modes": [
+    {
+      "lambda": 0.1514247277080749,
+      "n_bet": 0,
+      "n_win": 0,
+      "wr": null,
+      "final_equity": 500.0,
+      "roi": 0.0,
+      "max_drawdown": 0.0,
+      "mean_clv": null,
+      "halted": "EdgeDegraded",
+      "mode": "honest (WS-A \u03bb\u0302)"
+    },
+    {
+      "lambda": 0.5,
+      "n_bet": 229,
+      "n_win": 213,
+      "wr": 0.93,
+      "final_equity": 819.63,
+      "roi": 0.6393,
+      "max_drawdown": 0.0374,
+      "mean_clv": 0.0106,
+      "halted": null,
+      "mode": "counterfactual \u03bb=0.5"
+    },
+    {
+      "lambda": 1.0,
+      "n_bet": 78,
+      "n_win": 69,
+      "wr": 0.885,
+      "final_equity": 618.67,
+      "roi": 0.2373,
+      "max_drawdown": 0.0781,
+      "mean_clv": 0.0199,
+      "halted": "DayStopLoss",
+      "mode": "counterfactual \u03bb=1.0"
+    }
+  ]
+}
