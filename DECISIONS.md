@@ -543,3 +543,52 @@ REFUTED at the date D19-b computes.
 (2) de-lever the band-5 Kelly then PILOT (convergent with D18); (3) watch trust_weighted; (4) re-run
 persistence_tracker + system_readiness at the ~6-day floor and post-WC/Wimbledon. **Rollback:**
 git-revert the merge; delete reports/{reliability_tradeoff,system_readiness,persistence_tracker}.json.
+
+## D20 — Correlated risk: size the GAME, not the position — and keep the profit (2026-07-02, entry 18)
+
+Branch `feat/correlated-risk` (worktree off `main` 7bdf4a2, tag `pre-correlated-risk-20260702`).
+Two self-testing paper-only instruments; no Rust, zero migrations, nothing live changed. Corrects
+the correlation UNIT that D15's `portfolio_concentration` (ICC_slate≈0.008 "independent") got
+wrong. Full write-up: reports/entries/18.
+
+**The gap.** The book's true correlation unit is the **GAME** (`superkey.super_event`), not the
+position and not `event_slug`. favorite = **220 positions on 78 GAMES**; 64% on the top-10 games,
+66% World Cup. Every position on one game (moneyline, spread, advance, halftime, O/U, exact-score-No)
+resolves on the SAME outcome. The D15 ICC≈0.008 is a **benign-sample artifact** (residual-vs-baseline
+subtracts the shared factor; 93%-win no-loss record; event-clustering pre-collapsed the worst stacks).
+Measured win-ICC at the GAME grain is 0.12 but the within-game **pair concordance 0.874 = the 0.873
+independence baseline** — the within-game correlation is ≈0 ONLY because **no favorite team was upset
+on this record**; the shared block shock was never sampled. n_eff(game) ∈ **[78 structural, 220
+measured]**; which end binds depends on the unmeasurable `w_game`.
+
+**The load-bearing finding.** The constitution's `kelly_eighth_capped` keys its ≤1-unit cap on
+`event_slug`, NOT the game. `fifwc-eng-cdr` spans **7 event_slugs**, so one game takes **7 units =
+35% of a $10k bankroll** under ⅛-Kelly — a −35% drawdown if that favorite is upset. `corr_risk_engine.py`
+(game-block bootstrap + nested Gaussian copula, POSITION grain; self-test PROVES a position bootstrap
+understates the correlated tail 3× — the exact leak) prices it: at λ=0.5 P1 gives P(loss)≈9%, p95
+maxDD 24.7%; λ=0.25 P(loss)≈30%; λ=0 (efficient market) loses to costs. Copula matches the pre-run sim.
+
+**Recommendation (PROPOSED, not applied — Tue's call, three gates: this / D7 / a pilot).** Re-key the
+exposure cap from `event_slug` to the GAME: **≤3 units per match-key** (`super_event`). This is the
+unique knee of the K5 profit-preservation sweep: bounds the worst single-game loss **35%→21% of
+bankroll** while preserving **91% of λ=1 growth (K5 PASS)**. Tighter (≤1–2/game) bounds harder (7–14%)
+but guts growth to 70–82% (K5 fail); ≤5/game preserves 98% but barely bounds (23%). The cap is
+**insurance, not a free lunch** — it lowers the average-path risk-adjusted ratio 0.50→0.44, because
+the tail it insures against is one the benign record cannot price. **Dropping the "Exact Score — No"
+redundancy is EV-NEGATIVE** (+$2.5/pos, and near-INDEPENDENT of a directional upset — a different score
+still wins) — keep them. Tail is **insensitive to `w_day`**; the levered-block risk is **World-Cup-
+soccer-specific** (off-WC the book is ~1 position/game and the cap is inert — free insurance that
+rotates itself off).
+
+**Why the multiplicity/robustness machinery is trustworthy.** Reuses the gate's byte-identical
+`kelly_by_band` / band / regime / super_event; both scripts self-test (incl. iid⇒position≈game,
+fully-correlated⇒position-understates-and-cap-truncates, zero-edge⇒loses, upset⇒stop-loss binds,
+copula monotone in w_game). Every number carries the conditional-on-edge caveat and the λ=0 line.
+
+**Go/no-go: NOT-YET on real money, and it turns on λ.** 4 benign days cannot distinguish λ=1 from
+λ=0.25 — the separating event (an adverse correlated day, stacked favorites upset together) is exactly
+what the record lacks (same wall as D18/D19). What moves it: survive ≥K adverse correlated days across
+≥5 non-expiring regimes (months), NOT more WC weekends. This run does not shorten the clock; it makes
+the sizing honest about the correlation unit so the book isn't carrying 35%-of-bankroll single-game
+blocks when the clock runs out. **Rollback:** git-revert the merge; delete `scripts/{game_correlation,
+corr_risk_engine}.py` + `reports/{game_correlation,corr_risk_engine}.json`.
