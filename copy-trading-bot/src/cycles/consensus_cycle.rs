@@ -191,6 +191,58 @@ fn sport_bucket(title: &str, slug: &str) -> String {
     .to_string()
 }
 
+/// FROZEN slug/title-derived **bet-structure** bucket for `trader_fills.bet_type`
+/// (FORGE_PLAN Item 2). Sibling of [`sport_bucket`], computed once at capture so
+/// every query site shares one classification. Buckets the market's WAGER shape —
+/// `moneyline | spread | totals | prop | other` — orthogonal to `sport`, so a
+/// wallet sharp on moneylines but weak on spreads stops blending. First-hit-wins;
+/// order is load-bearing (prop before moneyline, so "X vs. Y: both teams to score"
+/// is a prop, not a moneyline). Validated over the live archive: `other` ≈ 16% of
+/// resolved buys and is dominated by crypto price markets, for which "other"
+/// (binary threshold event) is the honest bucket.
+fn bet_type_bucket(title: &str, slug: &str) -> String {
+    let s = slug.to_lowercase();
+    let t = title.to_lowercase();
+    let has = |pats: &[&str]| pats.iter().any(|p| s.contains(p) || t.contains(p));
+    // Spread keys on the explicit word or a PARENTHESIZED signed line "(-1.5)" /
+    // "(+3.5)" — never a bare " - " (which appears in "exact score: 2 - 0").
+    if has(&["spread", "(-", "(+"]) {
+        "spread"
+    } else if has(&["o/u ", "over/under", "over-under", "total"]) {
+        "totals"
+    } else if has(&[
+        "exact score",
+        "both teams to score",
+        "to score",
+        "at halftime",
+        "leading at",
+        "player",
+        "assists",
+        "rebounds",
+        " points",
+        "prop",
+        "winning margin",
+        "first to",
+    ]) {
+        "prop"
+    } else if has(&[
+        "to win",
+        " win on ",
+        "vs.",
+        " vs ",
+        "moneyline",
+        "to advance",
+        "end in a draw",
+        "winner",
+        "to qualify",
+    ]) {
+        "moneyline"
+    } else {
+        "other"
+    }
+    .to_string()
+}
+
 /// Convert one polled trade into a durable archive fill (BOTH sides). `None`
 /// drops trades we can't key (missing outcome index) or whose price is
 /// degenerate. `wallet_lc` is the lower-cased wallet (matches the window path's
@@ -207,6 +259,7 @@ fn trade_to_fill(wallet_lc: &str, tr: &TraderTrade) -> Option<NewTraderFill> {
     let title = tr.title.clone().unwrap_or_else(|| tr.slug.clone());
     let is_sports = is_sports(&title, &tr.slug);
     let sport = sport_bucket(&title, &tr.slug);
+    let bet_type = bet_type_bucket(&title, &tr.slug);
     Some(NewTraderFill {
         wallet: wallet_lc.to_string(),
         tx_hash: tr.tx_hash.clone(),
@@ -221,6 +274,7 @@ fn trade_to_fill(wallet_lc: &str, tr: &TraderTrade) -> Option<NewTraderFill> {
         event_slug: tr.event_slug.clone(),
         is_sports,
         sport: Some(sport),
+        bet_type: Some(bet_type),
         ts: tr.timestamp,
     })
 }
@@ -1094,6 +1148,49 @@ mod tests {
         // Unrecognized → the explicit catch-all, never a silent empty string.
         assert_eq!(
             sport_bucket("Random question", "random-market-slug"),
+            "other"
+        );
+    }
+
+    #[test]
+    fn bet_type_bucket_classifies_wager_structure() {
+        // Real live-archive title/slug shapes (validated against trader_fills).
+        assert_eq!(
+            bet_type_bucket("Spread: United States (-1.5)", "spread-usa-15"),
+            "spread"
+        );
+        assert_eq!(
+            bet_type_bucket("Portugal vs. Croatia: O/U 2.5", "por-cro-ou-25"),
+            "totals"
+        );
+        // prop is checked BEFORE moneyline, so a "vs." prop stays a prop.
+        assert_eq!(
+            bet_type_bucket("Portugal vs. Croatia: both teams to score", "por-cro-btts"),
+            "prop"
+        );
+        assert_eq!(
+            bet_type_bucket("Exact score: Spain 2 - 0 Austria?", "exact-esp-aut-2-0"),
+            "prop"
+        );
+        assert_eq!(
+            bet_type_bucket(
+                "Will Portugal win on 2026-07-02?",
+                "will-portugal-win-2026-07-02"
+            ),
+            "moneyline"
+        );
+        assert_eq!(
+            bet_type_bucket("Belgium vs. Senegal: team to advance", "bel-sen-advance"),
+            "moneyline"
+        );
+        // A "2 - 0" bare dash must NOT be read as a point spread.
+        assert_ne!(
+            bet_type_bucket("Exact score: Spain 2 - 0 Austria?", "exact-esp-aut-2-0"),
+            "spread"
+        );
+        // Crypto price markets are honestly 'other' (binary threshold events).
+        assert_eq!(
+            bet_type_bucket("Bitcoin above 100k on 2026-07-02?", "bitcoin-above-100k"),
             "other"
         );
     }
