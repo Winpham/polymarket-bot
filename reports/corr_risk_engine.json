@@ -1,0 +1,1023 @@
+{
+ "meta": {
+  "seed": 20260702,
+  "strategy": "favorite",
+  "n_positions": 220,
+  "n_games": 78,
+  "realized_wr": 0.9318,
+  "delta": 0.1388,
+  "kelly_full_by_band": {
+   "4": 0.1969,
+   "5": 0.5377
+  },
+  "w_game_lower_bound": 0.12,
+  "w_game_sweep": [
+   0.12,
+   0.4,
+   0.55,
+   0.8
+  ],
+  "w_day": 0.05,
+  "dd_ceiling": 0.25,
+  "dd_ceiling_p": 0.1,
+  "lambda_grid": [
+   1.0,
+   0.5,
+   0.25,
+   0.0
+  ],
+  "bankroll_headline": 10000.0,
+  "n_paths": 2500,
+  "objective": "max median log-growth/100 s.t. P(maxDD>25%)<=10% under game-block copula at lambda=0.5, robust across w_game; report the knee"
+ },
+ "arm_A_benign": {
+  "P0_flat_shares": {
+   "median_pnl": 2001.342222111679,
+   "p5_pnl": 1373.846360426155,
+   "p_profit": 1.0,
+   "median_maxdd": 0.014466737508269607,
+   "p95_maxdd": 0.024651602510588438,
+   "p_maxdd_over_ceil": 0.0,
+   "p_ruin": 0.0,
+   "median_g_per_100": 0.08292427372924631,
+   "risk_adj_ratio": 3.3638492140066107,
+   "n_bet": 220,
+   "worst_game_loss_pct": 14.4
+  },
+  "P1_constitution_event_caps": {
+   "median_pnl": 5835.120932540464,
+   "p5_pnl": 1759.4603435478905,
+   "p_profit": 0.9896,
+   "median_maxdd": 0.08551049169417993,
+   "p95_maxdd": 0.15899740796471806,
+   "p_maxdd_over_ceil": 0.0004,
+   "p_ruin": 0.0,
+   "median_g_per_100": 0.20892964545976017,
+   "risk_adj_ratio": 1.31404434911368,
+   "n_bet": 112,
+   "worst_game_loss_pct": 35.0
+  },
+  "P2_game_cap_1": {
+   "median_pnl": 6056.0993259139295,
+   "p5_pnl": 3000.730252084296,
+   "p_profit": 1.0,
+   "median_maxdd": 0.049586578687233776,
+   "p95_maxdd": 0.08370733292320409,
+   "p_maxdd_over_ceil": 0.0,
+   "p_ruin": 0.0,
+   "median_g_per_100": 0.21522895656999577,
+   "risk_adj_ratio": 2.5712079103924386,
+   "n_bet": 78,
+   "worst_game_loss_pct": 6.9
+  },
+  "P2_game_cap_2": {
+   "median_pnl": 4446.8641374513,
+   "p5_pnl": 729.3924395292594,
+   "p_profit": 0.9764,
+   "median_maxdd": 0.09193961862626489,
+   "p95_maxdd": 0.1718955049173373,
+   "p_maxdd_over_ceil": 0.0008,
+   "p_ruin": 0.0,
+   "median_g_per_100": 0.16722376188685903,
+   "risk_adj_ratio": 0.9728221919896924,
+   "n_bet": 89,
+   "worst_game_loss_pct": 13.7
+  },
+  "P2_game_cap_3": {
+   "median_pnl": 4824.871860019003,
+   "p5_pnl": 1097.0915923171997,
+   "p_profit": 0.9832,
+   "median_maxdd": 0.08778024101112034,
+   "p95_maxdd": 0.16557855064877014,
+   "p_maxdd_over_ceil": 0.0008,
+   "p_ruin": 0.0,
+   "median_g_per_100": 0.17896418507795692,
+   "risk_adj_ratio": 1.0808415967934202,
+   "n_bet": 99,
+   "worst_game_loss_pct": 20.6
+  },
+  "P2_game_cap_5": {
+   "median_pnl": 5691.8415239685155,
+   "p5_pnl": 1581.5991108314415,
+   "p_profit": 0.9892,
+   "median_maxdd": 0.08578880125708593,
+   "p95_maxdd": 0.1603827038637098,
+   "p_maxdd_over_ceil": 0.0004,
+   "p_ruin": 0.0,
+   "median_g_per_100": 0.20479810732836262,
+   "risk_adj_ratio": 1.276933873757336,
+   "n_bet": 109,
+   "worst_game_loss_pct": 23.1
+  },
+  "P2_game_cap_inf": {
+   "median_pnl": 5835.120932540464,
+   "p5_pnl": 1759.4603435478905,
+   "p_profit": 0.9896,
+   "median_maxdd": 0.08551049169417993,
+   "p95_maxdd": 0.15899740796471806,
+   "p_maxdd_over_ceil": 0.0004,
+   "p_ruin": 0.0,
+   "median_g_per_100": 0.20892964545976017,
+   "risk_adj_ratio": 1.31404434911368,
+   "n_bet": 112,
+   "worst_game_loss_pct": 35.0
+  },
+  "P3_drop_redundant": {
+   "median_pnl": 5895.677049572963,
+   "p5_pnl": 1842.40377633413,
+   "p_profit": 0.9932,
+   "median_maxdd": 0.07674677251699377,
+   "p95_maxdd": 0.13953322728254838,
+   "p_maxdd_over_ceil": 0.0,
+   "p_ruin": 0.0,
+   "median_g_per_100": 0.2106645828109294,
+   "risk_adj_ratio": 1.5097807662997953,
+   "n_bet": 87,
+   "worst_game_loss_pct": 13.7
+  },
+  "P4_per_game_kelly": {
+   "median_pnl": 5618.042424813923,
+   "p5_pnl": 2841.553803731451,
+   "p_profit": 1.0,
+   "median_maxdd": 0.04273461080243746,
+   "p95_maxdd": 0.07636951690557779,
+   "p_maxdd_over_ceil": 0.0,
+   "p_ruin": 0.0,
+   "median_g_per_100": 0.2026553265097461,
+   "risk_adj_ratio": 2.6536154046948646,
+   "n_bet": 112,
+   "worst_game_loss_pct": 6.9
+  }
+ },
+ "frontier_lambda05": {
+  "P0_flat_shares": {
+   "wgame_0.55": {
+    "median_pnl": 1029.3574375641656,
+    "p5_pnl": -238.90341963019873,
+    "p_profit": 0.9164,
+    "median_maxdd": 0.04484096033821666,
+    "p95_maxdd": 0.09788197378015336,
+    "p_maxdd_over_ceil": 0.0,
+    "p_ruin": 0.0,
+    "median_g_per_100": 0.044534307894357535,
+    "risk_adj_ratio": 0.45497966759827796,
+    "n_bet": 220,
+    "worst_game_loss_pct": 14.4
+   },
+   "wgame_0.80": {
+    "median_pnl": 1088.1575975490769,
+    "p5_pnl": -257.9832073124953,
+    "p_profit": 0.9132,
+    "median_maxdd": 0.04968463768521555,
+    "p95_maxdd": 0.10918619461574627,
+    "p_maxdd_over_ceil": 0.0,
+    "p_ruin": 0.0,
+    "median_g_per_100": 0.046951164478952416,
+    "risk_adj_ratio": 0.43001008180736944,
+    "n_bet": 220,
+    "worst_game_loss_pct": 14.4
+   }
+  },
+  "P1_constitution_event_caps": {
+   "wgame_0.55": {
+    "median_pnl": 3152.1572472113266,
+    "p5_pnl": -772.5277567071315,
+    "p_profit": 0.9004,
+    "median_maxdd": 0.12525219564224302,
+    "p95_maxdd": 0.2467595487397312,
+    "p_maxdd_over_ceil": 0.0468,
+    "p_ruin": 0.0,
+    "median_g_per_100": 0.12454576916725296,
+    "risk_adj_ratio": 0.5047252266562425,
+    "n_bet": 112,
+    "worst_game_loss_pct": 35.0
+   },
+   "wgame_0.80": {
+    "median_pnl": 3267.909590247662,
+    "p5_pnl": -578.6079900276372,
+    "p_profit": 0.9144,
+    "median_maxdd": 0.12435453030629466,
+    "p95_maxdd": 0.2480480305994974,
+    "p_maxdd_over_ceil": 0.0484,
+    "p_ruin": 0.0,
+    "median_g_per_100": 0.12852873359099898,
+    "risk_adj_ratio": 0.5181606694492313,
+    "n_bet": 112,
+    "worst_game_loss_pct": 35.0
+   }
+  },
+  "P2_game_cap_1": {
+   "wgame_0.55": {
+    "median_pnl": 1946.3184905258913,
+    "p5_pnl": -997.3129473468128,
+    "p_profit": 0.856,
+    "median_maxdd": 0.1125660666257978,
+    "p95_maxdd": 0.22430219430779824,
+    "p_maxdd_over_ceil": 0.0296,
+    "p_ruin": 0.0,
+    "median_g_per_100": 0.08083548231909574,
+    "risk_adj_ratio": 0.36038649808378337,
+    "n_bet": 78,
+    "worst_game_loss_pct": 6.9
+   },
+   "wgame_0.80": {
+    "median_pnl": 1999.2771215467037,
+    "p5_pnl": -942.1984497251212,
+    "p_profit": 0.856,
+    "median_maxdd": 0.1128652662950358,
+    "p95_maxdd": 0.22273040489579982,
+    "p_maxdd_over_ceil": 0.0264,
+    "p_ruin": 0.0,
+    "median_g_per_100": 0.08284605200253718,
+    "risk_adj_ratio": 0.37195663538300994,
+    "n_bet": 78,
+    "worst_game_loss_pct": 6.9
+   }
+  },
+  "P2_game_cap_2": {
+   "wgame_0.55": {
+    "median_pnl": 2282.397926410802,
+    "p5_pnl": -954.1130414823314,
+    "p_profit": 0.862,
+    "median_maxdd": 0.11972076217104373,
+    "p95_maxdd": 0.23737372514471144,
+    "p_maxdd_over_ceil": 0.04,
+    "p_ruin": 0.0,
+    "median_g_per_100": 0.09344640057611955,
+    "risk_adj_ratio": 0.39366783547400336,
+    "n_bet": 89,
+    "worst_game_loss_pct": 13.7
+   },
+   "wgame_0.80": {
+    "median_pnl": 2346.8492126576602,
+    "p5_pnl": -955.8955830825473,
+    "p_profit": 0.8636,
+    "median_maxdd": 0.12088963987452456,
+    "p95_maxdd": 0.23598877158786316,
+    "p_maxdd_over_ceil": 0.036,
+    "p_ruin": 0.0,
+    "median_g_per_100": 0.09582536952683873,
+    "risk_adj_ratio": 0.40605902086812257,
+    "n_bet": 89,
+    "worst_game_loss_pct": 13.7
+   }
+  },
+  "P2_game_cap_3": {
+   "wgame_0.55": {
+    "median_pnl": 2694.0223007507902,
+    "p5_pnl": -899.2831629390059,
+    "p_profit": 0.8788,
+    "median_maxdd": 0.12243969370072261,
+    "p95_maxdd": 0.24583692554512399,
+    "p_maxdd_over_ceil": 0.0436,
+    "p_ruin": 0.0,
+    "median_g_per_100": 0.10843004122787887,
+    "risk_adj_ratio": 0.44106490913618374,
+    "n_bet": 99,
+    "worst_game_loss_pct": 20.6
+   },
+   "wgame_0.80": {
+    "median_pnl": 2745.071614790776,
+    "p5_pnl": -875.7017643983775,
+    "p_profit": 0.8868,
+    "median_maxdd": 0.12341307486335658,
+    "p95_maxdd": 0.24251299535714113,
+    "p_maxdd_over_ceil": 0.042,
+    "p_ruin": 0.0,
+    "median_g_per_100": 0.11025434685942889,
+    "risk_adj_ratio": 0.45463273709130864,
+    "n_bet": 99,
+    "worst_game_loss_pct": 20.6
+   }
+  },
+  "P2_game_cap_5": {
+   "wgame_0.55": {
+    "median_pnl": 3032.0005828225258,
+    "p5_pnl": -841.7687143781113,
+    "p_profit": 0.8932,
+    "median_maxdd": 0.12524483622460036,
+    "p95_maxdd": 0.2483568578238522,
+    "p_maxdd_over_ceil": 0.0488,
+    "p_ruin": 0.0,
+    "median_g_per_100": 0.12037401008325548,
+    "risk_adj_ratio": 0.48468164373633316,
+    "n_bet": 109,
+    "worst_game_loss_pct": 23.1
+   },
+   "wgame_0.80": {
+    "median_pnl": 3150.8385985689765,
+    "p5_pnl": -647.5044525509945,
+    "p_profit": 0.9084,
+    "median_maxdd": 0.1249723870734123,
+    "p95_maxdd": 0.24576209856823528,
+    "p_maxdd_over_ceil": 0.0476,
+    "p_ruin": 0.0,
+    "median_g_per_100": 0.12450019573668275,
+    "risk_adj_ratio": 0.5065882675237474,
+    "n_bet": 109,
+    "worst_game_loss_pct": 23.1
+   }
+  },
+  "P2_game_cap_inf": {
+   "wgame_0.55": {
+    "median_pnl": 3152.1572472113266,
+    "p5_pnl": -772.5277567071315,
+    "p_profit": 0.9004,
+    "median_maxdd": 0.12525219564224302,
+    "p95_maxdd": 0.2467595487397312,
+    "p_maxdd_over_ceil": 0.0468,
+    "p_ruin": 0.0,
+    "median_g_per_100": 0.12454576916725296,
+    "risk_adj_ratio": 0.5047252266562425,
+    "n_bet": 112,
+    "worst_game_loss_pct": 35.0
+   },
+   "wgame_0.80": {
+    "median_pnl": 3267.909590247662,
+    "p5_pnl": -578.6079900276372,
+    "p_profit": 0.9144,
+    "median_maxdd": 0.12435453030629466,
+    "p95_maxdd": 0.2480480305994974,
+    "p_maxdd_over_ceil": 0.0484,
+    "p_ruin": 0.0,
+    "median_g_per_100": 0.12852873359099898,
+    "risk_adj_ratio": 0.5181606694492313,
+    "n_bet": 112,
+    "worst_game_loss_pct": 35.0
+   }
+  },
+  "P3_drop_redundant": {
+   "wgame_0.55": {
+    "median_pnl": 2242.330425350404,
+    "p5_pnl": -1012.0574615509549,
+    "p_profit": 0.8576,
+    "median_maxdd": 0.11993422689140959,
+    "p95_maxdd": 0.23892293130453685,
+    "p_maxdd_over_ceil": 0.0392,
+    "p_ruin": 0.0,
+    "median_g_per_100": 0.09196116065027232,
+    "risk_adj_ratio": 0.3848988464529445,
+    "n_bet": 87,
+    "worst_game_loss_pct": 13.7
+   },
+   "wgame_0.80": {
+    "median_pnl": 2279.8237579628103,
+    "p5_pnl": -961.292480778008,
+    "p_profit": 0.8596,
+    "median_maxdd": 0.12134059012840231,
+    "p95_maxdd": 0.23689892607574295,
+    "p_maxdd_over_ceil": 0.0348,
+    "p_ruin": 0.0,
+    "median_g_per_100": 0.09335112593833224,
+    "risk_adj_ratio": 0.3940546607141874,
+    "n_bet": 87,
+    "worst_game_loss_pct": 13.7
+   }
+  },
+  "P4_per_game_kelly": {
+   "wgame_0.55": {
+    "median_pnl": 1901.025894308942,
+    "p5_pnl": -852.1795655817249,
+    "p_profit": 0.858,
+    "median_maxdd": 0.10571413483320519,
+    "p95_maxdd": 0.21416541321783616,
+    "p_maxdd_over_ceil": 0.0244,
+    "p_ruin": 0.0,
+    "median_g_per_100": 0.07910886730284802,
+    "risk_adj_ratio": 0.36938208702440317,
+    "n_bet": 112,
+    "worst_game_loss_pct": 6.9
+   },
+   "wgame_0.80": {
+    "median_pnl": 1949.6484815956483,
+    "p5_pnl": -871.6971561389122,
+    "p_profit": 0.8648,
+    "median_maxdd": 0.10754267621271585,
+    "p95_maxdd": 0.21500993173470287,
+    "p_maxdd_over_ceil": 0.0212,
+    "p_ruin": 0.0,
+    "median_g_per_100": 0.0809621677065304,
+    "risk_adj_ratio": 0.37655082745865087,
+    "n_bet": 112,
+    "worst_game_loss_pct": 6.9
+   }
+  }
+ },
+ "lambda_sweep": {
+  "P0_flat_shares": {
+   "1.0": {
+    "median_pnl": 2055.33910803289,
+    "p5_pnl": 1108.1304745064758,
+    "p_profit": 0.9996,
+    "median_maxdd": 0.021220260708047115,
+    "p95_maxdd": 0.053479776138179426,
+    "p_maxdd_over_ceil": 0.0,
+    "p_ruin": 0.0,
+    "median_g_per_100": 0.08496479320735119,
+    "risk_adj_ratio": 1.5887275404411143,
+    "n_bet": 220,
+    "worst_game_loss_pct": 14.4
+   },
+   "0.5": {
+    "median_pnl": 1018.2937250617615,
+    "p5_pnl": -290.9900259144,
+    "p_profit": 0.9148,
+    "median_maxdd": 0.043587824100030766,
+    "p95_maxdd": 0.10171947421389195,
+    "p_maxdd_over_ceil": 0.0,
+    "p_ruin": 0.0,
+    "median_g_per_100": 0.04407812016079268,
+    "risk_adj_ratio": 0.4333302005484893,
+    "n_bet": 220,
+    "worst_game_loss_pct": 14.4
+   },
+   "0.25": {
+    "median_pnl": 412.09477076633993,
+    "p5_pnl": -909.86412805108,
+    "p_profit": 0.692,
+    "median_maxdd": 0.06217105004805883,
+    "p95_maxdd": 0.13812864740616498,
+    "p_maxdd_over_ceil": 0.0012,
+    "p_ruin": 0.0,
+    "median_g_per_100": 0.01835590731702795,
+    "risk_adj_ratio": 0.13288993747294658,
+    "n_bet": 220,
+    "worst_game_loss_pct": 14.4
+   },
+   "0.0": {
+    "median_pnl": -294.7434152418591,
+    "p5_pnl": -1678.8287430889939,
+    "p_profit": 0.3604,
+    "median_maxdd": 0.09019231796044516,
+    "p95_maxdd": 0.1974861787723457,
+    "p_maxdd_over_ceil": 0.0072,
+    "p_ruin": 0.0,
+    "median_g_per_100": -0.013598837328706991,
+    "risk_adj_ratio": -0.06885969141356062,
+    "n_bet": 220,
+    "worst_game_loss_pct": 14.4
+   }
+  },
+  "P1_constitution_event_caps": {
+   "1.0": {
+    "median_pnl": 8090.3747311613115,
+    "p5_pnl": 3427.0130757413144,
+    "p_profit": 0.9996,
+    "median_maxdd": 0.07016228410554592,
+    "p95_maxdd": 0.13383593262552226,
+    "p_maxdd_over_ceil": 0.0,
+    "p_ruin": 0.0,
+    "median_g_per_100": 0.26945223656293954,
+    "risk_adj_ratio": 2.0133026406060663,
+    "n_bet": 112,
+    "worst_game_loss_pct": 35.0
+   },
+   "0.5": {
+    "median_pnl": 3032.555541183686,
+    "p5_pnl": -680.1812711439047,
+    "p_profit": 0.908,
+    "median_maxdd": 0.12381097911842434,
+    "p95_maxdd": 0.23625725365582717,
+    "p_maxdd_over_ceil": 0.0352,
+    "p_ruin": 0.0,
+    "median_g_per_100": 0.12039336648416231,
+    "risk_adj_ratio": 0.5095859052841947,
+    "n_bet": 112,
+    "worst_game_loss_pct": 35.0
+   },
+   "0.25": {
+    "median_pnl": 1121.7004319621146,
+    "p5_pnl": -2131.4760024640354,
+    "p_profit": 0.6956,
+    "median_maxdd": 0.15849548806737623,
+    "p95_maxdd": 0.31341921695000874,
+    "p_maxdd_over_ceil": 0.154,
+    "p_ruin": 0.0,
+    "median_g_per_100": 0.04832413310102661,
+    "risk_adj_ratio": 0.15418369547115054,
+    "n_bet": 112,
+    "worst_game_loss_pct": 35.0
+   },
+   "0.0": {
+    "median_pnl": -659.0591102215303,
+    "p5_pnl": -3576.2361769948366,
+    "p_profit": 0.3708,
+    "median_maxdd": 0.22016965089555596,
+    "p95_maxdd": 0.41792321503056806,
+    "p_maxdd_over_ceil": 0.3848,
+    "p_ruin": 0.0,
+    "median_g_per_100": -0.030990064941085232,
+    "risk_adj_ratio": -0.07415253287333783,
+    "n_bet": 112,
+    "worst_game_loss_pct": 35.0
+   }
+  },
+  "P2_game_cap_3": {
+   "1.0": {
+    "median_pnl": 7188.138458022593,
+    "p5_pnl": 2925.858673150015,
+    "p_profit": 0.9996,
+    "median_maxdd": 0.07024497757134071,
+    "p95_maxdd": 0.13289274682693689,
+    "p_maxdd_over_ceil": 0.0,
+    "p_ruin": 0.0,
+    "median_g_per_100": 0.24619746712089885,
+    "risk_adj_ratio": 1.8526027416794693,
+    "n_bet": 99,
+    "worst_game_loss_pct": 20.6
+   },
+   "0.5": {
+    "median_pnl": 2607.530870203909,
+    "p5_pnl": -882.6662088291062,
+    "p_profit": 0.8852,
+    "median_maxdd": 0.12327002459827244,
+    "p95_maxdd": 0.23842358066372774,
+    "p_maxdd_over_ceil": 0.0356,
+    "p_ruin": 0.0,
+    "median_g_per_100": 0.10532237734789612,
+    "risk_adj_ratio": 0.44174480164544905,
+    "n_bet": 99,
+    "worst_game_loss_pct": 20.6
+   },
+   "0.25": {
+    "median_pnl": 852.0210607320078,
+    "p5_pnl": -2228.744579637938,
+    "p_profit": 0.6588,
+    "median_maxdd": 0.15662968541724115,
+    "p95_maxdd": 0.31310935448165994,
+    "p_maxdd_over_ceil": 0.1484,
+    "p_ruin": 0.0,
+    "median_g_per_100": 0.0371664686303234,
+    "risk_adj_ratio": 0.11870123999281659,
+    "n_bet": 99,
+    "worst_game_loss_pct": 20.6
+   },
+   "0.0": {
+    "median_pnl": -701.7383790213662,
+    "p5_pnl": -3522.365654656605,
+    "p_profit": 0.3448,
+    "median_maxdd": 0.21633645843607385,
+    "p95_maxdd": 0.4031019512703794,
+    "p_maxdd_over_ceil": 0.3708,
+    "p_ruin": 0.0,
+    "median_g_per_100": -0.03307165323213053,
+    "risk_adj_ratio": -0.08204290038265734,
+    "n_bet": 99,
+    "worst_game_loss_pct": 20.6
+   }
+  },
+  "P3_drop_redundant": {
+   "1.0": {
+    "median_pnl": 6125.49413495129,
+    "p5_pnl": 2278.1750764528742,
+    "p_profit": 0.9992,
+    "median_maxdd": 0.06855235812496227,
+    "p95_maxdd": 0.13187406388780795,
+    "p_maxdd_over_ceil": 0.0,
+    "p_ruin": 0.0,
+    "median_g_per_100": 0.21718927873208296,
+    "risk_adj_ratio": 1.6469446101005658,
+    "n_bet": 87,
+    "worst_game_loss_pct": 13.7
+   },
+   "0.5": {
+    "median_pnl": 2113.8475908713017,
+    "p5_pnl": -990.3278006394604,
+    "p_profit": 0.8584,
+    "median_maxdd": 0.1198105605237322,
+    "p95_maxdd": 0.2326201260218507,
+    "p_maxdd_over_ceil": 0.0352,
+    "p_ruin": 0.0,
+    "median_g_per_100": 0.08716551541847341,
+    "risk_adj_ratio": 0.3747118398959413,
+    "n_bet": 87,
+    "worst_game_loss_pct": 13.7
+   },
+   "0.25": {
+    "median_pnl": 673.0010187939488,
+    "p5_pnl": -2200.344432081411,
+    "p_profit": 0.6316,
+    "median_maxdd": 0.15204783137306516,
+    "p95_maxdd": 0.3019908963230661,
+    "p_maxdd_over_ceil": 0.132,
+    "p_ruin": 0.0,
+    "median_g_per_100": 0.02960554031173419,
+    "risk_adj_ratio": 0.09803454565088132,
+    "n_bet": 87,
+    "worst_game_loss_pct": 13.7
+   },
+   "0.0": {
+    "median_pnl": -752.6165777618116,
+    "p5_pnl": -3396.567401550098,
+    "p_profit": 0.3312,
+    "median_maxdd": 0.20839493403355008,
+    "p95_maxdd": 0.3918252942471497,
+    "p_maxdd_over_ceil": 0.3424,
+    "p_ruin": 0.0,
+    "median_g_per_100": -0.035565666598297414,
+    "risk_adj_ratio": -0.09076919515018302,
+    "n_bet": 87,
+    "worst_game_loss_pct": 13.7
+   }
+  },
+  "P4_per_game_kelly": {
+   "1.0": {
+    "median_pnl": 5131.782503239008,
+    "p5_pnl": 2033.7952389997704,
+    "p_profit": 0.9976,
+    "median_maxdd": 0.06855235812496217,
+    "p95_maxdd": 0.11847994101696241,
+    "p_maxdd_over_ceil": 0.0,
+    "p_ruin": 0.0,
+    "median_g_per_100": 0.18827829011906408,
+    "risk_adj_ratio": 1.5891153262146616,
+    "n_bet": 112,
+    "worst_game_loss_pct": 6.9
+   },
+   "0.5": {
+    "median_pnl": 1831.5539689886891,
+    "p5_pnl": -924.7048023884737,
+    "p_profit": 0.86,
+    "median_maxdd": 0.10662818016636219,
+    "p95_maxdd": 0.2159600799803064,
+    "p_maxdd_over_ceil": 0.0208,
+    "p_ruin": 0.0,
+    "median_g_per_100": 0.07644769758438381,
+    "risk_adj_ratio": 0.3539899484726768,
+    "n_bet": 112,
+    "worst_game_loss_pct": 6.9
+   },
+   "0.25": {
+    "median_pnl": 555.5598741585063,
+    "p5_pnl": -2068.4981586847175,
+    "p_profit": 0.6216,
+    "median_maxdd": 0.13913406275291842,
+    "p95_maxdd": 0.28388200877202996,
+    "p_maxdd_over_ceil": 0.1036,
+    "p_ruin": 0.0,
+    "median_g_per_100": 0.02457619418495119,
+    "risk_adj_ratio": 0.08657186234259381,
+    "n_bet": 112,
+    "worst_game_loss_pct": 6.9
+   },
+   "0.0": {
+    "median_pnl": -740.9326530241724,
+    "p5_pnl": -3189.131389740852,
+    "p_profit": 0.3204,
+    "median_maxdd": 0.19251861219203653,
+    "p95_maxdd": 0.36697887355592756,
+    "p_maxdd_over_ceil": 0.2764,
+    "p_ruin": 0.0,
+    "median_g_per_100": -0.03499171270280547,
+    "risk_adj_ratio": -0.09535075510953829,
+    "n_bet": 112,
+    "worst_game_loss_pct": 6.9
+   }
+  }
+ },
+ "wgame_sweep": {
+  "P0_flat_shares": {
+   "0.12": {
+    "median_pnl": 969.6745939456196,
+    "p5_pnl": 43.75552709909763,
+    "p_profit": 0.9568,
+    "median_maxdd": 0.03301248011283939,
+    "p95_maxdd": 0.0710053020886727,
+    "p_maxdd_over_ceil": 0.0,
+    "p_ruin": 0.0,
+    "median_g_per_100": 0.0420679624546016,
+    "risk_adj_ratio": 0.5924622699593105,
+    "n_bet": 220,
+    "worst_game_loss_pct": 14.4
+   },
+   "0.4": {
+    "median_pnl": 974.7666056649159,
+    "p5_pnl": -148.2154934444412,
+    "p_profit": 0.9252,
+    "median_maxdd": 0.041922201127173805,
+    "p95_maxdd": 0.08939528887574735,
+    "p_maxdd_over_ceil": 0.0,
+    "p_ruin": 0.0,
+    "median_g_per_100": 0.04227890732833256,
+    "risk_adj_ratio": 0.47294334925296816,
+    "n_bet": 220,
+    "worst_game_loss_pct": 14.4
+   },
+   "0.55": {
+    "median_pnl": 1008.4878747487492,
+    "p5_pnl": -291.3346296338456,
+    "p_profit": 0.9076,
+    "median_maxdd": 0.04477238350799756,
+    "p95_maxdd": 0.09887334539246423,
+    "p_maxdd_over_ceil": 0.0,
+    "p_ruin": 0.0,
+    "median_g_per_100": 0.04367341237816761,
+    "risk_adj_ratio": 0.4417106774814989,
+    "n_bet": 220,
+    "worst_game_loss_pct": 14.4
+   },
+   "0.8": {
+    "median_pnl": 1102.6189130818184,
+    "p5_pnl": -280.1911440878083,
+    "p_profit": 0.9164,
+    "median_maxdd": 0.0498540048323874,
+    "p95_maxdd": 0.106082510046962,
+    "p_maxdd_over_ceil": 0.0,
+    "p_ruin": 0.0,
+    "median_g_per_100": 0.04754360213003724,
+    "risk_adj_ratio": 0.4481756899322048,
+    "n_bet": 220,
+    "worst_game_loss_pct": 14.4
+   }
+  },
+  "P1_constitution_event_caps": {
+   "0.12": {
+    "median_pnl": 2793.862079910198,
+    "p5_pnl": -673.175425756178,
+    "p_profit": 0.8964,
+    "median_maxdd": 0.12158442111657726,
+    "p95_maxdd": 0.23576655444651234,
+    "p_maxdd_over_ceil": 0.0316,
+    "p_ruin": 0.0,
+    "median_g_per_100": 0.11199110752316509,
+    "risk_adj_ratio": 0.4750084582017004,
+    "n_bet": 112,
+    "worst_game_loss_pct": 35.0
+   },
+   "0.4": {
+    "median_pnl": 2990.458697149589,
+    "p5_pnl": -809.3874784836373,
+    "p_profit": 0.8936,
+    "median_maxdd": 0.12386369026590643,
+    "p95_maxdd": 0.24206117224736545,
+    "p_maxdd_over_ceil": 0.0448,
+    "p_ruin": 0.0,
+    "median_g_per_100": 0.11892274302886383,
+    "risk_adj_ratio": 0.4912921057299315,
+    "n_bet": 112,
+    "worst_game_loss_pct": 35.0
+   },
+   "0.55": {
+    "median_pnl": 3029.2185230948844,
+    "p5_pnl": -749.475636752947,
+    "p_profit": 0.902,
+    "median_maxdd": 0.12459548171676813,
+    "p95_maxdd": 0.2461959151374812,
+    "p_maxdd_over_ceil": 0.0464,
+    "p_ruin": 0.0,
+    "median_g_per_100": 0.12027696348623894,
+    "risk_adj_ratio": 0.4885416698285739,
+    "n_bet": 112,
+    "worst_game_loss_pct": 35.0
+   },
+   "0.8": {
+    "median_pnl": 3244.9929043818274,
+    "p5_pnl": -594.853349452503,
+    "p_profit": 0.914,
+    "median_maxdd": 0.12438621790309154,
+    "p95_maxdd": 0.2406830202618639,
+    "p_maxdd_over_ceil": 0.0384,
+    "p_ruin": 0.0,
+    "median_g_per_100": 0.12774294418377463,
+    "risk_adj_ratio": 0.5307517914840436,
+    "n_bet": 112,
+    "worst_game_loss_pct": 35.0
+   }
+  },
+  "P2_game_cap_3": {
+   "0.12": {
+    "median_pnl": 2481.3380894466836,
+    "p5_pnl": -813.6983494122527,
+    "p_profit": 0.8768,
+    "median_maxdd": 0.12024481074646695,
+    "p95_maxdd": 0.23707436175006497,
+    "p_maxdd_over_ceil": 0.0384,
+    "p_ruin": 0.0,
+    "median_g_per_100": 0.10074976342360552,
+    "risk_adj_ratio": 0.42497114694258126,
+    "n_bet": 99,
+    "worst_game_loss_pct": 20.6
+   },
+   "0.4": {
+    "median_pnl": 2621.1524297546466,
+    "p5_pnl": -908.9926494860138,
+    "p_profit": 0.874,
+    "median_maxdd": 0.12170420885822124,
+    "p95_maxdd": 0.2391032164795443,
+    "p_maxdd_over_ceil": 0.0388,
+    "p_ruin": 0.0,
+    "median_g_per_100": 0.10581321692756333,
+    "risk_adj_ratio": 0.44254200543812355,
+    "n_bet": 99,
+    "worst_game_loss_pct": 20.6
+   },
+   "0.55": {
+    "median_pnl": 2556.52443247842,
+    "p5_pnl": -904.7791428263605,
+    "p_profit": 0.8808,
+    "median_maxdd": 0.1220753544802119,
+    "p95_maxdd": 0.24111763356798763,
+    "p_maxdd_over_ceil": 0.0436,
+    "p_ruin": 0.0,
+    "median_g_per_100": 0.10347968362099179,
+    "risk_adj_ratio": 0.42916680165498455,
+    "n_bet": 99,
+    "worst_game_loss_pct": 20.6
+   },
+   "0.8": {
+    "median_pnl": 2727.817788727347,
+    "p5_pnl": -805.684046414895,
+    "p_profit": 0.8836,
+    "median_maxdd": 0.12324040133641903,
+    "p95_maxdd": 0.24134456522755746,
+    "p_maxdd_over_ceil": 0.0412,
+    "p_ruin": 0.0,
+    "median_g_per_100": 0.1096385819774763,
+    "risk_adj_ratio": 0.4542823737261328,
+    "n_bet": 99,
+    "worst_game_loss_pct": 20.6
+   }
+  }
+ },
+ "recommendation": {
+  "frozen_pick": "P1_constitution_event_caps",
+  "chosen": "P2_game_cap_3",
+  "eligible_frozen": [
+   "P1_constitution_event_caps",
+   "P2_game_cap_inf",
+   "P2_game_cap_5",
+   "P2_game_cap_3",
+   "P2_game_cap_2",
+   "P3_drop_redundant",
+   "P2_game_cap_1",
+   "P4_per_game_kelly",
+   "P0_flat_shares"
+  ],
+  "detail": {
+   "config": "P2_game_cap_3",
+   "policy": "P2",
+   "k_game": 3,
+   "arm_A_benign_H1": {
+    "median_pnl": 4824.871860019003,
+    "p5_pnl": 1097.0915923171997,
+    "p_profit": 0.9832,
+    "median_maxdd": 0.08778024101112034,
+    "p95_maxdd": 0.16557855064877014,
+    "p_maxdd_over_ceil": 0.0008,
+    "p_ruin": 0.0,
+    "median_g_per_100": 0.17896418507795692,
+    "risk_adj_ratio": 1.0808415967934202,
+    "n_bet": 99,
+    "worst_game_loss_pct": 20.6
+   },
+   "copula_l05_w055_H1": {
+    "median_pnl": 2694.0223007507902,
+    "p5_pnl": -899.2831629390059,
+    "p_profit": 0.8788,
+    "median_maxdd": 0.12243969370072261,
+    "p95_maxdd": 0.24583692554512399,
+    "p_maxdd_over_ceil": 0.0436,
+    "p_ruin": 0.0,
+    "median_g_per_100": 0.10843004122787887,
+    "risk_adj_ratio": 0.44106490913618374,
+    "n_bet": 99,
+    "worst_game_loss_pct": 20.6
+   },
+   "copula_l05_w080_H1": {
+    "median_pnl": 2745.071614790776,
+    "p5_pnl": -875.7017643983775,
+    "p_profit": 0.8868,
+    "median_maxdd": 0.12341307486335658,
+    "p95_maxdd": 0.24251299535714113,
+    "p_maxdd_over_ceil": 0.042,
+    "p_ruin": 0.0,
+    "median_g_per_100": 0.11025434685942889,
+    "risk_adj_ratio": 0.45463273709130864,
+    "n_bet": 99,
+    "worst_game_loss_pct": 20.6
+   },
+   "copula_l05_w055_H5_extrapolation": {
+    "median_pnl": 19247.48366454705,
+    "p5_pnl": 5273.697839662616,
+    "p_profit": 0.996,
+    "median_maxdd": 0.19727397355918877,
+    "p95_maxdd": 0.338094880707116,
+    "p_maxdd_over_ceil": 0.2392,
+    "p_ruin": 0.0,
+    "median_g_per_100": 0.09756440421833953,
+    "risk_adj_ratio": 0.28857107807810134,
+    "n_bet": 99,
+    "worst_game_loss_pct": 20.6
+   },
+   "risk_adj_ratio_l05_w055": 0.44106490913618374,
+   "bankroll_sensitivity": {
+    "5000": {
+     "median_pnl": 1292.0773553012532,
+     "p5_pnl": -499.97290018016355,
+     "p_profit": 0.8708,
+     "median_maxdd": 0.13464275084990596,
+     "p95_maxdd": 0.2694275530171688,
+     "p_maxdd_over_ceil": 0.0748,
+     "p_ruin": 0.0,
+     "median_g_per_100": 0.1044788029936608,
+     "risk_adj_ratio": 0.3877806921514188,
+     "n_bet": 99,
+     "worst_game_loss_pct": 20.6
+    },
+    "10000": {
+     "median_pnl": 2598.3264774395566,
+     "p5_pnl": -784.3991764566537,
+     "p_profit": 0.8876,
+     "median_maxdd": 0.12383648541835071,
+     "p95_maxdd": 0.2422633988493789,
+     "p_maxdd_over_ceil": 0.0424,
+     "p_ruin": 0.0,
+     "median_g_per_100": 0.10499040479326531,
+     "risk_adj_ratio": 0.4333729539497645,
+     "n_bet": 99,
+     "worst_game_loss_pct": 20.6
+    },
+    "25000": {
+     "median_pnl": 6013.255596136405,
+     "p5_pnl": -1895.6547774198948,
+     "p_profit": 0.8876,
+     "median_maxdd": 0.109269761779794,
+     "p95_maxdd": 0.21450510713539636,
+     "p_maxdd_over_ceil": 0.0212,
+     "p_ruin": 0.0,
+     "median_g_per_100": 0.09797222112756648,
+     "risk_adj_ratio": 0.45673607699105306,
+     "n_bet": 99,
+     "worst_game_loss_pct": 20.6
+    }
+   }
+  },
+  "k5_profit_preservation": {
+   "baseline_max_g100_lambda1": 0.2652881916008864,
+   "bar_90pct": 0.23875937244079776,
+   "per_config": {
+    "P0_flat_shares": {
+     "g100_lambda1": 0.08484152361444394,
+     "k5_frac": 0.31980889576149707,
+     "worst_game_loss_pct": 14.4,
+     "n_bet": 220
+    },
+    "P1_constitution_event_caps": {
+     "g100_lambda1": 0.2652881916008864,
+     "k5_frac": 1.0,
+     "worst_game_loss_pct": 35.0,
+     "n_bet": 112
+    },
+    "P2_game_cap_1": {
+     "g100_lambda1": 0.1909170045966141,
+     "k5_frac": 0.719658886603742,
+     "worst_game_loss_pct": 6.9,
+     "n_bet": 78
+    },
+    "P2_game_cap_2": {
+     "g100_lambda1": 0.21696246295746113,
+     "k5_frac": 0.8178368650643559,
+     "worst_game_loss_pct": 13.7,
+     "n_bet": 89
+    },
+    "P2_game_cap_3": {
+     "g100_lambda1": 0.24098014523635408,
+     "k5_frac": 0.9083711709222904,
+     "worst_game_loss_pct": 20.6,
+     "n_bet": 99
+    },
+    "P2_game_cap_5": {
+     "g100_lambda1": 0.2599553432164926,
+     "k5_frac": 0.9798979051716828,
+     "worst_game_loss_pct": 23.1,
+     "n_bet": 109
+    },
+    "P2_game_cap_inf": {
+     "g100_lambda1": 0.2652881916008864,
+     "k5_frac": 1.0,
+     "worst_game_loss_pct": 35.0,
+     "n_bet": 112
+    },
+    "P3_drop_redundant": {
+     "g100_lambda1": 0.21370417402747244,
+     "k5_frac": 0.8055547920843017,
+     "worst_game_loss_pct": 13.7,
+     "n_bet": 87
+    },
+    "P4_per_game_kelly": {
+     "g100_lambda1": 0.18696021486728387,
+     "k5_frac": 0.704743824966611,
+     "worst_game_loss_pct": 6.9,
+     "n_bet": 112
+    }
+   },
+   "frozen_pick": "P1_constitution_event_caps",
+   "honest_recommendation": "P2_game_cap_3",
+   "honest_k5_frac": 0.9083711709222904,
+   "honest_passes_90": true,
+   "honest_worst_game_loss_pct": 20.6,
+   "constitution_worst_game_loss_pct": 35.0,
+   "rule": "honest override: record has no upset \u21d2 avg-path DD ceiling is slack and cannot see the worst single-GAME block; recommend the tightest per-GAME cap that still preserves \u226590% of \u03bb=1 growth"
+  }
+ }
+}

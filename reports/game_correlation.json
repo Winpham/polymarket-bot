@@ -1,0 +1,517 @@
+{
+ "meta": {
+  "seed": 20260702,
+  "haircut": 0.005,
+  "fee": 0.02,
+  "days": [
+   "2026-06-29",
+   "2026-06-30",
+   "2026-07-01",
+   "2026-07-02",
+   "2026-07-03"
+  ],
+  "populations": [
+   "favorite",
+   "elite_fresh_fav",
+   "strict"
+  ],
+  "game_key": "superkey.super_event (falls back to slug; strips through first date)"
+ },
+ "strategies": {
+  "favorite": {
+   "n_positions": 220,
+   "n_games": 78,
+   "n_event_slug_clusters": 112,
+   "positions_per_game_mean": 2.82,
+   "positions_per_game_top10": [
+    {
+     "game": "fifwc-mex-ecu-2026-06-30",
+     "n": 17
+    },
+    {
+     "game": "fifwc-fra-swe-2026-06-30",
+     "n": 16
+    },
+    {
+     "game": "fifwc-bel-sen-2026-07-01",
+     "n": 16
+    },
+    {
+     "game": "fifwc-bra-jpn-2026-06-29",
+     "n": 15
+    },
+    {
+     "game": "fifwc-eng-cdr-2026-07-01",
+     "n": 15
+    },
+    {
+     "game": "fifwc-usa-bih-2026-07-01",
+     "n": 15
+    },
+    {
+     "game": "fifwc-ger-par-2026-06-29",
+     "n": 14
+    },
+    {
+     "game": "fifwc-nld-mar-2026-06-29",
+     "n": 12
+    },
+    {
+     "game": "fifwc-esp-aut-2026-07-02",
+     "n": 11
+    },
+    {
+     "game": "fifwc-civ-nor-2026-06-30",
+     "n": 10
+    }
+   ],
+   "top10_games_hold_pct": 64.1,
+   "size_distribution": [
+    17,
+    16,
+    16,
+    15,
+    15,
+    15,
+    14,
+    12,
+    11,
+    10,
+    4,
+    4,
+    3,
+    2,
+    2
+   ],
+   "world_cup": {
+    "positions": 146,
+    "share_pct": 66.4,
+    "games": 12
+   },
+   "icc_win_game_grain": 0.1197,
+   "n_eff_win_game_grain": 180.6,
+   "icc_pnl_game_grain": 0.1369,
+   "cr_n_eff_game_grain": 201.3,
+   "cr_n_clusters": 78,
+   "within_game_lower_bound": {
+    "n_mixed_games": 6,
+    "icc_mixed_games": 0.0,
+    "pair_concordance": 0.8737,
+    "independence_baseline": 0.8729,
+    "excess_over_independence": 0.0008
+   },
+   "worst_game_blocks": [
+    {
+     "game": "fifwc-mex-ecu-2026-06-30",
+     "n_pos": 17,
+     "pnl_as_resolved": 56.0,
+     "pnl_if_full_upset": -1444.0,
+     "pnl_if_all_chalk": 256.0,
+     "win_rate": 0.88
+    },
+    {
+     "game": "fifwc-fra-swe-2026-06-30",
+     "n_pos": 16,
+     "pnl_as_resolved": 39.0,
+     "pnl_if_full_upset": -1361.0,
+     "pnl_if_all_chalk": 239.0,
+     "win_rate": 0.88
+    },
+    {
+     "game": "fifwc-bel-sen-2026-07-01",
+     "n_pos": 16,
+     "pnl_as_resolved": 86.0,
+     "pnl_if_full_upset": -1414.0,
+     "pnl_if_all_chalk": 186.0,
+     "win_rate": 0.94
+    },
+    {
+     "game": "fifwc-bra-jpn-2026-06-29",
+     "n_pos": 15,
+     "pnl_as_resolved": 206.0,
+     "pnl_if_full_upset": -1294.0,
+     "pnl_if_all_chalk": 206.0,
+     "win_rate": 1.0
+    },
+    {
+     "game": "fifwc-eng-cdr-2026-07-01",
+     "n_pos": 15,
+     "pnl_as_resolved": 104.0,
+     "pnl_if_full_upset": -1296.0,
+     "pnl_if_all_chalk": 204.0,
+     "win_rate": 0.93
+    },
+    {
+     "game": "fifwc-usa-bih-2026-07-01",
+     "n_pos": 15,
+     "pnl_as_resolved": 225.0,
+     "pnl_if_full_upset": -1275.0,
+     "pnl_if_all_chalk": 225.0,
+     "win_rate": 1.0
+    },
+    {
+     "game": "fifwc-ger-par-2026-06-29",
+     "n_pos": 14,
+     "pnl_as_resolved": -27.0,
+     "pnl_if_full_upset": -1227.0,
+     "pnl_if_all_chalk": 173.0,
+     "win_rate": 0.86
+    },
+    {
+     "game": "fifwc-nld-mar-2026-06-29",
+     "n_pos": 12,
+     "pnl_as_resolved": -3.0,
+     "pnl_if_full_upset": -1103.0,
+     "pnl_if_all_chalk": 97.0,
+     "win_rate": 0.92
+    },
+    {
+     "game": "fifwc-esp-aut-2026-07-02",
+     "n_pos": 11,
+     "pnl_as_resolved": 204.0,
+     "pnl_if_full_upset": -896.0,
+     "pnl_if_all_chalk": 204.0,
+     "win_rate": 1.0
+    },
+    {
+     "game": "fifwc-civ-nor-2026-06-30",
+     "n_pos": 10,
+     "pnl_as_resolved": 130.0,
+     "pnl_if_full_upset": -870.0,
+     "pnl_if_all_chalk": 130.0,
+     "win_rate": 1.0
+    }
+   ]
+  },
+  "elite_fresh_fav": {
+   "n_positions": 72,
+   "n_games": 30,
+   "n_event_slug_clusters": 45,
+   "positions_per_game_mean": 2.4,
+   "positions_per_game_top10": [
+    {
+     "game": "fifwc-bra-jpn-2026-06-29",
+     "n": 10
+    },
+    {
+     "game": "fifwc-nld-mar-2026-06-29",
+     "n": 7
+    },
+    {
+     "game": "fifwc-ger-par-2026-06-29",
+     "n": 7
+    },
+    {
+     "game": "fifwc-usa-bih-2026-07-01",
+     "n": 7
+    },
+    {
+     "game": "fifwc-bel-sen-2026-07-01",
+     "n": 5
+    },
+    {
+     "game": "fifwc-fra-swe-2026-06-30",
+     "n": 4
+    },
+    {
+     "game": "fifwc-mex-ecu-2026-06-30",
+     "n": 3
+    },
+    {
+     "game": "fifwc-esp-aut-2026-07-02",
+     "n": 3
+    },
+    {
+     "game": "fifwc-prt-hrv-2026-07-02",
+     "n": 3
+    },
+    {
+     "game": "fifwc-eng-cdr-2026-07-01",
+     "n": 2
+    }
+   ],
+   "top10_games_hold_pct": 70.8,
+   "size_distribution": [
+    10,
+    7,
+    7,
+    7,
+    5,
+    4,
+    3,
+    3,
+    3,
+    2,
+    2,
+    1,
+    1,
+    1,
+    1
+   ],
+   "world_cup": {
+    "positions": 53,
+    "share_pct": 73.6,
+    "games": 11
+   },
+   "icc_win_game_grain": 0.0,
+   "n_eff_win_game_grain": 72.0,
+   "icc_pnl_game_grain": 0.0,
+   "cr_n_eff_game_grain": 66.5,
+   "cr_n_clusters": 30,
+   "within_game_lower_bound": {
+    "n_mixed_games": 2,
+    "icc_mixed_games": 0.0,
+    "pair_concordance": 0.9111,
+    "independence_baseline": 0.946,
+    "excess_over_independence": -0.0349
+   },
+   "worst_game_blocks": [
+    {
+     "game": "fifwc-bra-jpn-2026-06-29",
+     "n_pos": 10,
+     "pnl_as_resolved": 85.0,
+     "pnl_if_full_upset": -915.0,
+     "pnl_if_all_chalk": 85.0,
+     "win_rate": 1.0
+    },
+    {
+     "game": "fifwc-nld-mar-2026-06-29",
+     "n_pos": 7,
+     "pnl_as_resolved": -56.0,
+     "pnl_if_full_upset": -656.0,
+     "pnl_if_all_chalk": 44.0,
+     "win_rate": 0.86
+    },
+    {
+     "game": "fifwc-ger-par-2026-06-29",
+     "n_pos": 7,
+     "pnl_as_resolved": -45.0,
+     "pnl_if_full_upset": -645.0,
+     "pnl_if_all_chalk": 55.0,
+     "win_rate": 0.86
+    },
+    {
+     "game": "fifwc-usa-bih-2026-07-01",
+     "n_pos": 7,
+     "pnl_as_resolved": 58.0,
+     "pnl_if_full_upset": -642.0,
+     "pnl_if_all_chalk": 58.0,
+     "win_rate": 1.0
+    },
+    {
+     "game": "fifwc-bel-sen-2026-07-01",
+     "n_pos": 5,
+     "pnl_as_resolved": 35.0,
+     "pnl_if_full_upset": -465.0,
+     "pnl_if_all_chalk": 35.0,
+     "win_rate": 1.0
+    },
+    {
+     "game": "fifwc-fra-swe-2026-06-30",
+     "n_pos": 4,
+     "pnl_as_resolved": 27.0,
+     "pnl_if_full_upset": -373.0,
+     "pnl_if_all_chalk": 27.0,
+     "win_rate": 1.0
+    },
+    {
+     "game": "fifwc-mex-ecu-2026-06-30",
+     "n_pos": 3,
+     "pnl_as_resolved": 22.0,
+     "pnl_if_full_upset": -278.0,
+     "pnl_if_all_chalk": 22.0,
+     "win_rate": 1.0
+    },
+    {
+     "game": "fifwc-esp-aut-2026-07-02",
+     "n_pos": 3,
+     "pnl_as_resolved": 32.0,
+     "pnl_if_full_upset": -268.0,
+     "pnl_if_all_chalk": 32.0,
+     "win_rate": 1.0
+    },
+    {
+     "game": "fifwc-prt-hrv-2026-07-02",
+     "n_pos": 3,
+     "pnl_as_resolved": 32.0,
+     "pnl_if_full_upset": -268.0,
+     "pnl_if_all_chalk": 32.0,
+     "win_rate": 1.0
+    },
+    {
+     "game": "fifwc-eng-cdr-2026-07-01",
+     "n_pos": 2,
+     "pnl_as_resolved": 14.0,
+     "pnl_if_full_upset": -186.0,
+     "pnl_if_all_chalk": 14.0,
+     "win_rate": 1.0
+    }
+   ]
+  },
+  "strict": {
+   "n_positions": 714,
+   "n_games": 201,
+   "n_event_slug_clusters": 265,
+   "positions_per_game_mean": 3.55,
+   "positions_per_game_top10": [
+    {
+     "game": "fifwc-mex-ecu-2026-06-30",
+     "n": 51
+    },
+    {
+     "game": "fifwc-eng-cdr-2026-07-01",
+     "n": 42
+    },
+    {
+     "game": "fifwc-usa-bih-2026-07-01",
+     "n": 42
+    },
+    {
+     "game": "fifwc-bel-sen-2026-07-01",
+     "n": 38
+    },
+    {
+     "game": "fifwc-bra-jpn-2026-06-29",
+     "n": 37
+    },
+    {
+     "game": "fifwc-nld-mar-2026-06-29",
+     "n": 34
+    },
+    {
+     "game": "fifwc-ger-par-2026-06-29",
+     "n": 33
+    },
+    {
+     "game": "fifwc-fra-swe-2026-06-30",
+     "n": 33
+    },
+    {
+     "game": "fifwc-esp-aut-2026-07-02",
+     "n": 33
+    },
+    {
+     "game": "fifwc-prt-hrv-2026-07-02",
+     "n": 32
+    }
+   ],
+   "top10_games_hold_pct": 52.5,
+   "size_distribution": [
+    51,
+    42,
+    42,
+    38,
+    37,
+    34,
+    33,
+    33,
+    33,
+    32,
+    26,
+    7,
+    6,
+    5,
+    5
+   ],
+   "world_cup": {
+    "positions": 407,
+    "share_pct": 57.0,
+    "games": 14
+   },
+   "icc_win_game_grain": 0.0,
+   "n_eff_win_game_grain": 714.0,
+   "icc_pnl_game_grain": 0.033,
+   "cr_n_eff_game_grain": 964.2,
+   "cr_n_clusters": 201,
+   "within_game_lower_bound": {
+    "n_mixed_games": 65,
+    "icc_mixed_games": 0.0,
+    "pair_concordance": 0.4995,
+    "independence_baseline": 0.5013,
+    "excess_over_independence": -0.0018
+   },
+   "worst_game_blocks": [
+    {
+     "game": "fifwc-mex-ecu-2026-06-30",
+     "n_pos": 51,
+     "pnl_as_resolved": 13.0,
+     "pnl_if_full_upset": -2587.0,
+     "pnl_if_all_chalk": 2513.0,
+     "win_rate": 0.51
+    },
+    {
+     "game": "fifwc-eng-cdr-2026-07-01",
+     "n_pos": 42,
+     "pnl_as_resolved": 266.0,
+     "pnl_if_full_upset": -2334.0,
+     "pnl_if_all_chalk": 1866.0,
+     "win_rate": 0.62
+    },
+    {
+     "game": "fifwc-usa-bih-2026-07-01",
+     "n_pos": 42,
+     "pnl_as_resolved": -128.0,
+     "pnl_if_full_upset": -2228.0,
+     "pnl_if_all_chalk": 1972.0,
+     "win_rate": 0.5
+    },
+    {
+     "game": "fifwc-bel-sen-2026-07-01",
+     "n_pos": 38,
+     "pnl_as_resolved": 161.0,
+     "pnl_if_full_upset": -2139.0,
+     "pnl_if_all_chalk": 1661.0,
+     "win_rate": 0.61
+    },
+    {
+     "game": "fifwc-bra-jpn-2026-06-29",
+     "n_pos": 37,
+     "pnl_as_resolved": -50.0,
+     "pnl_if_full_upset": -2050.0,
+     "pnl_if_all_chalk": 1650.0,
+     "win_rate": 0.54
+    },
+    {
+     "game": "fifwc-nld-mar-2026-06-29",
+     "n_pos": 34,
+     "pnl_as_resolved": 1.0,
+     "pnl_if_full_upset": -1899.0,
+     "pnl_if_all_chalk": 1501.0,
+     "win_rate": 0.56
+    },
+    {
+     "game": "fifwc-ger-par-2026-06-29",
+     "n_pos": 33,
+     "pnl_as_resolved": -162.0,
+     "pnl_if_full_upset": -2062.0,
+     "pnl_if_all_chalk": 1238.0,
+     "win_rate": 0.58
+    },
+    {
+     "game": "fifwc-fra-swe-2026-06-30",
+     "n_pos": 33,
+     "pnl_as_resolved": -19.0,
+     "pnl_if_full_upset": -1919.0,
+     "pnl_if_all_chalk": 1381.0,
+     "win_rate": 0.58
+    },
+    {
+     "game": "fifwc-esp-aut-2026-07-02",
+     "n_pos": 33,
+     "pnl_as_resolved": 250.0,
+     "pnl_if_full_upset": -1450.0,
+     "pnl_if_all_chalk": 1850.0,
+     "win_rate": 0.52
+    },
+    {
+     "game": "fifwc-prt-hrv-2026-07-02",
+     "n_pos": 32,
+     "pnl_as_resolved": 67.0,
+     "pnl_if_full_upset": -1133.0,
+     "pnl_if_all_chalk": 2067.0,
+     "win_rate": 0.38
+    }
+   ]
+  }
+ }
+}
