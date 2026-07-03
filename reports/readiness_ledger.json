@@ -1,0 +1,79 @@
+{
+  "gates": [
+    {
+      "gate": "edge_reality",
+      "status": "INDETERMINATE",
+      "current": "coverage 0%, proxy \u03bb\u0302_lo 0.08",
+      "threshold": "\u03bb\u0302_lo > 0.25 at \u226550% coverage",
+      "needs": "deploy dense capture, accrue ~2\u20134 wk",
+      "eta": "weeks"
+    },
+    {
+      "gate": "persistence",
+      "status": "NOT_MET",
+      "current": "5 event-day clusters (WC-heavy), tracker=PENDING",
+      "threshold": "\u22655 independent NON-EXPIRING regimes (months)",
+      "needs": "accrue across sports past the World Cup/Wimbledon",
+      "eta": "months"
+    },
+    {
+      "gate": "power",
+      "status": "MET (caveat)",
+      "current": "115 events",
+      "threshold": "\u226530",
+      "needs": "count OK; day-deflated SE on ~5 correlated days is the real limit (\u2282 persistence)",
+      "eta": "none"
+    },
+    {
+      "gate": "sizing",
+      "status": "MET",
+      "current": "kelly_1/12",
+      "threshold": "de-lever fraction pinned",
+      "needs": "\u2014",
+      "eta": "none"
+    },
+    {
+      "gate": "copyability",
+      "status": "MET",
+      "current": "favorite 69% survives, net +7.3%",
+      "threshold": "modeled realizable > 0",
+      "needs": "\u2014",
+      "eta": "none"
+    },
+    {
+      "gate": "pilot_harness",
+      "status": "BUILT",
+      "current": "unarmed, kill-switches, place-path unreachable",
+      "threshold": "wired behind PILOT_ARMED + master",
+      "needs": "arm only after the 4 GO gates + Tue",
+      "eta": "none"
+    },
+    {
+      "gate": "operational",
+      "status": "NOT_MET",
+      "current": "0 trajectory rows",
+      "threshold": "dense capture writing + monitors live",
+      "needs": "deploy Option B (DENSE_CAPTURE=true)",
+      "eta": "days"
+    },
+    {
+      "gate": "alt_thesis",
+      "status": "LEAD",
+      "current": "1 FDR-soft cell(s): soccer/directional/b5 NO +8.2%",
+      "threshold": "a durable, post-tournament soft pocket",
+      "needs": "re-run softness_map as blind universe grows",
+      "eta": "months"
+    }
+  ],
+  "verdict": {
+    "real_money_eligible": false,
+    "go_gates_met": "2/4",
+    "binding_constraint": "persistence",
+    "binding_eta": "months",
+    "nearest_action": "deploy Option B (DENSE_CAPTURE=true)",
+    "unmet": [
+      "edge_reality",
+      "persistence"
+    ]
+  }
+}
