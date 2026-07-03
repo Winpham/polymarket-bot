@@ -178,6 +178,16 @@ nothing promoted. Corrects the correlation UNIT D15 got wrong.
 ## Honest status & posture
 - **Certified/bankable today: nothing.** One tournament, ~89% World Cup soccer. The favorite edge is
   real and attack-hardened, but 4 correlated event-days cannot clear the day-deflated SE — accrual-gated.
+- **λ is now MEASURED (weakly), not just assumed (2026-07-03, entry `clv-lambda`, D22).** The proper
+  CLV instrument (`signal_price_trajectory`) is **empty — dense capture never ran** — so true λ is
+  INDETERMINATE-BY-DATA. The best available proxy (`mean_price` drift) is positive and beats the
+  selection-matched null (p=0.0000) but explains only **~15% of the surplus** (λ̂≈**0.15**, wide CI) —
+  weakly ANTI a high λ. **Next dollar of work = turn on `DENSE_CAPTURE` (paper-only) so real CLV
+  accrues and λ̂ becomes trustworthy**, before more modeling. `scripts/clv_lambda.py` switches from
+  proxy to trajectory automatically once coverage exists.
+- **The winners fire SILENTLY (2026-07-03, entry `alert-leak`, D22).** favorite/elite = 334 signals /
+  0 alerts; only `strict` (the DODGE-containing stream) is surfaced. ≈ **+$2,122 realizable leaked**;
+  the fix is a default-OFF env flip (D12, already implemented) — **Tue's live-flip decision.**
 - **Best paper result (one weekend, $100 flat):** favorites-only ≈ +$900-1,300; naive full-feed
   flat-$ LOSES (−$4,447 strict). Sane sizing is mandatory.
 - **Posture:** keep accruing across the World Cup ending + other sports; re-run the as-of pre-flight
