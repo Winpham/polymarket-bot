@@ -7,5 +7,14 @@
   "checkpoint_index": 1,
   "n_transitions": 13,
   "n_dodge": 2
+ },
+ {
+  "version": 2,
+  "effective_from": "2026-07-03T18:00:00Z",
+  "file": "v002.json",
+  "sha256": "aaa50a72819e39b6c0acf5a9be26443703c4e65c8d8c4d63e6e7709e8eb4017b",
+  "checkpoint_index": 2,
+  "n_transitions": 1,
+  "n_dodge": 3
  }
 ]
