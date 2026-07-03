@@ -38,14 +38,17 @@ consensus on them *lost* badly (band 1: 76 bets, 3.9% hit, −$5,821 at $100 fla
    earns its aggression only then. The per-band SE-shrunk Kelly also auto-zeroes losing bands
    (strict bands 1–3 → f=0), reproducing the DODGE map from sizing alone. Flat-$ reproduced the
    sign flip (strict P(ruin) 45.6% vs flat-shares +EV) — the anchor still holds.
-   *Corrected by the correlated-risk run (entry 18, `scripts/corr_risk_engine.py`):* the caps must
-   key on the **GAME (match-key = `super_event`), NOT `event_slug`**. The ≤1-unit/event cap keys on
-   `event_slug`, and one game spans up to 7 of them (`fifwc-eng-cdr`), so it lets ONE game take
-   **7 units = 35% of bankroll** under ⅛-Kelly — a −35% drawdown if that favorite is upset. The
-   pre-registered fix is **≤3 units per GAME** (bounds the worst single-game block 35%→21% of
-   bankroll, preserves 91% of λ=1 growth). Insurance, not a free lunch (risk-adjusted ratio
-   0.50→0.44), and **inert off soccer** (tennis/MLB fire ~1 market/game) — it only binds while the
-   book is World-Cup-heavy. PROPOSED, not applied — Tue's call.
+   *Correlated-risk run + VERIFICATION (entries 18–19, `scripts/corr_risk_engine.py`,
+   `corr_risk_verify.py`):* the game-stacking is real — one game spans up to 7 `event_slug`s
+   (`fifwc-eng-cdr`), so ≤1/event lets ONE game take 35% of bankroll under ⅛-Kelly. **But the
+   verification (D21) CORRECTED D20's "≤3/game fixes it":** no per-game cap improves portfolio
+   downside (CVaR₅/p99 maxDD) — caps bound the *rare single-game* block but WORSEN CVaR by shedding
+   +EV diversifying volume. **The first-order risk lever is the KELLY FRACTION, not the game cap**
+   (P0 flat-shares is 4× safer on CVaR than any ⅛-Kelly policy — converges with D18/D19 de-lever).
+   Ordered levers: **(1) de-lever the Kelly fraction (⅒–⅟₁₆); (2) OPTIONAL market-type-aware cap**
+   — keep the near-independent totals/exact-score (+EV ballast), bound only the DIRECTIONAL units/
+   game (this Pareto-beats a blunt count cap). All PROPOSED, not applied. The whole trade-off is
+   **conditional on the edge δ** (shuffle-invariant ⇒ its reality is the selection-null's job, D16).
 4. **Act in real-time, within a few minutes of fire.** The consensus is fully formed at fire
    (~3 backers, stable — it does NOT grow), and the edge is front-loaded (a ~1-1.5pt follower tax
    from the sharps' fill to our first observable mid; further drift beyond that is what speed
@@ -150,12 +153,16 @@ nothing promoted. Corrects the correlation UNIT D15 got wrong.
   the independence baseline (0.873) ONLY because **no favorite team was upset** on this record — the
   shared block shock was never sampled. n_eff(game) ∈ **[78, 220]**; which end binds depends on the
   unmeasurable `w_game`.
-- **The cap must key on the GAME (see rule 3).** ≤1/`event_slug` lets `fifwc-eng-cdr` (7 event_slugs)
-  take **35% of bankroll on one game**. Fix = **≤3 units/GAME** (worst block 35%→21%, keeps 91% of
-  λ=1 growth — the K5 knee). Insurance, not a free lunch; inert off soccer.
-- **Keep the "Exact Score — No" markets** — dropping them is EV-negative (+$2.5/pos) and they are
-  near-INDEPENDENT of a directional upset (a different score still wins), so they diversify WITHIN
-  a game rather than add to its tail.
+- **The game-stacking is real but the cap is NOT a free win (D21 corrects D20).** ≤1/`event_slug`
+  lets `fifwc-eng-cdr` (7 event_slugs) take 35% of bankroll on one game. D20 proposed ≤3/GAME; the
+  verification found **no per-game cap improves portfolio downside (CVaR₅/p99 maxDD)** — caps bound
+  the *rare* single-game block but WORSEN CVaR by shedding +EV diversifying volume. **The KELLY
+  FRACTION is the first-order lever** (P0 flat 4× safer on CVaR than any ⅛-Kelly cap — converges with
+  D18/D19 de-lever). Ordered: (1) de-lever ⅒–⅟₁₆; (2) OPTIONAL market-type-aware directional cap.
+- **Keep the "Exact Score — No" / totals markets** — dropping them is EV-negative (+$2.5/pos) and
+  they are near-INDEPENDENT of a directional upset (a different score still wins). They are +EV
+  diversifying ballast; a blunt count cap that keeps directional and drops THESE is backwards — cap
+  the DIRECTIONAL units instead (market-type-aware, Pareto-beats the blunt cap).
 - **Go/no-go turns on λ.** At λ=0.5 the book still profits with a bounded tail; at λ≤0.25 it bleeds;
   at λ=0 it loses to costs. 4 benign days cannot distinguish λ=1 from λ=0.25 — the separating event
   (an adverse correlated day) is what the record lacks. Real money waits on ≥K adverse correlated

@@ -592,3 +592,49 @@ what the record lacks (same wall as D18/D19). What moves it: survive ≥K advers
 the sizing honest about the correlation unit so the book isn't carrying 35%-of-bankroll single-game
 blocks when the clock runs out. **Rollback:** git-revert the merge; delete `scripts/{game_correlation,
 corr_risk_engine}.py` + `reports/{game_correlation,corr_risk_engine}.json`.
+
+## D21 — Correlated risk VERIFIED: finding holds, cap recommendation OVERSTATED, refinement found (2026-07-02, entry 19)
+
+Branch `feat/corr-risk-verify` (worktree off `main` 81db85b, tag `pre-corr-risk-verify-20260702`).
+Adversarial audit of D20. One self-testing instrument (`scripts/corr_risk_verify.py`: t-copula +
+heterogeneous within-game correlation + multi-seed CI + CVaR/p99/worst-block downside metrics +
+market-type-aware cap) + a Rust-code fidelity check. Paper-only, no Rust, zero migrations. Full
+write-up: reports/entries/19. **CORRECTS D20's interpretation (not its code).**
+
+**Q3 data fidelity ✓** — read the Rust: the bot stakes one flat bet per
+`(strategy, condition_id, outcome_index)` row (`housekeeping.rs:163`, `consensus.rs:896`); event
+clustering is stats-only, never sizing. The position-grain MC is faithful. (Record grew to 229
+positions / 80 games by accrual.)
+
+**Q1 tail-model robustness ✓** — the D20 result SURVIVES a t-copula (ν=4, per-game χ² tail
+dependence) and heterogeneous correlation (directional markets w=0.55, near-independent total/
+exact-score w=0.08), 8 seeds. The cap-vs-P1 ordering is stable where caps bind; the t-copula fattens
+the single-GAME worst-block but is **diluted at portfolio level** (p99 maxDD ≈31% under both Gaussian
+and t across ~80 games). **Gaussian did NOT materially understate the portfolio tail.**
+
+**Q2 the correction ✗** — D20's "≤3/game improves the risk-adjusted trade-off, the knee" is NOT
+supported. **No per-game cap dominates P1 (no cap) on portfolio downside.** The two metrics oppose:
+caps DO bound the worst single-game block (P1 −$1648 → cap_1 −$1173, P4 −$1156) but WORSEN portfolio
+CVaR₅ (P1 −$1390 → caps −$1400…−$1586) because they shed +EV diversifying volume. The per-game cap is
+**optional targeted insurance against a rare specific-game catastrophe, NOT a Pareto win.** And **the
+KELLY FRACTION is the first-order lever, not the game cap**: P0 flat-shares has 4× better CVaR₅
+(−$359) and 11% p99 maxDD vs every ⅛-Kelly policy's ~31%, regardless of cap — **converging with
+D18/D19's de-lever conclusion.**
+
+**Q5 refinement ✓** — the blunt count cap keeps the directional (correlated) markets and drops the
+near-independent totals/exact-score — backwards. A **market-type-aware cap** (keep the independent
++EV markets, cap only DIRECTIONAL units/game; classified by slug string, no fitting) **Pareto-beats
+blunt cap_3** (K5 94% vs 92%, CVaR₅ −$1437 vs −$1514). The independent markets are diversifying +EV
+ballast — keep them, bound only the directional stack.
+
+**Q4 null ✓ / the deepest honesty** — λ=0 (δ removed) loses to costs (−$812); and δ = realized-WR −
+mean-price ≈ +0.14 is **shuffle-invariant**, so this sizing engine CANNOT self-validate the edge —
+δ's reality is the selection-null's job (D16 favorite p=0.0000), not this engine's. **The "good
+trade-off" is entirely conditional on δ being real** = the unchanged D7/persistence wall (NOT-YET).
+
+**Corrected recommendation (PROPOSED, not applied — Tue's call):** base = **P1 (⅛-Kelly per band,
+≤1/event, NO mandatory game cap)** — best portfolio downside AND growth. Ordered tail-hardening
+levers: **(1) de-lever the Kelly fraction (⅒–⅟₁₆, first-order, per D18/D19); (2) OPTIONAL
+market-type-aware directional cap** for the rare stacked-game catastrophe — NOT D20's blunt ≤3/game.
+**Rollback:** git-revert the merge; delete `scripts/corr_risk_verify.py` + `reports/corr_risk_verify.json`.
+D20's instruments remain; this corrects its interpretation.
