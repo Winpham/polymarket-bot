@@ -625,7 +625,7 @@ impl CopyTraderMonitor {
         const MAX_OFFSET: usize = 10_000;
         let mut all: Vec<TraderTrade> = Vec::new();
         let mut offset = 0usize;
-        loop {
+        'pages: loop {
             let url = format!(
                 "{DATA_API}/activity?user={wallet}&type=TRADE&limit={PAGE}&offset={offset}"
             );
@@ -638,15 +638,33 @@ impl CopyTraderMonitor {
                     .send()
                     .await
                     .context("backfill activity request failed")?;
-                if resp.status() == reqwest::StatusCode::TOO_MANY_REQUESTS {
-                    crate::metrics::record_data_api_429();
-                    attempt += 1;
-                    if attempt > 5 {
-                        return Err(anyhow::anyhow!("backfill 429 giving up for {wallet}"));
+                let status = resp.status();
+                // Throttle signals — a burst of sequential backfill requests draws
+                // 429 OR a plain 403 (verified: throttled wallets return 200 again
+                // after a pause) or a transient 5xx. Back off with escalating delay
+                // and retry; after a few tries return the PARTIAL history (never a
+                // hard error) so one throttled wallet can't abort the run — the
+                // idempotent re-run completes it.
+                if status == reqwest::StatusCode::TOO_MANY_REQUESTS
+                    || status == reqwest::StatusCode::FORBIDDEN
+                    || status.is_server_error()
+                {
+                    if status == reqwest::StatusCode::TOO_MANY_REQUESTS {
+                        crate::metrics::record_data_api_429();
                     }
-                    // linear backoff: 1s, 2s, 3s… keeps us well under the rate limit
-                    tokio::time::sleep(Duration::from_secs(attempt as u64)).await;
+                    attempt += 1;
+                    if attempt > 6 {
+                        tracing::warn!(wallet = %wallet, %status, got = all.len(),
+                            "backfill: throttled, keeping partial history");
+                        return Ok(all);
+                    }
+                    tokio::time::sleep(Duration::from_secs(2 * attempt as u64)).await;
                     continue;
+                }
+                // 400 = offset past the wallet's available data (or the 10k server
+                // cap) — the clean end-of-history signal, NOT an error.
+                if status == reqwest::StatusCode::BAD_REQUEST {
+                    break 'pages;
                 }
                 break resp
                     .error_for_status()
@@ -662,7 +680,7 @@ impl CopyTraderMonitor {
                 break;
             }
             // Gentle pacing between pages (well under the data-api rate limit).
-            tokio::time::sleep(Duration::from_millis(120)).await;
+            tokio::time::sleep(Duration::from_millis(200)).await;
         }
         Ok(all)
     }
