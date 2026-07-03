@@ -1,0 +1,30 @@
+{
+  "strategy": "elite_fresh_fav",
+  "n_total": 74,
+  "n_events": 47,
+  "n_traj": 0,
+  "n_fallback": 74,
+  "n_unusable": 0,
+  "trajectory_coverage": 0.0,
+  "usable_frac": 1.0,
+  "mean_clv": 0.00545169269673774,
+  "clv_ci": [
+    0.001267786778379015,
+    0.010858129107891976
+  ],
+  "clv_z_approx": 2.228349587214082,
+  "mean_surplus_delta": 0.10627967187062137,
+  "mean_resid": 0.10082797917388367,
+  "null_mu": -0.01101306244911326,
+  "null_sd": 0.010755516656303223,
+  "null_z": 1.530819547957457,
+  "null_p": 0.0355,
+  "null_draws": 2000,
+  "clv_explained_frac": 0.0512957238273591,
+  "lambda_hat": 0.0512957238273591,
+  "lambda_ci": [
+    0.01096671458310951,
+    0.09921101229986842
+  ],
+  "verdict": "INDETERMINATE-BY-DATA (K1): trajectory coverage 0% < 50% \u2014 CLV is fallback-dominated. The mean_price proxy below is a WEAK, single-snapshot read, NOT a certified \u03bb."
+}
