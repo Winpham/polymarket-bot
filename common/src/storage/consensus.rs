@@ -1318,6 +1318,31 @@ impl PgPortfolio {
         Ok(res.rows_affected())
     }
 
+    /// Classify each tracked wallet as `bot` | `human` in
+    /// `followed_traders.trader_type`, from its captured fills. A market-maker bot
+    /// fires hundreds of fills per active day; a human placing picks does not. Flag
+    /// `bot` iff `fills / distinct_active_days >= 400`. Returns rows updated.
+    /// Advisory — nothing in the live alert path reads `trader_type`; the selection
+    /// layer filters on it. Idempotent (a plain UPDATE from a fresh aggregate).
+    pub async fn classify_trader_types(&self) -> Result<u64> {
+        let res = sqlx::query(
+            "WITH s AS ( \
+                SELECT wallet, \
+                       count(*)::float8 \
+                         / GREATEST(count(DISTINCT (ts AT TIME ZONE 'UTC')::date), 1) AS fpd \
+                FROM trader_fills GROUP BY wallet \
+             ) \
+             UPDATE followed_traders ft \
+                SET trader_type = CASE WHEN s.fpd >= 400 THEN 'bot' ELSE 'human' END \
+             FROM s \
+             WHERE lower(ft.proxy_wallet) = s.wallet",
+        )
+        .execute(&self.pool)
+        .await
+        .context("classify_trader_types")?;
+        Ok(res.rows_affected())
+    }
+
     /// Stamp capture bookkeeping for one wallet after a poll. `min_ts`/`max_ts`
     /// are the oldest/newest fill timestamps in this poll; `raw_count` is the
     /// raw page length. A **gap** is counted iff the page was full (`raw_count

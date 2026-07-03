@@ -611,6 +611,62 @@ impl CopyTraderMonitor {
         Ok(PollResult { trades, raw_count })
     }
 
+    /// Fetch a wallet's COMPLETE reachable trade history via **offset pagination**
+    /// (`limit=500`, `offset` 0..10_000) — the correct params (`startTs` is silently
+    /// ignored by the data-api; `offset`/`limit=500` and `start`/`end` DO work,
+    /// verified live 2026-07-03). Pages newest→older until a short page or the
+    /// 10_000-offset server cap. A wallet exceeding the cap is a high-frequency
+    /// market-maker (10k+ trades) — capped here on purpose; genuine traders have far
+    /// fewer and are captured completely. Returns ALL parsed trades (BUY and SELL);
+    /// dedup is the DB's job (`insert_trader_fills` ON CONFLICT). 429 → bounded
+    /// backoff-and-retry so a transient rate-limit doesn't truncate a wallet.
+    pub async fn fetch_full_history(&self, wallet: &str) -> Result<Vec<TraderTrade>> {
+        const PAGE: usize = 500;
+        const MAX_OFFSET: usize = 10_000;
+        let mut all: Vec<TraderTrade> = Vec::new();
+        let mut offset = 0usize;
+        loop {
+            let url = format!(
+                "{DATA_API}/activity?user={wallet}&type=TRADE&limit={PAGE}&offset={offset}"
+            );
+            let mut attempt = 0u32;
+            let events: Vec<ActivityEvent> = loop {
+                let resp = self
+                    .http
+                    .get(&url)
+                    .timeout(REQUEST_TIMEOUT)
+                    .send()
+                    .await
+                    .context("backfill activity request failed")?;
+                if resp.status() == reqwest::StatusCode::TOO_MANY_REQUESTS {
+                    crate::metrics::record_data_api_429();
+                    attempt += 1;
+                    if attempt > 5 {
+                        return Err(anyhow::anyhow!("backfill 429 giving up for {wallet}"));
+                    }
+                    // linear backoff: 1s, 2s, 3s… keeps us well under the rate limit
+                    tokio::time::sleep(Duration::from_secs(attempt as u64)).await;
+                    continue;
+                }
+                break resp
+                    .error_for_status()
+                    .context("backfill activity non-2xx")?
+                    .json()
+                    .await
+                    .context("backfill activity JSON parse failed")?;
+            };
+            let n = events.len();
+            all.extend(parse_activity_events(events));
+            offset += PAGE;
+            if n < PAGE || offset > MAX_OFFSET {
+                break;
+            }
+            // Gentle pacing between pages (well under the data-api rate limit).
+            tokio::time::sleep(Duration::from_millis(120)).await;
+        }
+        Ok(all)
+    }
+
     /// Iterate over all active traders, poll their recent activity in parallel,
     /// deduplicate against the `copy_trade_events` table, and return unseen trades.
     ///
