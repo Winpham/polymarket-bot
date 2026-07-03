@@ -1,4 +1,10 @@
-# 2026-07-03 · WS-4 — the market-softness cell map (the realer thesis, tested)
+# 2026-07-03 · WS-4 — two-sided softness / FADE probe (the underdog complement to D24)
+
+> **Multi-chat note:** a parallel run shipped the richer favorite-SIDE softness×skill map (D24 —
+> category×type×band, softness/skill/ROI separated, map-integrated). This instrument
+> (`softness_fade.py`, renamed from a colliding `softness_map.py`) is the **two-sided complement**: it
+> surfaces NO-side / underdog softness (overpriced favorites you FADE) that a favorite-only (entry≥0.60)
+> map cannot see. Keep both — D24 *aims* the favorite edge; this finds where the favorite is *overpriced*.
 
 **One line:** on the rich blind universe (10,106 rows / ~5,116 events), the softest FDR-surviving
 pocket is **`soccer/directional/band5` — FADE the heavy favorite, net +8.2%, z −4.57, p=0.000** — the

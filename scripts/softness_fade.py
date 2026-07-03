@@ -1,6 +1,14 @@
 #!/usr/bin/env python3
 """
-WS-4 — PER-SPORT MARKET-SOFTNESS CELL MAP. Where is the LINE itself soft — bet it directly, no sharps.
+WS-4 — TWO-SIDED SOFTNESS / FADE PROBE (the underdog complement to D24's favorite-side map).
+
+Note (multi-chat): a parallel run shipped the richer favorite-SIDE softness×skill map (D24,
+category×type×band, softness/skill/ROI separated, map-integrated). THIS instrument's additive angle is
+the TWO-SIDED test — it surfaces NO-side / underdog softness (overpriced favorites you FADE) that a
+favorite-only (entry≥0.60) map cannot see. Keep both: D24 aims the favorite edge at soft pockets; this
+finds where the favorite itself is OVERPRICED. Same blind universe; different question.
+
+Where is the LINE itself soft — bet it directly, no sharps.
 
 The CLV finding (D22/WS-A) says the copy-consensus edge is mostly favorite-longshot BIAS the market
 never corrects, not information we front-run. That reframes the goal (per Tue's live-betting posture):
@@ -20,8 +28,8 @@ Bettable: the best SIDE (YES if gap>0 else NO) net of cost (1¢ haircut + 2% fee
   could bet the line on directly. A soft cell must be BOTH FDR-real (excess) AND net-positive (raw).
 
 Read-only, paper-only. This maps; it certifies nothing (persistence/D7 still govern real money).
-  ./softness_map.py                 # the map + verdict; writes reports/softness_map.json
-  ./softness_map.py --selftest      # injected soft cell detected; flat cell not; NO/YES side logic
+  ./softness_fade.py                # the map + verdict; writes reports/softness_fade.json
+  ./softness_fade.py --selftest     # injected soft cell detected; flat cell not; NO/YES side logic
 """
 
 import argparse
@@ -206,7 +214,7 @@ def run():
                     "band_flb": {str(k): round(v, 4) for k, v in sorted(band_gap.items())}},
            "cells": results}
     os.makedirs(REPORT_DIR, exist_ok=True)
-    path = os.path.join(REPORT_DIR, "softness_map.json")
+    path = os.path.join(REPORT_DIR, "softness_fade.json")
     with open(path, "w") as f:
         json.dump(out, f, indent=2)
     print(f"\nwrote {path}")

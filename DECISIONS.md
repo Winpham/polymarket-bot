@@ -697,14 +697,23 @@ should be stopped (Tue's alert flip). **Rollback:** git-revert the merge; the ne
 `copy-trading-bot/src/pilot.rs`, the `mod pilot;` line, `reports/*.json`, the four entries) are all
 additive.
 
-## D23 — Forward Truth: measure λ (apparatus), map the realer thesis, board the distance to money (2026-07-03)
+## D25 — Forward Truth: measure λ (apparatus), map the realer thesis, board the distance to money (2026-07-03)
 
 Branch `feat/forward-truth` (worktree off `main` 643886e, tag `pre-forward-truth-2026-07-03`). Tue's
 directive after D22: "fix everything + a long autonomous run to solve the 3 things" — (1) we're far
 from money and now know WHY (truth was the bottleneck), (2) turn on dense capture to measure λ,
 (3) don't be a lazy copycat — pivot toward softness × specialists × copyability-at-our-price. Four
 self-testing paper-only instruments + the deploy (Tue's hand). Full write-ups: reports/entries/
-2026-07-03-{clv-monitor, readiness-ledger, copyability, softness-map}.md.
+2026-07-03-{clv-monitor, readiness-ledger, copyability, softness-fade}.md.
+
+**Multi-chat overlap (honest).** While this ran, a parallel chat shipped D23 (specialist mining +
+copyability GATE) and D24 (favorite-side softness×skill map). Two independent runs converged on the
+same "aim/pivot" thesis — genuine duplication from unclaimed parallel work. Reconciled WITHOUT
+clobbering theirs: my colliding `softness_map.py` was renamed `softness_fade.py` and reframed as the
+TWO-SIDED (NO-side / fade) complement to D24's favorite-only map; my per-strategy `copyability.py`
+sits beside their per-wallet copyability gate (different unit). WS-1 (monitor) + WS-2 (ledger) are
+uniquely mine. Their D23/D24 both land on NULL/INDETERMINATE-by-power — the same accrual wall this
+run's ledger boards.
 
 **THE META-FINDING (ties all three together): the binding constraint everywhere is ACCRUAL, not
 analysis.** CLV empty (dense off), decision-time asks thin (favorite n=5), persistence 5 WC-heavy

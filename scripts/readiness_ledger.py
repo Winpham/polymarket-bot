@@ -136,7 +136,7 @@ def build_gates():
                       "—" if ntraj > 0 else "deploy Option B (DENSE_CAPTURE=true)", "none" if ntraj > 0 else "days"))
 
     # --- alt_thesis (informational: softness lead) ---
-    sm = load("softness_map.json")
+    sm = load("softness_fade.json")
     soft = [c for c in (sm or {}).get("cells", []) if c.get("SOFT_CELL")]
     gates.append(gate("alt_thesis", "LEAD" if soft else "NONE",
                       f"{len(soft)} FDR-soft cell(s)" + (f": {soft[0]['sport']}/{soft[0]['mtype']}/b{soft[0]['band']} {soft[0]['side']} {soft[0]['net_edge']:+.1%}" if soft else ""),
