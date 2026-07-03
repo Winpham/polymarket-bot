@@ -754,3 +754,47 @@ the ~3¢ tax), MLB the fastest-growing floor cell (re-read at +20 dates), NBA/NF
 (calendar-blocked, no shortcut), politics toward the midterms. **Rollback:** git-revert the merge; all
 additive (`scripts/specialist_mining.py`, `reports/entries/2026-07-03-20-specialist-mining.md`, this
 entry, the REFINED-STRATEGY block).
+
+---
+
+## D24 — Softness × Skill map: aim the edge, don't invent one (2026-07-03, entry 21)
+
+**The move.** Built the `category × market-type × band` **softness×skill map** that steers the *same*
+generic favorite edge toward the soft pockets and DODGES the sharp ones — no new signal, just aim.
+Three numbers are kept strictly separate per cell: **softness** (event-clustered blind-favorite edge,
+entry≥0.60 — opportunity size, knowable from the blind pool alone with far less data than a P&L
+verdict), **skill** (surplus over the matched category×band blind baseline — the edge), **realizable
+ROI** (at measured 0.5¢+2% costs — the bankable number). Instruments: `market_taxonomy.py`
+(category incl. politics/esports/econ + main|deriv, self-test PASS), `softness_map.py` (the map,
+K1 self-test PASS), `seed_softness_map.py` (map as new `catmix` dimension in the `map_state` store,
+**v002**), `overlay_lift.py` (silent forward overlay + watch-list).
+
+**What the map says (honest, ugly-first).**
+- **0 PRIORITIZE, 0 FDR survivors** (5-cell skill family, min p=0.052). Skill is INDETERMINATE-by-
+  power — the D16 accrual wall, not a refutation. The map orders nothing to bet today.
+- **DODGE `mlb/deriv/0.60–0.80`** — softness −10.5% (CI ub −0.5%), certified on the *blind pool alone*
+  (121 favorites). Low-band MLB totals bleed the base rate past the ~3% capture cost.
+- **K2 downgrades bind:** `soccer/deriv/0.80–0.90` is reliably **soft (+9.3%)** yet realizable-ROI LB
+  is **−7.0%** → NEUTRAL, not PRIORITIZE. Soft ≠ bankable, stated per cell.
+- **Coverage (K4):** only **soccer (174 fires) + tennis (52)** fire the consensus enough to measure
+  skill; mlb/esports/nba/politics are data-starved; **crypto/other/econ NEVER fire** (softness
+  observations, not arms — no Bonferroni slot).
+- **New findings:** esports is the softest well-populated non-summer venue (deriv +9.0%); MLB-props
+  sharpness is concentrated in the LOW band while heavy-favorite MLB totals are mildly soft (+4.6%) —
+  the sport-level −5.1% hid both. Politics is a year-round soft frontier (92 blind favs, 3 days,
+  2 fires) ramping to the Nov-2026 midterms.
+- **Overlay (K3):** virtual, forward-only. Retrospective lift is −0.8% *because* the DODGE cell's 4
+  actual fires won (+42.7%, N=4) — which is exactly why the map is pre-registered on the reliable
+  large-sample softness and judged forward. Forward lift today = INDETERMINATE (0 post-map events);
+  the overlay orders nothing yet and EARNS a Rust arm only if forward paired lift clears the bar.
+
+**Reconciliation.** The (category×market-type) softness rollup matches the per-sport tracker (entry 15)
+within sampling noise on same-sign cells (tennis moneyline +3.2% vs +2.7%; tennis handicaps −5.3%;
+mlb props −7.7% vs −5.1%; soccer props +5.2% vs +3.3%) — the map is that tracker, refined and extended
+past sports.
+
+**What changed live: NOTHING.** No migration, no Rust, no env flip, no alert change. Additive:
+`scripts/{market_taxonomy,softness_map,seed_softness_map,overlay_lift}.py`,
+`reports/softness_map.json`, `reports/map/v002.json` + manifest, this entry. **Rollback:** git-revert
+the merge. **Deliverable:** a map of WHERE the edge can be harvested — softness, skill, and
+bankability stated plainly per cell, sports and beyond.
