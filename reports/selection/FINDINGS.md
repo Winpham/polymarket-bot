@@ -23,6 +23,7 @@ Surviving set so far: **∅** (nothing certified — expected; forward data is t
 | F1 | Trust floor 30→25 | `TrustParams{min_events:25}`, pilot stays 50 | SHIPPED-FOUNDATION | lifts gate-grain reach 59→72 wallets; hairline-25 still Indeterminate (tested). Does **not** relax margin/Bonferroni/selection-null. |
 | F2 | `bet_type` axis | mig 037; `bet_type_bucket`; new `bettype` slice | SHIPPED-FOUNDATION | `other`≈16% = honest crypto binary; classifier unit-tested. Forward-only meaning (historical rows read `other`). |
 | F3 | favorite-residual cell-blind | `(sport,band)` blind, cascade → band → 0 | SHIPPED-FOUNDATION | differs from band-blind by up to ±0.44 in high-vol cells (00-baseline §7). Neutralizes favorite-loading **at the verdict**. Never fails open (cascade). |
+| F4 | pooled per-cell vote weight | `WeightMode::CellPooled`; `slice_sport_tail` arm; K_POOL=40 frozen; `SLICE_POOLED` default OFF | PENDING-FORWARD | **The named mechanism.** Each vote weighted by the trader's per-sport cell edge, partial-pooled toward overall by N/(N+40). NO cell selection at the live layer (continuous fn ⇒ family size 1). Silent (alerting:false), EXPERIMENTAL family, strict byte-identical (default_strict_is_non_regressive green). Worked example reproduced: soccer +276ev→1.073, MLB −89ev→0.977 (tempered, not full 0.967 swing). **Certifies nothing until forward accrual + Item 4 L3.** To begin accrual: enable `SLICE_POOLED` (silent, low-risk config flip). |
 
 ## Levers (WS-1…WS-4) — pre-registered here BEFORE running; gate decides
 

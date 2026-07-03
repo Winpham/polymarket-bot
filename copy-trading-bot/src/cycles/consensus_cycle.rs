@@ -19,11 +19,11 @@ use crate::data::models::{fetch_clob_market, fetch_market_by_slug, fetch_price_h
 use crate::live::broadcast;
 use crate::scanner::consensus::{
     BackerInfo, ConsensusParams, ConsensusSignal, MarketBook, StrategyDef, Tier, TraderVote,
-    default_portfolio, quality_weight, score_all_strategies, trust_arms,
+    default_portfolio, quality_weight, score_all_strategies, slice_sport_tail, trust_arms,
 };
 use crate::scanner::copy_trader::{CopyTraderMonitor, PollResult, TraderTrade};
 use crate::scanner::enrich::{EnrichCtx, EnrichMargins, EnrichModels, MarketCtx, enrich_all};
-use crate::scanner::trader_trust::{TraderTrust, TrustVerdict};
+use crate::scanner::trader_trust::{CellMap, TraderTrust, TrustVerdict, cell_verdict};
 use crate::storage::consensus::{
     NewConsensusSignal, NewMarketFeatureLog, NewTraderFill, WindowVote,
 };
@@ -70,11 +70,10 @@ fn earned_quality(trust: &TrustMap, wallet: &str, rank: Option<i32>) -> (f64, bo
     let qw = quality_weight(rank);
     match trust.get(wallet) {
         Some(t) => {
-            let n = t.n_events as f64;
-            let damp = n / (n + 20.0); // shrink toward the prior for low N
+            let d = damp(t.n_events); // shrink toward the prior for low N
             let earned = match t.verdict {
-                TrustVerdict::Trusted => (1.0 + t.lower_bound * damp).clamp(0.5, 2.0),
-                TrustVerdict::Avoid => (1.0 + t.upper_bound * damp).clamp(0.5, 1.0),
+                TrustVerdict::Trusted => (1.0 + t.lower_bound * d).clamp(0.5, 2.0),
+                TrustVerdict::Avoid => (1.0 + t.upper_bound * d).clamp(0.5, 1.0),
                 TrustVerdict::Indeterminate => qw,
             };
             let certified = matches!(t.verdict, TrustVerdict::Trusted);
@@ -82,6 +81,43 @@ fn earned_quality(trust: &TrustMap, wallet: &str, rank: Option<i32>) -> (f64, bo
         }
         None => (qw, true, false),
     }
+}
+
+/// Low-N shrink toward the prior, `n/(n+20)` — the already-blessed `earned_quality`
+/// seam, factored out so the pooled per-cell multiplier reuses the identical shrink.
+fn damp(n: i64) -> f64 {
+    let n = n as f64;
+    n / (n + 20.0)
+}
+
+/// FIXED pooling constant K (FORGE_PLAN Item 3): a cell of N=K events pools the
+/// vote weight HALFWAY toward its cell multiplier. FROZEN, never fitted — a fitted
+/// K would be a hidden search that re-inflates the multiplicity Item 4 dissolves.
+const K_POOL: f64 = 40.0;
+
+/// The ONE live axis for the pooled per-cell weight v1: the market's sport (live-
+/// derivable via `sport_bucket`). Band/bettype are extendable here later.
+pub struct SliceCtx {
+    pub sport: String,
+}
+
+/// Per-CELL earned quality, partial-pooled toward the wallet's overall multiplier
+/// `m_over` by `N_cell/(N_cell+K_POOL)` (FORGE_PLAN Item 3). Fail-closed: an
+/// Indeterminate / absent cell / untracked wallet returns `m_over` (never zero); at
+/// N_cell=0 the weight IS `m_over` (today's behavior). A thin cell moves the weight
+/// only a fraction of the way — this removes cell *selection* from the live layer
+/// (the weight is a continuous function of the cells, never an argmax).
+fn slice_pooled_quality(cells: &CellMap, ctx: &SliceCtx, m_over: f64) -> f64 {
+    let Some(c) = cells.get(&("sport".to_string(), ctx.sport.clone())) else {
+        return m_over; // no cell for this sport ⇒ overall (fail-closed)
+    };
+    let m_cell = match c.verdict {
+        TrustVerdict::Trusted => (1.0 + c.lower_bound * damp(c.n_events)).clamp(0.5, 2.0),
+        TrustVerdict::Avoid => (1.0 + c.upper_bound * damp(c.n_events)).clamp(0.5, 1.0),
+        TrustVerdict::Indeterminate => return m_over, // fail-closed
+    };
+    let w = c.n_events as f64 / (c.n_events as f64 + K_POOL); // partial-pool weight
+    m_over + (m_cell - m_over) * w // shrink toward the parent
 }
 
 /// Cached earned-trust map: lower-cased wallet → its verdict. Refreshed slowly
@@ -92,14 +128,33 @@ pub type TrustMap = std::collections::HashMap<String, TraderTrust>;
 /// `trader_slice_scores` query → a `trust_verdict` per wallet. Called by the
 /// slow refresh task in `live.rs`; empty on any DB error (fallback = incumbent
 /// behavior). Cheap relative to its ~hourly cadence.
-pub async fn compute_trust_map(portfolio: &PgPortfolio) -> TrustMap {
+pub async fn compute_trust_map(portfolio: &PgPortfolio, slice_pooled: bool) -> TrustMap {
     let scores = portfolio.trader_slice_scores().await.unwrap_or_default();
     let mut by: HashMap<String, Vec<_>> = HashMap::new();
     for s in scores {
         by.entry(s.wallet.clone()).or_default().push(s);
     }
+    let tp = crate::scanner::promotion::TrustParams::default().into_promotion();
     by.into_iter()
-        .map(|(w, slices)| (w, crate::scanner::trader_trust::trust_verdict(&slices)))
+        .map(|(w, slices)| {
+            let mut trust = crate::scanner::trader_trust::trust_verdict(&slices);
+            // Per-cell verdicts for the pooled per-cell vote weight (FORGE_PLAN
+            // Item 3), populated ONLY when SLICE_POOLED is on. Off ⇒ cells stay
+            // empty ⇒ every cell_earned_quality == earned_quality ⇒ byte-identical.
+            // ONE extra pass over the already-fetched slices; zero new queries.
+            if slice_pooled {
+                let n_comp = slices.iter().filter(|s| s.surplus.is_some()).count().max(1);
+                for s in &slices {
+                    if s.slice_kind == "sport" {
+                        trust.cells.insert(
+                            ("sport".to_string(), s.slice_key.clone()),
+                            cell_verdict(s, n_comp, &tp),
+                        );
+                    }
+                }
+            }
+            (w, trust)
+        })
         .collect()
 }
 
@@ -589,6 +644,19 @@ pub(crate) fn books_from_window_votes(votes: &[WindowVote], trust: &TrustMap) ->
         // behavior: an empty/absent map ⇒ earned_quality == quality_weight(rank),
         // trusted == true, so every non-trust strategy is byte-identical.
         let (eq, trusted, certified) = earned_quality(trust, &v.trader_wallet, v.rank);
+        // Pooled per-cell weight (FORGE_PLAN Item 3): consult the trader's cell for
+        // THIS market's sport, partial-pooled toward `eq`. When the CellMap is empty
+        // (SLICE_POOLED off / untracked / no sport cell) this returns `eq` exactly ⇒
+        // cell_earned_quality == earned_quality ⇒ byte-identical.
+        let cell_eq = match trust.get(&v.trader_wallet) {
+            Some(t) if !t.cells.is_empty() => {
+                let ctx = SliceCtx {
+                    sport: sport_bucket(&v.title, &v.slug),
+                };
+                slice_pooled_quality(&t.cells, &ctx, eq)
+            }
+            _ => eq,
+        };
         book.add_vote(
             v.outcome_index,
             v.outcome.clone(),
@@ -599,6 +667,7 @@ pub(crate) fn books_from_window_votes(votes: &[WindowVote], trust: &TrustMap) ->
                 pnl: v.pnl,
                 quality: v.quality,
                 earned_quality: eq,
+                cell_earned_quality: cell_eq,
                 trusted,
                 certified,
                 price: v.price,
@@ -913,6 +982,12 @@ pub(crate) fn active_portfolio(cfg: &CopyTradingConfig) -> Vec<StrategyDef> {
     if cfg.consensus_trust_arms {
         all.extend(trust_arms(&base, cfg.track_consensus_rank_cutoff));
     }
+    // Pooled per-cell specialist arm (FORGE_PLAN Item 3): silent, EXPERIMENTAL,
+    // registered only when SLICE_POOLED is on. Off (default) ⇒ not appended ⇒ the
+    // portfolio is byte-identical to today.
+    if cfg.slice_pooled {
+        all.push(slice_sport_tail(&base));
+    }
     // Re-tuned strict-thresholds variant (Phase 2): registered only when the
     // CONSENSUS_RETUNED spec parses; silent; empty default = not registered.
     if let Some(t) = crate::scanner::consensus::parse_retuned(&cfg.consensus_retuned) {
@@ -1101,6 +1176,7 @@ fn truncate(s: &str, max: usize) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::scanner::trader_trust::CellVerdict;
 
     #[test]
     fn alert_sets_default_is_builtin_flags_and_no_watch() {
@@ -1192,6 +1268,75 @@ mod tests {
         assert_eq!(
             bet_type_bucket("Bitcoin above 100k on 2026-07-02?", "bitcoin-above-100k"),
             "other"
+        );
+    }
+
+    #[test]
+    fn pooled_weight_equals_overall_when_no_usable_cell() {
+        // FORGE_PLAN Item 3 fail-closed: no cell for this sport (empty map) OR an
+        // Indeterminate cell ⇒ the vote pools to its overall multiplier exactly.
+        let ctx = SliceCtx {
+            sport: "soccer".into(),
+        };
+        assert_eq!(slice_pooled_quality(&CellMap::default(), &ctx, 1.23), 1.23);
+        let mut cells = CellMap::default();
+        cells.insert(
+            ("sport".into(), "soccer".into()),
+            CellVerdict {
+                verdict: TrustVerdict::Indeterminate,
+                lower_bound: 0.0,
+                upper_bound: 0.0,
+                n_events: 50,
+            },
+        );
+        assert_eq!(slice_pooled_quality(&cells, &ctx, 1.23), 1.23);
+    }
+
+    #[test]
+    fn pooled_weight_tempers_thin_cell() {
+        // FORGE_PLAN Item 3 worked example (overall multiplier m_over = 1.0).
+        // Soccer Trusted lo=+0.09 over 276 ev ⇒ m_cell≈1.084 ⇒ pooled ≈ 1.073.
+        let mut cells = CellMap::default();
+        cells.insert(
+            ("sport".into(), "soccer".into()),
+            CellVerdict {
+                verdict: TrustVerdict::Trusted,
+                lower_bound: 0.09,
+                upper_bound: 0.20,
+                n_events: 276,
+            },
+        );
+        let soc = slice_pooled_quality(
+            &cells,
+            &SliceCtx {
+                sport: "soccer".into(),
+            },
+            1.0,
+        );
+        assert!((soc - 1.073).abs() < 0.002, "soccer pooled = {soc}");
+        // MLB Avoid hi=-0.04 over 89 ev ⇒ m_cell≈0.967 ⇒ pooled ≈ 0.977 — TEMPERED
+        // toward the parent, NOT the full 0.967 cell swing (the thin-cell defense).
+        let mut cells2 = CellMap::default();
+        cells2.insert(
+            ("sport".into(), "mlb".into()),
+            CellVerdict {
+                verdict: TrustVerdict::Avoid,
+                lower_bound: -0.20,
+                upper_bound: -0.04,
+                n_events: 89,
+            },
+        );
+        let mlb = slice_pooled_quality(
+            &cells2,
+            &SliceCtx {
+                sport: "mlb".into(),
+            },
+            1.0,
+        );
+        assert!((mlb - 0.977).abs() < 0.002, "mlb pooled = {mlb}");
+        assert!(
+            mlb > 0.967,
+            "pooling tempers toward parent, not the full swing"
         );
     }
 

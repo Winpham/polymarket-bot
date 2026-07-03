@@ -212,6 +212,7 @@ mod tests {
             surplus: lb + 0.05,
             best_slices: vec![],
             worst_slices: vec![],
+            cells: Default::default(),
         }
     }
 
@@ -372,7 +373,7 @@ mod tests {
         let pool = sqlx::PgPool::connect(&url).await.unwrap();
         let pf = PgPortfolio::new(pool).await.unwrap();
 
-        let trust = crate::cycles::consensus_cycle::compute_trust_map(&pf).await;
+        let trust = crate::cycles::consensus_cycle::compute_trust_map(&pf, false).await;
         let traders = pf.get_active_traders().await.unwrap();
         let pass = deep_sharp_pass(&traders, &trust);
         println!("=== deep-sharp promotion pass: {} profiled ===", pass.len());

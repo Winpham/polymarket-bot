@@ -243,6 +243,14 @@ pub struct CopyTradingConfig {
     #[config(env = "CONSENSUS_TRUST_ARMS", default = false)]
     pub consensus_trust_arms: bool,
 
+    /// Pooled per-cell specialist weighting (FORGE_PLAN Item 3). When on, registers
+    /// the silent EXPERIMENTAL `slice_sport_tail` arm (WeightMode::CellPooled) and
+    /// populates per-sport cell verdicts so each vote is weighted by the trader's
+    /// edge in THIS market's sport, partial-pooled toward their overall multiplier.
+    /// Default OFF ⇒ no arm registered, cells empty, every book byte-identical.
+    #[config(env = "SLICE_POOLED", default = false)]
+    pub slice_pooled: bool,
+
     /// Re-tuned `strict` thresholds variant, `"min_backers,strong_net,elite_net"`
     /// (e.g. "4,5,8"). Deep-pool edge run, Phase 2: a WIDER eligible voter set
     /// inflates net_count, so selectivity must be re-chosen — as a SILENT

@@ -15,6 +15,8 @@
 //! would double-penalize N. (Shrink-toward-0 lives only on the continuous
 //! `earned_quality` weight in Phase 4, where it regularizes a multiplier.)
 
+use std::collections::HashMap;
+
 use polymarket_common::storage::consensus::TraderSliceStat;
 
 use crate::scanner::promotion::{PromotionParams, TrustParams, surplus_bounds};
@@ -90,6 +92,60 @@ impl TrustVerdict {
     }
 }
 
+/// A per-cell trust verdict (e.g. per-sport) — the SAME machinery as
+/// [`trust_verdict_with`], applied to ONE slice, cached for the pooled per-cell
+/// vote weight (FORGE_PLAN Item 3). No new estimator.
+#[derive(Debug, Clone)]
+pub struct CellVerdict {
+    pub verdict: TrustVerdict,
+    pub lower_bound: f64,
+    pub upper_bound: f64,
+    pub n_events: i64,
+}
+
+/// `(slice_kind, slice_key)` → its verdict. Empty ⇒ today's wallet-level behavior
+/// (a wallet with no populated cells pools to its overall multiplier).
+pub type CellMap = HashMap<(String, String), CellVerdict>;
+
+/// Verdict for a SINGLE slice/cell, reusing the exact bound machinery
+/// (`surplus_bounds` + day-deflated `eff_n` + the wallet's Bonferroni
+/// `n_comparisons`). A dataless or below-floor cell reads `Indeterminate` — small
+/// N is not evidence. `n_comparisons` is the wallet's OWN slice count (the cells
+/// are a large multiplicity surface; corrected the same way the headline is).
+pub fn cell_verdict(
+    cell: &TraderSliceStat,
+    n_comparisons: usize,
+    p: &PromotionParams,
+) -> CellVerdict {
+    let indet = |n| CellVerdict {
+        verdict: TrustVerdict::Indeterminate,
+        lower_bound: 0.0,
+        upper_bound: 0.0,
+        n_events: n,
+    };
+    let Some(surplus) = cell.surplus else {
+        return indet(cell.n_events);
+    };
+    if cell.n_events < p.min_events {
+        return indet(cell.n_events);
+    }
+    let eff_n = cell.n_days.clamp(1, cell.n_events.max(1));
+    let (lo, hi) = surplus_bounds(eff_n, surplus, cell.surplus_sd, n_comparisons, p);
+    let verdict = if lo > p.margin {
+        TrustVerdict::Trusted
+    } else if hi < 0.0 {
+        TrustVerdict::Avoid
+    } else {
+        TrustVerdict::Indeterminate
+    };
+    CellVerdict {
+        verdict,
+        lower_bound: lo,
+        upper_bound: hi,
+        n_events: cell.n_events,
+    }
+}
+
 /// The full trust picture for one wallet: the headline verdict + the slices that
 /// most help (best) and hurt (worst), for surfacing "with what games".
 #[derive(Debug, Clone)]
@@ -108,6 +164,10 @@ pub struct TraderTrust {
     pub best_slices: Vec<(String, String, f64)>,
     /// `(slice_kind, slice_key, surplus)` worst-first (non-overall slices).
     pub worst_slices: Vec<(String, String, f64)>,
+    /// Per-cell verdicts (populated by `compute_trust_map`; empty here). Consumed
+    /// by the pooled per-cell vote weight (FORGE_PLAN Item 3). Empty ⇒ the vote
+    /// weight is exactly the wallet-level `earned_quality` (byte-identical).
+    pub cells: CellMap,
 }
 
 /// Compute one wallet's trust verdict from its slice stats, using the default
@@ -158,6 +218,7 @@ pub fn trust_verdict_with(slices: &[TraderSliceStat], p: &PromotionParams) -> Tr
             surplus: 0.0,
             best_slices,
             worst_slices,
+            cells: CellMap::default(),
         };
     };
     let surplus = o.surplus.unwrap_or(0.0);
@@ -171,6 +232,7 @@ pub fn trust_verdict_with(slices: &[TraderSliceStat], p: &PromotionParams) -> Tr
             surplus,
             best_slices,
             worst_slices,
+            cells: CellMap::default(),
         };
     }
 
@@ -204,6 +266,7 @@ pub fn trust_verdict_with(slices: &[TraderSliceStat], p: &PromotionParams) -> Tr
         surplus,
         best_slices,
         worst_slices,
+        cells: CellMap::default(),
     }
 }
 
