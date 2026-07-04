@@ -431,6 +431,47 @@ pub async fn run_live(cfg: Arc<CopyTradingConfig>) -> Result<()> {
         });
     }
 
+    // Hot-lane fast poll for the router follow-set (2026-07-04 capture-hardening,
+    // paper-only): fast-poll ONLY the follow-set wallets (from the shared slot the
+    // re-scorer publishes), ingest through the same dedup path, and run a scoped
+    // `proven_router`-only scoring pass so a routed wallet's fresh BUY becomes a
+    // signal in ≲30s instead of 1.5–3 min. Requires PROVEN_ROUTER (so a follow-set
+    // exists); off ⇒ never spawned ⇒ byte-identical.
+    if cfg.hot_lane && cfg.proven_router {
+        let hl_portfolio = Arc::clone(&portfolio);
+        let hl_monitor = Arc::clone(&monitor);
+        let hl_cfg = Arc::clone(&cfg);
+        let hl_router = Arc::clone(&router_set);
+        tokio::spawn(async move {
+            let interval = hl_cfg.hot_poll_secs.max(5);
+            let mut cursors: std::collections::HashMap<
+                String,
+                chrono::DateTime<chrono::Utc>,
+            > = std::collections::HashMap::new();
+            tracing::info!(
+                interval_secs = interval,
+                "Hot lane ON — fast-polling the router follow-set"
+            );
+            loop {
+                // Cheap clone of the shared follow-set; fail-closed while None/∅.
+                if let Some(set) = hl_router.read().await.clone() {
+                    if let Err(e) = cycles::hot_lane_tick(
+                        &hl_portfolio,
+                        &hl_monitor,
+                        &hl_cfg,
+                        set,
+                        &mut cursors,
+                    )
+                    .await
+                    {
+                        tracing::warn!(err = %e, "hot-lane tick failed");
+                    }
+                }
+                tokio::time::sleep(Duration::from_secs(interval)).await;
+            }
+        });
+    }
+
     // Consensus detection loop.
     let co_portfolio = Arc::clone(&portfolio);
     let co_notifier = Arc::clone(&notifier);

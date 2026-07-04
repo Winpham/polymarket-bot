@@ -877,6 +877,27 @@ pub fn proven_router_arm(base: &ConsensusParams, set: Arc<HashSet<String>>) -> S
     }
 }
 
+/// Score ONLY the `proven_router` arm over the given books — the hot lane's
+/// scoped scoring pass (capture-hardening Item 2). Pure and deterministic: it
+/// emits EXACTLY what the slow portfolio pass emits for the `proven_router`
+/// strategy over the same books, so the fast lane and the 1-min cycle converge on
+/// the identical signal — it only arrives sooner (≲30s vs 1.5–3 min). No other
+/// arm is ever scored here, so the hot lane cannot perturb `strict` (or any
+/// other) emissions.
+pub fn score_router_only(
+    books: &[MarketBook],
+    now: DateTime<Utc>,
+    base: &ConsensusParams,
+    set: Arc<HashSet<String>>,
+) -> Vec<ConsensusSignal> {
+    let def = proven_router_arm(base, set);
+    let mut sigs = score_all(books, now, &def.params);
+    for s in &mut sigs {
+        s.strategy = def.name.to_string();
+    }
+    sigs
+}
+
 /// Parse the `CONSENSUS_RETUNED` spec — `"min_backers,strong_net,elite_net"` —
 /// into the re-tuned threshold triple. Empty/garbage ⇒ `None` (arm not
 /// registered; live portfolio unchanged). The re-tune exists because a WIDER
@@ -1241,6 +1262,50 @@ mod tests {
         );
         // longshot (band 0.02-0.35) must NOT fire on a 0.50 market.
         assert!(!sigs.iter().any(|s| s.strategy == "longshot"));
+    }
+
+    // --- capture-hardening Item 2: the hot lane's scoped scorer ---
+
+    #[test]
+    fn score_router_only_scores_router_arm_and_nothing_else() {
+        let now = Utc::now();
+        // Two fresh backers on Yes at 0.50 (in the 0.45–0.90 band): `wa` is a
+        // follow-set wallet, `wb` is not.
+        let b = book_with(
+            now,
+            vec![(0, "wa", Some(5), 0.50, 5), (0, "wb", Some(20), 0.51, 5)],
+        );
+        let base = ConsensusParams::default();
+
+        // Only `wa` is routed ⇒ exactly one proven_router signal, counting ONLY
+        // the router member (net_count = 1, `wb` filtered out by router_set).
+        let set: Arc<HashSet<String>> = Arc::new(["wa".to_string()].into_iter().collect());
+        let sigs = score_router_only(&[b.clone()], now, &base, set);
+        assert_eq!(sigs.len(), 1, "one market, one routed backer ⇒ one signal");
+        assert!(
+            sigs.iter().all(|s| s.strategy == "proven_router"),
+            "the scoped pass tags ONLY proven_router — never strict/loose/etc."
+        );
+        assert_eq!(sigs[0].net_count, 1, "only the routed wallet is counted");
+        assert!(
+            sigs[0].backers.iter().all(|bk| bk.wallet == "wa"),
+            "non-router wallet `wb` must not appear as a backer"
+        );
+
+        // Fail-closed: an empty follow-set counts nothing (mirrors the arm's
+        // published-but-empty state).
+        let empty: Arc<HashSet<String>> = Arc::new(HashSet::new());
+        assert!(
+            score_router_only(&[b.clone()], now, &base, empty).is_empty(),
+            "empty follow-set ⇒ no signals (fail-closed)"
+        );
+
+        // A follow-set that matches no wallet in the book ⇒ no signal.
+        let miss: Arc<HashSet<String>> = Arc::new(["zz".to_string()].into_iter().collect());
+        assert!(
+            score_router_only(&[b], now, &base, miss).is_empty(),
+            "no routed wallet present ⇒ no signal"
+        );
     }
 
     #[test]

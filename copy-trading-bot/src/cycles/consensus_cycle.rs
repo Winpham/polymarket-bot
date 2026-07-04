@@ -33,7 +33,7 @@ use polymarket_common::model::features::MarketFeatures;
 use polymarket_common::ntfy::Ntfy;
 
 /// Build [`ConsensusParams`] from runtime config.
-fn params_from_cfg(cfg: &CopyTradingConfig) -> ConsensusParams {
+pub(crate) fn params_from_cfg(cfg: &CopyTradingConfig) -> ConsensusParams {
     ConsensusParams {
         min_backers: cfg.min_backers,
         max_opposers: cfg.max_opposers,
@@ -581,7 +581,7 @@ pub async fn consensus_cycle(
 
 /// Display name for a trader (username, else short wallet) — matches the legacy
 /// book-assembly naming exactly.
-fn trader_name(t: &FollowedTrader) -> String {
+pub(crate) fn trader_name(t: &FollowedTrader) -> String {
     t.username
         .clone()
         .unwrap_or_else(|| t.proxy_wallet[..8.min(t.proxy_wallet.len())].to_string())
@@ -590,7 +590,7 @@ fn trader_name(t: &FollowedTrader) -> String {
 /// Convert one polled trade into a window fill atom, applying the same BUY /
 /// outcome-index / price-validity filters the legacy book assembly used. `None`
 /// drops the trade. `is_sports` is computed once here from the title + slug.
-fn trade_to_window_vote(
+pub(crate) fn trade_to_window_vote(
     trader: &FollowedTrader,
     name: &str,
     quality: f64,
@@ -1050,7 +1050,7 @@ fn alert_sets(
 
 /// Serialize the raw vote atoms for every observed `(condition_id, outcome_index)`.
 /// Strategy-agnostic, computed once per cycle, reused across all strategies.
-fn atom_log(books: &[MarketBook]) -> std::collections::HashMap<(String, i32), serde_json::Value> {
+pub(crate) fn atom_log(books: &[MarketBook]) -> std::collections::HashMap<(String, i32), serde_json::Value> {
     let mut map = std::collections::HashMap::new();
     for book in books {
         for (&oidx, votes) in &book.votes {
@@ -1077,7 +1077,7 @@ fn atom_log(books: &[MarketBook]) -> std::collections::HashMap<(String, i32), se
 }
 
 /// Convert a scored signal into its DB upsert payload (atoms attached).
-fn to_new_signal(
+pub(crate) fn to_new_signal(
     sig: &ConsensusSignal,
     atoms: &std::collections::HashMap<(String, i32), serde_json::Value>,
 ) -> NewConsensusSignal {
