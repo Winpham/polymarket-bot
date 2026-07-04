@@ -987,3 +987,17 @@ not the 2026-06-30…07-03 backfill crawl whose crawl-stamp `ts` weakens the tem
 matched null. Offline-decidable now (Tue's call, not applied): the 40/92 pool reconciliation, and
 dropping/relaxing the FP-generating `round_trip` axis. Scripts: `mm_common/mm_calibrate/
 mm_persistence_effect/mm_reconcile.py`, all `--selftest`-green.
+
+**D29 ADDENDUM (same day) — the criterion was misframed; the screen IS profit-accretive.**
+Cross-checked against the router's own `trader_scorecard.persistence`. Persistence WITHIN subgroups:
+MM-flagged +0.417 (n=98) > all +0.291 > clean +0.194 (n=103) — MMs are *mechanically* persistent
+(arb) and INFLATE the pooled corr, so "does exclusion RAISE persistence" was the wrong test (removing
+uncopyable arbers correctly lowers it). On the RIGHT criterion — forward H2 copy-return of the H1≥10%
+cohort the arm follows — the screen ~10×'s realized return (+0.004 unscreened → +0.043 screened) by
+keeping arbers out of the copy cohort. **Screen VINDICATED as profit-accretive; keep it.** New
+instrument `scripts/mm_screen_effect.py` (--selftest green) makes this reproducible. Refinement
+(PROPOSAL, not applied, needs Tue + forward re-confirm — `reports/PROPOSAL_mm_round_trip_relax.md`):
+relax `round_trip` 0.30→0.50 recovers ~18 copyable directional traders (n 103→121) at equal/greater
+cohort forward-return (+0.043→+0.045); `round_trip` is a pure FP-generator (all 11 Tier-1 human FPs
+fired on it), `sell_buy` earns its keep. Net: Phase-1 STOP stands (no Rust change, thresholds frozen),
+but the durable takeaways are the vindication + the dominated round_trip axis, both forward-decidable.

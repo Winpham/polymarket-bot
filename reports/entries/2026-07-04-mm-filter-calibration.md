@@ -122,6 +122,52 @@ both"). Read-only recommendations, **nothing mutated**:
 Full tables in `reports/mm_reconcile.json`; Tier-1 in `mm_calibrate.json`; Tier-2 in
 `mm_persistence_effect.json`.
 
+## ADDENDUM — reconciliation with the router's own persistence instrument (the criterion was misframed)
+
+After the NO-GO I cross-checked against `trader_scorecard.persistence` (the router's own H1→H2
+copy-return instrument that produced the +0.338 selection-persistence claim) — and it both
+**corroborates the NO-GO and explains it**, then reframes what the screen is *for*.
+
+**(1) The inflation diagnostic (`scripts/mm_screen_effect.py`).** Persistence *within* subgroups:
+
+| subgroup | H1→H2 copy-return corr | n |
+|---|---|---|
+| MM-flagged | **+0.417** | 98 |
+| all | +0.291 | 201 |
+| clean (copyable) | **+0.194** | 103 |
+
+MMs are *more* persistent — buy-both-hold arbers earn a stable small edge every period, so they are
+mechanically rank-stable and **INFLATE** the pooled corr. Excluding them *correctly* lowers the raw
+number (0.291 → 0.194). So "does exclusion RAISE pooled persistence?" — the Tier-2 criterion — was
+never the right success test; the NO-GO is technically correct but against a misframed target.
+
+**(2) The right criterion — downstream copyable profit — says the screen HELPS.** Forward (H2)
+copy-return of the H1≥10% cohort (the wallets the arm actually follows):
+
+| screen | corr | n | **cohort fwd-H2** | cohort n |
+|---|---|---|---|---|
+| no screen | +0.291 | 201 | **+0.004** | 57 |
+| current 0.30/0.25/0.50 | +0.194 | 103 | **+0.043** | 36 |
+| relax round_trip → 0.50 | +0.210 | 121 | **+0.045** | 40 |
+| two_sided only | +0.204 | 133 | +0.029 | 45 |
+
+The screen **~10×'s the copy cohort's realized forward return** (+0.004 → +0.043) by keeping arbers
+(whose H1≥10% is arb-driven and doesn't copy at our tax) out of the cohort. **The MM screen is
+profit-accretive and should stay** — a materially different conclusion than "the screen is
+unvalidated," reached because the downstream-profit lens is the correct one, not pooled persistence.
+
+**(3) Concrete refinement (proposed, NOT applied):** relaxing `round_trip_rate` 0.30 → 0.50 recovers
+~18 copyable directional traders (n 103 → 121) at equal/greater cohort forward-return (+0.043 →
++0.045). This is the same false-positive the Tier-1 `round_trip` axis flagged (all 11 human FPs fired
+on it), now confirmed on the downstream proxy. `sell_buy` earns its place (dropping it lowers the
+cohort return); only `round_trip` is a pure FP-generator. Because the thresholds are pre-registered
+and the margin is within-noise on a 4-day record, this is filed as a documented amendment proposal
+requiring Tue's sign-off — `reports/PROPOSAL_mm_round_trip_relax.md` — not an autonomous edit.
+
+**Verdict, corrected:** Tier-2 NO-GO stands *against its literal criterion*, but the screen is
+**validated as profit-accretive on the correct downstream criterion**. The screen stays; the
+`round_trip` axis is a candidate simplification pending forward re-confirmation.
+
 ## Decision & next step
 
 **STOP at the Phase-1 gate. Do not build Phase 2** (the calibrated Rust verdict / migration 040 /
