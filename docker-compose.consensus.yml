@@ -97,6 +97,13 @@ services:
       DENSE_WINDOW_MINS: ${DENSE_WINDOW_MINS:-15}
       DENSE_MAX_SIGNALS: ${DENSE_MAX_SIGNALS:-40}
       DENSE_STRATEGIES: ${DENSE_STRATEGIES:-strict,favorite,elite_fresh_fav,proven_router}
+      # --- capture hardening (2026-07-04, paper-only): survivorship fix + hot lane.
+      #     Both default OFF (loop never spawned) ⇒ byte-identical live behavior.
+      #     Must be named here AND set in .env.consensus to reach the container
+      #     (env-drift footgun) — flip both to true, then recreate, to enable. ---
+      CAPTURE_DROPPED: ${CAPTURE_DROPPED:-false}       # keep polling deactivated scorecard-eligible wallets' fills (de-bias forward reads)
+      HOT_LANE: ${HOT_LANE:-false}                     # fast-poll the router follow-set → ≲30s fill→signal (needs PROVEN_ROUTER)
+      HOT_POLL_SECS: ${HOT_POLL_SECS:-12}              # hot-lane poll interval (floored at 5s in code)
       # --- optional consensus tuning (sensible defaults baked in) ---
       # TRACK_TOP_N: "40"
       # TRACK_PERIODS: "WEEK,MONTH"

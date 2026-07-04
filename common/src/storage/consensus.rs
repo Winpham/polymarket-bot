@@ -1661,6 +1661,48 @@ impl PgPortfolio {
         Ok(rows.into_iter().map(|r| r.0).collect())
     }
 
+    /// Survivorship capture fix (2026-07-04 capture-hardening): the DEACTIVATED
+    /// wallets the scorecard still cares about, so the hardened loop can keep
+    /// polling their fills after they drop off the leaderboard. Without this the
+    /// forward scorecard/benchmark is conditioned on staying tracked (upward bias;
+    /// router_verify A4 measured 245 inactive wallets with 0 fills after
+    /// `last_seen_on_lb`).
+    ///
+    /// A wallet qualifies when it is `active = FALSE` AND scorecard-eligible — the
+    /// pool the scorecard reads: it has EVER appeared in `router_followset`, OR it
+    /// holds ≥100 BUY fills in the entry band 0.45 ≤ price < 0.90 over the trailing
+    /// 365 days (the `n_fills ≥ 100` floor the scorecard applies). Returns
+    /// `(proxy_wallet, since)` where `since` is the last point we captured
+    /// (`consensus_polled_at`, else `last_seen_on_lb`, else 2 days back) — used only
+    /// to advance the poll cursor and for logging (the data-api returns the newest
+    /// page regardless of `startTs`; dedup is the DB's job).
+    pub async fn scorecard_eligible_dropped_wallets(
+        &self,
+    ) -> Result<Vec<(String, DateTime<Utc>)>> {
+        let rows: Vec<(String, DateTime<Utc>)> = sqlx::query_as(
+            "WITH band_fills AS ( \
+                 SELECT wallet FROM trader_fills \
+                 WHERE side = 'BUY' AND price >= 0.45 AND price < 0.90 \
+                   AND ts >= NOW() - INTERVAL '365 days' \
+                 GROUP BY wallet HAVING COUNT(*) >= 100 \
+             ), \
+             eligible AS ( \
+                 SELECT wallet FROM router_followset \
+                 UNION SELECT wallet FROM band_fills \
+             ) \
+             SELECT ft.proxy_wallet, \
+                    COALESCE(ft.consensus_polled_at, ft.last_seen_on_lb, \
+                             NOW() - INTERVAL '2 days') AS since \
+             FROM followed_traders ft \
+             JOIN eligible e ON e.wallet = lower(ft.proxy_wallet) \
+             WHERE ft.active = FALSE",
+        )
+        .fetch_all(&self.pool)
+        .await
+        .context("scorecard_eligible_dropped_wallets")?;
+        Ok(rows)
+    }
+
     /// Leak-free **as-of** clone of `trader_slice_scores`: every wallet's per-slice
     /// event-clustered surplus computed using ONLY fills resolved strictly before
     /// `cut`. The `resolved_at < $1` predicate lives in the `adv` CTE, so BOTH the
@@ -2802,6 +2844,134 @@ mod trader_fills_it {
                 .unwrap();
         }
         println!("trader_fills_it: multi-outcome resolve + void-skip all OK");
+    }
+
+    /// SURVIVORSHIP CAPTURE FIX (capture-hardening Item 1): a DEACTIVATED wallet
+    /// that is still scorecard-eligible is returned by
+    /// `scorecard_eligible_dropped_wallets`, and its new fills LAND in the archive
+    /// through the ordinary `insert_trader_fills` path — while an active or
+    /// ineligible wallet is NOT returned. This is the query the hardened loop keys
+    /// on; the acceptance ("deactivated-wallet fills appear in trader_fills").
+    #[tokio::test]
+    #[ignore = "requires a live Postgres at $DATABASE_URL with migrations applied"]
+    async fn capture_dropped_selects_deactivated_scorecard_eligible() {
+        let url = std::env::var("DATABASE_URL").expect("DATABASE_URL must be set");
+        let pool = sqlx::PgPool::connect(&url).await.expect("connect");
+        let pf = PgPortfolio::new(pool).await.expect("portfolio");
+        pf.run_migrations().await.expect("migrations");
+
+        // Three synthetic wallets — the fills join is lower-cased, so store lower.
+        let dropped = "0xcd_dropped_elig"; // active=false + ≥100 band fills → RETURNED
+        let active = "0xcd_active_elig"; // active=true  + ≥100 band fills → NOT returned
+        let thin = "0xcd_dropped_thin"; // active=false + too few fills   → NOT returned
+        for w in [dropped, active, thin] {
+            sqlx::query("DELETE FROM followed_traders WHERE proxy_wallet = $1")
+                .bind(w)
+                .execute(&pf.pool)
+                .await
+                .unwrap();
+            sqlx::query("DELETE FROM trader_fills WHERE wallet = $1")
+                .bind(w)
+                .execute(&pf.pool)
+                .await
+                .unwrap();
+        }
+
+        // Row helper: a BUY fill in the 0.45–0.90 band, unique tx so no dedup.
+        let bandfill = |w: &str, i: usize| NewTraderFill {
+            wallet: w.into(),
+            tx_hash: Some(format!("0xcd_{w}_{i}")),
+            condition_id: format!("0xcd_cond_{i}"),
+            outcome_index: 0,
+            outcome: "Yes".into(),
+            side: "BUY".into(),
+            price: 0.60,
+            size_usd: 100.0,
+            title: "t".into(),
+            slug: "nba-x".into(),
+            event_slug: Some(format!("ev-{i}")),
+            is_sports: true,
+            sport: Some("nba".into()),
+            bet_type: Some("spread".into()),
+            ts: Utc::now() - chrono::Duration::days(1),
+        };
+
+        // Eligible pool = ≥100 band fills; give `dropped` and `active` 100, `thin` 3.
+        let mut fills = Vec::new();
+        for i in 0..100 {
+            fills.push(bandfill(dropped, i));
+            fills.push(bandfill(active, 1_000 + i));
+        }
+        for i in 0..3 {
+            fills.push(bandfill(thin, 2_000 + i));
+        }
+        pf.insert_trader_fills(&fills).await.unwrap();
+
+        // followed_traders rows: `dropped` + `thin` deactivated, `active` active.
+        for (w, is_active) in [(dropped, false), (active, true), (thin, false)] {
+            sqlx::query(
+                "INSERT INTO followed_traders \
+                   (proxy_wallet, source, active, consensus_eligible, last_seen_on_lb) \
+                 VALUES ($1, 'leaderboard', $2, TRUE, NOW() - INTERVAL '3 days') \
+                 ON CONFLICT (proxy_wallet) DO UPDATE SET active = EXCLUDED.active",
+            )
+            .bind(w)
+            .bind(is_active)
+            .execute(&pf.pool)
+            .await
+            .unwrap();
+        }
+
+        let got = pf.scorecard_eligible_dropped_wallets().await.unwrap();
+        let names: std::collections::HashSet<String> =
+            got.iter().map(|(w, _)| w.clone()).collect();
+        assert!(
+            names.contains(dropped),
+            "deactivated + scorecard-eligible wallet is selected"
+        );
+        assert!(
+            !names.contains(active),
+            "an ACTIVE wallet is polled by the main loop — not the dropped lane"
+        );
+        assert!(
+            !names.contains(thin),
+            "a deactivated wallet below the ≥100-fill floor is not scorecard-eligible"
+        );
+
+        // The archive path itself: a NEW fill for the dropped wallet lands (dedup
+        // never drops a genuinely new tx). This is the acceptance condition.
+        let before: i64 =
+            sqlx::query_scalar("SELECT COUNT(*) FROM trader_fills WHERE wallet = $1")
+                .bind(dropped)
+                .fetch_one(&pf.pool)
+                .await
+                .unwrap();
+        let n = pf
+            .insert_trader_fills(&[bandfill(dropped, 9_999)])
+            .await
+            .unwrap();
+        assert_eq!(n, 1, "a new deactivated-wallet fill is inserted");
+        let after: i64 =
+            sqlx::query_scalar("SELECT COUNT(*) FROM trader_fills WHERE wallet = $1")
+                .bind(dropped)
+                .fetch_one(&pf.pool)
+                .await
+                .unwrap();
+        assert_eq!(after, before + 1, "deactivated-wallet fills land in the archive");
+
+        for w in [dropped, active, thin] {
+            sqlx::query("DELETE FROM trader_fills WHERE wallet = $1")
+                .bind(w)
+                .execute(&pf.pool)
+                .await
+                .unwrap();
+            sqlx::query("DELETE FROM followed_traders WHERE proxy_wallet = $1")
+                .bind(w)
+                .execute(&pf.pool)
+                .await
+                .unwrap();
+        }
+        println!("trader_fills_it: capture-dropped selection + archive-land OK");
     }
 }
 

@@ -407,6 +407,30 @@ pub async fn run_live(cfg: Arc<CopyTradingConfig>) -> Result<()> {
         });
     }
 
+    // Survivorship capture fix (2026-07-04 capture-hardening, paper-only): keep
+    // polling the fills of DEACTIVATED but scorecard-eligible wallets so the
+    // forward scorecard/benchmark isn't conditioned on staying tracked. Writes
+    // ONLY the durable `trader_fills` archive (never consensus window votes), so a
+    // dropped wallet can't re-enter the live book — on or off, the consensus book
+    // is byte-identical. Bounded slow loop on the trust cadence, poll fan-out
+    // capped by `consensus_max_concurrency`. Off ⇒ the task exits ⇒ byte-identical.
+    if cfg.capture_dropped {
+        let cd_portfolio = Arc::clone(&portfolio);
+        let cd_monitor = Arc::clone(&monitor);
+        let cd_cfg = Arc::clone(&cfg);
+        tokio::spawn(async move {
+            tracing::info!("Capture-dropped ON — polling deactivated scorecard-eligible wallets");
+            loop {
+                if let Err(e) =
+                    cycles::capture_dropped_tick(&cd_portfolio, &cd_monitor, &cd_cfg).await
+                {
+                    tracing::warn!(err = %e, "capture-dropped tick failed");
+                }
+                tokio::time::sleep(Duration::from_secs(cd_cfg.trust_refresh_mins * 60)).await;
+            }
+        });
+    }
+
     // Consensus detection loop.
     let co_portfolio = Arc::clone(&portfolio);
     let co_notifier = Arc::clone(&notifier);
