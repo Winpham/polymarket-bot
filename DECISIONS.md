@@ -898,3 +898,29 @@ posture ever changes, the blueprint's Rungs 1–2 (retrospective `/prices-histor
 edge (D22's "next dollar buys truth"); reversible via `DENSE_CAPTURE=false` + container recreate. Standing
 posture unchanged — accrue the favorite edge to its floor; no real money. **Rollback:** git-revert the merge
 (additive: `scripts/mm_rung0.py`, the entry, this D26; the forge docs live loose in run-prompts/).
+
+## D27 — Proven-trader router: route to the scorecard, not the crowd (2026-07-04, entry proven-router)
+
+**Decision.** Build the trader-selection lever as a pre-registered, fail-closed, paper-only arm:
+a rolling per-wallet scorecard (`router_followset`, migration 039) computed at OUR repriced entry
+(follower tax + band spread), gated by FROZEN thresholds (≥100 fills / ≥15 days / ≥+10%
+event-clustered copy-return / MM-microstructure screens), feeding a silent `proven_router` arm
+(`sharp_tail_fresh` construction, 0.45–0.90 band, alerting OFF, EXPERIMENTAL family). Thresholds
+frozen in `reports/PREREG_2026-07-04T094304Z_proven_router.md` BEFORE the instrument ran.
+
+**Why.** The 2026-07-04 deep-dive: equal-weight copying is NEGATIVE (−7%), "top traders +80%" is
+survivorship noise, but within-trader persistence is real (H1→H2 corr 0.338) — so the capturable
+edge is WHO is buying, not how many agree. This is D23's follow-set question answered with a
+persistence criterion instead of the (empty) certification criterion, MM-screened first as the
+MM-filter plan demands.
+
+**First read (R3).** Persistence SURVIVES MM exclusion (corr 0.207, n=92; 166/258 wallets
+MM-shaped ≈ D23's 59%). The MM-cleaned forward source edge of the ≥10% cohort is **+10.2%**
+(n=32) — the deep-dive's +16.2% was partly MM contamination. Follow-set today = 4 wallets.
+**Correction this buys:** the honest capturable ceiling is ~+10% source → ~+5–8% realizable
+after the (now-measurable, DENSE_CAPTURE-accruing) copyability tax — IF it persists cross-regime.
+
+**Guardrails.** Paper-only; judged ONLY by the standing gate on `first_detected_at ≥` prereg
+signals; the arm never widens the core Bonferroni bar (EXPERIMENTAL family); fail-closed on
+empty/unpublished set; interim MM screens to be reconciled with FORGE_PLAN_MM_FILTER's calibrated
+verdict when built. Rollback = revert merge or `PROVEN_ROUTER=false` + recreate.
