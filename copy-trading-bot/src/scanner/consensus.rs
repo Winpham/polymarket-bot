@@ -1280,7 +1280,7 @@ mod tests {
         // Only `wa` is routed ⇒ exactly one proven_router signal, counting ONLY
         // the router member (net_count = 1, `wb` filtered out by router_set).
         let set: Arc<HashSet<String>> = Arc::new(["wa".to_string()].into_iter().collect());
-        let sigs = score_router_only(&[b.clone()], now, &base, set);
+        let sigs = score_router_only(std::slice::from_ref(&b), now, &base, set);
         assert_eq!(sigs.len(), 1, "one market, one routed backer ⇒ one signal");
         assert!(
             sigs.iter().all(|s| s.strategy == "proven_router"),
@@ -1296,7 +1296,7 @@ mod tests {
         // published-but-empty state).
         let empty: Arc<HashSet<String>> = Arc::new(HashSet::new());
         assert!(
-            score_router_only(&[b.clone()], now, &base, empty).is_empty(),
+            score_router_only(std::slice::from_ref(&b), now, &base, empty).is_empty(),
             "empty follow-set ⇒ no signals (fail-closed)"
         );
 

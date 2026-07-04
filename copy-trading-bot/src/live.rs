@@ -454,8 +454,8 @@ pub async fn run_live(cfg: Arc<CopyTradingConfig>) -> Result<()> {
             );
             loop {
                 // Cheap clone of the shared follow-set; fail-closed while None/∅.
-                if let Some(set) = hl_router.read().await.clone() {
-                    if let Err(e) = cycles::hot_lane_tick(
+                if let Some(set) = hl_router.read().await.clone()
+                    && let Err(e) = cycles::hot_lane_tick(
                         &hl_portfolio,
                         &hl_monitor,
                         &hl_cfg,
@@ -466,7 +466,6 @@ pub async fn run_live(cfg: Arc<CopyTradingConfig>) -> Result<()> {
                     {
                         tracing::warn!(err = %e, "hot-lane tick failed");
                     }
-                }
                 tokio::time::sleep(Duration::from_secs(interval)).await;
             }
         });
