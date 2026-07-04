@@ -924,3 +924,13 @@ after the (now-measurable, DENSE_CAPTURE-accruing) copyability tax — IF it per
 signals; the arm never widens the core Bonferroni bar (EXPERIMENTAL family); fail-closed on
 empty/unpublished set; interim MM screens to be reconciled with FORGE_PLAN_MM_FILTER's calibrated
 verdict when built. Rollback = revert merge or `PROVEN_ROUTER=false` + recreate.
+
+### D27 addendum — same-day verification CORRECTED the first read (entry, §verification)
+
+The +10.2% was inflated: within-event leakage (event-safe corr 0.094), pseudo-replicated N
+(day-clustered raw LB −16.5%), and no blind baseline. What survives: cohort forward SURPLUS over
+the day-matched fleet blind +5.3% (LB −9.8%), permutation-null p=0.034 — real-but-small,
+NOT certifiable, soccer-carried, survivorship-biased upward (capture stops at deactivation —
+fix queued). MM exclusion now = UNION(microstructure, trader_type='bot') in Rust + script (the
+detectors disagree on 51/161 wallets; 26 caught only by the bot flag). Honest ceiling revised:
+~+5% source surplus pending accrual; the arm + gate decide forward. Nothing promotes.

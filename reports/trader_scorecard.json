@@ -16,16 +16,16 @@
       "sbr": 0.5
     },
     "band_spreads": {
-      "1": 0.0074,
-      "2": 0.0074,
-      "3": 0.0185,
-      "4": 0.006,
-      "5": 0.0122
+      "1": 0.0077,
+      "2": 0.0078,
+      "3": 0.0181,
+      "4": 0.0069,
+      "5": 0.0142
     },
     "prereg": "PREREG_2026-07-04T094304Z_proven_router.md"
   },
   "followset": [
-    "0x0224bb9eb0a5c9fd261ac9123a72cbdd5748292a",
+    "0x5b4ec9c06b284ee52c41a761974d836992880232",
     "0x65018f9fc473f6e920b8929a375d39c26a461220",
     "0x99e42eb9038705165b22f821e27659c1dc41e4c4",
     "0xe9a6ed2e4d4ee8ce47cd47cac834746dc4cf627b"
@@ -33,18 +33,18 @@
   "followset_live": [],
   "drift": {
     "script_only": [
-      "0x0224bb9eb0a5c9fd261ac9123a72cbdd5748292a",
+      "0x5b4ec9c06b284ee52c41a761974d836992880232",
       "0x65018f9fc473f6e920b8929a375d39c26a461220",
       "0x99e42eb9038705165b22f821e27659c1dc41e4c4",
       "0xe9a6ed2e4d4ee8ce47cd47cac834746dc4cf627b"
     ],
     "live_only": []
   },
-  "n_wallets_scored": 408,
+  "n_wallets_scored": 412,
   "distribution_top": [
     {
       "wallet": "0xbbd339eb192219358de7b92f70f595e41471641b",
-      "copy_return": 1.0568,
+      "copy_return": 1.0584,
       "n_events": 1,
       "n_fills": 93,
       "n_days": 1,
@@ -52,7 +52,7 @@
     },
     {
       "wallet": "0x8cb4ca5af7d9361322340bb307a828d288c91057",
-      "copy_return": 1.0145,
+      "copy_return": 1.0161,
       "n_events": 1,
       "n_fills": 145,
       "n_days": 1,
@@ -60,15 +60,23 @@
     },
     {
       "wallet": "0xed64a7bf029040aa331abc87902434d815ef217d",
-      "copy_return": 0.9739,
+      "copy_return": 0.9754,
       "n_events": 1,
       "n_fills": 173,
       "n_days": 1,
       "mm_excluded": false
     },
     {
+      "wallet": "0x6100acd1f9ebe426750cb5cf7bc89e262beaed95",
+      "copy_return": 0.8737,
+      "n_events": 1,
+      "n_fills": 55,
+      "n_days": 1,
+      "mm_excluded": true
+    },
+    {
       "wallet": "0x96cfcb0c30942cfcd1cdf76c7d408794d66b1acb",
-      "copy_return": 0.8614,
+      "copy_return": 0.8627,
       "n_events": 1,
       "n_fills": 101,
       "n_days": 1,
@@ -76,7 +84,7 @@
     },
     {
       "wallet": "0x3f87d51f27ba6e19ec52aaeebb68559a839c742c",
-      "copy_return": 0.8611,
+      "copy_return": 0.8624,
       "n_events": 1,
       "n_fills": 100,
       "n_days": 1,
@@ -84,7 +92,7 @@
     },
     {
       "wallet": "0x2e25b222e2080c377fc1fb2b9f926315f0f4d49e",
-      "copy_return": 0.8453,
+      "copy_return": 0.8466,
       "n_events": 2,
       "n_fills": 162,
       "n_days": 2,
@@ -92,15 +100,23 @@
     },
     {
       "wallet": "0xb22598b366c9ec16a3e97dc90e09dd5fd8dc3d54",
-      "copy_return": 0.8367,
+      "copy_return": 0.838,
       "n_events": 5,
       "n_fills": 71,
       "n_days": 4,
       "mm_excluded": false
     },
     {
+      "wallet": "0x55d94368a50750f264cf42096e9034315d9c832c",
+      "copy_return": 0.8115,
+      "n_events": 2,
+      "n_fills": 49,
+      "n_days": 1,
+      "mm_excluded": false
+    },
+    {
       "wallet": "0x3a6a2e7a7707c720219228eb8efa7398bc0e458e",
-      "copy_return": 0.7932,
+      "copy_return": 0.7944,
       "n_events": 1,
       "n_fills": 71,
       "n_days": 1,
@@ -108,7 +124,7 @@
     },
     {
       "wallet": "0x25d3d4e435ac54775b873708c25705321c31efe2",
-      "copy_return": 0.7297,
+      "copy_return": 0.7309,
       "n_events": 2,
       "n_fills": 161,
       "n_days": 2,
@@ -116,7 +132,7 @@
     },
     {
       "wallet": "0xbc11a64ab34a03a043fbe80598fa065ee87eeec6",
-      "copy_return": 0.7267,
+      "copy_return": 0.7278,
       "n_events": 1,
       "n_fills": 168,
       "n_days": 1,
@@ -124,7 +140,7 @@
     },
     {
       "wallet": "0x412fe1a101554f0b382181c3af932e4b2d8030fa",
-      "copy_return": 0.7133,
+      "copy_return": 0.7139,
       "n_events": 6,
       "n_fills": 134,
       "n_days": 4,
@@ -132,7 +148,7 @@
     },
     {
       "wallet": "0xc6a63ad5a788a576d4acc9911c50fef9fde49458",
-      "copy_return": 0.6802,
+      "copy_return": 0.6813,
       "n_events": 2,
       "n_fills": 226,
       "n_days": 2,
@@ -140,7 +156,7 @@
     },
     {
       "wallet": "0xc1da9728491b4d25480a771bbf932dbeddc5fefa",
-      "copy_return": 0.6706,
+      "copy_return": 0.6716,
       "n_events": 1,
       "n_fills": 48,
       "n_days": 1,
@@ -148,7 +164,7 @@
     },
     {
       "wallet": "0x8a260ebadf8ef07e693dd1b0be120b3330dd73c3",
-      "copy_return": 0.6439,
+      "copy_return": 0.6449,
       "n_events": 3,
       "n_fills": 92,
       "n_days": 3,
@@ -156,31 +172,31 @@
     },
     {
       "wallet": "0x882f2a4c805d12717cc5cf97018413d296aba8c0",
-      "copy_return": 0.5909,
+      "copy_return": 0.5899,
       "n_events": 4,
       "n_fills": 218,
       "n_days": 3,
       "mm_excluded": false
     },
     {
-      "wallet": "0xa800d978a3ee5795d6958b21c9a4feb1e629bd7a",
-      "copy_return": 0.5899,
-      "n_events": 3,
-      "n_fills": 126,
-      "n_days": 2,
-      "mm_excluded": false
-    },
-    {
       "wallet": "0xab6a7da501eb0f53ab56f758e7c399f9249a2978",
-      "copy_return": 0.589,
+      "copy_return": 0.5899,
       "n_events": 1,
       "n_fills": 33,
       "n_days": 1,
       "mm_excluded": false
     },
     {
+      "wallet": "0xa800d978a3ee5795d6958b21c9a4feb1e629bd7a",
+      "copy_return": 0.5888,
+      "n_events": 3,
+      "n_fills": 126,
+      "n_days": 2,
+      "mm_excluded": false
+    },
+    {
       "wallet": "0xbee54d90051720e27921dc6874f02d646ffca636",
-      "copy_return": 0.5836,
+      "copy_return": 0.583,
       "n_events": 2,
       "n_fills": 106,
       "n_days": 2,
@@ -188,15 +204,23 @@
     },
     {
       "wallet": "0xb1ca909e848cc24ec4e220ce1c453bc290c51705",
-      "copy_return": 0.5806,
+      "copy_return": 0.5801,
       "n_events": 2,
       "n_fills": 55,
       "n_days": 3,
       "mm_excluded": false
     },
     {
+      "wallet": "0xe405483ff60ab58ce973479d3317045549fec67e",
+      "copy_return": 0.576,
+      "n_events": 3,
+      "n_fills": 85,
+      "n_days": 2,
+      "mm_excluded": false
+    },
+    {
       "wallet": "0x9a5462ab1c4d54c016dfa25a29be8a617d387191",
-      "copy_return": 0.5623,
+      "copy_return": 0.5634,
       "n_events": 3,
       "n_fills": 97,
       "n_days": 2,
@@ -204,7 +228,7 @@
     },
     {
       "wallet": "0x664ce9fb97ae1bbd538d7381b2f4e92dab16f49c",
-      "copy_return": 0.5523,
+      "copy_return": 0.5501,
       "n_events": 1,
       "n_fills": 144,
       "n_days": 1,
@@ -212,23 +236,15 @@
     },
     {
       "wallet": "0x547f2917d51f2e63ab382dcf641d4e0240162937",
-      "copy_return": 0.5026,
+      "copy_return": 0.5019,
       "n_events": 7,
       "n_fills": 226,
       "n_days": 4,
       "mm_excluded": false
     },
     {
-      "wallet": "0x1420b746dea30e05b387ab880f9d3ec5bc579daa",
-      "copy_return": 0.4973,
-      "n_events": 14,
-      "n_fills": 46,
-      "n_days": 7,
-      "mm_excluded": false
-    },
-    {
       "wallet": "0x38337de21ff0bb0a11a40761507d51e318d633d1",
-      "copy_return": 0.4865,
+      "copy_return": 0.4864,
       "n_events": 12,
       "n_fills": 72,
       "n_days": 4,
@@ -236,7 +252,7 @@
     },
     {
       "wallet": "0xb45a797faa52b0fd8adc56d30382022b7b12192c",
-      "copy_return": 0.4527,
+      "copy_return": 0.4507,
       "n_events": 1,
       "n_fills": 178,
       "n_days": 1,
@@ -244,39 +260,31 @@
     },
     {
       "wallet": "0x5d0c2108a8d50bafc16a4f8200281a0e822dbceb",
-      "copy_return": 0.4437,
+      "copy_return": 0.4428,
       "n_events": 3,
       "n_fills": 73,
       "n_days": 2,
       "mm_excluded": false
     },
     {
-      "wallet": "0xe405483ff60ab58ce973479d3317045549fec67e",
-      "copy_return": 0.416,
-      "n_events": 2,
-      "n_fills": 63,
-      "n_days": 1,
-      "mm_excluded": false
-    },
-    {
-      "wallet": "0xee00ba338c59557141789b127927a55f5cc5cea1",
-      "copy_return": 0.4142,
-      "n_events": 5,
-      "n_fills": 64,
-      "n_days": 4,
-      "mm_excluded": false
-    },
-    {
       "wallet": "0xc96e5287ab294ac0388c2ddb00180fc464cff1f9",
-      "copy_return": 0.3994,
+      "copy_return": 0.3993,
       "n_events": 8,
       "n_fills": 79,
       "n_days": 4,
       "mm_excluded": false
     },
     {
+      "wallet": "0x336bf6f91a4619d54f0711a20fe468adf4d71233",
+      "copy_return": 0.3993,
+      "n_events": 5,
+      "n_fills": 114,
+      "n_days": 3,
+      "mm_excluded": false
+    },
+    {
       "wallet": "0x4cc3522b689a6bf1fb4a2444c523e7776db47552",
-      "copy_return": 0.3904,
+      "copy_return": 0.3886,
       "n_events": 1,
       "n_fills": 43,
       "n_days": 1,
@@ -284,7 +292,7 @@
     },
     {
       "wallet": "0x4f1af091d122e76fa5b1a8ec115c554ec481bc89",
-      "copy_return": 0.3842,
+      "copy_return": 0.3841,
       "n_events": 18,
       "n_fills": 48,
       "n_days": 8,
@@ -292,7 +300,7 @@
     },
     {
       "wallet": "0xa49becb692927d455924583b5e3e5788246f4c40",
-      "copy_return": 0.3805,
+      "copy_return": 0.3782,
       "n_events": 6,
       "n_fills": 82,
       "n_days": 4,
@@ -308,7 +316,7 @@
     },
     {
       "wallet": "0xbacd00c9080a82ded56f504ee8810af732b0ab35",
-      "copy_return": 0.3601,
+      "copy_return": 0.3593,
       "n_events": 3,
       "n_fills": 54,
       "n_days": 5,
@@ -316,88 +324,80 @@
     },
     {
       "wallet": "0x095fbca2e0eaf0c9841005135427e1e0117190b2",
-      "copy_return": 0.3434,
+      "copy_return": 0.3432,
       "n_events": 8,
       "n_fills": 556,
       "n_days": 5,
       "mm_excluded": false
     },
     {
-      "wallet": "0x336bf6f91a4619d54f0711a20fe468adf4d71233",
-      "copy_return": 0.3371,
-      "n_events": 4,
-      "n_fills": 104,
-      "n_days": 2,
-      "mm_excluded": false
-    },
-    {
-      "wallet": "0xbc43c8bfbc4d77c2fc9011adad38ba43b88996d3",
-      "copy_return": 0.3327,
-      "n_events": 4,
-      "n_fills": 404,
-      "n_days": 3,
-      "mm_excluded": true
-    },
-    {
       "wallet": "0xf751fbd76257ad498e02c1da257ac6e31df0fec8",
-      "copy_return": 0.3301,
+      "copy_return": 0.3307,
       "n_events": 17,
       "n_fills": 644,
       "n_days": 6,
       "mm_excluded": true
     },
     {
+      "wallet": "0xbc43c8bfbc4d77c2fc9011adad38ba43b88996d3",
+      "copy_return": 0.3306,
+      "n_events": 4,
+      "n_fills": 404,
+      "n_days": 3,
+      "mm_excluded": true
+    },
+    {
       "wallet": "0x088ba59031e4bac4cc7b344581e3d908258221cc",
-      "copy_return": 0.3242,
+      "copy_return": 0.3235,
       "n_events": 14,
       "n_fills": 200,
       "n_days": 8,
       "mm_excluded": false
     },
     {
-      "wallet": "0x6adcccb0ea0b93a66e67f0d7b2b625b135a8beba",
-      "copy_return": 0.3187,
-      "n_events": 18,
-      "n_fills": 395,
-      "n_days": 18,
-      "mm_excluded": true
+      "wallet": "0x54525ee78bd513b0bf75f94e560158f6fc35d448",
+      "copy_return": 0.3108,
+      "n_events": 5,
+      "n_fills": 304,
+      "n_days": 3,
+      "mm_excluded": false
     }
   ],
   "persistence_with_mm": {
-    "corr_h1_h2": 0.27662057857555444,
-    "n_wallets": 188,
+    "corr_h1_h2": 0.28775154155751215,
+    "n_wallets": 194,
     "n_mm_excluded": 0,
     "forward_h2_return": {
       "gte10": {
-        "mean": 0.02706398532152082,
-        "n": 52
+        "mean": 0.029699917421811974,
+        "n": 55
       },
       "mid": {
-        "mean": -0.013153726759908427,
-        "n": 40
+        "mean": -0.0009000970707032638,
+        "n": 38
       },
       "neg": {
-        "mean": -0.09644666955714169,
-        "n": 96
+        "mean": -0.10236435966255569,
+        "n": 101
       }
     }
   },
   "persistence_mm_excluded": {
-    "corr_h1_h2": 0.20686396865519938,
-    "n_wallets": 92,
-    "n_mm_excluded": 166,
+    "corr_h1_h2": 0.20848337112815638,
+    "n_wallets": 96,
+    "n_mm_excluded": 170,
     "forward_h2_return": {
       "gte10": {
-        "mean": 0.102239224185955,
-        "n": 32
+        "mean": 0.08765949730665645,
+        "n": 34
       },
       "mid": {
-        "mean": -0.04427544284850236,
+        "mean": -0.02676838527856415,
         "n": 16
       },
       "neg": {
-        "mean": -0.03303578888124204,
-        "n": 44
+        "mean": -0.03465122974563406,
+        "n": 46
       }
     }
   }

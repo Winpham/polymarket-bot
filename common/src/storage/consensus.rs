@@ -1566,9 +1566,12 @@ impl PgPortfolio {
     /// - `copy_return = (won − our_entry)/our_entry − 0.02 (fee)`, event-clustered
     ///   at `COALESCE(event_slug, condition_id)`;
     /// - membership: ≥100 fills, ≥15 distinct UTC days, copy_return ≥ +0.10, and
-    ///   NOT market-maker-shaped (position-grain microstructure screens:
-    ///   round_trip_rate < 0.30 AND two_sided_rate < 0.25 AND sell_buy_ratio < 0.50 —
-    ///   interim thresholds pending FORGE_PLAN_MM_FILTER's calibrated verdict);
+    ///   NOT market-maker-shaped — the UNION of two detectors (router_verify A4
+    ///   found they disagree on 51/161 wallets, so both are enforced):
+    ///   position-grain microstructure screens (round_trip_rate < 0.30 AND
+    ///   two_sided_rate < 0.25 AND sell_buy_ratio < 0.50) AND NOT flagged
+    ///   `followed_traders.trader_type = 'bot'` (classify_trader_types, fpd ≥ 400);
+    ///   interim pending FORGE_PLAN_MM_FILTER's calibrated verdict;
     /// - `lower_bound` is a one-sided-95% day-deflated DIAGNOSTIC, never the gate.
     pub async fn refresh_router_followset(&self) -> Result<Vec<String>> {
         let rows: Vec<(String,)> = sqlx::query_as(
@@ -1646,6 +1649,10 @@ impl PgPortfolio {
                AND COALESCE(m.round_trip_rate, 0) < 0.30 \
                AND COALESCE(m.two_sided_rate, 0) < 0.25 \
                AND COALESCE(m.sell_buy_ratio, 0) < 0.50 \
+               AND NOT EXISTS ( \
+                   SELECT 1 FROM followed_traders ft \
+                   WHERE lower(ft.proxy_wallet) = lower(s.wallet) \
+                     AND ft.trader_type = 'bot') \
              RETURNING wallet",
         )
         .fetch_all(&self.pool)

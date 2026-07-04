@@ -36,3 +36,36 @@ entry ships the capture machinery, pre-registered BEFORE the instrument was buil
 
 **Rollback.** Revert the merge (additive); or `PROVEN_ROUTER=false` + container recreate
 (arm and re-scorer vanish; portfolio byte-identical).
+
+---
+
+## SAME-DAY ADVERSARIAL VERIFICATION (scripts/router_verify.py) — the first read was inflated
+
+Four pre-named attacks on the +10.2% (A1 within-event leak, A2 fake-N, A3 no-blind-baseline +
+permutation null, A4 market-mover reconciliation + survivorship). Results:
+
+- **A1 (leak): CONFIRMED.** Event-safe halves (whole events assigned by first-fill time) drop the
+  persistence corr 0.21 → **0.094** — much of the "persistence" was one event's fills straddling
+  the H1/H2 boundary (the known within-match leak class). Cohort re-formed event-safe: n=18.
+- **A2 (fake N): CONFIRMED.** Event-dedup + day-clustered SE over 47 forward days: raw mean
+  −0.2%, **LB −16.5%**. The 32-wallet mean was pseudo-replication of the same games.
+- **A3 (baseline + null): the surviving signal.** Surplus over the day-matched fleet blind =
+  **+5.3% (LB −9.8%)**; permutation null (1000 random same-size cohorts) **p_emp = 0.034**,
+  null p95 +4.7%. Selection carries real signal above chance — but it misses the p ≤ 0.01 bar
+  and the LB is negative. Regime split: soccer +14% (62 ev) carries it; months Feb–Apr negative
+  (thin), May–Jul positive.
+- **A4 (market movers): ACTED ON.** The two detectors DISAGREE: of 161 half-eligible wallets,
+  61 flagged by both, 25 microstructure-only, **26 bot-flag-only** (classify_trader_types).
+  The UNION is now enforced in BOTH the Rust re-scorer (NOT EXISTS trader_type='bot') and the
+  script. Today's follow-set-4 survives the union. **Survivorship: capture STOPS at
+  deactivation** (245 inactive wallets, 0 fills after drop) ⇒ every forward number is
+  conditioned on staying tracked (upward bias, magnitude unknown). Fix = keep polling dropped
+  wallets' fills (proposed build).
+
+**Corrected verdict:** the trader-selection lever is REAL-BUT-SMALL and NOT CERTIFIABLE today —
+surplus ~+5% with a negative LB, p=0.034, soccer-carried, survivorship-biased upward.
+INDETERMINATE-BY-POWER with a positive lean. The paper arm is exactly the right instrument:
+forward accrual under the standing gate decides. Day profile of the cohort forward: 62% of days
+raw-positive; worst days are single-event total losses — at ~2–5 events/day, all-days-profitable
+is arithmetically out of reach for ANY selection at this edge size (P(day>0) rises with events/
+day; ≈80+ independent events/day needed for ~85% positive days at μ≈5%, σ≈45%).

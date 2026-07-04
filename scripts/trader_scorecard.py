@@ -116,6 +116,14 @@ def is_mm(m):
     return m["rtr"] >= MM_RTR or m["tsr"] >= MM_TSR or m["sbr"] >= MM_SBR
 
 
+def fetch_bot_flags():
+    """The repo's OTHER MM detector (classify_trader_types, fpd>=400): wallet -> trader_type.
+    router_verify A4 found the two detectors disagree on 51/161 wallets — membership excludes
+    the UNION (mirrors the Rust re-scorer's NOT EXISTS bot-flag clause)."""
+    rows = q("SELECT lower(proxy_wallet) AS wallet, trader_type FROM followed_traders")
+    return {r["wallet"]: r["trader_type"] for r in rows}
+
+
 def clustered(rows, spreads):
     """rows → per-wallet {copy_return (event-clustered), n_fills, n_days, n_events}."""
     ev = defaultdict(list)          # (wallet, ev) -> rets
@@ -137,11 +145,13 @@ def clustered(rows, spreads):
     return out
 
 
-def members(scored, micro):
+def members(scored, micro, bots=None):
+    bots = bots or {}
     return sorted(w for w, s in scored.items()
                   if s["n_fills"] >= MIN_FILLS and s["n_days"] >= MIN_DAYS
                   and s["copy_return"] >= MIN_RETURN
-                  and not is_mm(micro.get(w, {"rtr": 0, "sbr": 0, "tsr": 0})))
+                  and not is_mm(micro.get(w, {"rtr": 0, "sbr": 0, "tsr": 0}))
+                  and bots.get(w) != "bot")
 
 
 def pearson(xs, ys):
@@ -251,8 +261,9 @@ def main():
     spreads = fetch_band_spreads()
     rows = fetch_fills()
     micro = fetch_micro()
+    bots = fetch_bot_flags()
     scored = clustered(rows, spreads)
-    mem = members(scored, micro)
+    mem = members(scored, micro, bots)
 
     # Drift check vs the arm's actual set (latest batch; timing skew is expected
     # between re-scores, a persistent mismatch is a bug).
