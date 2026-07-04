@@ -1,0 +1,112 @@
+{
+ "meta": {
+  "prereg": "reports/PREREG_20260704T191458Z_regime_persistence.md",
+  "persist_min_clusters": 10,
+  "margin": 0.03,
+  "transfer_min_regimes": 2,
+  "n_perm_regime": 1000,
+  "seed": 20260704
+ },
+ "arms": {
+  "favorite": {
+   "n_events": 92,
+   "cutoff": "2026-07-02",
+   "temporal": {
+    "cutoff": "2026-07-02",
+    "n_in": 67,
+    "n_out": 25,
+    "recurring_out": {
+     "n_events": 10,
+     "n_clusters": 3,
+     "surplus": 0.19020365028727432,
+     "lb": 0.12401091581741162,
+     "net_taker": 0.14309569585882656,
+     "net_taker_lb": 0.07197883390739541,
+     "mass": 1.902036502872743,
+     "hi": 0.256396384757137
+    },
+    "expiring_out": {
+     "n_events": 15,
+     "n_clusters": 3,
+     "surplus": -0.002563566449080142,
+     "lb": -0.2601070321528056,
+     "net_taker": -0.05252446690877634,
+     "net_taker_lb": -0.3082676320266231,
+     "mass": -0.03845349673620213,
+     "hi": 0.2549798992546453
+    },
+    "all_out": {
+     "n_events": 25,
+     "n_clusters": 3,
+     "surplus": 0.07454332024546165,
+     "lb": -0.12477564030973717,
+     "net_taker": 0.02572359819826481,
+     "net_taker_lb": -0.17437494103618803,
+     "mass": 1.863583006136541,
+     "hi": 0.27386228080066044
+    },
+    "verdict": "PENDING"
+   },
+   "transfer": {
+    "n_recurring_regimes": 5,
+    "real_transfer_count": 2,
+    "required": 2,
+    "p_conc": 0.92,
+    "concentration_flagged": false,
+    "null_mean": 1.406,
+    "null_dist": {
+     "0": 102,
+     "1": 473,
+     "2": 345,
+     "3": 77,
+     "4": 3
+    },
+    "per_regime": {
+     "mlb|2026-07": {
+      "n_events": 11,
+      "held_surplus": 0.21450941577154536,
+      "held_lb": 0.103208110000388,
+      "fit_surplus": 0.10962826753697971,
+      "transfers": true
+     },
+     "mlb|2026-06": {
+      "n_events": 2,
+      "held_surplus": 0.3677273106384196,
+      "held_lb": null,
+      "fit_surplus": 0.1494716765605636,
+      "transfers": false
+     },
+     "nba/cbb|2026-07": {
+      "n_events": 2,
+      "held_surplus": 0.2547564205798847,
+      "held_lb": 0.15855309146885962,
+      "fit_surplus": 0.16359303781788048,
+      "transfers": true
+     },
+     "politics/elections|2026-07": {
+      "n_events": 2,
+      "held_surplus": 0.097545327719946,
+      "held_lb": null,
+      "fit_surplus": 0.1832444244253728,
+      "transfers": false
+     },
+     "nba/cbb|2026-06": {
+      "n_events": 1,
+      "held_surplus": -0.6726602451176427,
+      "held_lb": null,
+      "fit_surplus": 0.22350951125667645,
+      "transfers": false
+     }
+    },
+    "passes": true
+   },
+   "expiring_edge_mass_share": 0.565004988805982,
+   "verdict": "SOCCER-ARTIFACT",
+   "why": "edge is expiring-carried (57% of edge mass) and recurring regimes are below the floor \u2014 not yet certifiable"
+  },
+  "proven_router": {
+   "n_events": 0,
+   "note": "no resolved data (arm empty) \u2192 PENDING"
+  }
+ }
+}
