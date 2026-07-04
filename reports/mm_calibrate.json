@@ -1,0 +1,343 @@
+{
+ "n_mm": 27,
+ "n_hum": 41,
+ "live_thresholds": {
+  "rt": 0.3,
+  "ts": 0.25,
+  "sb": 0.5
+ },
+ "confusion_live": {
+  "tp": 27,
+  "fp": 11,
+  "tn": 30,
+  "fn": 0
+ },
+ "false_positive_rate": 0.2682926829268293,
+ "false_negative_rate": 0.0,
+ "auc": {
+  "round_trip": 0.26513098464317975,
+  "two_sided": 1.0,
+  "sell_buy": 0.24435411020776873,
+  "ensemble": 0.995483288166215
+ },
+ "perm_null_p": 0.0004997501249375312,
+ "sweep": {
+  "best_tau_rt": 0.5,
+  "best_bal_acc": 0.975609756097561,
+  "loo_tau_min": 0.5,
+  "loo_tau_max": 0.5,
+  "loo_tau_std": 0.0
+ },
+ "grid": [
+  [
+   0.1,
+   0.72
+  ],
+  [
+   0.15,
+   0.756
+  ],
+  [
+   0.2,
+   0.817
+  ],
+  [
+   0.25,
+   0.829
+  ],
+  [
+   0.3,
+   0.866
+  ],
+  [
+   0.35,
+   0.902
+  ],
+  [
+   0.4,
+   0.927
+  ],
+  [
+   0.45,
+   0.951
+  ],
+  [
+   0.5,
+   0.976
+  ]
+ ],
+ "labels": {
+  "0x0346afae26": {
+   "label": "MM",
+   "prov": "arb both_frac=0.74 med_sum=1.026 mkts=312"
+  },
+  "0x06f22ff6d9": {
+   "label": "MM",
+   "prov": "arb both_frac=0.96 med_sum=1.012 mkts=23"
+  },
+  "0x0d2d845a6f": {
+   "label": "MM",
+   "prov": "arb both_frac=0.59 med_sum=0.997 mkts=838"
+  },
+  "0x0dcf5b4962": {
+   "label": "HUM",
+   "prov": "directional both_frac=0.03 n_days=26 n_fills=2024"
+  },
+  "0x10ff6cd4b1": {
+   "label": "MM",
+   "prov": "arb both_frac=0.64 med_sum=0.982 mkts=33"
+  },
+  "0x122cb94c43": {
+   "label": "MM",
+   "prov": "arb both_frac=0.65 med_sum=1.002 mkts=85"
+  },
+  "0x1420b746de": {
+   "label": "HUM",
+   "prov": "directional both_frac=0.04 n_days=25 n_fills=1565"
+  },
+  "0x1465b79bff": {
+   "label": "HUM",
+   "prov": "directional both_frac=0.00 n_days=42 n_fills=889"
+  },
+  "0x16bb9951a3": {
+   "label": "HUM",
+   "prov": "directional both_frac=0.01 n_days=65 n_fills=984"
+  },
+  "0x1d1ade627d": {
+   "label": "HUM",
+   "prov": "directional both_frac=0.00 n_days=93 n_fills=2766"
+  },
+  "0x2005d16a84": {
+   "label": "MM",
+   "prov": "arb both_frac=0.76 med_sum=1.009 mkts=1125"
+  },
+  "0x204f72f353": {
+   "label": "MM",
+   "prov": "flagship $51M buy-both-hold churner (mm_premise_probe)"
+  },
+  "0x228b8d11eb": {
+   "label": "MM",
+   "prov": "arb both_frac=0.90 med_sum=0.995 mkts=323"
+  },
+  "0x23c8a4c266": {
+   "label": "HUM",
+   "prov": "directional both_frac=0.03 n_days=55 n_fills=2456"
+  },
+  "0x26437896ed": {
+   "label": "HUM",
+   "prov": "directional both_frac=0.03 n_days=37 n_fills=1002"
+  },
+  "0x29ccb2084a": {
+   "label": "HUM",
+   "prov": "directional both_frac=0.00 n_days=100 n_fills=1312"
+  },
+  "0x2dc13c6bda": {
+   "label": "HUM",
+   "prov": "directional both_frac=0.01 n_days=59 n_fills=616"
+  },
+  "0x32b484581f": {
+   "label": "MM",
+   "prov": "arb both_frac=0.89 med_sum=1.025 mkts=339"
+  },
+  "0x34aba0ed4a": {
+   "label": "HUM",
+   "prov": "directional both_frac=0.08 n_days=51 n_fills=728"
+  },
+  "0x34f62ce5be": {
+   "label": "HUM",
+   "prov": "directional both_frac=0.00 n_days=37 n_fills=206"
+  },
+  "0x3da89a55cd": {
+   "label": "HUM",
+   "prov": "directional both_frac=0.00 n_days=32 n_fills=922"
+  },
+  "0x3dd16e79f9": {
+   "label": "HUM",
+   "prov": "directional both_frac=0.03 n_days=38 n_fills=237"
+  },
+  "0x42c99f38d2": {
+   "label": "MM",
+   "prov": "arb both_frac=0.75 med_sum=0.995 mkts=118"
+  },
+  "0x4572136226": {
+   "label": "HUM",
+   "prov": "directional both_frac=0.05 n_days=51 n_fills=1085"
+  },
+  "0x4e5533b48f": {
+   "label": "HUM",
+   "prov": "directional both_frac=0.01 n_days=37 n_fills=317"
+  },
+  "0x4f29e10333": {
+   "label": "MM",
+   "prov": "arb both_frac=0.77 med_sum=1.017 mkts=97"
+  },
+  "0x5268527977": {
+   "label": "MM",
+   "prov": "arb both_frac=0.69 med_sum=1.008 mkts=221"
+  },
+  "0x5b4ec9c06b": {
+   "label": "HUM",
+   "prov": "directional both_frac=0.05 n_days=25 n_fills=1075"
+  },
+  "0x6157d529ae": {
+   "label": "HUM",
+   "prov": "directional both_frac=0.00 n_days=54 n_fills=521"
+  },
+  "0x65018f9fc4": {
+   "label": "HUM",
+   "prov": "directional both_frac=0.00 n_days=26 n_fills=1730"
+  },
+  "0x664a25f165": {
+   "label": "MM",
+   "prov": "arb both_frac=0.71 med_sum=1.003 mkts=75"
+  },
+  "0x69d57cfa1a": {
+   "label": "HUM",
+   "prov": "directional both_frac=0.04 n_days=53 n_fills=2374"
+  },
+  "0x6adcccb0ea": {
+   "label": "HUM",
+   "prov": "directional both_frac=0.02 n_days=31 n_fills=734"
+  },
+  "0x6db568e61e": {
+   "label": "MM",
+   "prov": "arb both_frac=0.86 med_sum=1.015 mkts=143"
+  },
+  "0x6e82b93eb5": {
+   "label": "HUM",
+   "prov": "directional both_frac=0.06 n_days=53 n_fills=3406"
+  },
+  "0x7072dd5216": {
+   "label": "HUM",
+   "prov": "directional both_frac=0.09 n_days=24 n_fills=2418"
+  },
+  "0x7650e94d9c": {
+   "label": "HUM",
+   "prov": "directional both_frac=0.01 n_days=122 n_fills=1507"
+  },
+  "0x7d787c72c8": {
+   "label": "HUM",
+   "prov": "directional both_frac=0.03 n_days=33 n_fills=1887"
+  },
+  "0x83255595ba": {
+   "label": "MM",
+   "prov": "arb both_frac=0.70 med_sum=0.989 mkts=206"
+  },
+  "0x84cfffc3f1": {
+   "label": "MM",
+   "prov": "arb both_frac=0.53 med_sum=1.062 mkts=543"
+  },
+  "0x8718865882": {
+   "label": "HUM",
+   "prov": "directional both_frac=0.05 n_days=36 n_fills=1141"
+  },
+  "0x92d8a88f0a": {
+   "label": "HUM",
+   "prov": "directional both_frac=0.05 n_days=88 n_fills=1964"
+  },
+  "0x96a3a4d0f0": {
+   "label": "HUM",
+   "prov": "directional both_frac=0.05 n_days=24 n_fills=835"
+  },
+  "0x98db8cca55": {
+   "label": "MM",
+   "prov": "arb both_frac=0.89 med_sum=1.016 mkts=162"
+  },
+  "0x99e42eb903": {
+   "label": "HUM",
+   "prov": "directional both_frac=0.07 n_days=30 n_fills=1215"
+  },
+  "0xac4773707d": {
+   "label": "HUM",
+   "prov": "directional both_frac=0.02 n_days=37 n_fills=1285"
+  },
+  "0xae2b0aaea3": {
+   "label": "HUM",
+   "prov": "directional both_frac=0.04 n_days=72 n_fills=1021"
+  },
+  "0xb27bc932bf": {
+   "label": "MM",
+   "prov": "arb both_frac=1.00 med_sum=1.066 mkts=811"
+  },
+  "0xc07d5961e7": {
+   "label": "MM",
+   "prov": "arb both_frac=0.67 med_sum=1.066 mkts=98"
+  },
+  "0xc15b833b69": {
+   "label": "HUM",
+   "prov": "directional both_frac=0.05 n_days=37 n_fills=2103"
+  },
+  "0xc29198ad76": {
+   "label": "MM",
+   "prov": "arb both_frac=0.52 med_sum=0.997 mkts=465"
+  },
+  "0xc29e1cef42": {
+   "label": "HUM",
+   "prov": "directional both_frac=0.01 n_days=62 n_fills=2608"
+  },
+  "0xc3656b313a": {
+   "label": "MM",
+   "prov": "arb both_frac=0.52 med_sum=1.028 mkts=97"
+  },
+  "0xc65ca47554": {
+   "label": "HUM",
+   "prov": "directional both_frac=0.03 n_days=34 n_fills=3268"
+  },
+  "0xd218e47477": {
+   "label": "MM",
+   "prov": "arb both_frac=0.57 med_sum=1.010 mkts=23"
+  },
+  "0xd9e0aaca47": {
+   "label": "MM",
+   "prov": "arb both_frac=0.92 med_sum=1.001 mkts=305"
+  },
+  "0xde9f7f4e77": {
+   "label": "MM",
+   "prov": "arb both_frac=0.68 med_sum=1.039 mkts=133"
+  },
+  "0xe0ac9addc5": {
+   "label": "HUM",
+   "prov": "directional both_frac=0.01 n_days=55 n_fills=462"
+  },
+  "0xe6535d8644": {
+   "label": "HUM",
+   "prov": "directional both_frac=0.04 n_days=30 n_fills=1370"
+  },
+  "0xe73ee729fc": {
+   "label": "HUM",
+   "prov": "directional both_frac=0.00 n_days=74 n_fills=2571"
+  },
+  "0xe9514aa0b9": {
+   "label": "HUM",
+   "prov": "directional both_frac=0.00 n_days=46 n_fills=1903"
+  },
+  "0xe9a6ed2e4d": {
+   "label": "HUM",
+   "prov": "D23 soccer human +11% tax-surviving (DECISIONS.md:733)"
+  },
+  "0xeebde7a0e0": {
+   "label": "MM",
+   "prov": "arb both_frac=0.75 med_sum=1.070 mkts=973"
+  },
+  "0xf0318c3213": {
+   "label": "MM",
+   "prov": "arb both_frac=0.61 med_sum=0.840 mkts=54"
+  },
+  "0xfaf98181c4": {
+   "label": "HUM",
+   "prov": "directional both_frac=0.06 n_days=36 n_fills=1704"
+  },
+  "0xfbe66593e4": {
+   "label": "HUM",
+   "prov": "directional both_frac=0.00 n_days=25 n_fills=1185"
+  },
+  "0xfe787d2da7": {
+   "label": "MM",
+   "prov": "arb both_frac=0.69 med_sum=1.010 mkts=623"
+  },
+  "0x56f0321917": {
+   "label": "HUM",
+   "prov": "D23 soccer human +10% tax-surviving (DECISIONS.md:733)"
+  }
+ }
+}

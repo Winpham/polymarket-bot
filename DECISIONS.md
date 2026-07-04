@@ -949,3 +949,55 @@ day-clustered LOWER bound of any COPYABLE wallet at OUR repriced entry) = **+3.4
 by a wallet ALREADY in the router follow-set; the +25% headline is selection-inflated and mostly
 market-makers. Our favorite arm (mean +5.4%, LB −7.1%, 4 days) is statistically indistinguishable
 from B_LB — not provably behind, nothing provable ahead; accrual decides. Gate stays the judge.
+
+## D29 — MM-FILTER Phase 1: the churn screen catches MMs but its exclusion doesn't move persistence — NO-GO (2026-07-04, entry mm-filter-calibration)
+
+The deferred calibration the `refresh_router_followset` docstring flagged ("interim pending
+FORGE_PLAN_MM_FILTER's calibrated verdict") is now measured, offline, read-only. **Verdict:
+NO-GO / INDETERMINATE-BY-POWER — stop at Phase 1, do not build the calibrated Rust verdict / mig
+040 / shadow arm.** Live paper screen left byte-identical.
+
+**Tier-1 (labeled, necessary-not-sufficient).** 27 economic buy-both-hold arbers (price-sum arb
+signature, orthogonal to the rates) + 41 directional humans. Live `0.30/0.25/0.50` screen catches
+**27/27 MMs (FN-rate 0%)** but flags **11/41 humans (FP-rate 27%)** — every FP a directional bettor
+tripped by `round_trip_rate ≥ 0.30` (sells to manage positions). `two_sided_rate` AUC 1.00 (but
+circular — humans labelled by low both-hold); `round_trip` AUC 0.265 and `sell_buy` AUC 0.244 —
+**below 0.5**, i.e. those two axes anti-discriminate the MM class actually in the data (arbers hold
+both legs to resolution, so they *don't* round-trip). The `two_sided` axis carries all validated
+signal; `round_trip`/`sell_buy` are unvalidated + FP-generating. Sweep wants round-trip *relaxed*
+to 0.50 (LOO-stable).
+
+**Tier-2 (label-free, THE BINDING TEST).** Does excluding flagged wallets raise the copy pool's
+early→late surplus persistence, beyond a matched-subset null (remove random equal-N subsets matched
+on volume/n_positions, ≥2000×), with an as-of/leak-free screen? **NO across all 12 operating
+points** (every p ≥ 0.16; Δcorr flips sign −0.13…+0.13; parity split-half p=0.910 in the wrong
+tail). Baseline persistence is ≈0 (not the −0.10 assumed) and its CI (±0.3 at n≈30-60) swamps any
+effect. The screen has structural face validity but **cannot be shown to improve the thing we copy
+for at current power** — the same accrual wall as everywhere else.
+
+**Item 6 reconciliation (read-only, nothing mutated).** 132 disagreements between the 115 `fpd`
+flags and the screen: **40 restore candidates** (fpd='bot' but clean, several +0.15…+0.25 surplus =
+burst-humans the fpd≥400 rule likely deleted) and **92 exclude candidates** (fpd='human' but
+churner, `two_sided`-driven patient MMs, mostly low/negative surplus). Python microstructure ==
+persisted `router_followset` rates (crosscheck clean).
+
+**Next step.** Accrue ≥2-3 months of genuinely-timestamped forward fills (dense at-fire capture,
+not the 2026-06-30…07-03 backfill crawl whose crawl-stamp `ts` weakens the temporal split), re-run
+`mm_persistence_effect.py` with a rolling cutoff, revisit Phase 2 only if Δcorr then clears its
+matched null. Offline-decidable now (Tue's call, not applied): the 40/92 pool reconciliation, and
+dropping/relaxing the FP-generating `round_trip` axis. Scripts: `mm_common/mm_calibrate/
+mm_persistence_effect/mm_reconcile.py`, all `--selftest`-green.
+
+**D29 ADDENDUM (same day) — the criterion was misframed; the screen IS profit-accretive.**
+Cross-checked against the router's own `trader_scorecard.persistence`. Persistence WITHIN subgroups:
+MM-flagged +0.417 (n=98) > all +0.291 > clean +0.194 (n=103) — MMs are *mechanically* persistent
+(arb) and INFLATE the pooled corr, so "does exclusion RAISE persistence" was the wrong test (removing
+uncopyable arbers correctly lowers it). On the RIGHT criterion — forward H2 copy-return of the H1≥10%
+cohort the arm follows — the screen ~10×'s realized return (+0.004 unscreened → +0.043 screened) by
+keeping arbers out of the copy cohort. **Screen VINDICATED as profit-accretive; keep it.** New
+instrument `scripts/mm_screen_effect.py` (--selftest green) makes this reproducible. Refinement
+(PROPOSAL, not applied, needs Tue + forward re-confirm — `reports/PROPOSAL_mm_round_trip_relax.md`):
+relax `round_trip` 0.30→0.50 recovers ~18 copyable directional traders (n 103→121) at equal/greater
+cohort forward-return (+0.043→+0.045); `round_trip` is a pure FP-generator (all 11 Tier-1 human FPs
+fired on it), `sell_buy` earns its keep. Net: Phase-1 STOP stands (no Rust change, thresholds frozen),
+but the durable takeaways are the vindication + the dominated round_trip axis, both forward-decidable.
