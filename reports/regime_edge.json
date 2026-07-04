@@ -1,21 +1,21 @@
 {
  "arms": {
   "favorite": {
-   "n_events": 91,
+   "n_events": 92,
    "n_clusters": 6,
-   "pooled_surplus": 0.09677865072426384,
-   "pooled_lb": 0.023409429824727865,
-   "pooled_net_taker": 0.05152658534615287,
-   "pooled_net_taker_lb": -0.022188817215187492,
+   "pooled_surplus": 0.09728173514870143,
+   "pooled_lb": 0.024545898504068145,
+   "pooled_net_taker": 0.051709400061279436,
+   "pooled_net_taker_lb": -0.021406377822384963,
    "regimes": {
     "soccer|2026-06": {
      "n_events": 11,
      "n_clusters": 2,
-     "surplus": 0.052652457539948495,
-     "lb": 0.027561719900104722,
-     "net_taker": -0.0013569192811359548,
-     "net_taker_lb": -0.024734161976960226,
-     "mass": 0.5791770329394335,
+     "surplus": 0.0531150897269653,
+     "lb": 0.027014196327622007,
+     "net_taker": -0.0026178029361633563,
+     "net_taker_lb": -0.028847796509890788,
+     "mass": 0.5842659869966182,
      "sport": "soccer",
      "regime_type": "expiring",
      "recurring": false,
@@ -24,11 +24,11 @@
     "tennis|2026-06": {
      "n_events": 33,
      "n_clusters": 2,
-     "surplus": 0.06989990522355977,
+     "surplus": 0.0698999052235598,
      "lb": 0.010881752928408775,
-     "net_taker": 0.027655658885392793,
-     "net_taker_lb": -0.031062930518359552,
-     "mass": 2.306696872377472,
+     "net_taker": 0.027655658885392804,
+     "net_taker_lb": -0.031062930518359542,
+     "mass": 2.306696872377473,
      "sport": "tennis",
      "regime_type": "expiring",
      "recurring": false,
@@ -48,13 +48,13 @@
      "clears_floor": false
     },
     "soccer|2026-07": {
-     "n_events": 6,
+     "n_events": 7,
      "n_clusters": 4,
-     "surplus": 0.09425565428888198,
-     "lb": 0.02643642342059868,
-     "net_taker": 0.045613806087803944,
-     "net_taker_lb": -0.02773594926335269,
-     "mass": 0.5655339257332919,
+     "surplus": 0.10050105563551866,
+     "lb": 0.03283426184294144,
+     "net_taker": 0.0508425851242743,
+     "net_taker_lb": -0.019974817077223227,
+     "mass": 0.7035073894486306,
      "sport": "soccer",
      "regime_type": "expiring",
      "recurring": false,
@@ -76,11 +76,11 @@
     "mlb|2026-07": {
      "n_events": 11,
      "n_clusters": 4,
-     "surplus": 0.21450941577154534,
+     "surplus": 0.21450941577154536,
      "lb": 0.103208110000388,
      "net_taker": 0.16864491168167092,
-     "net_taker_lb": 0.04892448527922362,
-     "mass": 2.3596035734869987,
+     "net_taker_lb": 0.04892448527922359,
+     "mass": 2.359603573486999,
      "sport": "mlb",
      "regime_type": "recurring",
      "recurring": true,
@@ -89,11 +89,11 @@
     "mlb|2026-06": {
      "n_events": 2,
      "n_clusters": 1,
-     "surplus": 0.36772731063841957,
+     "surplus": 0.3677273106384196,
      "lb": null,
      "net_taker": 0.333867788275385,
      "net_taker_lb": null,
-     "mass": 0.7354546212768391,
+     "mass": 0.7354546212768392,
      "sport": "mlb",
      "regime_type": "recurring",
      "recurring": true,
@@ -103,9 +103,9 @@
      "n_events": 2,
      "n_clusters": 2,
      "surplus": 0.2547564205798847,
-     "lb": 0.15855309146885965,
-     "net_taker": 0.2200047539563028,
-     "net_taker_lb": 0.12187735826305732,
+     "lb": 0.15855309146885962,
+     "net_taker": 0.22000475395630278,
+     "net_taker_lb": 0.12187735826305726,
      "mass": 0.5095128411597694,
      "sport": "nba/cbb",
      "regime_type": "recurring",
@@ -153,26 +153,26 @@
     }
    },
    "concentration": {
-    "hhi": 0.15309781882395876,
-    "eff_regimes": 6.531771697870243,
+    "hhi": 0.150580309816856,
+    "eff_regimes": 6.640974515301866,
     "top_regime": "mlb|2026-07",
-    "top_share": 0.23242339149157665,
+    "top_share": 0.22919364143878934,
     "top_is_expiring": false,
-    "expiring_edge_mass_share": 0.5594716654954881,
-    "pooled_ex_top_surplus": 0.08059067053026263
+    "expiring_edge_mass_share": 0.5655932370055218,
+    "pooled_ex_top_surplus": 0.08136192666905599
    },
    "exposure": {
     "grain": "signal/capital",
     "by_sport_share": {
-     "soccer": 0.7018181818181818,
-     "tennis": 0.1890909090909091,
-     "esports": 0.03272727272727273,
-     "mlb": 0.05818181818181818,
-     "nba/cbb": 0.01090909090909091,
-     "politics/elections": 0.007272727272727273
+     "soccer": 0.7132867132867133,
+     "tennis": 0.18181818181818182,
+     "esports": 0.03146853146853147,
+     "mlb": 0.055944055944055944,
+     "nba/cbb": 0.01048951048951049,
+     "politics/elections": 0.006993006993006993
     },
     "top_sport": "soccer",
-    "top_sport_share": 0.7018181818181818
+    "top_sport_share": 0.7132867132867133
    },
    "breadth": {
     "n_regimes": 11,
@@ -198,8 +198,55 @@
    }
   },
   "proven_router": {
-   "n_events": 0,
-   "note": "no resolved data (arm empty)"
+   "n_events": 1,
+   "n_clusters": 1,
+   "pooled_surplus": -0.5994343578990419,
+   "pooled_lb": null,
+   "pooled_net_taker": -0.6426343578990419,
+   "pooled_net_taker_lb": null,
+   "regimes": {
+    "soccer|2026-07": {
+     "n_events": 1,
+     "n_clusters": 1,
+     "surplus": -0.5994343578990419,
+     "lb": null,
+     "net_taker": -0.6426343578990419,
+     "net_taker_lb": null,
+     "mass": -0.5994343578990419,
+     "sport": "soccer",
+     "regime_type": "expiring",
+     "recurring": false,
+     "clears_floor": false
+    }
+   },
+   "concentration": {
+    "hhi": 1.0,
+    "eff_regimes": 1.0,
+    "top_regime": "soccer|2026-07",
+    "top_share": 1.0,
+    "top_is_expiring": true,
+    "expiring_edge_mass_share": 1.0,
+    "pooled_ex_top_surplus": null
+   },
+   "exposure": {
+    "grain": "signal/capital",
+    "by_sport_share": {
+     "soccer": 1.0
+    },
+    "top_sport": "soccer",
+    "top_sport_share": 1.0
+   },
+   "breadth": {
+    "n_regimes": 1,
+    "n_recurring": 0,
+    "n_expiring": 1,
+    "recurring_cleared": 0,
+    "cluster_floor": 10,
+    "recurring_ids": [],
+    "expiring_ids": [
+     "soccer|2026-07"
+    ]
+   }
   }
  },
  "meta": {

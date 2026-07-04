@@ -28,22 +28,22 @@
     "expiring_out": {
      "n_events": 15,
      "n_clusters": 3,
-     "surplus": -0.002563566449080142,
-     "lb": -0.2601070321528056,
-     "net_taker": -0.05252446690877634,
-     "net_taker_lb": -0.3082676320266231,
-     "mass": -0.03845349673620213,
-     "hi": 0.2549798992546453
+     "surplus": -0.0036514497760418594,
+     "lb": -0.26044701140288073,
+     "net_taker": -0.053654224956445236,
+     "net_taker_lb": -0.3085753692818214,
+     "mass": -0.054771746640627894,
+     "hi": 0.253144111850797
     },
     "all_out": {
      "n_events": 25,
      "n_clusters": 3,
-     "surplus": 0.07454332024546165,
-     "lb": -0.12477564030973717,
-     "net_taker": 0.02572359819826481,
-     "net_taker_lb": -0.17437494103618803,
-     "mass": 1.863583006136541,
-     "hi": 0.27386228080066044
+     "surplus": 0.07389059024928461,
+     "lb": -0.12473524122680953,
+     "net_taker": 0.02504574336966349,
+     "net_taker_lb": -0.17429546691594378,
+     "mass": 1.8472647562321154,
+     "hi": 0.27251642172537877
     },
     "verdict": "PENDING"
    },
@@ -100,13 +100,54 @@
     },
     "passes": true
    },
-   "expiring_edge_mass_share": 0.565004988805982,
+   "expiring_edge_mass_share": 0.5655932370055218,
    "verdict": "SOCCER-ARTIFACT",
    "why": "edge is expiring-carried (57% of edge mass) and recurring regimes are below the floor \u2014 not yet certifiable"
   },
   "proven_router": {
-   "n_events": 0,
-   "note": "no resolved data (arm empty) \u2192 PENDING"
+   "n_events": 1,
+   "cutoff": "2026-07-04",
+   "temporal": {
+    "cutoff": "2026-07-04",
+    "n_in": 0,
+    "n_out": 1,
+    "recurring_out": null,
+    "expiring_out": {
+     "n_events": 1,
+     "n_clusters": 1,
+     "surplus": -0.5994343578990419,
+     "lb": null,
+     "net_taker": -0.6426343578990419,
+     "net_taker_lb": null,
+     "mass": -0.5994343578990419,
+     "hi": null
+    },
+    "all_out": {
+     "n_events": 1,
+     "n_clusters": 1,
+     "surplus": -0.5994343578990419,
+     "lb": null,
+     "net_taker": -0.6426343578990419,
+     "net_taker_lb": null,
+     "mass": -0.5994343578990419,
+     "hi": null
+    },
+    "verdict": "PENDING"
+   },
+   "transfer": {
+    "n_recurring_regimes": 0,
+    "real_transfer_count": 0,
+    "required": 2,
+    "p_conc": null,
+    "concentration_flagged": false,
+    "null_mean": null,
+    "null_dist": {},
+    "per_regime": {},
+    "passes": false
+   },
+   "expiring_edge_mass_share": 1.0,
+   "verdict": "SOCCER-ARTIFACT",
+   "why": "edge is expiring-carried (100% of edge mass) and recurring regimes are below the floor \u2014 not yet certifiable"
   }
  }
 }

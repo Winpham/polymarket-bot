@@ -51,7 +51,7 @@
     {
       "gate": "operational",
       "status": "MET",
-      "current": "1434 trajectory rows",
+      "current": "1447 trajectory rows",
       "threshold": "dense capture writing + monitors live",
       "needs": "\u2014",
       "eta": "none"
@@ -91,7 +91,7 @@
       {
         "regime": "nba/cbb|2026-07",
         "n_clusters": 2,
-        "edge_lb": 0.15855309146885965,
+        "edge_lb": 0.15855309146885962,
         "net_taker_fee2": 0.22000475395630278,
         "net_positive": true,
         "clears_cluster_floor": false
@@ -124,8 +124,8 @@
     "n_recurring_net_positive": 2,
     "concentration": {
       "top_regime": "mlb|2026-07",
-      "top_share": 0.23242339149157665,
-      "expiring_edge_mass_share": 0.5594716654954881
+      "top_share": 0.22919364143878934,
+      "expiring_edge_mass_share": 0.5655932370055218
     },
     "breadth": {
       "recurring_cleared": 0,
