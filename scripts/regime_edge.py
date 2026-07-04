@@ -58,6 +58,17 @@ FEE = 0.02                             # PREREG §7
 REPORT_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "reports")
 
 
+def lb_small_cluster(theta, se_cr, G):
+    """One-sided 95% lower bound with SMALL-CLUSTER t(G−1) — corrects the normal-z overstatement on
+    tiny cluster counts (audit 2026-07-04; ADDENDUM 20260704T210132Z). effective_n.py's own docstring
+    warns a normal-z LB on few clusters is misleading; here G is often 2–6, so t(G−1) is required. Uses
+    effective_n._t_ppf at one-sided 95% (matches effective_n's alpha convention and the independent
+    audit's re-derivation). Returns None for G<2 (a single cluster carries no between-cluster info)."""
+    if G is None or G < 2 or se_cr is None or not math.isfinite(se_cr):
+        return None
+    return theta - en._t_ppf(0.95, G - 1) * se_cr
+
+
 def _month(day):
     return str(day)[:7]   # YYYY-MM from a YYYY-MM-DD day string
 
@@ -110,8 +121,8 @@ def _regime_read(ev_subset, spreads):
     ev_cl = {k: v["day"] for k, v in ev_subset.items()}
     cr = en.cluster_robust(ev_s, ev_cl)   # None for a single-event regime
     surplus = cr["theta"] if cr else float(np.mean(list(ev_s.values())))
-    lb = surplus - Z * cr["se_CR"] if cr and math.isfinite(cr["se_CR"]) else None
     n_clusters = cr["G"] if cr else len({d for d in ev_cl.values()})
+    lb = lb_small_cluster(surplus, cr["se_CR"] if cr else None, n_clusters)   # small-cluster t (ADDENDUM 2)
     # net_taker per event: gross − band_spread(band) − follower_tax − fee·entry (PREREG §5)
     ev_net = {}
     for k, v in ev_subset.items():
@@ -119,7 +130,7 @@ def _regime_read(ev_subset, spreads):
         ev_net[k] = v["surplus"] - tax
     net_taker = float(np.mean(list(ev_net.values())))
     cr_n = en.cluster_robust(ev_net, ev_cl)
-    net_lb = net_taker - Z * cr_n["se_CR"] if cr_n and math.isfinite(cr_n["se_CR"]) else None
+    net_lb = lb_small_cluster(net_taker, cr_n["se_CR"] if cr_n else None, n_clusters)
     return {"n_events": len(ev_subset), "n_clusters": n_clusters,
             "surplus": surplus, "lb": lb, "net_taker": net_taker, "net_taker_lb": net_lb,
             "mass": float(np.sum(list(ev_s.values())))}   # unnormalized surplus mass for HHI
@@ -167,6 +178,16 @@ def analyze(rows, spreads=None):
         # the direct SOCCER-ARTIFACT test: share of |edge mass| carried by EXPIRING regimes.
         exp_mass = sum(abs(regimes[rid]["mass"]) for rid in regimes if not regimes[rid]["recurring"])
         expiring_edge_share = exp_mass / total_abs
+        # WHICH expiring sport carries it (audit fix 2026-07-04): the "SOCCER-ARTIFACT" label is a
+        # frozen verdict-ladder rung, but by EDGE MASS the carrier is tennis/Wimbledon, not soccer —
+        # "soccer" only leads on CAPITAL exposure. Surface the split so the label isn't misleading.
+        exp_by_sport = defaultdict(float)
+        for rid, rr in regimes.items():
+            if not rr["recurring"]:
+                exp_by_sport[rr["sport"]] += abs(rr["mass"])
+        tot_exp = sum(exp_by_sport.values()) or 1.0
+        expiring_by_sport = {sp: m / tot_exp for sp, m in sorted(exp_by_sport.items(), key=lambda kv: -kv[1])}
+        top_expiring_sport = next(iter(expiring_by_sport), None)
         # pooled edge with the top regime removed
         ev_ex = {k: v for k, v in ev.items() if v["regime_id"] != top_rid}
         pooled_ex_top = _regime_read(ev_ex, spreads) if ev_ex else None
@@ -191,6 +212,7 @@ def analyze(rows, spreads=None):
                               "top_regime": top_rid, "top_share": top_share,
                               "top_is_expiring": (not regimes[top_rid]["recurring"]) if top_rid else None,
                               "expiring_edge_mass_share": expiring_edge_share,
+                              "expiring_by_sport": expiring_by_sport, "top_expiring_sport": top_expiring_sport,
                               "pooled_ex_top_surplus": pooled_ex_top["surplus"] if pooled_ex_top else None},
             "exposure": {"grain": "signal/capital", "by_sport_share": exp_shares,
                          "top_sport": exp_top_sport,
@@ -230,8 +252,11 @@ def run_live():
         c = a["concentration"]; b = a["breadth"]; ex = a["exposure"]
         print(f"   EDGE CONCENTRATION (event grain): HHI {c['hhi']:.3f} (≈{_fmt(c['eff_regimes'],'.1f')} eff regimes) · "
               f"top '{c['top_regime']}' = {c['top_share']:.0%}{' [EXPIRING]' if c['top_is_expiring'] else ' [recurring]'}")
+        comp = " · ".join(f"{sp} {sh:.0%}" for sp, sh in list(c.get("expiring_by_sport", {}).items())[:3])
         print(f"                  EXPIRING regimes carry {c['expiring_edge_mass_share']:.0%} of edge mass "
               f"(the direct soccer-artifact test) · pooled edge minus top regime: {_fmt(c['pooled_ex_top_surplus'])}")
+        print(f"                  ↳ expiring edge-mass by sport: {comp}  ← '{c.get('top_expiring_sport')}' actually "
+              f"carries it (the 'SOCCER-ARTIFACT' label reflects CAPITAL, not edge mass)")
         print(f"   EXPOSURE (capital, signal grain): top sport '{ex['top_sport']}' = {ex['top_sport_share']:.0%} of BETS "
               f"— the 'soccer-carried' prior lives HERE, not in the event-grain edge")
         print(f"   BREADTH: {b['n_regimes']} regimes ({b['n_recurring']} recurring / {b['n_expiring']} expiring) · "
@@ -315,6 +340,16 @@ def _selftest():
     c4 = r1["arms"]["proven_router"]["n_events"] == 0
     ok = ok and c4
     print(f"  [{'ok' if c4 else 'FAIL'}] empty arm → n_events 0 (graceful)")
+
+    # (5) small-cluster t: G=2 uses t(1)≈6.31 (much wider than z=1.96); G<2 → None (ADDENDUM 2).
+    lb_g2 = lb_small_cluster(0.10, 0.02, 2)     # 0.10 − t(1)·0.02, flips negative
+    lb_g6 = lb_small_cluster(0.10, 0.02, 6)     # 0.10 − t(5)·0.02 ≈ +0.060
+    exp_g2 = 0.10 - en._t_ppf(0.95, 1) * 0.02
+    c5 = (lb_g2 is not None and abs(lb_g2 - exp_g2) < 1e-9 and lb_g2 < 0 < lb_g6
+          and lb_small_cluster(0.1, 0.02, 1) is None)
+    ok = ok and c5
+    print(f"  [{'ok' if c5 else 'FAIL'}] small-cluster t: G=2 LB {lb_g2:+.3f} (t(1)≈6.31 ≫ z, flips neg) < "
+          f"G=6 LB {lb_g6:+.3f}; G<2→None")
 
     print("selftest:", "PASS" if ok else "FAIL")
     sys.exit(0 if ok else 1)

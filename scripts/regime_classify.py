@@ -43,10 +43,16 @@ _EXPIRING_KW = [
     "round-of", "round of", "semifinal", "semi-final", "quarterfinal", "quarter-final",
     "-final", "grand final", "finals", "-cup", "championship",
     "worlds", "-msi-", "major", "super bowl", "superbowl", "world series",
+    # one-off elections are bounded events, not recurring venues (audit fix 2026-07-04): a specific
+    # primary / nomination / runoff resolves once and never repeats — treat as expiring.
+    "primary", "runoff", "nominee", "-nominee", "by-election", "special election",
 ]
 
 # --- Rule R: recurring venues (PREREG §2 Rule R) ---
-_RECURRING_CATS = {"mlb", "nba/cbb", "nfl/cfb", "nhl", "crypto", "econ/other", "politics/elections"}
+# NB: politics/elections is NOT here — Polymarket political markets are one-off resolutions (this
+# election / this nominee / this primary), substantively EXPIRING; they fall to Rule U (→expiring),
+# the conservative call (audit 2026-07-04: the two live political markets are one-off CO primaries).
+_RECURRING_CATS = {"mlb", "nba/cbb", "nfl/cfb", "nhl", "crypto", "econ/other"}
 # regular-league soccer slug prefixes (recurring when NOT flagged by Rule E)
 _RECURRING_SOCCER_PREFIXES = ("epl", "mls", "laliga", "seriea", "bund", "ligue", "erediv",
                               "mar1", "bra2", "kbo", "npb")
@@ -180,6 +186,8 @@ def _selftest():
         ("who-visited-island", "Will X be confirmed?", "other", UNKNOWN, "unclassifiable→unknown"),
         ("uefa-champions-league-final-2026", "Champions League Final", "soccer", EXPIRING, "cup final"),
         ("epl-ars-che-2026-08-15", "Arsenal vs Chelsea", "soccer", RECURRING, "EPL regular league"),
+        ("co-01-democratic-primary-winner", "Colorado Democratic primary winner?", "politics/elections", EXPIRING, "one-off primary"),
+        ("btc-updown-2026-07-02", "Bitcoin Up or Down", "crypto", RECURRING, "crypto stays recurring"),
     ]
     for slug, title, sport, want, label in cases:
         _, got = classify_regime(sport, "main", slug, title)

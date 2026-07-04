@@ -9,98 +9,96 @@
  },
  "arms": {
   "favorite": {
-   "n_events": 92,
+   "n_events": 93,
    "cutoff": "2026-07-02",
    "temporal": {
     "cutoff": "2026-07-02",
     "n_in": 67,
-    "n_out": 25,
+    "n_out": 26,
     "recurring_out": {
-     "n_events": 10,
+     "n_events": 11,
      "n_clusters": 3,
-     "surplus": 0.19020365028727432,
-     "lb": 0.12401091581741162,
-     "net_taker": 0.14309569585882656,
-     "net_taker_lb": 0.07197883390739541,
-     "mass": 1.902036502872743,
-     "hi": 0.256396384757137
+     "surplus": 0.2144115258756896,
+     "lb": 0.11248769966330191,
+     "net_taker": 0.1685421875147535,
+     "net_taker_lb": 0.05634676237612138,
+     "mass": 2.3585267846325855,
+     "hi": 0.3163353520880773
     },
     "expiring_out": {
      "n_events": 15,
      "n_clusters": 3,
-     "surplus": -0.0036514497760418594,
-     "lb": -0.26044701140288073,
-     "net_taker": -0.053654224956445236,
-     "net_taker_lb": -0.3085753692818214,
-     "mass": -0.054771746640627894,
-     "hi": 0.253144111850797
+     "surplus": -0.005660454945908455,
+     "lb": -0.3866421061169561,
+     "net_taker": -0.055663230126311816,
+     "net_taker_lb": -0.43379741039316416,
+     "mass": -0.08490682418862683,
+     "hi": 0.3753211962251392
     },
     "all_out": {
-     "n_events": 25,
+     "n_events": 26,
      "n_clusters": 3,
-     "surplus": 0.07389059024928461,
-     "lb": -0.12473524122680953,
-     "net_taker": 0.02504574336966349,
-     "net_taker_lb": -0.17429546691594378,
-     "mass": 1.8472647562321154,
-     "hi": 0.27251642172537877
+     "surplus": 0.08744692155553688,
+     "lb": -0.20774406512100427,
+     "net_taker": 0.039192908106446586,
+     "net_taker_lb": -0.258179691778927,
+     "mass": 2.2736199604439586,
+     "hi": 0.382637908232078
     },
     "verdict": "PENDING"
    },
    "transfer": {
-    "n_recurring_regimes": 5,
+    "n_recurring_regimes": 4,
     "real_transfer_count": 2,
     "required": 2,
-    "p_conc": 0.92,
+    "p_conc": 0.994,
     "concentration_flagged": false,
-    "null_mean": 1.406,
+    "count_ok": true,
+    "min_p_conc": 0.217,
+    "guard_can_fire": false,
+    "p_beat": 0.188,
+    "beat_null_can_pass": false,
+    "null_mean": 0.977,
     "null_dist": {
-     "0": 102,
-     "1": 473,
-     "2": 345,
-     "3": 77,
-     "4": 3
+     "0": 217,
+     "1": 595,
+     "2": 182,
+     "3": 6
     },
     "per_regime": {
      "mlb|2026-07": {
       "n_events": 11,
-      "held_surplus": 0.21450941577154536,
-      "held_lb": 0.103208110000388,
-      "fit_surplus": 0.10962826753697971,
+      "held_surplus": 0.21330181190566186,
+      "held_lb": 0.08086751099804187,
+      "fit_surplus": 0.16730668790954492,
       "transfers": true
      },
      "mlb|2026-06": {
       "n_events": 2,
-      "held_surplus": 0.3677273106384196,
+      "held_surplus": 0.3650705821334758,
       "held_lb": null,
-      "fit_surplus": 0.1494716765605636,
+      "fit_surplus": 0.17466792627683989,
       "transfers": false
      },
      "nba/cbb|2026-07": {
-      "n_events": 2,
-      "held_surplus": 0.2547564205798847,
-      "held_lb": 0.15855309146885962,
-      "fit_surplus": 0.16359303781788048,
+      "n_events": 3,
+      "held_surplus": 0.30556427779597145,
+      "held_lb": 0.20232636862349596,
+      "fit_surplus": 0.1738190875022597,
       "transfers": true
-     },
-     "politics/elections|2026-07": {
-      "n_events": 2,
-      "held_surplus": 0.097545327719946,
-      "held_lb": null,
-      "fit_surplus": 0.1832444244253728,
-      "transfers": false
      },
      "nba/cbb|2026-06": {
       "n_events": 1,
-      "held_surplus": -0.6726602451176427,
+      "held_surplus": -0.6429938701975964,
       "held_lb": null,
-      "fit_surplus": 0.22350951125667645,
+      "fit_surplus": 0.24957212053857164,
       "transfers": false
      }
     },
-    "passes": true
+    "passes": true,
+    "guard_inert_note": "permutation null non-discriminating on this data (guard cannot fire, beat-null cannot pass) \u2192 leg(b) is a RAW count, not a passed test"
    },
-   "expiring_edge_mass_share": 0.5655932370055218,
+   "expiring_edge_mass_share": 0.5719427528760835,
    "verdict": "SOCCER-ARTIFACT",
    "why": "edge is expiring-carried (57% of edge mass) and recurring regimes are below the floor \u2014 not yet certifiable"
   },
@@ -115,21 +113,21 @@
     "expiring_out": {
      "n_events": 1,
      "n_clusters": 1,
-     "surplus": -0.5994343578990419,
+     "surplus": -0.5967539061354175,
      "lb": null,
-     "net_taker": -0.6426343578990419,
+     "net_taker": -0.6399539061354175,
      "net_taker_lb": null,
-     "mass": -0.5994343578990419,
+     "mass": -0.5967539061354175,
      "hi": null
     },
     "all_out": {
      "n_events": 1,
      "n_clusters": 1,
-     "surplus": -0.5994343578990419,
+     "surplus": -0.5967539061354175,
      "lb": null,
-     "net_taker": -0.6426343578990419,
+     "net_taker": -0.6399539061354175,
      "net_taker_lb": null,
-     "mass": -0.5994343578990419,
+     "mass": -0.5967539061354175,
      "hi": null
     },
     "verdict": "PENDING"
@@ -140,10 +138,16 @@
     "required": 2,
     "p_conc": null,
     "concentration_flagged": false,
+    "count_ok": false,
+    "min_p_conc": null,
+    "guard_can_fire": false,
+    "p_beat": null,
+    "beat_null_can_pass": false,
     "null_mean": null,
     "null_dist": {},
     "per_regime": {},
-    "passes": false
+    "passes": false,
+    "guard_inert_note": "permutation null non-discriminating on this data (guard cannot fire, beat-null cannot pass) \u2192 leg(b) is a RAW count, not a passed test"
    },
    "expiring_edge_mass_share": 1.0,
    "verdict": "SOCCER-ARTIFACT",

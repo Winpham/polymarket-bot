@@ -3,7 +3,30 @@
 **Date:** 2026-07-04 (UTC) · **Branch:** `feat/regime-persistence` (NOT merged — left for review) ·
 **Paper-only, read-only, promotes nothing.** DB snapshot: favorite = 275 resolved signals → 92
 match-events over 6 contiguous days (2026-06-29 → 07-04), spanning 2 calendar months but ONE
-continuous span (World-Cup + Wimbledon window).
+continuous span (World-Cup + Wimbledon window). *(Live bot; later runs drift to ~288–293 signals /
+93 events — conclusions are drift-invariant.)*
+
+> ## ⟢ AUDIT OUTCOME & CORRECTIONS APPLIED (2026-07-04)
+> An **independent adversarial audit** (`2026-07-04-regime-persistence-AUDIT.md`) reproduced every
+> headline number from raw DB with its own code (zero DIVERGE) and **CONFIRMED `SOCCER-ARTIFACT`** —
+> robust across 12/13 defensible configs, and *structurally unflippable* (6 days < 10-cluster floor,
+> so PERSISTS is unreachable by construction). It also found **three real defects, all in
+> certification-favorable sub-claims — fixing each makes the non-certification verdict STRONGER.** All
+> are now fixed (see `PREREG_..._ADDENDUM2.md`), belief-blind (verdict unchanged under old & new):
+> 1. **Small-cluster inference** used normal z=1.96 where t(G−1) is required (G=2–6). Fixed → t(G−1)
+>    via `regime_edge.lb_small_cluster`. The load-bearing pooled edge survives (t-LB ≈ +2.7%); a G=2
+>    regime can no longer clear (t(1)≈6.31). The "net-positive" / "leg-b transfer" counts now DRIFT with
+>    the snapshot (1 at the audit's 286-signal snapshot, 2 at 288 where nba/cbb reached 3 clusters) —
+>    always non-load-bearing.
+> 2. **leg (b) was decorative** — its permutation guard is mathematically incapable of firing on this
+>    data. Fixed → it now reports a **RAW transfer count** with `guard_can_fire=False`, never "PASS".
+> 3. **leg (a) baseline leaked** ~43% post-cutoff blind rows. Fixed → strictly-causal IN-period-only
+>    baseline (`build_events_leakfree`). Benign today (leak deflated the edge) but was set to
+>    contaminate the certification LB.
+> Plus: classifier now treats one-off primaries as expiring, and the label is clarified —
+> **by edge mass the carrier is tennis/Wimbledon (~67%), not soccer (~21%)**; "soccer" only leads on
+> capital exposure (71%). The `SOCCER-ARTIFACT` enum is a frozen ladder rung; the substance is
+> "expiring-tournament-carried." Audit verdict: **TRUSTWORTHY-WITH-MINOR-FIXES → now APPLIED.**
 
 ## Headline (brutally honest)
 
@@ -30,14 +53,17 @@ clusters**, exactly the stationarity gate — not sample size, not the point est
 - **Breadth:** 11 regimes (5 recurring / 6 expiring). **Recurring regimes clearing the 10-cluster
   floor: 0 / 5.** Toward the ≥2-disjoint-non-expiring bar: **0 cleared.**
 - **Persistence legs (recurring only):** leg (a) temporal = **PENDING** (only 3 recurring OUT
-  day-clusters < 10 floor; recurring-OUT surplus +19%, LB +12% — strong but power-starved). leg (b)
-  transfer = **PASS** (2/2 recurring regimes transfer — mlb|2026-07 & nba/cbb|2026-07 — with
-  concentration-guard p_conc 0.92, not flagged). Both legs required → not PERSISTS.
-- **Net-positive recurring regimes after tax (taker, fee 2%, LB>0):** `mlb|2026-07`, `nba/cbb|2026-07`
-  = **2**. This *meets* the net leg's ≥2 count — but on power-starved cluster counts (4 and 2 clusters,
-  both below the 10-cluster persistence floor), so **net-positive ≠ persistent**. `PERSISTS-NET`
-  requires BOTH persistence legs AND ≥2 net-positive recurring regimes; the persistence temporal leg
-  is unmet, so `PERSISTS-NET` is **not** reached.
+  day-clusters < 10 floor; leak-free recurring-OUT surplus +21%, small-cluster t-LB +11% — strong but
+  power-starved). leg (b) transfer = a **RAW COUNT of 2/2** recurring regimes that transfer — **NOT a
+  passed statistical test**: its regime-permutation guard is non-discriminating on this data
+  (`guard_can_fire=False`, min achievable p_conc ≈ 0.22 ≥ 0.05; the original beat-null is also
+  unpassable). Reported honestly as a count, not "PASS." Both legs required → not PERSISTS regardless.
+- **Net-positive recurring regimes after tax (taker, fee 2%, small-cluster t-LB>0):** snapshot-dependent
+  — **1** at the audit's 286-signal snapshot (nba/cbb had G=2, flips negative under t(1)≈6.31), **2** at
+  288+ where `nba/cbb|2026-07` reaches 3 clusters and survives t(2). Either way on power-starved counts
+  (2–4 clusters, all below the 10-cluster persistence floor), so **net-positive ≠ persistent**.
+  `PERSISTS-NET` requires BOTH persistence legs AND ≥2 net-positive recurring regimes; leg (a) is
+  PENDING, so `PERSISTS-NET` is **not** reached under any snapshot.
 
 ## The single binding constraint + ETA
 
@@ -73,7 +99,8 @@ reusing `market_taxonomy.category` (no new sport bucket). *Tested:* `--selftest`
 regular-season→recurring, playoff→expiring, tennis/esports→unknown, EPL/KBO→recurring, determinism).
 *Verified live:* the archive audit correctly classifies soccer=World Cup and tennis=**Wimbledon**
 (caught from the market titles, not just my conservative default) as EXPIRING; recurring pool = mlb /
-nba-cbb / politics (all thin). A human can eyeball every edge case in the printed audit.
+nba-cbb (all thin; politics reclassified EXPIRING post-audit — one-off primaries). A human can eyeball
+every edge case in the printed audit.
 
 **Item 2 — `regime_edge.py`** (NEW). Per sport×month regime: matched-baseline surplus (byte-identical
 to softness_map), cluster count + CR-LB (effective_n), regime_type, net_taker column, and TWO
@@ -91,8 +118,8 @@ reported.
 **Item 4 — `regime_net_edge.py`** (NEW). gross → net_taker → net_maker (δ=0¢/5m adverse-selection gap)
 per regime, in fee=2% and fee=0 columns, net_positive iff cluster-robust LB>0. *Tested:* `--selftest`
 (+8% gross nets positive; +3% gross under a 5¢ spread nets negative; maker avoids the wide spread;
-fee=0 ≥ fee=2%). *Verified live:* 2 recurring regimes net-positive after taker tax, on sub-floor
-cluster counts.
+fee=0 ≥ fee=2%). *Verified live (post-audit, small-cluster t):* 1–2 recurring regimes net-positive
+after taker tax (snapshot-dependent), all on sub-floor cluster counts.
 
 **Item 5 — `readiness_ledger.py`** (EXTEND). Regime-aware persistence GO-gate `current`/`needs` (bar
 UNCHANGED — still NOT_MET / months) + a new informational per-regime panel (status / edge-LB /
@@ -121,16 +148,34 @@ consistent DB snapshot before this report. No migration added (`ls migrations/` 
 untouched). `PILOT_ARMED` unset, `EARN_DEEP_SHARPS` false, alert path untouched, `main` never
 merged/rebased.
 
-## Honest limitations (so a reviewer isn't misled)
+## Honest limitations (so a reviewer isn't misled — completed post-audit)
 1. All recurring data sits in one **contiguous** 6-day span; the calendar-month regime split
    (mlb|2026-06 vs mlb|2026-07) yields "2 disjoint regimes" that are really adjacent days — the
    `≥2 disjoint recurring regimes` bar is technically satisfiable by contiguous months, but leg (a)'s
    10-cluster floor (unmet: 3) is the real gate and is robust to this. Noted, not hidden.
-2. Leg (b)'s regime-permutation null certifies *distribution/non-concentration*, not "beats chance" —
-   an upper-tail beat is mechanically impossible for a distributed edge (ADDENDUM). Leg (a) carries the
-   temporal out-of-sample evidence; both are necessary.
-3. `proven_router` has ~0–1 resolved events (the live bot resolved one mid-build) → reported as
-   empty/PENDING, not analyzed. Favorite is the only arm with real evidence.
+2. **Leg (b) is decorative on this data** (audit finding, now fixed): its regime-permutation null
+   cannot fire (min p_conc ≈ 0.22) and the beat-null cannot pass, so leg (b) is a RAW "≥2 transfer"
+   count, not a passed test — and under correct small-cluster t the count itself is snapshot-fragile
+   (1–2). It is immaterial to the verdict (consulted only if leg (a) PASSes, which is PENDING).
+3. **Small-cluster inference** (audit finding, now fixed): LBs use t(G−1), not normal z. The pooled
+   edge survives (t-LB ≈ +2.7%); any G=2 per-regime clearance/net-positive claim flips negative under
+   t(1)≈6.31, so those informational counts drift with the snapshot. Never load-bearing (all sub-floor).
+4. **Leg (a) baseline leakage** (audit finding, now fixed): the temporal baseline now uses IN-period
+   blind only. The old full-record baseline deflated the OUT edge (benign) but would have contaminated
+   the certification LB once ≥10 clusters accrue.
+5. The `SOCCER-ARTIFACT` **label** reflects capital exposure (71% soccer); by EDGE MASS the carrier is
+   tennis/**Wimbledon** (~67%) vs soccer (~21%). The verdict enum is a frozen ladder rung; the
+   substance is "expiring-tournament-carried."
+6. `proven_router` has ~0–1 resolved events → reported as empty/PENDING, not analyzed. Favorite is the
+   only arm with real evidence.
+
+## Before certification (Aug–Sep accrual) — the audit's must-fix list, status
+- **DONE** small-cluster t(G−1) inference — this was the one fix flagged as *must-land-before-cert*
+  because at ≥10 clusters the LB becomes the binding PASS gate.
+- **DONE** leg (a) leak-free IN-period baseline — would otherwise contaminate the certification LB.
+- **DONE** leg (b) honest labeling; classifier one-off-election fix; Wimbledon-vs-soccer label.
+- **OPEN (by design)** the binding constraint itself: ≥10 independent recurring OUT clusters across
+  ≥2 disjoint (non-contiguous) months of non-expiring sport. ETA ~months. Nothing to build — accrue.
 
 ## Handback
 Branch `feat/regime-persistence` is left for review — **do not merge** without a look (a `main` HEAD

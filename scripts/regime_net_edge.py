@@ -59,12 +59,15 @@ def _maker_gaps():
 
 
 def _lb(series, ev_cl):
-    """cluster-robust LB (day-clustered) of a per-event series; (mean, lb) — lb None if <2 clusters."""
+    """cluster-robust LB (day-clustered) of a per-event series; (mean, lb). Uses SMALL-CLUSTER t(G−1)
+    (reg.lb_small_cluster) — normal z overstates on the G=2–6 counts here (audit fix, ADDENDUM 2).
+    lb None for <2 clusters."""
     if not series:
         return None, None
     cr = en.cluster_robust(series, ev_cl)
     mean = cr["theta"] if cr else float(np.mean(list(series.values())))
-    lb = mean - Z * cr["se_CR"] if cr and math.isfinite(cr["se_CR"]) else None
+    G = cr["G"] if cr else len({d for d in ev_cl.values()})
+    lb = reg.lb_small_cluster(mean, cr["se_CR"] if cr else None, G)
     return mean, lb
 
 

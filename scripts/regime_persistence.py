@@ -64,6 +64,19 @@ def build_events(rows, arm):
     return reg._events(prows, baseline)
 
 
+def build_events_leakfree(rows, arm, cutoff):
+    """LEAK-FREE events for the temporal leg (audit fix 2026-07-04; ADDENDUM 20260704T210132Z): the
+    matched baseline is fit on IN-period (pre-cutoff) blind ONLY, so the OUT surplus never sees
+    post-cutoff blind data. The full-record baseline (build_events) leaked ~43% post-cutoff blind rows
+    into the 'leak-free' split — benign today (it DEFLATED the OUT edge) but it would contaminate the
+    certification LB once ≥10 recurring OUT clusters accrue, so leg(a) uses this strictly-causal
+    baseline. Cells absent from IN-period blind default to a 0 baseline (documented)."""
+    blind_in = [r for r in rows if r["strategy"] == "_blind" and str(r["day"]) < cutoff]
+    baseline = reg._matched_baseline(blind_in)
+    prows = [r for r in rows if r["strategy"] == arm]
+    return reg._events(prows, baseline)
+
+
 def _read(ev_subset, spreads):
     """Wrap regime_edge._regime_read and add the upper bound (hi = 2·surplus − lb)."""
     r = reg._regime_read(ev_subset, spreads)
@@ -155,16 +168,31 @@ def transfer_leg(ev, spreads, rng):
     # null count; documented in the ADDENDUM.)
     p_conc = (sum(1 for c in null_counts if c <= real_count) / len(null_counts)) if null_counts else None
     concentration_flagged = (p_conc is not None and p_conc < 0.05)
-    passes = (real_count >= TRANSFER_MIN_REGIMES and not concentration_flagged and p_conc is not None)
+    # HONESTY DIAGNOSTIC (audit 2026-07-04): the permutation guard is only meaningful if it CAN fire.
+    # min achievable p_conc = frac(null == 0) (p_conc is monotone in real, minimised at real=0); if that
+    # is ≥0.05 the guard can NEVER flag any real count ⇒ it is inert and leg(b) reduces to a raw
+    # "≥TRANSFER_MIN_REGIMES transfer" count. We report it honestly rather than headlining "PASS".
+    min_p_conc = (null_counts.count(0) / len(null_counts)) if null_counts else None
+    guard_can_fire = (min_p_conc is not None and min_p_conc < 0.05)
+    # would the ORIGINAL upper-tail beat-null pass? p_beat = frac(null ≥ real); pass needs ≤0.05.
+    p_beat = (sum(1 for c in null_counts if c >= real_count) / len(null_counts)) if null_counts else None
+    beat_null_can_pass = (p_beat is not None and p_beat <= 0.05)
+    count_ok = real_count >= TRANSFER_MIN_REGIMES
+    passes = (count_ok and not concentration_flagged and p_conc is not None)
     null_dist = {}
     for c in null_counts:
         null_dist[c] = null_dist.get(c, 0) + 1
     return {"n_recurring_regimes": n_regimes, "real_transfer_count": real_count,
             "required": TRANSFER_MIN_REGIMES, "p_conc": p_conc,
-            "concentration_flagged": concentration_flagged,
+            "concentration_flagged": concentration_flagged, "count_ok": count_ok,
+            "min_p_conc": min_p_conc, "guard_can_fire": guard_can_fire,
+            "p_beat": p_beat, "beat_null_can_pass": beat_null_can_pass,
             "null_mean": (float(np.mean(null_counts)) if null_counts else None),
             "null_dist": {str(k): v for k, v in sorted(null_dist.items())},
-            "per_regime": detail, "passes": passes}
+            "per_regime": detail, "passes": passes,
+            "guard_inert_note": (None if guard_can_fire else
+                                 "permutation null non-discriminating on this data (guard cannot fire, "
+                                 "beat-null cannot pass) → leg(b) is a RAW count, not a passed test")}
 
 
 # ---------------------------------------------------------------------------------------------
@@ -211,7 +239,9 @@ def analyze(rows, cutoff=None, spreads=None):
             continue
         days = sorted({v["day"] for v in ev.values()})
         cut = cutoff or (days[len(days) // 2] if len(days) > 1 else days[0])
-        temporal = temporal_leg(ev, cut, spreads)
+        # leg(a) uses the strictly-causal IN-period-blind baseline (leak-free); leg(b) is not a forward
+        # test (leave-one-regime-out, in-sample) so it keeps the full-record matched baseline.
+        temporal = temporal_leg(build_events_leakfree(rows, arm, cut), cut, spreads)
         transfer = transfer_leg(ev, spreads, rng)
         exp_share = edge["arms"].get(arm, {}).get("concentration", {}).get("expiring_edge_mass_share")
         vd, why = verdict_ladder(temporal, transfer, exp_share)
@@ -244,9 +274,15 @@ def run_live(cutoff=None):
                  if rec else f"no recurring OUT events → {t['verdict']}"))
         if exp:
             print(f"                    (expiring OUT, reported/excluded: {exp['n_clusters']} clusters · surplus {_f(exp['surplus'])})")
-        print(f"  leg(b) TRANSFER — {tr['n_recurring_regimes']} recurring regimes · real transfer count "
-              f"{tr['real_transfer_count']}/{tr['required']} · concentration-guard p_conc {_f(tr['p_conc'],'.3f')} "
-              f"(null mean {_f(tr['null_mean'],'.2f')}, flagged={tr['concentration_flagged']}) → {'PASS' if tr['passes'] else 'fail'}")
+        leg_b_state = (f"count {tr['real_transfer_count']}/{tr['required']} "
+                       + ("(RAW COUNT — guard inert)" if not tr['guard_can_fire'] else
+                          ("count-met" if tr['count_ok'] else "count-short")))
+        print(f"  leg(b) TRANSFER — {tr['n_recurring_regimes']} recurring regimes · {leg_b_state} · "
+              f"perm-null p_conc {_f(tr['p_conc'],'.3f')} (min achievable {_f(tr['min_p_conc'],'.3f')} — "
+              f"{'CAN fire' if tr['guard_can_fire'] else 'CANNOT fire ≥0.05'}); "
+              f"beat-null p {_f(tr['p_beat'],'.3f')} ({'passable' if tr['beat_null_can_pass'] else 'unpassable'})")
+        if tr.get("guard_inert_note"):
+            print(f"                    ⚠ {tr['guard_inert_note']}")
         for rid, d in sorted(tr["per_regime"].items(), key=lambda kv: -(kv[1]['n_events'])):
             print(f"      hold-out {rid:<24} n={d['n_events']:>2} held-surplus {_f(d['held_surplus'])} "
                   f"LB {_f(d['held_lb'])} fit {_f(d['fit_surplus'])} → {'transfers' if d['transfers'] else 'no'}")
