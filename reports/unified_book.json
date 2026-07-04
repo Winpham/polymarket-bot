@@ -1,0 +1,81 @@
+{
+  "policy": {
+    "policy": "unified_v1",
+    "sizing_base": "flat_shares",
+    "kelly_ladder": [
+      {
+        "lambda_ci_lower_min": 0.25,
+        "k": "1/16"
+      },
+      {
+        "lambda_ci_lower_min": 0.5,
+        "k": "1/12"
+      }
+    ],
+    "kelly_ruled_out": [
+      "1/4",
+      "1/6"
+    ],
+    "deploy_cap_per_day": 0.13,
+    "deploy_hard_ceiling": 0.16,
+    "per_bet_cap": 0.02,
+    "entry_floor": 0.45,
+    "per_game_cap": null,
+    "slate_stop_units": -5,
+    "dodge_overlay": "map_state (selection-time, not re-applied here)",
+    "arms": [
+      "favorite",
+      "proven_router"
+    ],
+    "bankroll_start": 10000.0,
+    "provenance": {
+      "flat_shares": "refined-strategy anchor + D21 (4x CVaR) + stress VERDICT F1",
+      "ladder": "D22 corr_risk_delever (1/12 knee, 1/16 conservative, flat floor at lambda~0)",
+      "deploy_cap": "reports/sizing/optimal_deploy.json (ruin<=5% even-if-fake)",
+      "per_bet_cap": "stress VERDICT fix #1",
+      "no_game_cap": "D21 corr_risk_verify",
+      "rejected": "kelly_eighth_capped (D15, overturned by stress test)"
+    }
+  },
+  "sizing_mode_today": "flat_shares (lambda INDETERMINATE - ladder parked at the floor)",
+  "lambda_ci_lower": null,
+  "freeze_day": "2026-07-04",
+  "arms_present": [
+    "favorite"
+  ],
+  "book": {
+    "final_bankroll": 10229.69,
+    "total_pnl": 229.69,
+    "max_drawdown": 0.0132,
+    "n_days": 4,
+    "pct_days_positive": 0.5,
+    "worst_day": -128.44,
+    "tail_mean_worst5pct": -128.44,
+    "forward_days": 1,
+    "forward_pnl": -128.44,
+    "equity_tail": [
+      [
+        "2026-07-01",
+        10072.72
+      ],
+      [
+        "2026-07-02",
+        10366.26
+      ],
+      [
+        "2026-07-03",
+        10358.13
+      ],
+      [
+        "2026-07-04",
+        10229.69
+      ]
+    ]
+  },
+  "flat_100_baseline": {
+    "total_pnl": 472.07,
+    "pct_days_positive": 0.5,
+    "worst_day": -219.39
+  },
+  "verdict": "INDETERMINATE \u2014 forward accrual 1/20 day-blocks (seed record is illustrative only)"
+}
