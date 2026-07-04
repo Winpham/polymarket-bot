@@ -64,6 +64,64 @@ def gate(name, status, current, threshold, needs, eta):
             "needs": needs, "eta": eta}
 
 
+def persistence_current(persist, edge, ndays, tracker_verdict):
+    """Regime-aware `current`/`needs` for the persistence GO gate. The BAR is unchanged (≥CLUSTER_FLOOR
+    non-expiring regimes over months); this only makes the read name recurring vs expiring regimes.
+    Pure (takes the loaded JSONs), so it is unit-tested without a DB."""
+    needs = f"≥{CLUSTER_FLOOR} independent NON-EXPIRING regimes (months)"
+    fav_e = (edge or {}).get("arms", {}).get("favorite", {})
+    fav_p = (persist or {}).get("arms", {}).get("favorite", {})
+    if not fav_e or not fav_p:
+        return f"{ndays} event-day clusters (WC-heavy), tracker={tracker_verdict}", needs
+    br = fav_e.get("breadth", {})
+    rec_cleared = br.get("recurring_cleared", 0)
+    n_rec = br.get("n_recurring", 0)
+    verdict = fav_p.get("verdict", "PENDING")
+    exp_ids = br.get("expiring_ids", [])
+    exp_sports = sorted({rid.split("|")[0] for rid in exp_ids})
+    exp_note = ("; " + "/".join(exp_sports) + " expiring") if exp_sports else ""
+    current = f"regime={verdict}; {rec_cleared}/{n_rec} recurring regimes clear floor{exp_note}"
+    return current, needs
+
+
+def regime_panel(edge, persist, net):
+    """Informational per-regime persistence panel (NOT a GO gate). Pure — takes the three loaded
+    JSON artifacts (regime_edge / regime_persistence / regime_net_edge). Returns None if unavailable."""
+    if not edge or not persist or not net:
+        return None
+    fe = edge.get("arms", {}).get("favorite", {})
+    fp = persist.get("arms", {}).get("favorite", {})
+    fn = net.get("arms", {}).get("favorite", {})
+    if not fe.get("regimes") or not fn.get("regimes"):
+        return None
+    edge_reg = fe["regimes"]
+    net_reg = fn["regimes"]
+    rows = []
+    for rid, nr in net_reg.items():
+        if not nr.get("recurring"):
+            continue
+        er = edge_reg.get(rid, {})
+        rows.append({
+            "regime": rid, "n_clusters": nr.get("n_clusters"),
+            "edge_lb": er.get("lb"), "net_taker_fee2": nr.get("net_taker_fee2"),
+            "net_positive": nr.get("net_taker_fee2_positive"),
+            "clears_cluster_floor": er.get("clears_floor", False),
+        })
+    rows.sort(key=lambda r: -(r["net_taker_fee2"] if r["net_taker_fee2"] is not None else -9))
+    conc = fe.get("concentration", {})
+    br = fe.get("breadth", {})
+    return {
+        "verdict": fp.get("verdict"), "why": fp.get("why"),
+        "recurring_regimes": rows,
+        "n_recurring_net_positive": fn.get("n_recurring_net_positive", 0),
+        "concentration": {"top_regime": conc.get("top_regime"), "top_share": conc.get("top_share"),
+                          "expiring_edge_mass_share": conc.get("expiring_edge_mass_share")},
+        "breadth": {"recurring_cleared": br.get("recurring_cleared", 0),
+                    "n_recurring": br.get("n_recurring", 0),
+                    "cluster_floor": br.get("cluster_floor"), "bar": 2},
+    }
+
+
 def build_gates():
     gates = []
 
@@ -86,6 +144,10 @@ def build_gates():
                               "edge is bias, not information — PIVOT (WS-4/WS-3)", "months"))
 
     # --- persistence (independent clusters, non-expiring) ---
+    # REGIME-AWARE (2026-07-04, regime-persistence run): the `current`/`needs` now consume
+    # regime_persistence.json / regime_edge.json so the binding read names WHICH regimes are
+    # recurring vs expiring. The GO-gate BAR is UNCHANGED (still NOT_MET until ≥CLUSTER_FLOOR
+    # independent NON-EXPIRING regimes over months) — this only makes the read regime-legible.
     days = q("select count(distinct date(first_detected_at at time zone 'UTC')) d, "
              "count(distinct coalesce(event_slug,condition_id)) ev "
              "from consensus_signals where strategy='favorite' and resolved")
@@ -93,8 +155,9 @@ def build_gates():
     nev = int(days[0]["ev"]) if days else 0
     pt = load("persistence_tracker.json")
     pv = (pt or {}).get("verdict", "PENDING")
-    gates.append(gate("persistence", "NOT_MET", f"{ndays} event-day clusters (WC-heavy), tracker={pv}",
-                      f"≥{CLUSTER_FLOOR} independent NON-EXPIRING regimes (months)",
+    current, needs = persistence_current(load("regime_persistence.json"), load("regime_edge.json"),
+                                         ndays, pv)
+    gates.append(gate("persistence", "NOT_MET", current, needs,
                       "accrue across sports past the World Cup/Wimbledon", "months"))
 
     # --- power (distinct events) ---
@@ -165,13 +228,45 @@ def verdict(gates):
 def run():
     gates = build_gates()
     v = verdict(gates)
+    panel = regime_panel(load("regime_edge.json"), load("regime_persistence.json"),
+                         load("regime_net_edge.json"))
     _print(gates, v)
-    out = {"gates": gates, "verdict": v}
+    _print_panel(panel)
+    out = {"gates": gates, "verdict": v, "regime_panel": panel}
     os.makedirs(REPORT_DIR, exist_ok=True)
     with open(os.path.join(REPORT_DIR, "readiness_ledger.json"), "w") as f:
         json.dump(out, f, indent=2)
     print(f"\nwrote {os.path.join(REPORT_DIR, 'readiness_ledger.json')}")
     return out
+
+
+def _pf(x, spec="+.1%"):
+    return "n/a" if x is None or (isinstance(x, float) and x != x) else format(x, spec)
+
+
+def _print_panel(panel):
+    if not panel:
+        print("\n(regime panel unavailable — run regime_edge / regime_persistence / regime_net_edge first)")
+        return
+    print("\n" + "=" * 96)
+    print("REGIME PERSISTENCE PANEL (informational — NOT a GO gate; makes 'accumulate over months' watchable)")
+    print("=" * 96)
+    print(f"regime verdict: {panel['verdict']} — {panel['why']}")
+    print(f"{'recurring regime':<26}{'status':<14}{'edge LB':>9}{'net-taker':>11}{'clusters':>9}{'net+?':>7}")
+    print("-" * 76)
+    for r in panel["recurring_regimes"]:
+        status = "cleared" if r["clears_cluster_floor"] else "below-floor"
+        npos = "yes" if r["net_positive"] else ("no" if r["net_positive"] is not None else "—")
+        print(f"{r['regime']:<26}{status:<14}{_pf(r['edge_lb']):>9}{_pf(r['net_taker_fee2']):>11}"
+              f"{str(r['n_clusters']):>9}{npos:>7}")
+    print("-" * 76)
+    c = panel["concentration"]
+    print(f"concentration: top regime '{c['top_regime']}' = {_pf(c['top_share'],'.0%')} of edge mass · "
+          f"EXPIRING regimes carry {_pf(c['expiring_edge_mass_share'],'.0%')} (soccer-artifact test)")
+    b = panel["breadth"]
+    print(f"breadth: {b['recurring_cleared']}/{b['n_recurring']} recurring regimes clear the "
+          f"{b['cluster_floor']}-cluster floor · {panel['n_recurring_net_positive']} net-positive after tax "
+          f"· need ≥{b['bar']} non-expiring for PERSISTS-NET")
 
 
 def _print(gates, v):
@@ -214,6 +309,44 @@ def selftest():
     c3 = verdict([gate(n, "MET (caveat)" if n == "power" else "MET", "", "", "", "none") for n in GO_GATES])["real_money_eligible"]
     ok = ok and c3
     print(f"  [{'ok' if c3 else 'FAIL'}] 'MET (caveat)' counts as met")
+
+    # --- regime-aware persistence gate rewire (pure, fixture JSONs) ---
+    edge_fix = {"arms": {"favorite": {"breadth": {"recurring_cleared": 0, "n_recurring": 5,
+                "expiring_ids": ["soccer|2026-07", "tennis|2026-06"]},
+                "concentration": {"top_regime": "mlb|2026-07", "top_share": 0.23,
+                                  "expiring_edge_mass_share": 0.57},
+                "regimes": {"mlb|2026-07": {"lb": 0.10, "clears_floor": False, "recurring": True}}}}}
+    persist_fix = {"arms": {"favorite": {"verdict": "SOCCER-ARTIFACT", "why": "expiring-carried"}}}
+    cur, needs = persistence_current(persist_fix, edge_fix, 6, "PENDING")
+    c4 = ("SOCCER-ARTIFACT" in cur and "0/5" in cur and "soccer" in cur
+          and needs == f"≥{CLUSTER_FLOOR} independent NON-EXPIRING regimes (months)")
+    ok = ok and c4
+    print(f"  [{'ok' if c4 else 'FAIL'}] persistence gate rewired regime-aware, bar UNCHANGED: '{cur}'")
+
+    # gate stays NOT_MET and eta months even when regime-aware (does not weaken)
+    g_p = next(g for g in [gate("persistence", "NOT_MET", cur, needs, "accrue", "months")])
+    c4b = g_p["status"] == "NOT_MET" and g_p["eta"] == "months"
+    ok = ok and c4b
+    print(f"  [{'ok' if c4b else 'FAIL'}] persistence gate still NOT_MET / months (bar not weakened)")
+
+    # --- regime panel (pure, fixture JSONs) ---
+    net_fix = {"arms": {"favorite": {"n_recurring_net_positive": 2, "regimes": {
+        "mlb|2026-07": {"recurring": True, "n_clusters": 4, "net_taker_fee2": 0.169, "net_taker_fee2_positive": True},
+        "nba/cbb|2026-07": {"recurring": True, "n_clusters": 2, "net_taker_fee2": 0.22, "net_taker_fee2_positive": True},
+        "soccer|2026-07": {"recurring": False, "n_clusters": 4, "net_taker_fee2": 0.05, "net_taker_fee2_positive": False}}}}}
+    panel = regime_panel(edge_fix, persist_fix, net_fix)
+    c5 = (panel is not None and panel["verdict"] == "SOCCER-ARTIFACT"
+          and len(panel["recurring_regimes"]) == 2  # only recurring regimes, soccer excluded
+          and panel["n_recurring_net_positive"] == 2
+          and panel["concentration"]["expiring_edge_mass_share"] == 0.57)
+    ok = ok and c5
+    print(f"  [{'ok' if c5 else 'FAIL'}] regime panel: {len(panel['recurring_regimes'])} recurring rows, "
+          f"verdict {panel['verdict']}, {panel['n_recurring_net_positive']} net-positive")
+
+    c6 = regime_panel(None, None, None) is None   # graceful when artifacts missing
+    ok = ok and c6
+    print(f"  [{'ok' if c6 else 'FAIL'}] regime panel graceful when artifacts missing")
+
     print("selftest:", "PASS" if ok else "FAIL")
     sys.exit(0 if ok else 1)
 

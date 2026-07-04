@@ -11,7 +11,7 @@
     {
       "gate": "persistence",
       "status": "NOT_MET",
-      "current": "5 event-day clusters (WC-heavy), tracker=PENDING",
+      "current": "regime=SOCCER-ARTIFACT; 0/4 recurring regimes clear floor; esports/politics/elections/soccer/tennis expiring",
       "threshold": "\u22655 independent NON-EXPIRING regimes (months)",
       "needs": "accrue across sports past the World Cup/Wimbledon",
       "eta": "months"
@@ -19,7 +19,7 @@
     {
       "gate": "power",
       "status": "MET (caveat)",
-      "current": "115 events",
+      "current": "137 events",
       "threshold": "\u226530",
       "needs": "count OK; day-deflated SE on ~5 correlated days is the real limit (\u2282 persistence)",
       "eta": "none"
@@ -50,11 +50,11 @@
     },
     {
       "gate": "operational",
-      "status": "NOT_MET",
-      "current": "0 trajectory rows",
+      "status": "MET",
+      "current": "1862 trajectory rows",
       "threshold": "dense capture writing + monitors live",
-      "needs": "deploy Option B (DENSE_CAPTURE=true)",
-      "eta": "days"
+      "needs": "\u2014",
+      "eta": "none"
     },
     {
       "gate": "alt_thesis",
@@ -70,10 +70,60 @@
     "go_gates_met": "2/4",
     "binding_constraint": "persistence",
     "binding_eta": "months",
-    "nearest_action": "deploy Option B (DENSE_CAPTURE=true)",
+    "nearest_action": "deploy dense capture, accrue ~2\u20134 wk",
     "unmet": [
       "edge_reality",
       "persistence"
     ]
+  },
+  "regime_panel": {
+    "verdict": "SOCCER-ARTIFACT",
+    "why": "edge is expiring-carried (57% of edge mass) and recurring regimes are below the floor \u2014 not yet certifiable",
+    "recurring_regimes": [
+      {
+        "regime": "mlb|2026-06",
+        "n_clusters": 1,
+        "edge_lb": null,
+        "net_taker_fee2": 0.3312110597704412,
+        "net_positive": false,
+        "clears_cluster_floor": false
+      },
+      {
+        "regime": "nba/cbb|2026-07",
+        "n_clusters": 3,
+        "edge_lb": 0.20232636862349596,
+        "net_taker_fee2": 0.27123544081831036,
+        "net_positive": true,
+        "clears_cluster_floor": false
+      },
+      {
+        "regime": "mlb|2026-07",
+        "n_clusters": 4,
+        "edge_lb": 0.08086751099804187,
+        "net_taker_fee2": 0.1674373078157874,
+        "net_positive": true,
+        "clears_cluster_floor": false
+      },
+      {
+        "regime": "nba/cbb|2026-06",
+        "n_clusters": 1,
+        "edge_lb": null,
+        "net_taker_fee2": -0.6762938701351288,
+        "net_positive": false,
+        "clears_cluster_floor": false
+      }
+    ],
+    "n_recurring_net_positive": 2,
+    "concentration": {
+      "top_regime": "tennis|2026-06",
+      "top_share": 0.22202977174287217,
+      "expiring_edge_mass_share": 0.5719427528760835
+    },
+    "breadth": {
+      "recurring_cleared": 0,
+      "n_recurring": 4,
+      "cluster_floor": 10,
+      "bar": 2
+    }
   }
 }
