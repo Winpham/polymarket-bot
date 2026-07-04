@@ -1,0 +1,72 @@
+{
+ "meta": {
+  "prereg": "reports/PREREG_20260704T191458Z_regime_persistence.md",
+  "arm": "favorite",
+  "deploy_cap": 0.13
+ },
+ "days": {
+  "2026-06-29": {
+   "nominal": 73,
+   "matches": 40,
+   "icc_edge": 0.14885998789720384,
+   "n_eff_edge": 65.01548183299751,
+   "icc_pnl": 0.1396245890678813,
+   "n_eff_pnl": 65.4596806640796,
+   "n_eff": 65.4596806640796
+  },
+  "2026-06-30": {
+   "nominal": 31,
+   "matches": 14,
+   "icc_edge": 0.0,
+   "n_eff_edge": 31.0,
+   "icc_pnl": 0.0,
+   "n_eff_pnl": 31.0,
+   "n_eff": 31.0
+  },
+  "2026-07-01": {
+   "nominal": 65,
+   "matches": 24,
+   "icc_edge": 0.0,
+   "n_eff_edge": 65.0,
+   "icc_pnl": 0.0,
+   "n_eff_pnl": 65.0,
+   "n_eff": 65.0
+  },
+  "2026-07-02": {
+   "nominal": 52,
+   "matches": 23,
+   "icc_edge": 0.009127637984538748,
+   "n_eff_edge": 51.40835354884023,
+   "icc_pnl": 0.0,
+   "n_eff_pnl": 52.0,
+   "n_eff": 52.0
+  },
+  "2026-07-03": {
+   "nominal": 41,
+   "matches": 16,
+   "icc_edge": 0.005054315318940742,
+   "n_eff_edge": 40.67874499378535,
+   "icc_pnl": 0.0,
+   "n_eff_pnl": 41.0,
+   "n_eff": 41.0
+  },
+  "2026-07-04": {
+   "nominal": 24,
+   "matches": 10,
+   "icc_edge": 0.0,
+   "n_eff_edge": 24.0,
+   "icc_pnl": 0.0,
+   "n_eff_pnl": 24.0,
+   "n_eff": 24.0
+  }
+ },
+ "aggregate": {
+  "mean_nominal_per_day": 47.666666666666664,
+  "mean_neff_per_day": 46.4099467773466,
+  "mean_inflation_factor": 1.0191983809968337,
+  "median_inflation_factor": 1.0,
+  "exposure_per_bet_if_sized_to_nominal": 0.0027272727272727275,
+  "exposure_per_bet_if_sized_to_neff": 0.0028011236604876906
+ },
+ "recommendation": "cap \u2248 well-sized: median inflation 1.0\u00d7 (< 1.5) \u2014 nominal and N_eff are close on this record. Re-check as multi-game slates grow. REPORT-ONLY."
+}
