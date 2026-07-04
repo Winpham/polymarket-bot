@@ -114,7 +114,7 @@ pub async fn run_live(cfg: Arc<CopyTradingConfig>) -> Result<()> {
         // the ACTIVE portfolio would emit if certified deep sharps voted. Read-only.
         let shadow = crate::board::ShadowBoardParams {
             window_hours: cfg.consensus_window_hours,
-            portfolio: crate::cycles::consensus_cycle::active_portfolio(&cfg),
+            portfolio: crate::cycles::consensus_cycle::active_portfolio(&cfg, None),
             earn_flag_on: cfg.earn_deep_sharps,
         };
         tokio::spawn(async move {
@@ -370,6 +370,43 @@ pub async fn run_live(cfg: Arc<CopyTradingConfig>) -> Result<()> {
         });
     }
 
+    // Proven-trader router follow-set (PREREG 2026-07-04, paper-only): re-scored
+    // on the trust cadence and published as EXACTLY the set the arm counts. `None`
+    // until the first successful re-score, so the arm isn't even registered before
+    // then (fail-closed); an honest empty re-score publishes Some(∅), which
+    // registers the arm but counts no votes. Off ⇒ the task exits and the slot
+    // stays None ⇒ the live portfolio is byte-identical.
+    let router_set: Arc<
+        tokio::sync::RwLock<Option<Arc<std::collections::HashSet<String>>>>,
+    > = Arc::new(tokio::sync::RwLock::new(None));
+    {
+        let rs = Arc::clone(&router_set);
+        let rp = Arc::clone(&portfolio);
+        let rcfg = Arc::clone(&cfg);
+        tokio::spawn(async move {
+            if !rcfg.proven_router {
+                tracing::info!("Proven-router off — follow-set re-scorer disabled");
+                return;
+            }
+            loop {
+                match rp.refresh_router_followset().await {
+                    Ok(ws) => {
+                        let n = ws.len();
+                        *rs.write().await = Some(Arc::new(
+                            ws.into_iter().map(|w| w.to_lowercase()).collect(),
+                        ));
+                        tracing::info!(wallets = n, "Router follow-set re-scored");
+                    }
+                    // Keep the previously-published set on a transient DB error —
+                    // a failed re-score must never blank an honest set (and never
+                    // fail-open either; the slot only moves on success).
+                    Err(e) => tracing::error!(err = %e, "Router follow-set re-score failed"),
+                }
+                tokio::time::sleep(Duration::from_secs(rcfg.trust_refresh_mins * 60)).await;
+            }
+        });
+    }
+
     // Consensus detection loop.
     let co_portfolio = Arc::clone(&portfolio);
     let co_notifier = Arc::clone(&notifier);
@@ -378,6 +415,7 @@ pub async fn run_live(cfg: Arc<CopyTradingConfig>) -> Result<()> {
     let co_ntfy = ntfy.clone();
     let co_models = Arc::clone(&enrich_models);
     let co_trust = Arc::clone(&trust_map);
+    let co_router = Arc::clone(&router_set);
     let co_http = reqwest::Client::builder()
         .timeout(Duration::from_secs(15))
         .build()
@@ -392,6 +430,7 @@ pub async fn run_live(cfg: Arc<CopyTradingConfig>) -> Result<()> {
             // Cheap snapshot of the slow-refreshed trust map (≤~60 entries); never
             // hold the lock across the cycle's network I/O.
             let trust_snapshot = co_trust.read().await.clone();
+            let router_snapshot = co_router.read().await.clone();
             if let Err(e) = cycles::consensus_cycle(
                 &co_portfolio,
                 &co_notifier,
@@ -401,6 +440,7 @@ pub async fn run_live(cfg: Arc<CopyTradingConfig>) -> Result<()> {
                 &co_http,
                 &co_models,
                 &trust_snapshot,
+                router_snapshot,
             )
             .await
             {

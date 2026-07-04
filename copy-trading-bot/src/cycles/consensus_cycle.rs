@@ -55,6 +55,7 @@ fn params_from_cfg(cfg: &CopyTradingConfig) -> ConsensusParams {
         trusted_only: false,
         cross_cohort_cutoff: None,
         certified_only: false,
+        router_set: None,
     }
 }
 
@@ -344,6 +345,7 @@ pub async fn consensus_cycle(
     http: &reqwest::Client,
     models: &EnrichModels,
     trust: &TrustMap,
+    router_set: Option<std::sync::Arc<std::collections::HashSet<String>>>,
 ) -> Result<()> {
     let traders = portfolio.get_active_traders().await?;
     if traders.is_empty() {
@@ -372,7 +374,7 @@ pub async fn consensus_cycle(
     // Stored on every signal so a strategy invented later can be replayed over it.
     let atoms = atom_log(&book_vec);
 
-    let strategies = active_portfolio(cfg);
+    let strategies = active_portfolio(cfg, router_set);
     let (alerting, watch_for) = alert_sets(
         &cfg.consensus_alert_strategies,
         &cfg.consensus_alert_watch_for,
@@ -974,9 +976,19 @@ async fn build_market_features(
 /// The active strategy portfolio: the full default set, optionally narrowed by
 /// the `CONSENSUS_STRATEGIES` allowlist (empty = all). `pub(crate)` so the
 /// board's read-only shadow study scores the IDENTICAL portfolio the cycle runs.
-pub(crate) fn active_portfolio(cfg: &CopyTradingConfig) -> Vec<StrategyDef> {
+pub(crate) fn active_portfolio(
+    cfg: &CopyTradingConfig,
+    router_set: Option<std::sync::Arc<std::collections::HashSet<String>>>,
+) -> Vec<StrategyDef> {
     let base = params_from_cfg(cfg);
     let mut all = default_portfolio(&base);
+    // Proven-trader router arm (PREREG 2026-07-04, paper-only): registered only
+    // when PROVEN_ROUTER is on AND a follow-set batch has been published by the
+    // re-scorer (None until then ⇒ not registered ⇒ fail-closed; Some(∅) is
+    // registered but counts no votes — also fail-closed).
+    if cfg.proven_router && let Some(set) = router_set {
+        all.push(crate::scanner::consensus::proven_router_arm(&base, set));
+    }
     // Earned-trust arms are registered ONLY when CONSENSUS_TRUST_ARMS is on;
     // off ⇒ not appended ⇒ the portfolio is byte-identical to today.
     if cfg.consensus_trust_arms {

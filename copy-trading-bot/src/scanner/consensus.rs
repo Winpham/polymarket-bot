@@ -22,6 +22,7 @@
 //! caller passes `now`). That makes the scoring fully unit-testable.
 
 use std::collections::{HashMap, HashSet};
+use std::sync::Arc;
 
 use chrono::{DateTime, Utc};
 
@@ -186,6 +187,12 @@ pub struct ConsensusParams {
     /// unlike `trusted_only`, an unprofiled trader does NOT count. Default
     /// `false` = no-op (the field is never read).
     pub certified_only: bool,
+    /// Proven-trader router follow-set (PREREG 2026-07-04, paper-only): with
+    /// `Some(set)`, ONLY votes from these (lower-cased) wallets count — the
+    /// scorecard-proven wallets from `router_followset`. FAIL-CLOSED: an empty
+    /// set counts nothing (the arm fires nothing until a re-score qualifies
+    /// wallets). Default `None` = no-op for every other strategy.
+    pub router_set: Option<Arc<HashSet<String>>>,
 }
 
 impl Default for ConsensusParams {
@@ -206,6 +213,7 @@ impl Default for ConsensusParams {
             trusted_only: false,
             cross_cohort_cutoff: None,
             certified_only: false,
+            router_set: None,
         }
     }
 }
@@ -359,7 +367,14 @@ pub fn score_market(
     // aggregation all see a consistent trusted-only view. With default votes
     // (`trusted == true`) this drops nothing.
     let keep = |v: &TraderVote| {
-        (!params.trusted_only || v.trusted) && (!params.certified_only || v.certified)
+        (!params.trusted_only || v.trusted)
+            && (!params.certified_only || v.certified)
+            // Router membership: votes are lower-cased at book assembly, and the
+            // follow-set is lower-cased at publish, so `contains` is exact.
+            && params
+                .router_set
+                .as_deref()
+                .is_none_or(|s| s.contains(v.wallet.as_str()))
     };
 
     // Identify two-sided wallets (present on >1 outcome) — dropped as MMs.
@@ -830,6 +845,32 @@ pub fn slice_sport_tail(base: &ConsensusParams) -> StrategyDef {
         name: "slice_sport_tail",
         params: ConsensusParams {
             weight_mode: WeightMode::CellPooled,
+            ..base.clone()
+        },
+        alerting: false,
+    }
+}
+
+/// The proven-trader router arm (PREREG_2026-07-04T094304Z, paper-only): ONE
+/// scorecard-proven wallet's fresh BUY in the favorite band 0.45–0.90 is itself
+/// a signal — ROUTE to who is buying, not how many agree. Construction mirrors
+/// `sharp_tail_fresh` (single-trader follow ⇒ opposer/coherence gates wide
+/// open), but selection is the ROLLING SCORECARD (`router_followset`: ≥100
+/// repriced fills, ≥15 days, event-clustered copy-return ≥ +10%, MM-screened),
+/// NOT the cert gate (whose follow-set is empty today). Silent, EXPERIMENTAL
+/// family, judged only by the standing gate; registered only when
+/// `PROVEN_ROUTER` is on AND a follow-set has been published — with an empty
+/// set it fires nothing (fail-closed).
+pub fn proven_router_arm(base: &ConsensusParams, set: Arc<HashSet<String>>) -> StrategyDef {
+    StrategyDef {
+        name: "proven_router",
+        params: ConsensusParams {
+            min_backers: 1,
+            max_opposers: usize::MAX,
+            max_price_std: 1.0,
+            max_age_mins: 180,
+            price_band: Some((0.45, 0.90)),
+            router_set: Some(set),
             ..base.clone()
         },
         alerting: false,
@@ -1375,6 +1416,70 @@ mod tests {
         assert_eq!(s1.len(), s2.len());
         assert_eq!(s1[0].net_count, s2[0].net_count);
         assert!((s1[0].score - s2[0].score).abs() < 1e-12);
+    }
+
+    #[test]
+    fn proven_router_counts_only_followset_wallets_and_fails_closed() {
+        let now = Utc::now();
+        let mk = |w: &str, price: f64| TraderVote {
+            wallet: w.into(),
+            name: w.into(),
+            rank: Some(120),
+            pnl: None,
+            quality: 1.0,
+            earned_quality: 1.0,
+            cell_earned_quality: 1.0,
+            trusted: true,
+            certified: false,
+            price,
+            size_usd: 1000.0,
+            ts: now - Duration::minutes(30),
+        };
+        let base = ConsensusParams::default();
+        let set: Arc<HashSet<String>> = Arc::new(["proven".to_string()].into_iter().collect());
+        let arm = proven_router_arm(&base, Arc::clone(&set)).params;
+
+        // A follow-set wallet's single in-band BUY fires the router.
+        let mut b = MarketBook::new("0xr", "t", "s", None, false);
+        b.add_vote(0, "Yes", mk("proven", 0.70));
+        let sigs = score_market(&b, now, &arm);
+        assert_eq!(sigs.len(), 1, "a proven wallet's in-band entry is a signal");
+        assert_eq!(sigs[0].n_backers, 1);
+
+        // A wallet OUTSIDE the follow-set never fires, however sharp its rank.
+        let mut b2 = MarketBook::new("0xr2", "t", "s", None, false);
+        b2.add_vote(0, "Yes", mk("stranger", 0.70));
+        assert!(
+            score_market(&b2, now, &arm).is_empty(),
+            "non-followset wallets never fire the router"
+        );
+
+        // Out-of-band entries are skipped even for proven wallets (longshot block).
+        let mut b3 = MarketBook::new("0xr3", "t", "s", None, false);
+        b3.add_vote(0, "Yes", mk("proven", 0.30));
+        assert!(
+            score_market(&b3, now, &arm).is_empty(),
+            "sub-0.45 longshots are blocked by the price band"
+        );
+
+        // FAIL-CLOSED: an EMPTY follow-set (no re-score published yet, or an
+        // honest empty re-score) fires nothing at all.
+        let empty = proven_router_arm(&base, Arc::new(HashSet::new())).params;
+        assert!(
+            score_market(&b, now, &empty).is_empty(),
+            "empty follow-set counts no votes"
+        );
+
+        // Default params (`router_set: None`) never read the set: books score
+        // identically with or without follow-set membership.
+        let plain = ConsensusParams::default();
+        let mut c1 = MarketBook::new("0xr4", "t", "s", None, false);
+        for w in ["wa", "wb", "wc"] {
+            c1.add_vote(0, "Yes", mk(w, 0.70));
+        }
+        let s = score_market(&c1, now, &plain);
+        assert_eq!(s.len(), 1);
+        assert_eq!(s[0].n_backers, 3);
     }
 
     #[test]

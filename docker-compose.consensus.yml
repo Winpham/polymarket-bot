@@ -86,6 +86,7 @@ services:
       #     arms are SILENT (never alert); EARN_DEEP_SHARPS=false keeps promotion
       #     report-only ("promotable" on the board, no eligibility flips). ---
       CONSENSUS_TRUST_ARMS: ${CONSENSUS_TRUST_ARMS:-false}   # register trust/cross-cohort/tail arms + hourly trust map
+      PROVEN_ROUTER: ${PROVEN_ROUTER:-false}           # proven-trader router arm + follow-set re-scorer (PREREG 2026-07-04, paper-only)
       TRUST_REFRESH_MINS: ${TRUST_REFRESH_MINS:-60}          # trust-map (and earn-pass) cadence
       EARN_DEEP_SHARPS: ${EARN_DEEP_SHARPS:-false}           # flip earned_eligible for gate-Trusted deep sharps
       CONSENSUS_RETUNED: ${CONSENSUS_RETUNED:-}              # "min_backers,strong_net,elite_net" silent strict variant

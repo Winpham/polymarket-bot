@@ -251,6 +251,16 @@ pub struct CopyTradingConfig {
     #[config(env = "SLICE_POOLED", default = false)]
     pub slice_pooled: bool,
 
+    /// Proven-trader router arm (PREREG_2026-07-04T094304Z, paper-only). When on:
+    /// (a) the follow-set re-scorer runs on the trust-refresh cadence, appending
+    /// each batch to `router_followset` (migration 039); (b) the silent
+    /// EXPERIMENTAL `proven_router` arm is registered, firing on a scorecard-
+    /// proven wallet's fresh BUY in the 0.45–0.90 favorite band. Fail-closed:
+    /// until the first re-score publishes (or when it publishes ∅) the arm counts
+    /// nothing. Default OFF ⇒ no arm, no re-scorer, portfolio byte-identical.
+    #[config(env = "PROVEN_ROUTER", default = false)]
+    pub proven_router: bool,
+
     /// Re-tuned `strict` thresholds variant, `"min_backers,strong_net,elite_net"`
     /// (e.g. "4,5,8"). Deep-pool edge run, Phase 2: a WIDER eligible voter set
     /// inflates net_count, so selectivity must be re-chosen — as a SILENT
