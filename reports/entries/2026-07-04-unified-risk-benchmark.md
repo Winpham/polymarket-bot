@@ -42,3 +42,24 @@ from the gated number (structurally uncopyable) but shown in headlines.
 
 Read-only, paper-only; nothing promotes. Follow-ups queued: survivorship capture fix
 (poll dropped wallets), readiness-ledger rows for unified_book + beats_best_trader.
+
+## Part 3 — circumventing the copyability tax: the maker-fill simulator (same day)
+
+`scripts/maker_fill_sim.py` (selftest green) replays the dense-capture trajectories under a
+frozen execution-policy menu: TAKER (earliest captured ask) vs MAKER limit at the sharp cohort's
+price + {0,1,2}¢, cancel after {5,15}m. First read (61 tracked signals, 32 resolved — mostly the
+`strict` stream, so ABSOLUTE edges are negative; the POLICY-RELATIVE numbers are the finding):
+
+- **Limit-at-their-price improves the entry ~5pp per fill** (edge/fill −8.0% vs taker −13.3%,
+  fee-zero basis) — the tax is partially clawable.
+- **But only 28% of signals ever return to the sharp's price** (5m window; 36% at 15m) — the
+  edge is front-loaded, so tight limits convert most signals into abstentions.
+- **Adverse selection is REAL and now measured**: filled signals win 0.7–6.3pp LESS often than
+  all resolved signals at tight limits — you are filled preferentially when the move goes
+  against you. Any "keep the whole edge with limit orders" claim must beat this gap.
+- **The 2% fee is OUR modeled buffer, not an exchange charge** on most Polymarket markets
+  (posted trading fee ≈ 0); the fee-zero table shows the buffer ≈ 2pp of the modeled tax.
+  Never book the buffer as recoverable until verified on live fill data.
+- Caveats: 45s sampling (true fill rates ≥ reported), no queue modeling, anchor = cohort mean.
+  Verdict: policy choice INDETERMINATE — accrues with every dense-captured fire.
+  `proven_router` added to DENSE_STRATEGIES (compose + env) so the router's own fires accrue.

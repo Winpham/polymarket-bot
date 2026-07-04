@@ -96,7 +96,7 @@ services:
       DENSE_INTERVAL_SECS: ${DENSE_INTERVAL_SECS:-45}
       DENSE_WINDOW_MINS: ${DENSE_WINDOW_MINS:-15}
       DENSE_MAX_SIGNALS: ${DENSE_MAX_SIGNALS:-40}
-      DENSE_STRATEGIES: ${DENSE_STRATEGIES:-strict,favorite,elite_fresh_fav}
+      DENSE_STRATEGIES: ${DENSE_STRATEGIES:-strict,favorite,elite_fresh_fav,proven_router}
       # --- optional consensus tuning (sensible defaults baked in) ---
       # TRACK_TOP_N: "40"
       # TRACK_PERIODS: "WEEK,MONTH"
