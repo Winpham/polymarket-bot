@@ -1,0 +1,38 @@
+{
+  "policy": "unified_v1",
+  "sizing_base": "flat_shares",
+  "kelly_ladder": [
+    {
+      "lambda_ci_lower_min": 0.25,
+      "k": "1/16"
+    },
+    {
+      "lambda_ci_lower_min": 0.5,
+      "k": "1/12"
+    }
+  ],
+  "kelly_ruled_out": [
+    "1/4",
+    "1/6"
+  ],
+  "deploy_cap_per_day": 0.13,
+  "deploy_hard_ceiling": 0.16,
+  "per_bet_cap": 0.02,
+  "entry_floor": 0.45,
+  "per_game_cap": null,
+  "slate_stop_units": -5,
+  "dodge_overlay": "map_state (selection-time, not re-applied here)",
+  "arms": [
+    "favorite",
+    "proven_router"
+  ],
+  "bankroll_start": 10000.0,
+  "provenance": {
+    "flat_shares": "refined-strategy anchor + D21 (4x CVaR) + stress VERDICT F1",
+    "ladder": "D22 corr_risk_delever (1/12 knee, 1/16 conservative, flat floor at lambda~0)",
+    "deploy_cap": "reports/sizing/optimal_deploy.json (ruin<=5% even-if-fake)",
+    "per_bet_cap": "stress VERDICT fix #1",
+    "no_game_cap": "D21 corr_risk_verify",
+    "rejected": "kelly_eighth_capped (D15, overturned by stress test)"
+  }
+}

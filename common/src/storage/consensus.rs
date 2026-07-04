@@ -1550,6 +1550,117 @@ impl PgPortfolio {
         Ok(rows)
     }
 
+    /// Re-score the proven-trader router follow-set and append the new batch to
+    /// `router_followset` (migration 039). Returns the qualifying wallets — the
+    /// caller publishes EXACTLY this set to the live `proven_router` arm, so an
+    /// honest empty re-score empties the live set even though an empty batch
+    /// writes no rows (a `scored_at` gap in the table ⇒ empty-or-down; either
+    /// way the arm wasn't firing, so as-of reconstruction treating a gap as ∅
+    /// is conservative and correct).
+    ///
+    /// Every constant is FROZEN by `reports/PREREG_2026-07-04T094304Z_proven_router.md`:
+    /// - universe: trailing-365d resolved BUY fills, entry band 0.45 ≤ price < 0.90;
+    /// - reprice at OUR entry: `price + 0.013 (follower tax) + band_spread` where
+    ///   band_spread = pooled decision-time (≤900s) `entry_ask − entry_ask_mid`
+    ///   clamped ≥0 per row (copyability.py conventions, width_bucket bands);
+    /// - `copy_return = (won − our_entry)/our_entry − 0.02 (fee)`, event-clustered
+    ///   at `COALESCE(event_slug, condition_id)`;
+    /// - membership: ≥100 fills, ≥15 distinct UTC days, copy_return ≥ +0.10, and
+    ///   NOT market-maker-shaped — the UNION of two detectors (router_verify A4
+    ///   found they disagree on 51/161 wallets, so both are enforced):
+    ///   position-grain microstructure screens (round_trip_rate < 0.30 AND
+    ///   two_sided_rate < 0.25 AND sell_buy_ratio < 0.50) AND NOT flagged
+    ///   `followed_traders.trader_type = 'bot'` (classify_trader_types, fpd ≥ 400);
+    ///   interim pending FORGE_PLAN_MM_FILTER's calibrated verdict;
+    /// - `lower_bound` is a one-sided-95% day-deflated DIAGNOSTIC, never the gate.
+    pub async fn refresh_router_followset(&self) -> Result<Vec<String>> {
+        let rows: Vec<(String,)> = sqlx::query_as(
+            "WITH spreads AS ( \
+                 SELECT width_bucket(initial_mean_price, 0.0, 1.0, 5) AS band, \
+                        AVG(GREATEST(entry_ask - entry_ask_mid, 0)) AS spread \
+                 FROM consensus_signals \
+                 WHERE entry_ask IS NOT NULL AND entry_ask_mid IS NOT NULL \
+                   AND entry_ask_at IS NOT NULL \
+                   AND EXTRACT(EPOCH FROM (entry_ask_at - first_detected_at)) <= 900 \
+                 GROUP BY 1 \
+             ), \
+             pos AS ( \
+                 SELECT wallet, condition_id, outcome_index, \
+                        COALESCE(SUM(size_usd) FILTER (WHERE side = 'BUY'), 0)  AS buy_usd, \
+                        COALESCE(SUM(size_usd) FILTER (WHERE side = 'SELL'), 0) AS sell_usd, \
+                        COUNT(*) FILTER (WHERE side = 'BUY')  AS n_buy, \
+                        COUNT(*) FILTER (WHERE side = 'SELL') AS n_sell \
+                 FROM trader_fills GROUP BY 1, 2, 3 \
+             ), \
+             sided AS ( \
+                 SELECT wallet, condition_id, COUNT(*) FILTER (WHERE n_buy > 0) AS n_out_held \
+                 FROM pos GROUP BY 1, 2 \
+             ), \
+             two AS ( \
+                 SELECT wallet, AVG((n_out_held >= 2)::int)::float8 AS two_sided_rate \
+                 FROM sided GROUP BY 1 \
+             ), \
+             micro AS ( \
+                 SELECT p.wallet, \
+                        AVG((p.n_sell > 0 AND p.n_buy > 0)::int)::float8 AS round_trip_rate, \
+                        (SUM(LEAST(p.sell_usd, p.buy_usd)) / NULLIF(SUM(p.buy_usd), 0))::float8 AS sell_buy_ratio, \
+                        t.two_sided_rate \
+                 FROM pos p JOIN two t USING (wallet) \
+                 GROUP BY p.wallet, t.two_sided_rate \
+             ), \
+             fills AS ( \
+                 SELECT f.wallet, \
+                        COALESCE(f.event_slug, f.condition_id) AS ev, \
+                        (f.ts AT TIME ZONE 'UTC')::date AS day, \
+                        ((f.outcome_won::int)::float8 - (f.price + 0.013 + COALESCE(s.spread, 0))) \
+                          / (f.price + 0.013 + COALESCE(s.spread, 0)) - 0.02 AS ret \
+                 FROM trader_fills f \
+                 LEFT JOIN spreads s ON s.band = width_bucket(f.price, 0.0, 1.0, 5) \
+                 WHERE f.side = 'BUY' AND f.resolved AND f.outcome_won IS NOT NULL \
+                   AND f.price >= 0.45 AND f.price < 0.90 \
+                   AND f.ts >= NOW() - INTERVAL '365 days' \
+             ), \
+             evl AS ( \
+                 SELECT wallet, ev, AVG(ret) AS ev_ret, COUNT(*) AS n_fills \
+                 FROM fills GROUP BY 1, 2 \
+             ), \
+             days AS ( SELECT wallet, COUNT(DISTINCT day) AS n_days FROM fills GROUP BY 1 ), \
+             scored AS ( \
+                 SELECT e.wallet, \
+                        AVG(e.ev_ret)          AS copy_return, \
+                        STDDEV_SAMP(e.ev_ret)  AS sd, \
+                        COUNT(*)               AS n_events, \
+                        SUM(e.n_fills)::bigint AS n_fills, \
+                        d.n_days \
+                 FROM evl e JOIN days d USING (wallet) \
+                 GROUP BY e.wallet, d.n_days \
+             ) \
+             INSERT INTO router_followset \
+                 (scored_at, wallet, copy_return, n_fills, n_events, n_days, lower_bound, \
+                  round_trip_rate, two_sided_rate, sell_buy_ratio) \
+             SELECT NOW(), lower(s.wallet), s.copy_return, s.n_fills, s.n_events, s.n_days, \
+                    s.copy_return - 1.6449 * s.sd / sqrt(LEAST(s.n_days, s.n_events)::float8), \
+                    m.round_trip_rate, m.two_sided_rate, m.sell_buy_ratio \
+             FROM scored s \
+             LEFT JOIN micro m USING (wallet) \
+             WHERE s.n_fills >= 100 \
+               AND s.n_days >= 15 \
+               AND s.copy_return >= 0.10 \
+               AND COALESCE(m.round_trip_rate, 0) < 0.30 \
+               AND COALESCE(m.two_sided_rate, 0) < 0.25 \
+               AND COALESCE(m.sell_buy_ratio, 0) < 0.50 \
+               AND NOT EXISTS ( \
+                   SELECT 1 FROM followed_traders ft \
+                   WHERE lower(ft.proxy_wallet) = lower(s.wallet) \
+                     AND ft.trader_type = 'bot') \
+             RETURNING wallet",
+        )
+        .fetch_all(&self.pool)
+        .await
+        .context("refresh_router_followset")?;
+        Ok(rows.into_iter().map(|r| r.0).collect())
+    }
+
     /// Leak-free **as-of** clone of `trader_slice_scores`: every wallet's per-slice
     /// event-clustered surplus computed using ONLY fills resolved strictly before
     /// `cut`. The `resolved_at < $1` predicate lives in the `adv` CTE, so BOTH the

@@ -1,0 +1,322 @@
+{
+  "meta": {
+    "min_events": 30,
+    "min_days": 5,
+    "alpha": 0.05,
+    "mm_flagged_n": 204,
+    "reprice": "price + 0.013 + band_spread, fee 0.02 (copyability conv.)"
+  },
+  "benchmark": {
+    "overall": {
+      "n_eligible": 65,
+      "n_copyable": 32,
+      "B_LB": 0.03398157400455509,
+      "B_LB_wallet": "0x99e42eb9038705165b22f821e27659c1dc41e4c4",
+      "B_point_selection_inflated": 0.25577882994719203,
+      "B_point_wallet": "0x99e42eb9038705165b22f821e27659c1dc41e4c4",
+      "B_point_is_mm": false
+    },
+    "crypto": {
+      "n_eligible": 3,
+      "n_copyable": 0,
+      "B_LB": null,
+      "B_LB_wallet": null,
+      "B_point_selection_inflated": -0.00462171580102518,
+      "B_point_wallet": "0xe9076a87c5ed90ef16e6fe6529c943baeca0cff6",
+      "B_point_is_mm": true
+    },
+    "soccer": {
+      "n_eligible": 20,
+      "n_copyable": 7,
+      "B_LB": -0.10652299427583498,
+      "B_LB_wallet": "0xc289082ddba5a95e95efa216adbed7cc8ab4ab37",
+      "B_point_selection_inflated": 0.20911609475599172,
+      "B_point_wallet": "0x83255595ba1fadd2e734cb30a0fb8110301a19cc",
+      "B_point_is_mm": true
+    },
+    "mlb": {
+      "n_eligible": 13,
+      "n_copyable": 5,
+      "B_LB": -0.152386828932343,
+      "B_LB_wallet": "0x2dc13c6bda81b202281e796953a7323de675b33c",
+      "B_point_selection_inflated": 0.16750262442081426,
+      "B_point_wallet": "0x9703676286b93c2eca71ca96e8757104519a69c2",
+      "B_point_is_mm": true
+    },
+    "tennis": {
+      "n_eligible": 7,
+      "n_copyable": 1,
+      "B_LB": -0.0322952095116977,
+      "B_LB_wallet": "0xa804390f80019699ab34a282c0df7528fba82a75",
+      "B_point_selection_inflated": 0.18756864705110848,
+      "B_point_wallet": "0xa804390f80019699ab34a282c0df7528fba82a75",
+      "B_point_is_mm": false
+    },
+    "other": {
+      "n_eligible": 7,
+      "n_copyable": 3,
+      "B_LB": 0.024370172019485437,
+      "B_LB_wallet": "0x7650e94d9c2decc455d7e2b9f8af0c0aa319fac1",
+      "B_point_selection_inflated": 0.18094171299539094,
+      "B_point_wallet": "0x7650e94d9c2decc455d7e2b9f8af0c0aa319fac1",
+      "B_point_is_mm": false
+    },
+    "cs2": {
+      "n_eligible": 2,
+      "n_copyable": 1,
+      "B_LB": -0.4102396089038899,
+      "B_LB_wallet": "0x3da89a55cdd4b5c69f80e5cd3ef1782a3e0480c3",
+      "B_point_selection_inflated": 0.05510881762911546,
+      "B_point_wallet": "0xe9076a87c5ed90ef16e6fe6529c943baeca0cff6",
+      "B_point_is_mm": true
+    },
+    "lol": {
+      "n_eligible": 1,
+      "n_copyable": 0,
+      "B_LB": null,
+      "B_LB_wallet": null,
+      "B_point_selection_inflated": -0.11977331634514869,
+      "B_point_wallet": "0x8718865882e085b764825b637788043c16185040",
+      "B_point_is_mm": true
+    },
+    "nba": {
+      "n_eligible": 5,
+      "n_copyable": 2,
+      "B_LB": -0.1487970074990815,
+      "B_LB_wallet": "0x6e82b93eb57b01a63027bd0c6d2f3f04934a752c",
+      "B_point_selection_inflated": 0.16085561202670468,
+      "B_point_wallet": "0x6157d529ae129fe08f22a27ed42e741d2eaa9fb4",
+      "B_point_is_mm": true
+    },
+    "ufc": {
+      "n_eligible": 1,
+      "n_copyable": 1,
+      "B_LB": -0.48586536979678746,
+      "B_LB_wallet": "0x7650e94d9c2decc455d7e2b9f8af0c0aa319fac1",
+      "B_point_selection_inflated": -0.20115899258261621,
+      "B_point_wallet": "0x7650e94d9c2decc455d7e2b9f8af0c0aa319fac1",
+      "B_point_is_mm": false
+    },
+    "nfl": {
+      "n_eligible": 1,
+      "n_copyable": 1,
+      "B_LB": -0.49759708087261156,
+      "B_LB_wallet": "0xe73ee729fc8ac69c3ee6ca70dedb3875070574fe",
+      "B_point_selection_inflated": -0.22199019088552624,
+      "B_point_wallet": "0xe73ee729fc8ac69c3ee6ca70dedb3875070574fe",
+      "B_point_is_mm": false
+    }
+  },
+  "our_arms": {
+    "count": {
+      "mean": -0.1302088441688372,
+      "n_days": 4,
+      "lb95": -0.18773673786242842
+    },
+    "elite_fresh_fav": {
+      "mean": -0.025601854435567457,
+      "n_days": 4,
+      "lb95": -0.1287054169135514
+    },
+    "elite_gated": {
+      "mean": -0.07562458176720256,
+      "n_days": 4,
+      "lb95": -0.22674445887976657
+    },
+    "favorite": {
+      "mean": 0.0543273993012503,
+      "n_days": 4,
+      "lb95": -0.07087004595652369
+    },
+    "fresh2h": {
+      "mean": -0.1308906207457984,
+      "n_days": 4,
+      "lb95": -0.18727449058658027
+    },
+    "longshot": {
+      "mean": -0.26259366940961565,
+      "n_days": 4,
+      "lb95": -0.5807593756983025
+    },
+    "loose": {
+      "mean": -0.1477254251128668,
+      "n_days": 4,
+      "lb95": -0.1997115701553212
+    },
+    "nonsports": {
+      "mean": -1.02,
+      "n_days": 2,
+      "lb95": -1.02
+    },
+    "sports_only": {
+      "mean": -0.1260675054628439,
+      "n_days": 4,
+      "lb95": -0.1811567178648009
+    },
+    "strict": {
+      "mean": -0.13020884416883718,
+      "n_days": 4,
+      "lb95": -0.1877367378624284
+    },
+    "strict_retuned": {
+      "mean": -0.3133326526984058,
+      "n_days": 3,
+      "lb95": -0.5407007717046077
+    },
+    "tight_cluster": {
+      "mean": -0.28076965704651846,
+      "n_days": 4,
+      "lb95": -0.5046922612985295
+    },
+    "trust_weighted": {
+      "mean": -0.2696529316155665,
+      "n_days": 3,
+      "lb95": -0.3462152905088761
+    },
+    "trusted_only": {
+      "mean": -0.35943925588291376,
+      "n_days": 2,
+      "lb95": -0.7277652482361716
+    },
+    "whales": {
+      "mean": -0.13022368659055641,
+      "n_days": 4,
+      "lb95": -0.18775464173763673
+    }
+  },
+  "gap_decomposition_top": [
+    {
+      "wallet": "0x99e42eb9038705165b22f821e27659c1dc41e4c4",
+      "raw_at_their_price": 0.3076,
+      "repriced_at_ours": 0.2558,
+      "copyability_tax": 0.0519,
+      "n_events": 49,
+      "n_days": 21,
+      "mm_flagged": false
+    },
+    {
+      "wallet": "0x65018f9fc473f6e920b8929a375d39c26a461220",
+      "raw_at_their_price": 0.2814,
+      "repriced_at_ours": 0.2227,
+      "copyability_tax": 0.0587,
+      "n_events": 30,
+      "n_days": 19,
+      "mm_flagged": false
+    },
+    {
+      "wallet": "0x10a6fadcbacd66330862206f6199b197e3ad4d8b",
+      "raw_at_their_price": 0.2759,
+      "repriced_at_ours": 0.21,
+      "copyability_tax": 0.0659,
+      "n_events": 34,
+      "n_days": 7,
+      "mm_flagged": false
+    },
+    {
+      "wallet": "0x1420b746dea30e05b387ab880f9d3ec5bc579daa",
+      "raw_at_their_price": 0.2657,
+      "repriced_at_ours": 0.2091,
+      "copyability_tax": 0.0566,
+      "n_events": 32,
+      "n_days": 13,
+      "mm_flagged": false
+    },
+    {
+      "wallet": "0xa804390f80019699ab34a282c0df7528fba82a75",
+      "raw_at_their_price": 0.2615,
+      "repriced_at_ours": 0.1983,
+      "copyability_tax": 0.0633,
+      "n_events": 54,
+      "n_days": 6,
+      "mm_flagged": false
+    },
+    {
+      "wallet": "0x83255595ba1fadd2e734cb30a0fb8110301a19cc",
+      "raw_at_their_price": 0.2573,
+      "repriced_at_ours": 0.2091,
+      "copyability_tax": 0.0482,
+      "n_events": 34,
+      "n_days": 5,
+      "mm_flagged": true
+    }
+  ],
+  "comparisons": {
+    "overall": {
+      "B_LB": 0.034,
+      "our_arms_clearing_B_LB+3pct": []
+    },
+    "crypto": "INDETERMINATE \u2014 no copyable wallet has a meaningful LB",
+    "soccer": {
+      "B_LB": -0.1065,
+      "our_arms_clearing_B_LB+3pct": [
+        "favorite"
+      ]
+    },
+    "mlb": {
+      "B_LB": -0.1524,
+      "our_arms_clearing_B_LB+3pct": [
+        "favorite"
+      ]
+    },
+    "tennis": {
+      "B_LB": -0.0323,
+      "our_arms_clearing_B_LB+3pct": []
+    },
+    "other": {
+      "B_LB": 0.0244,
+      "our_arms_clearing_B_LB+3pct": []
+    },
+    "cs2": {
+      "B_LB": -0.4102,
+      "our_arms_clearing_B_LB+3pct": [
+        "count",
+        "elite_fresh_fav",
+        "elite_gated",
+        "favorite",
+        "fresh2h",
+        "loose",
+        "sports_only",
+        "strict",
+        "trust_weighted",
+        "whales"
+      ]
+    },
+    "lol": "INDETERMINATE \u2014 no copyable wallet has a meaningful LB",
+    "nba": {
+      "B_LB": -0.1488,
+      "our_arms_clearing_B_LB+3pct": [
+        "favorite"
+      ]
+    },
+    "ufc": {
+      "B_LB": -0.4859,
+      "our_arms_clearing_B_LB+3pct": [
+        "count",
+        "elite_fresh_fav",
+        "elite_gated",
+        "favorite",
+        "fresh2h",
+        "loose",
+        "sports_only",
+        "strict",
+        "trust_weighted",
+        "whales"
+      ]
+    },
+    "nfl": {
+      "B_LB": -0.4976,
+      "our_arms_clearing_B_LB+3pct": [
+        "count",
+        "elite_fresh_fav",
+        "elite_gated",
+        "favorite",
+        "fresh2h",
+        "loose",
+        "sports_only",
+        "strict",
+        "trust_weighted",
+        "whales"
+      ]
+    }
+  }
+}

@@ -1,0 +1,166 @@
+{
+  "meta": {
+    "n_signals_tracked": 61,
+    "n_resolved": 32,
+    "deltas_cents": [
+      0,
+      1,
+      2
+    ],
+    "windows_min": [
+      5,
+      15
+    ],
+    "min_resolved_floor": 30,
+    "caveats": [
+      "fills sampled ~45s: between-sample touches missed => TRUE fill rates >= reported",
+      "queue position / partial fills not modeled (optimistic for maker)",
+      "anchor = initial_mean_price (sharp cohort mean), not a single wallet's fill"
+    ]
+  },
+  "policies": {
+    "fee_2pct_buffer": {
+      "taker": {
+        "fill_rate": 1.0,
+        "mean_entry": 0.5491875,
+        "edge_per_signal": -0.15328182889142739,
+        "edge_per_fill": -0.15328182889142739,
+        "wr_filled": 0.5625,
+        "n_resolved": 32
+      },
+      "maker_+0c_5m": {
+        "fill_rate": 0.2786885245901639,
+        "mean_entry": 0.41076177241279904,
+        "edge_per_signal": -0.02825770893252896,
+        "edge_per_fill": -0.1004718539823252,
+        "wr_filled": 0.5555555555555556,
+        "n_resolved_filled": 9,
+        "n_resolved": 32,
+        "adverse_selection_gap": -0.0069
+      },
+      "maker_+0c_15m": {
+        "fill_rate": 0.36065573770491804,
+        "mean_entry": 0.46700286172345423,
+        "edge_per_signal": -0.09767574743771588,
+        "edge_per_fill": -0.22325885128620773,
+        "wr_filled": 0.5,
+        "n_resolved_filled": 14,
+        "n_resolved": 32,
+        "adverse_selection_gap": -0.0625
+      },
+      "maker_+1c_5m": {
+        "fill_rate": 0.7049180327868853,
+        "mean_entry": 0.5089208074175902,
+        "edge_per_signal": -0.1680388558005923,
+        "edge_per_fill": -0.23379319067908494,
+        "wr_filled": 0.5217391304347826,
+        "n_resolved_filled": 23,
+        "n_resolved": 32,
+        "adverse_selection_gap": -0.0408
+      },
+      "maker_+1c_15m": {
+        "fill_rate": 0.7540983606557377,
+        "mean_entry": 0.5413984164493442,
+        "edge_per_signal": -0.16301142817037317,
+        "edge_per_fill": -0.20865462805807766,
+        "wr_filled": 0.56,
+        "n_resolved_filled": 25,
+        "n_resolved": 32,
+        "adverse_selection_gap": -0.0025
+      },
+      "maker_+2c_5m": {
+        "fill_rate": 0.8688524590163934,
+        "mean_entry": 0.5391104646534033,
+        "edge_per_signal": -0.12100053239490227,
+        "edge_per_fill": -0.13351782884954733,
+        "wr_filled": 0.5862068965517241,
+        "n_resolved_filled": 29,
+        "n_resolved": 32,
+        "adverse_selection_gap": 0.0237
+      },
+      "maker_+2c_15m": {
+        "fill_rate": 0.9016393442622951,
+        "mean_entry": 0.5544727131336366,
+        "edge_per_signal": -0.12162484235030303,
+        "edge_per_fill": -0.12973316517365657,
+        "wr_filled": 0.6,
+        "n_resolved_filled": 30,
+        "n_resolved": 32,
+        "adverse_selection_gap": 0.0375
+      },
+      "_wr_all_resolved": 0.5625
+    },
+    "fee_zero": {
+      "taker": {
+        "fill_rate": 1.0,
+        "mean_entry": 0.5491875,
+        "edge_per_signal": -0.13328182889142742,
+        "edge_per_fill": -0.13328182889142742,
+        "wr_filled": 0.5625,
+        "n_resolved": 32
+      },
+      "maker_+0c_5m": {
+        "fill_rate": 0.2786885245901639,
+        "mean_entry": 0.41076177241279904,
+        "edge_per_signal": -0.022632708932528955,
+        "edge_per_fill": -0.08047185398232518,
+        "wr_filled": 0.5555555555555556,
+        "n_resolved_filled": 9,
+        "n_resolved": 32,
+        "adverse_selection_gap": -0.0069
+      },
+      "maker_+0c_15m": {
+        "fill_rate": 0.36065573770491804,
+        "mean_entry": 0.46700286172345423,
+        "edge_per_signal": -0.08892574743771588,
+        "edge_per_fill": -0.20325885128620771,
+        "wr_filled": 0.5,
+        "n_resolved_filled": 14,
+        "n_resolved": 32,
+        "adverse_selection_gap": -0.0625
+      },
+      "maker_+1c_5m": {
+        "fill_rate": 0.7049180327868853,
+        "mean_entry": 0.5089208074175902,
+        "edge_per_signal": -0.1536638558005923,
+        "edge_per_fill": -0.21379319067908495,
+        "wr_filled": 0.5217391304347826,
+        "n_resolved_filled": 23,
+        "n_resolved": 32,
+        "adverse_selection_gap": -0.0408
+      },
+      "maker_+1c_15m": {
+        "fill_rate": 0.7540983606557377,
+        "mean_entry": 0.5413984164493442,
+        "edge_per_signal": -0.1473864281703732,
+        "edge_per_fill": -0.1886546280580777,
+        "wr_filled": 0.56,
+        "n_resolved_filled": 25,
+        "n_resolved": 32,
+        "adverse_selection_gap": -0.0025
+      },
+      "maker_+2c_5m": {
+        "fill_rate": 0.8688524590163934,
+        "mean_entry": 0.5391104646534033,
+        "edge_per_signal": -0.10287553239490226,
+        "edge_per_fill": -0.11351782884954732,
+        "wr_filled": 0.5862068965517241,
+        "n_resolved_filled": 29,
+        "n_resolved": 32,
+        "adverse_selection_gap": 0.0237
+      },
+      "maker_+2c_15m": {
+        "fill_rate": 0.9016393442622951,
+        "mean_entry": 0.5544727131336366,
+        "edge_per_signal": -0.10287484235030302,
+        "edge_per_fill": -0.10973316517365655,
+        "wr_filled": 0.6,
+        "n_resolved_filled": 30,
+        "n_resolved": 32,
+        "adverse_selection_gap": 0.0375
+      },
+      "_wr_all_resolved": 0.5625
+    }
+  },
+  "verdict": "32 resolved tracked signals \u2014 read the per-policy table"
+}
