@@ -1,0 +1,39 @@
+{
+  "snapshot_days": [
+    "2023-01-12",
+    "2026-07-05"
+  ],
+  "split_day": "within-wallet-median",
+  "n_wallets_both_windows": 116,
+  "min_ev_per_window": 10,
+  "cohort": "non-MM directional",
+  "a_blind_surplus_persistence": {
+    "spearman": -0.03672778995117826,
+    "ci95": [
+      -0.20981957454662914,
+      0.14204086654926057
+    ],
+    "null": true,
+    "interp": "early surplus rank vs late surplus"
+  },
+  "b_roi_persistence": {
+    "spearman": -0.055441510014223656,
+    "ci95": [
+      -0.22794807511881507,
+      0.12813295495620208
+    ],
+    "null": true
+  },
+  "c_success_rate_selection": {
+    "top_tercile_late_surplus": 0.002412397451372334,
+    "fleet_late_surplus": 0.0179471634931038,
+    "edge_retained": -0.015534766041731466,
+    "edge_retained_ci95": [
+      -0.03674455611214458,
+      0.003920118085893112
+    ],
+    "null": true,
+    "k_top": 38
+  },
+  "verdict": "WALL CONFIRMED \u2014 all past-PnL signals NULL (CI includes/below 0)"
+}

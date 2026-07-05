@@ -1001,3 +1001,47 @@ relax `round_trip` 0.30→0.50 recovers ~18 copyable directional traders (n 103�
 cohort forward-return (+0.043→+0.045); `round_trip` is a pure FP-generator (all 11 Tier-1 human FPs
 fired on it), `sell_buy` earns its keep. Net: Phase-1 STOP stands (no Rust change, thresholds frozen),
 but the durable takeaways are the vindication + the dominated round_trip axis, both forward-decidable.
+
+## D30 — Identify the Genuinely Skilled: past PnL still can't; CLV is the only live lead (power-limited) — ACCRUE (2026-07-05, entry identify-skilled)
+
+Belief-blind, event-clustered, leak-free forward/out-of-cohort search for an EX-ANTE identifier
+of copyable skilled traders, on the 2.47M-fill / 491-wallet snapshot. Artifacts under
+`reports/skilled/` (PRE_REGISTRATION frozen before any number; VERDICT + FINDINGS + 5 read-only
+scripts under `scripts/skilled/`, all `--selftest` green). **Nothing promoted; paper/silent.**
+
+**REFUTED again (frozen wall, do not re-open).** Past-outcome ranking — blind-surplus
+(ρ=−0.04), ROI (ρ=−0.06), success-rate selection (edge-retained −0.016) — all NULL on 116 non-MM
+wallets, within-wallet equal time-halves. Reduced-variance cousins (sign-consistency,
+EB-shrinkage, calibration-slope; WS-2) all NULL. Ex-ante STRUCTURAL attributes ×6 (entry-timing,
+price-discipline, band-frac, bet-size CV, sport-HHI, cadence; WS-3) fail to generalize
+out-of-cohort — signs flip between folds (max-of-noise). The winner's-curse wall stands.
+
+**REAL but wrong-kind.** Round-trip / TIMING PnL persists strongly early→late (ρ=0.62, CI
+[0.30,0.83]; WS-4) — genuine skill — but it is the trading/spread-capture mechanism, structurally
+UNCOPYABLE by a taker-follower (can't capture the exit), and not the same wallets as directional
+edge (cross-prediction to copyable direction straddles 0, ρ=0.29). Confirms the standing
+"leaderboard sharps are market-makers" truth from another angle.
+
+**The lead (INDETERMINATE-BY-POWER, accrue).** CLV — the betting gold standard, never measured
+here. Methodological unlock: it is computable from the FILL TAPE itself (closing_line = avg price
+in last 20% of a market's fill-life from OTHER traders; CLV = close − entry on the BUY), so it is
+cost-zero, needs no external API/daemon, and accrues forward for free. Fleet mean CLV ≈ −0.004
+(sanity clean). Retrospective read: persistence ρ=+0.27, CI [−0.09,0.59] — positive, forward-
+shaped, but CI includes 0 (only 36 wallets clear ≥10 CLV-events/half; **2** clear ≥50). Gate
+(CLV_lo>0, ≥50 ev/window, ≥2 windows) needs ~5× depth in time-separated windows → **~3–6 months**
+of fleet accrual. No shortcut. Zero signals cleared the pre-registered gate, so multiplicity
+(permutation/orthogonality) was moot.
+
+**WS-0.1 (code, GATED, HELD for deploy).** `classify_trader_types` swapped fpd≥400 → churn≥0.70
+(`Σ2·min(buy_sh,sell_sh)/Σ(buy_sh+sell_sh)` per market). Read-only validated on live DB: **26**
+MMs flagged (was 115), **108** directional traders restored — matches the pre-registered ~25/~100.
+`cargo clippy -p polymarket-common -D warnings` GREEN. Advisory-only: router arm also applies the
+position-grain screen and churn⊆that screen, so router membership ~unchanged. **HELD on
+`feat/identify-skilled`; `main` auto-deploys, so merge is Tue's call** (one-shot advisory
+reclassify on next backfill; no live-alert-path change). Relationship to D29: D29 addressed the
+3-axis router screen; this swaps only the advisory fpd classifier to the conservative pure-MM
+churn axis.
+
+**Bottom line:** the skilled traders are real; past PnL cannot find them (re-confirmed five more
+ways); the only forward-shaped lead is CLV, now measurable and accruing — decidable in months, not
+today. Honest null + one live instrument, exactly the mission's anticipated deliverable.

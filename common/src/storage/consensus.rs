@@ -1319,23 +1319,38 @@ impl PgPortfolio {
     }
 
     /// Classify each tracked wallet as `bot` | `human` in
-    /// `followed_traders.trader_type`, from its captured fills. A market-maker bot
-    /// fires hundreds of fills per active day; a human placing picks does not. Flag
-    /// `bot` iff `fills / distinct_active_days >= 400`. Returns rows updated.
-    /// Advisory — nothing in the live alert path reads `trader_type`; the selection
-    /// layer filters on it. Idempotent (a plain UPDATE from a fresh aggregate).
+    /// `followed_traders.trader_type`, from its captured fills.
+    ///
+    /// CHURN, not fills-per-day. The old `fills/distinct_active_days >= 400` rule was 92% wrong
+    /// (it flagged 100 directional limit-order traders as bots and caught only 8 real MMs — an
+    /// MM is defined by BUYING BOTH SIDES / round-tripping to harvest spread, not by frequency).
+    /// We now flag `bot` iff CHURN >= 0.70, the per-market matched-volume fraction
+    ///   churn = Σ_market 2·min(buy_sh, sell_sh) / Σ_market (buy_sh + sell_sh),  sh = size_usd/price
+    /// i.e. the share of a wallet's volume that is round-tripped within a market (pure spread/
+    /// rebate mechanics). ~26 fleet wallets are true MMs at 0.70; ~108 formerly-mislabeled
+    /// directional traders are restored to `human`. Advisory — nothing in the live alert path
+    /// reads `trader_type`; the selection layer filters on it (the router arm additionally
+    /// applies the position-grain microstructure screen, so this swap barely moves router
+    /// membership — it corrects the advisory label). Idempotent (a plain UPDATE from a fresh
+    /// aggregate). NULL-safe: a wallet with only BUYs (sell_sh NULL) → churn 0 → `human`.
     pub async fn classify_trader_types(&self) -> Result<u64> {
         let res = sqlx::query(
-            "WITH s AS ( \
+            "WITH pos AS ( \
+                SELECT wallet, condition_id, outcome_index, \
+                       SUM(size_usd / NULLIF(price, 0)) FILTER (WHERE side = 'BUY')  AS buy_sh, \
+                       SUM(size_usd / NULLIF(price, 0)) FILTER (WHERE side = 'SELL') AS sell_sh \
+                FROM trader_fills GROUP BY 1, 2, 3 \
+             ), \
+             churn AS ( \
                 SELECT wallet, \
-                       count(*)::float8 \
-                         / GREATEST(count(DISTINCT (ts AT TIME ZONE 'UTC')::date), 1) AS fpd \
-                FROM trader_fills GROUP BY wallet \
+                       SUM(2 * LEAST(COALESCE(buy_sh, 0), COALESCE(sell_sh, 0))) \
+                         / NULLIF(SUM(COALESCE(buy_sh, 0) + COALESCE(sell_sh, 0)), 0) AS ch \
+                FROM pos GROUP BY wallet \
              ) \
              UPDATE followed_traders ft \
-                SET trader_type = CASE WHEN s.fpd >= 400 THEN 'bot' ELSE 'human' END \
-             FROM s \
-             WHERE lower(ft.proxy_wallet) = s.wallet",
+                SET trader_type = CASE WHEN c.ch >= 0.70 THEN 'bot' ELSE 'human' END \
+             FROM churn c \
+             WHERE lower(ft.proxy_wallet) = c.wallet",
         )
         .execute(&self.pool)
         .await
@@ -1570,7 +1585,9 @@ impl PgPortfolio {
     ///   found they disagree on 51/161 wallets, so both are enforced):
     ///   position-grain microstructure screens (round_trip_rate < 0.30 AND
     ///   two_sided_rate < 0.25 AND sell_buy_ratio < 0.50) AND NOT flagged
-    ///   `followed_traders.trader_type = 'bot'` (classify_trader_types, fpd ≥ 400);
+    ///   `followed_traders.trader_type = 'bot'` (classify_trader_types, now CHURN ≥ 0.70 —
+    ///   was fpd ≥ 400; the churn set is ⊆ the microstructure screen, so the union is
+    ///   dominated by the microstructure screen and membership is ~unchanged by the swap);
     ///   interim pending FORGE_PLAN_MM_FILTER's calibrated verdict;
     /// - `lower_bound` is a one-sided-95% day-deflated DIAGNOSTIC, never the gate.
     pub async fn refresh_router_followset(&self) -> Result<Vec<String>> {

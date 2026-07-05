@@ -1,0 +1,39 @@
+{
+  "instrument": "tape-derived CLV (closing-line value from fill tape)",
+  "note": "accrues forward automatically as fills ingest; no external API",
+  "cohort": "non-MM directional",
+  "min_ev_half": 10,
+  "n_wallets": 36,
+  "forward_gate": "CLV_lo>0, >=50 events, >=2 disjoint windows (PRE_REGISTRATION)",
+  "fleet_mean_clv": -0.003877141546133969,
+  "clv_persistence": {
+    "spearman": 0.27387387387387385,
+    "ci95": [
+      -0.09187096774193548,
+      0.5861802243135232
+    ],
+    "persists": false,
+    "top_tercile_late_clv_LB": -0.018831473575319613,
+    "top_tercile_late_clv_mean": 0.004648722026954047
+  },
+  "clv_selects_copyable_direction": {
+    "n": 36,
+    "spearman": 0.1353925353925354,
+    "ci95": [
+      -0.25925925925925924,
+      0.4790697674418605
+    ],
+    "selects_copyable_edge": false,
+    "out_of_cohort_B": {
+      "spearman_oriented": 0.175,
+      "ci95": [
+        -0.44220183486238535,
+        0.7090909090909091
+      ],
+      "n_A": 21,
+      "n_B": 15,
+      "generalizes": false
+    }
+  },
+  "verdict": "CLV persistence INDETERMINATE on retrospective tape read; forward accrual required"
+}
