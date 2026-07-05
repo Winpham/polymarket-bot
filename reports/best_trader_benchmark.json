@@ -3,308 +3,369 @@
     "min_events": 30,
     "min_days": 5,
     "alpha": 0.05,
-    "mm_flagged_n": 204,
+    "mm_flagged_n": 215,
     "reprice": "price + 0.013 + band_spread, fee 0.02 (copyability conv.)"
   },
   "benchmark": {
     "overall": {
-      "n_eligible": 65,
-      "n_copyable": 32,
-      "B_LB": 0.03398157400455509,
+      "n_eligible": 98,
+      "n_copyable": 49,
+      "B_LB": -0.11232270494305763,
       "B_LB_wallet": "0x99e42eb9038705165b22f821e27659c1dc41e4c4",
-      "B_point_selection_inflated": 0.25577882994719203,
-      "B_point_wallet": "0x99e42eb9038705165b22f821e27659c1dc41e4c4",
+      "B_point_selection_inflated": 0.22548354259625258,
+      "B_point_wallet": "0x10a6fadcbacd66330862206f6199b197e3ad4d8b",
       "B_point_is_mm": false
     },
-    "crypto": {
-      "n_eligible": 3,
-      "n_copyable": 0,
-      "B_LB": null,
-      "B_LB_wallet": null,
-      "B_point_selection_inflated": -0.00462171580102518,
-      "B_point_wallet": "0xe9076a87c5ed90ef16e6fe6529c943baeca0cff6",
-      "B_point_is_mm": true
-    },
-    "soccer": {
-      "n_eligible": 20,
-      "n_copyable": 7,
-      "B_LB": -0.10652299427583498,
-      "B_LB_wallet": "0xc289082ddba5a95e95efa216adbed7cc8ab4ab37",
-      "B_point_selection_inflated": 0.20911609475599172,
-      "B_point_wallet": "0x83255595ba1fadd2e734cb30a0fb8110301a19cc",
-      "B_point_is_mm": true
-    },
     "mlb": {
-      "n_eligible": 13,
-      "n_copyable": 5,
-      "B_LB": -0.152386828932343,
+      "n_eligible": 20,
+      "n_copyable": 6,
+      "B_LB": -0.15642501578490275,
       "B_LB_wallet": "0x2dc13c6bda81b202281e796953a7323de675b33c",
-      "B_point_selection_inflated": 0.16750262442081426,
+      "B_point_selection_inflated": 0.16959084531425087,
       "B_point_wallet": "0x9703676286b93c2eca71ca96e8757104519a69c2",
       "B_point_is_mm": true
     },
     "tennis": {
-      "n_eligible": 7,
-      "n_copyable": 1,
-      "B_LB": -0.0322952095116977,
+      "n_eligible": 15,
+      "n_copyable": 2,
+      "B_LB": -0.15468480491433279,
       "B_LB_wallet": "0xa804390f80019699ab34a282c0df7528fba82a75",
-      "B_point_selection_inflated": 0.18756864705110848,
-      "B_point_wallet": "0xa804390f80019699ab34a282c0df7528fba82a75",
-      "B_point_is_mm": false
+      "B_point_selection_inflated": 0.1142675107798679,
+      "B_point_wallet": "0x5268527977f700f9bf9b6d5cd843859e4e70135d",
+      "B_point_is_mm": true
+    },
+    "soccer": {
+      "n_eligible": 32,
+      "n_copyable": 12,
+      "B_LB": -0.12671510036650857,
+      "B_LB_wallet": "0xc289082ddba5a95e95efa216adbed7cc8ab4ab37",
+      "B_point_selection_inflated": 0.16913205947670296,
+      "B_point_wallet": "0x83255595ba1fadd2e734cb30a0fb8110301a19cc",
+      "B_point_is_mm": true
     },
     "other": {
-      "n_eligible": 7,
+      "n_eligible": 14,
       "n_copyable": 3,
-      "B_LB": 0.024370172019485437,
+      "B_LB": 0.04288110623475308,
       "B_LB_wallet": "0x7650e94d9c2decc455d7e2b9f8af0c0aa319fac1",
-      "B_point_selection_inflated": 0.18094171299539094,
+      "B_point_selection_inflated": 0.18702291638735125,
       "B_point_wallet": "0x7650e94d9c2decc455d7e2b9f8af0c0aa319fac1",
       "B_point_is_mm": false
     },
-    "cs2": {
-      "n_eligible": 2,
-      "n_copyable": 1,
-      "B_LB": -0.4102396089038899,
-      "B_LB_wallet": "0x3da89a55cdd4b5c69f80e5cd3ef1782a3e0480c3",
-      "B_point_selection_inflated": 0.05510881762911546,
-      "B_point_wallet": "0xe9076a87c5ed90ef16e6fe6529c943baeca0cff6",
-      "B_point_is_mm": true
-    },
-    "lol": {
-      "n_eligible": 1,
-      "n_copyable": 0,
-      "B_LB": null,
-      "B_LB_wallet": null,
-      "B_point_selection_inflated": -0.11977331634514869,
-      "B_point_wallet": "0x8718865882e085b764825b637788043c16185040",
-      "B_point_is_mm": true
-    },
     "nba": {
-      "n_eligible": 5,
-      "n_copyable": 2,
-      "B_LB": -0.1487970074990815,
+      "n_eligible": 8,
+      "n_copyable": 3,
+      "B_LB": -0.16357118905135787,
       "B_LB_wallet": "0x6e82b93eb57b01a63027bd0c6d2f3f04934a752c",
-      "B_point_selection_inflated": 0.16085561202670468,
+      "B_point_selection_inflated": 0.10952921336754175,
       "B_point_wallet": "0x6157d529ae129fe08f22a27ed42e741d2eaa9fb4",
       "B_point_is_mm": true
     },
-    "ufc": {
+    "crypto": {
+      "n_eligible": 5,
+      "n_copyable": 1,
+      "B_LB": -0.7502950497710259,
+      "B_LB_wallet": "0x3da89a55cdd4b5c69f80e5cd3ef1782a3e0480c3",
+      "B_point_selection_inflated": 0.0650858969409083,
+      "B_point_wallet": "0x8718865882e085b764825b637788043c16185040",
+      "B_point_is_mm": true
+    },
+    "cs2": {
+      "n_eligible": 6,
+      "n_copyable": 3,
+      "B_LB": -0.23614033840260298,
+      "B_LB_wallet": "0x3da89a55cdd4b5c69f80e5cd3ef1782a3e0480c3",
+      "B_point_selection_inflated": 0.14386146127880817,
+      "B_point_wallet": "0xdbdd45150249e229eb4ca8aa48a30dca21faa5de",
+      "B_point_is_mm": true
+    },
+    "dota": {
       "n_eligible": 1,
       "n_copyable": 1,
-      "B_LB": -0.48586536979678746,
-      "B_LB_wallet": "0x7650e94d9c2decc455d7e2b9f8af0c0aa319fac1",
-      "B_point_selection_inflated": -0.20115899258261621,
-      "B_point_wallet": "0x7650e94d9c2decc455d7e2b9f8af0c0aa319fac1",
+      "B_LB": -0.2254850760063286,
+      "B_LB_wallet": "0x0dcf5b49627c5194805bd1af846fd0bd3388c556",
+      "B_point_selection_inflated": 0.018133601419561704,
+      "B_point_wallet": "0x0dcf5b49627c5194805bd1af846fd0bd3388c556",
       "B_point_is_mm": false
+    },
+    "lol": {
+      "n_eligible": 3,
+      "n_copyable": 1,
+      "B_LB": -0.28057120097665583,
+      "B_LB_wallet": "0x3da89a55cdd4b5c69f80e5cd3ef1782a3e0480c3",
+      "B_point_selection_inflated": -0.059022177618161434,
+      "B_point_wallet": "0xd27cc742d023d06ef633a4c880cf1ff1836ec081",
+      "B_point_is_mm": true
     },
     "nfl": {
       "n_eligible": 1,
       "n_copyable": 1,
-      "B_LB": -0.49759708087261156,
+      "B_LB": -0.4994592654096651,
       "B_LB_wallet": "0xe73ee729fc8ac69c3ee6ca70dedb3875070574fe",
-      "B_point_selection_inflated": -0.22199019088552624,
+      "B_point_selection_inflated": -0.2248897308948068,
       "B_point_wallet": "0xe73ee729fc8ac69c3ee6ca70dedb3875070574fe",
+      "B_point_is_mm": false
+    },
+    "ufc": {
+      "n_eligible": 1,
+      "n_copyable": 1,
+      "B_LB": -0.43281240361673845,
+      "B_LB_wallet": "0x7650e94d9c2decc455d7e2b9f8af0c0aa319fac1",
+      "B_point_selection_inflated": -0.17782053859707833,
+      "B_point_wallet": "0x7650e94d9c2decc455d7e2b9f8af0c0aa319fac1",
       "B_point_is_mm": false
     }
   },
   "our_arms": {
     "count": {
-      "mean": -0.1302088441688372,
-      "n_days": 4,
-      "lb95": -0.18773673786242842
+      "mean": -0.14683265134080753,
+      "n_days": 5,
+      "lb95": -0.20091646503362404
     },
     "elite_fresh_fav": {
-      "mean": -0.025601854435567457,
-      "n_days": 4,
-      "lb95": -0.1287054169135514
+      "mean": -0.01222612262906209,
+      "n_days": 5,
+      "lb95": -0.08106599104046777
     },
     "elite_gated": {
-      "mean": -0.07562458176720256,
-      "n_days": 4,
-      "lb95": -0.22674445887976657
+      "mean": -0.11701883719069914,
+      "n_days": 5,
+      "lb95": -0.25168881309717933
     },
     "favorite": {
-      "mean": 0.0543273993012503,
-      "n_days": 4,
-      "lb95": -0.07087004595652369
+      "mean": 0.04855478389766856,
+      "n_days": 5,
+      "lb95": -0.04576259663536953
     },
     "fresh2h": {
-      "mean": -0.1308906207457984,
-      "n_days": 4,
-      "lb95": -0.18727449058658027
+      "mean": -0.14369201037146623,
+      "n_days": 5,
+      "lb95": -0.19363171546886515
     },
     "longshot": {
-      "mean": -0.26259366940961565,
-      "n_days": 4,
-      "lb95": -0.5807593756983025
+      "mean": -0.3192976852330224,
+      "n_days": 5,
+      "lb95": -0.582788504192753
     },
     "loose": {
-      "mean": -0.1477254251128668,
-      "n_days": 4,
-      "lb95": -0.1997115701553212
+      "mean": -0.12134359736833497,
+      "n_days": 5,
+      "lb95": -0.1733989580235597
     },
     "nonsports": {
+      "mean": -1.02,
+      "n_days": 3,
+      "lb95": -1.02
+    },
+    "proven_router": {
       "mean": -1.02,
       "n_days": 2,
       "lb95": -1.02
     },
     "sports_only": {
-      "mean": -0.1260675054628439,
-      "n_days": 4,
-      "lb95": -0.1811567178648009
+      "mean": -0.13979771076650668,
+      "n_days": 5,
+      "lb95": -0.18951131106685432
     },
     "strict": {
-      "mean": -0.13020884416883718,
-      "n_days": 4,
-      "lb95": -0.1877367378624284
+      "mean": -0.14659033983306174,
+      "n_days": 5,
+      "lb95": -0.20044279964841522
     },
     "strict_retuned": {
-      "mean": -0.3133326526984058,
-      "n_days": 3,
-      "lb95": -0.5407007717046077
+      "mean": -0.34337211043143384,
+      "n_days": 4,
+      "lb95": -0.5604536798445776
     },
     "tight_cluster": {
-      "mean": -0.28076965704651846,
-      "n_days": 4,
-      "lb95": -0.5046922612985295
+      "mean": -0.2516752961665296,
+      "n_days": 5,
+      "lb95": -0.5008904822856057
     },
     "trust_weighted": {
-      "mean": -0.2696529316155665,
-      "n_days": 3,
-      "lb95": -0.3462152905088761
+      "mean": -0.24129162626367523,
+      "n_days": 4,
+      "lb95": -0.30665987148979806
     },
     "trusted_only": {
-      "mean": -0.35943925588291376,
-      "n_days": 2,
-      "lb95": -0.7277652482361716
+      "mean": -0.44860357666302403,
+      "n_days": 3,
+      "lb95": -0.653576065365017
     },
     "whales": {
-      "mean": -0.13022368659055641,
-      "n_days": 4,
-      "lb95": -0.18775464173763673
+      "mean": -0.14731674823825353,
+      "n_days": 5,
+      "lb95": -0.20185640047510625
     }
   },
   "gap_decomposition_top": [
     {
-      "wallet": "0x99e42eb9038705165b22f821e27659c1dc41e4c4",
-      "raw_at_their_price": 0.3076,
-      "repriced_at_ours": 0.2558,
-      "copyability_tax": 0.0519,
-      "n_events": 49,
-      "n_days": 21,
+      "wallet": "0x10a6fadcbacd66330862206f6199b197e3ad4d8b",
+      "raw_at_their_price": 0.2973,
+      "repriced_at_ours": 0.2255,
+      "copyability_tax": 0.0718,
+      "n_events": 42,
+      "n_days": 8,
       "mm_flagged": false
     },
     {
       "wallet": "0x65018f9fc473f6e920b8929a375d39c26a461220",
-      "raw_at_their_price": 0.2814,
-      "repriced_at_ours": 0.2227,
-      "copyability_tax": 0.0587,
-      "n_events": 30,
-      "n_days": 19,
+      "raw_at_their_price": 0.2854,
+      "repriced_at_ours": 0.2251,
+      "copyability_tax": 0.0603,
+      "n_events": 31,
+      "n_days": 20,
       "mm_flagged": false
     },
     {
-      "wallet": "0x10a6fadcbacd66330862206f6199b197e3ad4d8b",
-      "raw_at_their_price": 0.2759,
-      "repriced_at_ours": 0.21,
-      "copyability_tax": 0.0659,
-      "n_events": 34,
-      "n_days": 7,
-      "mm_flagged": false
+      "wallet": "0x1a2f67124f12eaa88be0f6683a95abede555647a",
+      "raw_at_their_price": 0.2555,
+      "repriced_at_ours": 0.2077,
+      "copyability_tax": 0.0477,
+      "n_events": 58,
+      "n_days": 8,
+      "mm_flagged": true
     },
     {
-      "wallet": "0x1420b746dea30e05b387ab880f9d3ec5bc579daa",
-      "raw_at_their_price": 0.2657,
-      "repriced_at_ours": 0.2091,
-      "copyability_tax": 0.0566,
-      "n_events": 32,
-      "n_days": 13,
-      "mm_flagged": false
+      "wallet": "0xca97f5464912ba0308bd40c095bea215980849f6",
+      "raw_at_their_price": 0.2538,
+      "repriced_at_ours": 0.1997,
+      "copyability_tax": 0.0541,
+      "n_events": 39,
+      "n_days": 11,
+      "mm_flagged": true
     },
     {
-      "wallet": "0xa804390f80019699ab34a282c0df7528fba82a75",
-      "raw_at_their_price": 0.2615,
-      "repriced_at_ours": 0.1983,
-      "copyability_tax": 0.0633,
+      "wallet": "0x4f1af091d122e76fa5b1a8ec115c554ec481bc89",
+      "raw_at_their_price": 0.2527,
+      "repriced_at_ours": 0.189,
+      "copyability_tax": 0.0636,
+      "n_events": 56,
+      "n_days": 16,
+      "mm_flagged": true
+    },
+    {
+      "wallet": "0x6a5121acdc5e4fc2980d177a0aa729315ce6006e",
+      "raw_at_their_price": 0.2492,
+      "repriced_at_ours": 0.1872,
+      "copyability_tax": 0.062,
       "n_events": 54,
-      "n_days": 6,
-      "mm_flagged": false
-    },
-    {
-      "wallet": "0x83255595ba1fadd2e734cb30a0fb8110301a19cc",
-      "raw_at_their_price": 0.2573,
-      "repriced_at_ours": 0.2091,
-      "copyability_tax": 0.0482,
-      "n_events": 34,
-      "n_days": 5,
+      "n_days": 7,
       "mm_flagged": true
     }
   ],
   "comparisons": {
     "overall": {
-      "B_LB": 0.034,
-      "our_arms_clearing_B_LB+3pct": []
-    },
-    "crypto": "INDETERMINATE \u2014 no copyable wallet has a meaningful LB",
-    "soccer": {
-      "B_LB": -0.1065,
+      "B_LB": -0.1123,
       "our_arms_clearing_B_LB+3pct": [
+        "elite_fresh_fav",
         "favorite"
       ]
     },
     "mlb": {
-      "B_LB": -0.1524,
+      "B_LB": -0.1564,
       "our_arms_clearing_B_LB+3pct": [
+        "elite_fresh_fav",
         "favorite"
       ]
     },
     "tennis": {
-      "B_LB": -0.0323,
-      "our_arms_clearing_B_LB+3pct": []
-    },
-    "other": {
-      "B_LB": 0.0244,
-      "our_arms_clearing_B_LB+3pct": []
-    },
-    "cs2": {
-      "B_LB": -0.4102,
+      "B_LB": -0.1547,
       "our_arms_clearing_B_LB+3pct": [
-        "count",
         "elite_fresh_fav",
-        "elite_gated",
-        "favorite",
-        "fresh2h",
-        "loose",
-        "sports_only",
-        "strict",
-        "trust_weighted",
-        "whales"
-      ]
-    },
-    "lol": "INDETERMINATE \u2014 no copyable wallet has a meaningful LB",
-    "nba": {
-      "B_LB": -0.1488,
-      "our_arms_clearing_B_LB+3pct": [
         "favorite"
       ]
     },
-    "ufc": {
-      "B_LB": -0.4859,
+    "soccer": {
+      "B_LB": -0.1267,
+      "our_arms_clearing_B_LB+3pct": [
+        "elite_fresh_fav",
+        "favorite"
+      ]
+    },
+    "other": {
+      "B_LB": 0.0429,
+      "our_arms_clearing_B_LB+3pct": []
+    },
+    "nba": {
+      "B_LB": -0.1636,
+      "our_arms_clearing_B_LB+3pct": [
+        "elite_fresh_fav",
+        "favorite"
+      ]
+    },
+    "crypto": {
+      "B_LB": -0.7503,
       "our_arms_clearing_B_LB+3pct": [
         "count",
         "elite_fresh_fav",
         "elite_gated",
         "favorite",
         "fresh2h",
+        "longshot",
         "loose",
         "sports_only",
         "strict",
+        "strict_retuned",
+        "tight_cluster",
         "trust_weighted",
+        "trusted_only",
+        "whales"
+      ]
+    },
+    "cs2": {
+      "B_LB": -0.2361,
+      "our_arms_clearing_B_LB+3pct": [
+        "count",
+        "elite_fresh_fav",
+        "favorite",
+        "fresh2h",
+        "loose",
+        "sports_only",
+        "strict",
+        "whales"
+      ]
+    },
+    "dota": {
+      "B_LB": -0.2255,
+      "our_arms_clearing_B_LB+3pct": [
+        "elite_fresh_fav",
+        "favorite",
+        "fresh2h",
+        "loose",
+        "sports_only"
+      ]
+    },
+    "lol": {
+      "B_LB": -0.2806,
+      "our_arms_clearing_B_LB+3pct": [
+        "count",
+        "elite_fresh_fav",
+        "favorite",
+        "fresh2h",
+        "loose",
+        "sports_only",
+        "strict",
         "whales"
       ]
     },
     "nfl": {
-      "B_LB": -0.4976,
+      "B_LB": -0.4995,
+      "our_arms_clearing_B_LB+3pct": [
+        "count",
+        "elite_fresh_fav",
+        "elite_gated",
+        "favorite",
+        "fresh2h",
+        "loose",
+        "sports_only",
+        "strict",
+        "trust_weighted",
+        "whales"
+      ]
+    },
+    "ufc": {
+      "B_LB": -0.4328,
       "our_arms_clearing_B_LB+3pct": [
         "count",
         "elite_fresh_fav",

@@ -1,0 +1,159 @@
+{
+  "tau_rt": 0.5,
+  "n_regimes_scored": 13,
+  "n_router_picks": 10,
+  "n_abstain": 3,
+  "conditional_on_pick": {
+    "n": 10,
+    "mean": -0.07659259524238986,
+    "sd": 0.5049784929086455,
+    "ci_lo": -0.4378073504636423,
+    "ci_hi": 0.28462215997886253,
+    "t_crit": 2.262,
+    "n_pos": 5,
+    "verdict": "INDETERMINATE (CI straddles 0)"
+  },
+  "abstain_as_zero": {
+    "n": 13,
+    "mean": -0.04446893492799515,
+    "sd": 0.44455509291479584,
+    "ci_lo": -0.3131339665566696,
+    "ci_hi": 0.2241960967006793,
+    "t_crit": 2.179,
+    "n_pos": 7,
+    "verdict": "INDETERMINATE (CI straddles 0)"
+  },
+  "per_regime": [
+    {
+      "regime": "crypto",
+      "n_elig_wallets_g": 32,
+      "n_events_g": 395,
+      "averaging_g": -0.11537810988576472,
+      "router_g": 0.2280809589548923,
+      "router_pick": "0x4f1af091d122e76fa5b1a8ec115c554ec481bc89",
+      "router_pick_shrunk": 0.11254650003681584,
+      "delta_g": 0.343459068840657
+    },
+    {
+      "regime": "cs2",
+      "n_elig_wallets_g": 38,
+      "n_events_g": 497,
+      "averaging_g": -0.059677405003817706,
+      "router_g": -1.0199999999999998,
+      "router_pick": "0x38337de21ff0bb0a11a40761507d51e318d633d1",
+      "router_pick_shrunk": 0.1529719986246144,
+      "delta_g": -0.9603225949961821
+    },
+    {
+      "regime": "dota",
+      "n_elig_wallets_g": 12,
+      "n_events_g": 99,
+      "averaging_g": -0.13065732545063755,
+      "router_g": null,
+      "router_pick": null,
+      "router_pick_shrunk": null,
+      "delta_g": null
+    },
+    {
+      "regime": "lol",
+      "n_elig_wallets_g": 52,
+      "n_events_g": 237,
+      "averaging_g": -0.02831019680628518,
+      "router_g": 0.27662993206829045,
+      "router_pick": "0x4f1af091d122e76fa5b1a8ec115c554ec481bc89",
+      "router_pick_shrunk": 0.11107719494008049,
+      "delta_g": 0.3049401288745756
+    },
+    {
+      "regime": "mlb",
+      "n_elig_wallets_g": 50,
+      "n_events_g": 1361,
+      "averaging_g": -0.05163158129976276,
+      "router_g": -0.6620629359978066,
+      "router_pick": "0xc660ae71765d0d9eaf5fa8328c1c959841d2bd28",
+      "router_pick_shrunk": 0.14310323329669056,
+      "delta_g": -0.6104313546980439
+    },
+    {
+      "regime": "nba",
+      "n_elig_wallets_g": 52,
+      "n_events_g": 761,
+      "averaging_g": -0.03513361503916633,
+      "router_g": -0.026332695436947662,
+      "router_pick": "0x499f138156d196abcb34f98a1cac73f48d37ccaf",
+      "router_pick_shrunk": 0.10827305697876444,
+      "delta_g": 0.008800919602218668
+    },
+    {
+      "regime": "nfl",
+      "n_elig_wallets_g": 4,
+      "n_events_g": 69,
+      "averaging_g": 0.08290063319724417,
+      "router_g": null,
+      "router_pick": null,
+      "router_pick_shrunk": null,
+      "delta_g": null
+    },
+    {
+      "regime": "nhl",
+      "n_elig_wallets_g": 18,
+      "n_events_g": 81,
+      "averaging_g": -0.13261033087145505,
+      "router_g": 0.626537333962103,
+      "router_pick": "0x4f1af091d122e76fa5b1a8ec115c554ec481bc89",
+      "router_pick_shrunk": 0.10000331590303344,
+      "delta_g": 0.759147664833558
+    },
+    {
+      "regime": "other",
+      "n_elig_wallets_g": 84,
+      "n_events_g": 865,
+      "averaging_g": -0.019418161325284584,
+      "router_g": -0.4456305093564086,
+      "router_pick": "0x4f1af091d122e76fa5b1a8ec115c554ec481bc89",
+      "router_pick_shrunk": 0.1276007484664053,
+      "delta_g": -0.426212348031124
+    },
+    {
+      "regime": "politics",
+      "n_elig_wallets_g": 21,
+      "n_events_g": 32,
+      "averaging_g": -0.14007310610656828,
+      "router_g": null,
+      "router_pick": null,
+      "router_pick_shrunk": null,
+      "delta_g": null
+    },
+    {
+      "regime": "soccer",
+      "n_elig_wallets_g": 218,
+      "n_events_g": 2438,
+      "averaging_g": 0.02984238904376841,
+      "router_g": -0.0650751250749834,
+      "router_pick": "0x96a3a4d0f0a91074a43ce8dc39d1f092a717d944",
+      "router_pick_shrunk": 0.19029827319596773,
+      "delta_g": -0.09491751411875182
+    },
+    {
+      "regime": "tennis",
+      "n_elig_wallets_g": 46,
+      "n_events_g": 349,
+      "averaging_g": -0.20141760362042782,
+      "router_g": -0.050702994823745406,
+      "router_pick": "0x65018f9fc473f6e920b8929a375d39c26a461220",
+      "router_pick_shrunk": 0.16018370554051176,
+      "delta_g": 0.15071460879668241
+    },
+    {
+      "regime": "ufc",
+      "n_elig_wallets_g": 29,
+      "n_events_g": 131,
+      "averaging_g": -0.23546817087515237,
+      "router_g": -0.47657270240264066,
+      "router_pick": "0x4f1af091d122e76fa5b1a8ec115c554ec481bc89",
+      "router_pick_shrunk": 0.13824110889255298,
+      "delta_g": -0.24110453152748829
+    }
+  ],
+  "eligible_wallets": 264
+}
