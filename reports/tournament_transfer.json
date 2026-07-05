@@ -1,0 +1,286 @@
+{
+ "meta": {
+  "prereg": "reports/PREREG_20260705T024128Z_tournament_transfer.md",
+  "margin": 0.03,
+  "transfer_min": 2,
+  "record_span": [
+   "2026-06-29",
+   "2026-07-04"
+  ]
+ },
+ "n_events": 94,
+ "tournaments": {
+  "world-cup": {
+   "is_tournament": true,
+   "sport": "soccer",
+   "n_events": 18,
+   "span": [
+    "2026-06-29",
+    "2026-07-04"
+   ],
+   "read": {
+    "n_events": 18,
+    "n_clusters": 6,
+    "surplus": 0.05107833181492326,
+    "lb": 0.01811835039687562,
+    "net_taker": -0.0034939330748329322,
+    "net_taker_lb": -0.03469580828090253,
+    "mass": 0.9194099726686187,
+    "hi": 0.0840383132329709
+   }
+  },
+  "wimbledon": {
+   "is_tournament": true,
+   "sport": "tennis",
+   "n_events": 48,
+   "span": [
+    "2026-06-29",
+    "2026-07-03"
+   ],
+   "read": {
+    "n_events": 48,
+    "n_clusters": 5,
+    "surplus": 0.06903987864062637,
+    "lb": -0.04500989055969935,
+    "net_taker": 0.02573419592819784,
+    "net_taker_lb": -0.08896852387113269,
+    "mass": 3.3139141747500656,
+    "hi": 0.1830896478409521
+   }
+  },
+  "esports-tournament": {
+   "is_tournament": true,
+   "sport": "esports",
+   "n_events": 4,
+   "span": [
+    "2026-06-29",
+    "2026-07-03"
+   ],
+   "read": {
+    "n_events": 4,
+    "n_clusters": 3,
+    "surplus": 0.14859438029754435,
+    "lb": 0.06678860194862232,
+    "net_taker": 0.10273367131301861,
+    "net_taker_lb": 0.006932656878252952,
+    "mass": 0.5943775211901774,
+    "hi": 0.23040015864646637
+   }
+  },
+  "mlb-league": {
+   "is_tournament": false,
+   "sport": "mlb",
+   "n_events": 13,
+   "span": [
+    "2026-06-30",
+    "2026-07-04"
+   ],
+   "read": {
+    "n_events": 13,
+    "n_clusters": 5,
+    "surplus": 0.23062996699708188,
+    "lb": 0.11659439931714377,
+    "net_taker": 0.1866123831728751,
+    "net_taker_lb": 0.06349470503283816,
+    "mass": 2.9981895709620643,
+    "hi": 0.34466553467702
+   }
+  },
+  "cary": {
+   "is_tournament": true,
+   "sport": "tennis",
+   "n_events": 1,
+   "span": [
+    "2026-07-02",
+    "2026-07-02"
+   ],
+   "read": {
+    "n_events": 1,
+    "n_clusters": 1,
+    "surplus": 0.06860100310407599,
+    "lb": null,
+    "net_taker": 0.012433114036811438,
+    "net_taker_lb": null,
+    "mass": 0.06860100310407599,
+    "hi": null
+   }
+  },
+  "soccer-league": {
+   "is_tournament": false,
+   "sport": "soccer",
+   "n_events": 1,
+   "span": [
+    "2026-07-04",
+    "2026-07-04"
+   ],
+   "read": {
+    "n_events": 1,
+    "n_clusters": 1,
+    "surplus": 0.25067882487402066,
+    "lb": null,
+    "net_taker": 0.21647963132375125,
+    "net_taker_lb": null,
+    "mass": 0.25067882487402066,
+    "hi": null
+   }
+  },
+  "milan": {
+   "is_tournament": true,
+   "sport": "tennis",
+   "n_events": 2,
+   "span": [
+    "2026-07-01",
+    "2026-07-01"
+   ],
+   "read": {
+    "n_events": 2,
+    "n_clusters": 1,
+    "surplus": 0.2695705351389096,
+    "lb": null,
+    "net_taker": 0.23445648615937895,
+    "net_taker_lb": null,
+    "mass": 0.5391410702778192,
+    "hi": null
+   }
+  },
+  "nba/cbb-league": {
+   "is_tournament": false,
+   "sport": "nba/cbb",
+   "n_events": 4,
+   "span": [
+    "2026-06-30",
+    "2026-07-04"
+   ],
+   "read": {
+    "n_events": 4,
+    "n_clusters": 4,
+    "surplus": 0.08971589690766071,
+    "lb": -0.4714523363738765,
+    "net_taker": 0.05564426919003182,
+    "net_taker_lb": -0.5050467182250731,
+    "mass": 0.35886358763064286,
+    "hi": 0.6508841301891979
+   }
+  },
+  "politics/elections-tournament-other": {
+   "is_tournament": true,
+   "sport": "politics/elections",
+   "n_events": 2,
+   "span": [
+    "2026-07-01",
+    "2026-07-01"
+   ],
+   "read": {
+    "n_events": 2,
+    "n_clusters": 1,
+    "surplus": 0.097545327719946,
+    "lb": null,
+    "net_taker": 0.04086272898820034,
+    "net_taker_lb": null,
+    "mass": 0.195090655439892,
+    "hi": null
+   }
+  },
+  "quito": {
+   "is_tournament": true,
+   "sport": "tennis",
+   "n_events": 1,
+   "span": [
+    "2026-07-03",
+    "2026-07-03"
+   ],
+   "read": {
+    "n_events": 1,
+    "n_clusters": 1,
+    "surplus": 0.12324537417596834,
+    "lb": null,
+    "net_taker": 0.06817037253014163,
+    "net_taker_lb": null,
+    "mass": 0.12324537417596834,
+    "hi": null
+   }
+  }
+ },
+ "transfer": {
+  "n_tournaments_testable": 7,
+  "real_transfer_count": 1,
+  "required": 2,
+  "p_conc": 0.83,
+  "min_p_conc": 0.393,
+  "guard_can_fire": false,
+  "p_beat": 0.607,
+  "beat_null_can_pass": false,
+  "null_dist": {
+   "0": 393,
+   "1": 437,
+   "2": 157,
+   "3": 12,
+   "4": 1
+  },
+  "per_tournament": {
+   "world-cup": {
+    "n_events": 18,
+    "held_surplus": 0.05107833181492326,
+    "held_lb": 0.01811835039687562,
+    "fit_surplus": 0.0833512034299655,
+    "transfers": false
+   },
+   "wimbledon": {
+    "n_events": 48,
+    "held_surplus": 0.06903987864062637,
+    "held_lb": -0.04500989055969935,
+    "fit_surplus": 0.08713805703059115,
+    "transfers": false
+   },
+   "esports-tournament": {
+    "n_events": 4,
+    "held_surplus": 0.14859438029754435,
+    "held_lb": 0.06678860194862232,
+    "fit_surplus": 0.07165836458911722,
+    "transfers": true
+   },
+   "cary": {
+    "n_events": 1,
+    "held_surplus": 0.06860100310407599,
+    "held_lb": null,
+    "fit_surplus": 0.07580238358003388,
+    "transfers": false
+   },
+   "milan": {
+    "n_events": 2,
+    "held_surplus": 0.2695705351389096,
+    "held_lb": null,
+    "fit_surplus": 0.07046809055849726,
+    "transfers": false
+   },
+   "politics/elections-tournament-other": {
+    "n_events": 2,
+    "held_surplus": 0.097545327719946,
+    "held_lb": null,
+    "fit_surplus": 0.07511742048873953,
+    "transfers": false
+   },
+   "quito": {
+    "n_events": 1,
+    "held_surplus": 0.12324537417596834,
+    "held_lb": null,
+    "fit_surplus": 0.07507379196574199,
+    "transfers": false
+   }
+  },
+  "count_ok": false,
+  "guard_inert_note": "tournament-permutation null non-discriminating (guard cannot fire) \u2192 leg is a RAW transfer count, not a passed test"
+ },
+ "diagnostics": {
+  "n_testable_tournaments": 3,
+  "pos_frac": 1.0,
+  "median_surplus": 0.06903987864062637,
+  "testable_ids": [
+   "esports-tournament",
+   "wimbledon",
+   "world-cup"
+  ]
+ },
+ "verdict": "TOURNAMENT-POWER-LIMITED",
+ "why": "1/2 clear the margin, but 100% of 3 tournaments are sign-consistent POSITIVE (median +6.9%) \u2014 the edge is CONSISTENT but too few clusters/tournament to clear cost individually. INDETERMINATE \u2014 accrue more tournaments (NOT an artifact, NOT bankable)"
+}
