@@ -51,7 +51,7 @@
     {
       "gate": "operational",
       "status": "MET",
-      "current": "2801 trajectory rows",
+      "current": "3007 trajectory rows",
       "threshold": "dense capture writing + monitors live",
       "needs": "\u2014",
       "eta": "none"
@@ -114,10 +114,42 @@
     },
     {
       "gate": "mm_screen_refinement",
-      "status": "LEAD",
-      "current": "relaxed cohort-fwd -2.7% vs frozen -2.7% (relaxed \u2265 frozen); both NEGATIVE now",
+      "status": "NOT_MET",
+      "current": "relaxed cohort-fwd -4.3% vs frozen -4.1% (relaxed < frozen); both NEGATIVE now",
       "threshold": "relaxed \u2265 frozen on cohort fwd-return, forward-confirmed \u22651 more week",
       "needs": "no-downside + recovers directional traders, but cohort return decayed negative; forward-confirm before any Rust change (Phase-1 STOP)",
+      "eta": "weeks"
+    },
+    {
+      "gate": "decay_diagnosis",
+      "status": "RECOVERABLE",
+      "current": "soccer copy-edge +10.7%->+3.7% (intact=True); ts artifact ruled out",
+      "threshold": "distinguish mix/composition vs genuine soccer-edge decay",
+      "needs": "soccer edge intact-but-unpowered; pooled decay = composition + thin reversion; route per-cell (do not pool soccer w/ never-copy cells)",
+      "eta": "weeks"
+    },
+    {
+      "gate": "topk_ensemble",
+      "status": "INDETERMINATE-BY-POWER",
+      "current": "k=3 mean\u0394 +6.3% vs fleet-avg, CI[-16.8%,+29.4%], random-k null p=0.1809095452273863",
+      "threshold": "k-ensemble mean\u0394 CI-lo > 0 AND random-k null p \u2264 0.01, \u22652 regimes",
+      "needs": "k\u22483 is the operator sweet spot (beats k=1 router AND fleet-avg on point est), but CI straddles 0 / null p not gate-clearing; accrue regimes",
+      "eta": "months"
+    },
+    {
+      "gate": "fade_persistence",
+      "status": "ARTIFACT",
+      "current": "early -3.3% vs late +4.9% (sign flips), within-soccer null p=0.25237381309345325",
+      "threshold": "fade positive in BOTH soccer halves, day-bootstrap CI>0, within-soccer null p\u22640.05",
+      "needs": "fade is a few-day artifact within soccer (not just non-transfer); do NOT forward-track; needs a genuinely recurring soft cell",
+      "eta": "months"
+    },
+    {
+      "gate": "dense_capture_coverage",
+      "status": "PENDING",
+      "current": "coverage +1.2% (signal_id join) -> +15.1% with market-key fix (13x); root cause = sibling-dedup crowd-out",
+      "threshold": "trajectory coverage \u2265 50% for a measured (non-proxy) \u03bb\u0302",
+      "needs": "apply read-side market-key join (paper-safe, DEFERRED gate-input swap) then accrue post-dense-start favorites toward 50%",
       "eta": "weeks"
     }
   ],

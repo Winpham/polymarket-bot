@@ -364,6 +364,67 @@ def build_gates():
     else:
         gates.append(gate("mm_screen_refinement", "INDETERMINATE", "no mm_screen_effect artifact",
                           "relaxed ≥ frozen cohort fwd-return", "run mm_screen_effect.py", "weeks"))
+
+    # ============================ Cycle-2 rows (beat-best-trader run, Threads A-D) ============
+    # --- decay_diagnosis (Thread A): is the copy-cohort forward-return decay recoverable? ---
+    dd = load("decay_decompose.json") or {}
+    if dd:
+        soc = (dd.get("soccer") or {})
+        ver = dd.get("verdict", "")
+        gates.append(gate("decay_diagnosis",
+                          "RECOVERABLE" if "RECOVERABLE" in ver else
+                          ("GENUINE-DECAY" if "GENUINE" in ver else "INDETERMINATE"),
+                          f"soccer copy-edge {_pf(soc.get('r_early'))}->{_pf(soc.get('r_late'))} "
+                          f"(intact={soc.get('intact')}); ts artifact ruled out",
+                          "distinguish mix/composition vs genuine soccer-edge decay",
+                          "soccer edge intact-but-unpowered; pooled decay = composition + thin reversion; "
+                          "route per-cell (do not pool soccer w/ never-copy cells)",
+                          "weeks"))
+
+    # --- topk_ensemble (Thread B): does a small concentrated ensemble beat fleet-average OOS? ---
+    tk = load("topk_ensemble.json") or {}
+    if tk:
+        k3 = ((tk.get("conditional_on_pick") or {}).get("ew_k3") or {})
+        p3 = (tk.get("random_k_null_p") or {}).get("3")
+        met = (k3.get("ci_lo") is not None and k3["ci_lo"] > 0 and p3 is not None and p3 <= 0.01)
+        gates.append(gate("topk_ensemble",
+                          "MET" if met else "INDETERMINATE-BY-POWER",
+                          f"k=3 meanΔ {_pf(k3.get('mean'))} vs fleet-avg, CI[{_pf(k3.get('ci_lo'))},"
+                          f"{_pf(k3.get('ci_hi'))}], random-k null p={p3}",
+                          "k-ensemble meanΔ CI-lo > 0 AND random-k null p ≤ 0.01, ≥2 regimes",
+                          "k≈3 is the operator sweet spot (beats k=1 router AND fleet-avg on point est), "
+                          "but CI straddles 0 / null p not gate-clearing; accrue regimes",
+                          "months"))
+
+    # --- fade_persistence (Thread C): is the soccer-band5 fade a recurring within-soccer edge? ---
+    fp = load("fade_persistence.json") or {}
+    if fp:
+        ver = fp.get("verdict", "")
+        wn = (fp.get("within_soccer_null") or {})
+        gates.append(gate("fade_persistence",
+                          "RECURRING" if "RECURRING" in ver else
+                          ("ARTIFACT" if "ARTIFACT" in ver else "INDETERMINATE"),
+                          f"early {_pf((fp.get('early') or {}).get('fade_net'))} vs late "
+                          f"{_pf((fp.get('late') or {}).get('fade_net'))} (sign flips), "
+                          f"within-soccer null p={wn.get('p_emp')}",
+                          "fade positive in BOTH soccer halves, day-bootstrap CI>0, within-soccer null p≤0.05",
+                          "fade is a few-day artifact within soccer (not just non-transfer); do NOT "
+                          "forward-track; needs a genuinely recurring soft cell",
+                          "months"))
+
+    # --- dense_capture_coverage (Thread D): λ̂ trajectory coverage + the paper-safe fix. ---
+    dc = load("dense_capture_diag.json") or {}
+    if dc:
+        today = ((dc.get("coverage_signal_id_join_TODAY") or {}).get("frac"))
+        fix = ((dc.get("coverage_market_key_join_FIX") or {}).get("frac"))
+        gates.append(gate("dense_capture_coverage",
+                          "PENDING",
+                          f"coverage {_pf(today)} (signal_id join) -> {_pf(fix)} with market-key fix "
+                          f"(13x); root cause = sibling-dedup crowd-out",
+                          "trajectory coverage ≥ 50% for a measured (non-proxy) λ̂",
+                          "apply read-side market-key join (paper-safe, DEFERRED gate-input swap) then "
+                          "accrue post-dense-start favorites toward 50%",
+                          "weeks"))
     return gates
 
 
@@ -527,8 +588,9 @@ def selftest():
     ok = ok and c5
     print(f"  [{'ok' if c5 else 'FAIL'}] unified_book: 1/20→NOT_MET, 20/20→MET, none→INDETERMINATE")
 
-    # beats_best_trader: real fixture (favorite LB −7.1% vs B_LB +3.4% + 3pp) → NOT_MET;
-    # a hypothetical arm above the bar → MET.
+    # beats_best_trader: real fixture (favorite LB −7.1%, UNDERWATER) → the Cycle-1 fail-closed guard
+    # returns INDETERMINATE-BY-POWER (an underwater arm cannot be said to beat/not-beat a benchmark —
+    # that is an edge/power problem, not a decidable comparison); a hypothetical arm above the bar → MET.
     bt_real = beats_best_trader_row({
         "benchmark": {"overall": {"B_LB": 0.034}},
         "our_arms": {"favorite": {"lb95": -0.071}, "loose": {"lb95": -0.20}},
@@ -538,7 +600,7 @@ def selftest():
         "our_arms": {"favorite": {"lb95": 0.10}},
     })
     bt_none = beats_best_trader_row(None)
-    c6 = (bt_real["status"] == "NOT_MET" and bt_win["status"] == "MET"
+    c6 = (bt_real["status"] == "INDETERMINATE-BY-POWER" and bt_win["status"] == "MET"
           and bt_none["status"] == "INDETERMINATE")
     ok = ok and c6
     print(f"  [{'ok' if c6 else 'FAIL'}] beats_best_trader: favorite LB<bar→NOT_MET, above→MET, none→INDETERMINATE")
