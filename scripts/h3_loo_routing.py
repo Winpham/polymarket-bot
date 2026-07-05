@@ -249,6 +249,228 @@ def fmt(x):
     return "None" if x is None else f"{x:+.3f}"
 
 
+# ============================================================ THREAD B — top-k ensemble operator
+TOPK_REPORT = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                           "reports", "topk_ensemble.json")
+KS = [1, 2, 3, 5]
+
+
+def _agg(ds):
+    """t-CI aggregate across regimes (each regime = one independent cluster). Mirrors run().agg."""
+    n = len(ds)
+    if n == 0:
+        return {"n": 0, "mean": None, "ci_lo": None, "ci_hi": None, "n_pos": 0,
+                "verdict": "INDETERMINATE-BY-POWER: no regimes"}
+    mean = sum(ds) / n
+    if n == 1:
+        return {"n": 1, "mean": mean, "ci_lo": None, "ci_hi": None,
+                "n_pos": sum(1 for d in ds if d > 0),
+                "verdict": "INDETERMINATE-BY-POWER: single regime"}
+    sd = math.sqrt(sum((d - mean) ** 2 for d in ds) / (n - 1))
+    se = sd / math.sqrt(n)
+    tc = t_crit(n - 1)
+    lo, hi = mean - tc * se, mean + tc * se
+    v = ("favors ENSEMBLE" if lo > 0 else
+         "favors AVERAGING" if hi < 0 else "INDETERMINATE (CI straddles 0)")
+    return {"n": n, "mean": mean, "sd": sd, "ci_lo": lo, "ci_hi": hi, "t_crit": tc,
+            "n_pos": sum(1 for d in ds if d > 0), "verdict": v}
+
+
+def run_topk(tau_rt, verbose=True):
+    """LOO top-k ensemble: for each held-out sport-regime, learn the wallet ranking on the OTHER
+    regimes, then tail the top-k (equal- and skill-weighted) and compare held-out realizable surplus
+    to fleet-averaging. Tests the untested middle of the routing<->averaging spectrum. k=1 reproduces
+    the single-wallet argmax router; large k -> fleet-average. Read-only."""
+    spreads = tsc.fetch_band_spreads()
+    rows = rv.fetch_fills_with_sport()
+    micro = tsc.fetch_micro()
+    bots = rv.fetch_bot_flags()
+    wre = wallet_regime_events(rows, spreads)
+    elig = eligible_wallets(wre, micro, bots, tau_rt)
+
+    sports = defaultdict(int)
+    for (w, sp), evs in wre.items():
+        if w in elig:
+            sports[sp] += len(evs)
+    regimes = sorted(sports)
+
+    # per regime: for each k, equal-weight (ew) and skill-weight (sw) delta vs averaging
+    per_regime = []
+    # collectors: op -> list of deltas across regimes (conditional-on-pick) and abstain-as-zero
+    cond = {f"{w}_k{k}": [] for k in KS for w in ("ew", "sw")}
+    abst = {f"{w}_k{k}": [] for k in KS for w in ("ew", "sw")}
+
+    for g in regimes:
+        elig_g = [w for w in elig if (w, g) in wre and len(wre[(w, g)]) >= 1]
+        if len(elig_g) < MIN_ELIG_G:
+            continue
+        g_ev_total = sum(len(wre[(w, g)]) for w in elig_g)
+        if g_ev_total < MIN_G_EV:
+            continue
+        averaging_g = sum(clustered_mean(wre[(w, g)]) for w in elig_g) / len(elig_g)
+
+        # LEARN on non-g
+        learn = {}
+        blind_evs = []
+        for w in elig:
+            merged = {}
+            for sp2 in regimes:
+                if sp2 != g and (w, sp2) in wre:
+                    merged.update(wre[(w, sp2)])
+            if len(merged) >= MIN_LEARN_EV:
+                learn[w] = (clustered_mean(merged), len(merged))
+                blind_evs.extend(merged.values())
+        if not learn or not blind_evs:
+            continue
+        blind = sum(blind_evs) / len(blind_evs)
+
+        # rank candidates that clear floors AND are evaluable in g
+        cands = []
+        for w, (cr, n) in learn.items():
+            shrunk = damp(n) * cr + (1 - damp(n)) * blind
+            if shrunk > MARGIN and (w, g) in wre:
+                cands.append((w, shrunk))
+        cands.sort(key=lambda x: -x[1])
+
+        rec = {"regime": g, "n_elig_g": len(elig_g), "n_ev_g": g_ev_total,
+               "averaging_g": averaging_g, "n_cands": len(cands), "k": {}}
+        for k in KS:
+            top = cands[:k]
+            if not top:
+                rec["k"][k] = {"ew": None, "sw": None, "picks": []}
+                # abstain-as-zero: no position -> 0 vs averaging
+                abst[f"ew_k{k}"].append(0.0 - averaging_g)
+                abst[f"sw_k{k}"].append(0.0 - averaging_g)
+                continue
+            g_scores = [clustered_mean(wre[(w, g)]) for w, _ in top]
+            ew = sum(g_scores) / len(g_scores)
+            wts = [s for _, s in top]
+            sw = sum(gs * wt for gs, wt in zip(g_scores, wts)) / sum(wts)
+            rec["k"][k] = {"ew": ew, "sw": sw, "picks": [w[:10] for w, _ in top]}
+            cond[f"ew_k{k}"].append(ew - averaging_g)
+            cond[f"sw_k{k}"].append(sw - averaging_g)
+            abst[f"ew_k{k}"].append(ew - averaging_g)
+            abst[f"sw_k{k}"].append(sw - averaging_g)
+        per_regime.append(rec)
+
+    agg_cond = {op: _agg(ds) for op, ds in cond.items()}
+    agg_abst = {op: _agg(ds) for op, ds in abst.items()}
+
+    # ---- RANDOM-k NULL: does RANKING-to-top-k beat a RANDOM-k ensemble? Isolates selection SKILL
+    # from the mere variance-reduction of any small ensemble. For each draw, per regime sample k
+    # wallets from the SAME evaluable pool (rankable in non-g, present in g), take equal-weight
+    # ensemble delta vs averaging, mean across regimes = one null statistic. p = P(null >= observed).
+    import random as _random
+    rng = _random.Random(20260705)
+    # rebuild per-regime evaluable pool + averaging + held-out scores (cache)
+    pools = {}
+    for rec in per_regime:
+        g = rec["regime"]
+        elig_g = [w for w in elig if (w, g) in wre and len(wre[(w, g)]) >= 1]
+        evaluable = []
+        for w in elig_g:
+            merged_n = sum(len(wre[(w, sp2)]) for sp2 in regimes if sp2 != g and (w, sp2) in wre)
+            if merged_n >= MIN_LEARN_EV:
+                evaluable.append(w)
+        pools[g] = (evaluable, rec["averaging_g"],
+                    {w: clustered_mean(wre[(w, g)]) for w in evaluable})
+    R = 2000
+    null_p = {}
+    for k in KS:
+        obs = agg_cond[f"ew_k{k}"]["mean"]
+        if obs is None:
+            null_p[k] = None
+            continue
+        ge = 0
+        n_null = 0
+        for _ in range(R):
+            ds = []
+            for g, (evaluable, avg_g, scores) in pools.items():
+                if len(evaluable) < k:
+                    continue
+                pick = rng.sample(evaluable, k)
+                ens = sum(scores[w] for w in pick) / k
+                ds.append(ens - avg_g)
+            if ds:
+                n_null += 1
+                if sum(ds) / len(ds) >= obs:
+                    ge += 1
+        null_p[k] = (ge + 1) / (n_null + 1) if n_null else None
+
+    out = {"tau_rt": tau_rt, "eligible_wallets": len(elig), "n_regimes_scored": len(per_regime),
+           "ks": KS, "conditional_on_pick": agg_cond, "abstain_as_zero": agg_abst,
+           "random_k_null_p": null_p, "per_regime": per_regime}
+    with open(TOPK_REPORT, "w") as f:
+        json.dump(out, f, indent=2, default=str)
+
+    if verbose:
+        print(f"TOP-K ENSEMBLE LOO (tau_rt={tau_rt}) · elig={len(elig)} · regimes={len(per_regime)}")
+        print(f"  Δ vs fleet-average, conditional-on-pick (each regime = 1 cluster):")
+        print(f"  {'operator':<10}{'n':>4}{'meanΔ':>9}{'CI_lo':>9}{'CI_hi':>9}{'pos':>6}  verdict")
+        for k in KS:
+            for wgt in ("ew", "sw"):
+                a = agg_cond[f"{wgt}_k{k}"]
+                lo = fmt(a["ci_lo"]); hi = fmt(a["ci_hi"]); mn = fmt(a["mean"])
+                tag = f"{wgt}_k{k}"
+                print(f"  {tag:<10}{a['n']:>4}{mn:>9}{lo:>9}{hi:>9}"
+                      f"{a['n_pos']:>3}/{a['n']:<2} {a['verdict']}")
+        print(f"  (k=1 == single-wallet argmax router; larger k -> fleet-average)")
+        print(f"  RANDOM-k null p (does RANKING beat a random-k ensemble?):")
+        for k in KS:
+            p = null_p.get(k)
+            print(f"    k={k}: p_emp={'n/a' if p is None else f'{p:.3f}'}  "
+                  f"(obs meanΔ={fmt(agg_cond[f'ew_k{k}']['mean'])})")
+        print(f"wrote {TOPK_REPORT}")
+    return out
+
+
+def selftest_topk():
+    """Synthetic: 2 genuinely-skilled wallets (+0.25 every regime) + noise. A top-2 ensemble should
+    beat fleet-averaging (lower variance than top-1, still concentrated above the mean)."""
+    orig_reprice, orig_fee = tsc.reprice, tsc.FEE
+    tsc.reprice = lambda p, s: p
+    tsc.FEE = 0.0
+    try:
+        import random
+        rng = random.Random(3)
+        rows = []
+        sports = ["a", "b", "c", "d", "e"]
+        for sp in sports:
+            for star in ("s0", "s1"):
+                for i in range(12):
+                    rows.append({"wallet": star, "sport": sp, "ev": f"{sp}-{star}-{i}",
+                                 "price": 0.5, "won": 1 if rng.random() < 0.80 else 0})
+            for k in range(6):
+                for i in range(12):
+                    rows.append({"wallet": f"n{k}", "sport": sp, "ev": f"{sp}-n{k}-{i}",
+                                 "price": 0.5, "won": 1 if rng.random() < 0.5 else 0})
+        wre = wallet_regime_events(rows, {})
+        micro = {w: {"rtr": 0, "sbr": 0, "tsr": 0} for w in {"s0", "s1"} | {f"n{k}" for k in range(6)}}
+        elig = eligible_wallets(wre, micro, {}, 0.50)
+        assert {"s0", "s1"} <= elig
+        regimes = sorted(sports)
+        wins = 0
+        for g in regimes:
+            elig_g = [w for w in elig if (w, g) in wre]
+            averaging_g = sum(clustered_mean(wre[(w, g)]) for w in elig_g) / len(elig_g)
+            learn = {}
+            for w in elig:
+                merged = {}
+                for sp2 in regimes:
+                    if sp2 != g and (w, sp2) in wre:
+                        merged.update(wre[(w, sp2)])
+                if len(merged) >= MIN_LEARN_EV:
+                    learn[w] = clustered_mean(merged)
+            top2 = sorted(learn, key=lambda w: -learn[w])[:2]
+            ens = sum(clustered_mean(wre[(w, g)]) for w in top2) / 2
+            if ens > averaging_g:
+                wins += 1
+        assert wins >= 4, f"top-2 ensemble should beat averaging in most regimes, got {wins}/5"
+        print("selftest_topk OK")
+    finally:
+        tsc.reprice, tsc.FEE = orig_reprice, orig_fee
+
+
 def selftest():
     """Synthetic: one wallet dominates every regime -> routing should beat averaging (Δ>0).
     All-noise -> Δ≈0 INDETERMINATE."""
@@ -306,8 +528,13 @@ if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("--selftest", action="store_true")
     ap.add_argument("--frozen", action="store_true", help="use frozen round_trip cutoff 0.30")
+    ap.add_argument("--topk", action="store_true", help="Thread B: top-k ensemble operator sweep")
     args = ap.parse_args()
+    tau = 0.30 if args.frozen else 0.50
     if args.selftest:
         selftest()
+        selftest_topk()
+    elif args.topk:
+        run_topk(tau_rt=tau)
     else:
-        run(tau_rt=(0.30 if args.frozen else 0.50))
+        run(tau_rt=tau)
