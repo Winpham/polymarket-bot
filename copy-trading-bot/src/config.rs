@@ -261,6 +261,37 @@ pub struct CopyTradingConfig {
     #[config(env = "PROVEN_ROUTER", default = false)]
     pub proven_router: bool,
 
+    /// Survivorship capture fix (2026-07-04 capture-hardening, paper-only). When
+    /// on, a bounded slow loop keeps polling the fills of DEACTIVATED wallets the
+    /// scorecard still cares about (dropped off the leaderboard but scorecard-
+    /// eligible: ever in `router_followset`, or ≥100 band 0.45–0.90 BUY fills in
+    /// trailing 365d). Without it, capture STOPS at deactivation (router_verify A4:
+    /// 245 inactive wallets, 0 fills after last_seen_on_lb) ⇒ every forward
+    /// scorecard/benchmark read is conditioned on staying tracked = biased UP. Only
+    /// the durable `trader_fills` archive is written (NOT consensus window votes),
+    /// so the live consensus book is byte-identical whether the flag is on or off.
+    /// Default OFF ⇒ the task isn't spawned ⇒ byte-identical.
+    #[config(env = "CAPTURE_DROPPED", default = false)]
+    pub capture_dropped: bool,
+
+    /// Hot-lane fast poll for the router follow-set (2026-07-04 capture-hardening,
+    /// paper-only). When on (AND `PROVEN_ROUTER` on, so a follow-set exists), a
+    /// task polls ONLY the current follow-set wallets every `HOT_POLL_SECS`,
+    /// ingests through the SAME window-vote + fills path (dedup), then runs a
+    /// SCOPED scoring pass for the affected markets only — building each book with
+    /// `books_from_window_votes` and scoring ONLY the `proven_router` arm. This
+    /// collapses fill→signal latency from ~1.5–3 min to ≲30s for the front-loaded
+    /// router edge. It never touches the main cycle cadence and never polls the
+    /// whole universe faster (the API 429 budget). Default OFF ⇒ no task ⇒
+    /// byte-identical.
+    #[config(env = "HOT_LANE", default = false)]
+    pub hot_lane: bool,
+
+    /// Hot-lane poll interval (seconds) for the follow-set. Only read when
+    /// `HOT_LANE` is on. Floored at 5s in code to protect the 429 budget.
+    #[config(env = "HOT_POLL_SECS", default = 12)]
+    pub hot_poll_secs: u64,
+
     /// Re-tuned `strict` thresholds variant, `"min_backers,strong_net,elite_net"`
     /// (e.g. "4,5,8"). Deep-pool edge run, Phase 2: a WIDER eligible voter set
     /// inflates net_count, so selectivity must be re-chosen — as a SILENT

@@ -40,6 +40,13 @@ MIN_LAMBDA, COVERAGE_FLOOR = 0.25, 0.50
 EVENT_FLOOR, CLUSTER_FLOOR = 30, 5
 GO_GATES = ("edge_reality", "persistence", "power", "sizing")   # ALL required for real money
 
+# --- capture-hardening Item 3 constants (frozen) ---
+# The proven_router pre-registration stamp: signals are judged ONLY from here
+# forward (PREREG_2026-07-04T094304Z_proven_router.md). Do not tune.
+ROUTER_PREREG_TS = "2026-07-04T09:43:04Z"
+UNIFIED_BOOK_FLOOR = 20          # forward day-blocks the unified paper book must accrue
+BEST_TRADER_MARGIN = 0.03        # "as profitable as the best": beat B_LB by ≥ 3pp
+
 # status ranks for the "binding = longest horizon unmet" pick
 ETA_RANK = {"none": 0, "days": 1, "weeks": 2, "months": 3, "unknown": 4}
 
@@ -120,6 +127,71 @@ def regime_panel(edge, persist, net):
                     "n_recurring": br.get("n_recurring", 0),
                     "cluster_floor": br.get("cluster_floor"), "bar": 2},
     }
+
+# --- capture-hardening Item 3: three pure row builders (fixture-testable) ---
+
+def router_gate_row(counts, artifact):
+    """proven_router forward signals (first_detected_at ≥ prereg) vs the standing
+    gate: promotion_verdict ≥30 events / day-deflated LB > 3% / selection_null
+    p ≤ 0.01 / ≥2 disjoint regimes. Expected PENDING with counts for months
+    (accrual is the binding constraint). `counts` come from the DB; `artifact` is
+    the optional gate JSON (None until the gate instrument writes it)."""
+    nsig = int((counts or {}).get("n_signals", 0))
+    nev = int((counts or {}).get("n_events", 0))
+    nreg = int((counts or {}).get("n_regimes", 0))       # distinct months = disjoint regimes
+    cur = f"{nsig} sigs / {nev} events / {nreg} regimes since prereg"
+    thr = f"≥{EVENT_FLOOR} events / LB>3% / selection_null p≤0.01 / ≥2 regimes"
+    verdict = str((artifact or {}).get("promotion_verdict", "")).upper()
+    null_p = (artifact or {}).get("selection_null_p")
+    if nev < EVENT_FLOOR or nreg < 2:
+        eta = "weeks" if nev < EVENT_FLOOR else "months"
+        return gate("router_gate", "PENDING", cur, thr,
+                    "accrue proven_router fires past the prereg stamp", eta)
+    if verdict.startswith("PROMOTE") and null_p is not None and null_p <= 0.01:
+        return gate("router_gate", "MET", cur, thr, "—", "none")
+    return gate("router_gate", "PENDING", cur, thr,
+                "counts OK; needs day-deflated LB>3% + selection_null p≤0.01", "months")
+
+
+def unified_book_row(ub):
+    """Forward day-blocks the unified paper book has accrued vs the ≥20 floor
+    (reports/unified_book.json → book.forward_days)."""
+    if not ub:
+        return gate("unified_book", "INDETERMINATE", "no artifact",
+                    f"≥{UNIFIED_BOOK_FLOOR} forward day-blocks", "run unified_book.py forward", "weeks")
+    fd = int((ub.get("book") or {}).get("forward_days", 0))
+    cur = f"{fd}/{UNIFIED_BOOK_FLOOR} forward day-blocks"
+    thr = f"≥{UNIFIED_BOOK_FLOOR}"
+    if fd >= UNIFIED_BOOK_FLOOR:
+        return gate("unified_book", "MET", cur, thr, "—", "none")
+    return gate("unified_book", "NOT_MET", cur, thr, "accrue forward-sealed day-blocks", "weeks")
+
+
+def beats_best_trader_row(bt):
+    """Our best arm's day-clustered LB vs B_LB + 3pp — the fair "as profitable as
+    the most profitable copyable trader" bar (reports/best_trader_benchmark.json:
+    benchmark.overall.B_LB and our_arms.*.lb95)."""
+    if not bt:
+        return gate("beats_best_trader", "INDETERMINATE", "no artifact",
+                    "best arm LB > B_LB + 3pp", "run best_trader_benchmark.py", "weeks")
+    b_lb = ((bt.get("benchmark") or {}).get("overall") or {}).get("B_LB")
+    best, best_arm = None, None
+    for name, a in (bt.get("our_arms") or {}).items():
+        lb = a.get("lb95")
+        if lb is None:
+            continue
+        if best is None or lb > best:
+            best, best_arm = lb, name
+    if b_lb is None or best is None:
+        return gate("beats_best_trader", "INDETERMINATE", "missing B_LB or arm LB",
+                    "best arm LB > B_LB + 3pp", "accrue benchmark inputs", "weeks")
+    thr_val = b_lb + BEST_TRADER_MARGIN
+    cur = f"best arm {best_arm} LB {best:+.1%} vs B_LB+3pp {thr_val:+.1%}"
+    thr = f"B_LB {b_lb:+.1%} + 3pp"
+    if best > thr_val:
+        return gate("beats_best_trader", "MET", cur, thr, "—", "none")
+    return gate("beats_best_trader", "NOT_MET", cur, thr,
+                "arm LB must clear the copyable-best floor +3pp", "months")
 
 
 def build_gates():
@@ -204,6 +276,25 @@ def build_gates():
     gates.append(gate("alt_thesis", "LEAD" if soft else "NONE",
                       f"{len(soft)} FDR-soft cell(s)" + (f": {soft[0]['sport']}/{soft[0]['mtype']}/b{soft[0]['band']} {soft[0]['side']} {soft[0]['net_edge']:+.1%}" if soft else ""),
                       "a durable, post-tournament soft pocket", "re-run softness_map as blind universe grows", "months"))
+
+    # --- router_gate (capture-hardening Item 3): proven_router forward vs the
+    #     standing gate. Distinct calendar months of first_detected_at proxy the
+    #     "disjoint regimes" the gate requires (consensus_signals has no sport col).
+    rc = q("select count(*) n, "
+           "count(distinct coalesce(event_slug,condition_id)) ev, "
+           "count(distinct to_char(first_detected_at at time zone 'UTC','YYYY-MM')) reg "
+           "from consensus_signals "
+           "where strategy='proven_router' and resolved "
+           f"and first_detected_at >= '{ROUTER_PREREG_TS}'")
+    counts = ({"n_signals": rc[0]["n"], "n_events": rc[0]["ev"], "n_regimes": rc[0]["reg"]}
+              if rc else {})
+    gates.append(router_gate_row(counts, load("router_gate.json")))
+
+    # --- unified_book (Item 3): forward day-blocks vs the ≥20 floor ---
+    gates.append(unified_book_row(load("unified_book.json")))
+
+    # --- beats_best_trader (Item 3): best arm LB vs B_LB + 3pp ---
+    gates.append(beats_best_trader_row(load("best_trader_benchmark.json")))
     return gates
 
 
@@ -273,11 +364,11 @@ def _print(gates, v):
     print("=" * 96)
     print("WS-2 · READINESS LEDGER · distance to real money (fuses D6–D22; certifies nothing)")
     print("=" * 96)
-    hdr = f"{'gate':<15}{'status':<16}{'current':<44}{'eta':>7}"
+    hdr = f"{'gate':<19}{'status':<16}{'current':<44}{'eta':>7}"
     print(hdr); print("-" * len(hdr))
     for g in gates:
         req = "*" if g["gate"] in GO_GATES else " "
-        print(f"{req}{g['gate']:<14}{g['status']:<16}{g['current'][:43]:<44}{g['eta']:>7}")
+        print(f"{req}{g['gate']:<18}{g['status']:<16}{g['current'][:43]:<44}{g['eta']:>7}")
     print("-" * len(hdr))
     print(f"(* = required for real money; all four must be MET)")
     print(f"\nGO gates met: {v['go_gates_met']}   ·   real-money eligible: {v['real_money_eligible']}")
@@ -346,6 +437,47 @@ def selftest():
     c6 = regime_panel(None, None, None) is None   # graceful when artifacts missing
     ok = ok and c6
     print(f"  [{'ok' if c6 else 'FAIL'}] regime panel graceful when artifacts missing")
+
+    # --- capture-hardening Item 3: the three new rows, on fixture JSON shapes ---
+    # router_gate: thin counts → PENDING; counts cleared + gate artifact → MET.
+    r_thin = router_gate_row({"n_signals": 3, "n_events": 4, "n_regimes": 1}, None)
+    r_ok = router_gate_row({"n_signals": 200, "n_events": 40, "n_regimes": 3},
+                           {"promotion_verdict": "PROMOTE", "selection_null_p": 0.004})
+    r_cnt = router_gate_row({"n_signals": 200, "n_events": 40, "n_regimes": 3}, None)
+    c4 = (r_thin["status"] == "PENDING" and r_thin["eta"] == "weeks"
+          and r_ok["status"] == "MET" and r_cnt["status"] == "PENDING")
+    ok = ok and c4
+    print(f"  [{'ok' if c4 else 'FAIL'}] router_gate: thin→PENDING, cleared+artifact→MET, cleared-only→PENDING")
+
+    # unified_book: below floor → NOT_MET; at/above → MET; missing → INDETERMINATE.
+    ub_lo = unified_book_row({"book": {"forward_days": 1}})
+    ub_hi = unified_book_row({"book": {"forward_days": 20}})
+    ub_none = unified_book_row(None)
+    c5 = (ub_lo["status"] == "NOT_MET" and "1/20" in ub_lo["current"]
+          and ub_hi["status"] == "MET" and ub_none["status"] == "INDETERMINATE")
+    ok = ok and c5
+    print(f"  [{'ok' if c5 else 'FAIL'}] unified_book: 1/20→NOT_MET, 20/20→MET, none→INDETERMINATE")
+
+    # beats_best_trader: real fixture (favorite LB −7.1% vs B_LB +3.4% + 3pp) → NOT_MET;
+    # a hypothetical arm above the bar → MET.
+    bt_real = beats_best_trader_row({
+        "benchmark": {"overall": {"B_LB": 0.034}},
+        "our_arms": {"favorite": {"lb95": -0.071}, "loose": {"lb95": -0.20}},
+    })
+    bt_win = beats_best_trader_row({
+        "benchmark": {"overall": {"B_LB": 0.034}},
+        "our_arms": {"favorite": {"lb95": 0.10}},
+    })
+    bt_none = beats_best_trader_row(None)
+    c6 = (bt_real["status"] == "NOT_MET" and bt_win["status"] == "MET"
+          and bt_none["status"] == "INDETERMINATE")
+    ok = ok and c6
+    print(f"  [{'ok' if c6 else 'FAIL'}] beats_best_trader: favorite LB<bar→NOT_MET, above→MET, none→INDETERMINATE")
+
+    # The three rows are informational — they must NOT enter the GO-gate verdict.
+    c7 = all(n not in GO_GATES for n in ("router_gate", "unified_book", "beats_best_trader"))
+    ok = ok and c7
+    print(f"  [{'ok' if c7 else 'FAIL'}] new rows are informational (not GO gates)")
 
     print("selftest:", "PASS" if ok else "FAIL")
     sys.exit(0 if ok else 1)

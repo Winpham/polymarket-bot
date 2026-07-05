@@ -407,6 +407,70 @@ pub async fn run_live(cfg: Arc<CopyTradingConfig>) -> Result<()> {
         });
     }
 
+    // Survivorship capture fix (2026-07-04 capture-hardening, paper-only): keep
+    // polling the fills of DEACTIVATED but scorecard-eligible wallets so the
+    // forward scorecard/benchmark isn't conditioned on staying tracked. Writes
+    // ONLY the durable `trader_fills` archive (never consensus window votes), so a
+    // dropped wallet can't re-enter the live book — on or off, the consensus book
+    // is byte-identical. Bounded slow loop on the trust cadence, poll fan-out
+    // capped by `consensus_max_concurrency`. Off ⇒ the task exits ⇒ byte-identical.
+    if cfg.capture_dropped {
+        let cd_portfolio = Arc::clone(&portfolio);
+        let cd_monitor = Arc::clone(&monitor);
+        let cd_cfg = Arc::clone(&cfg);
+        tokio::spawn(async move {
+            tracing::info!("Capture-dropped ON — polling deactivated scorecard-eligible wallets");
+            loop {
+                if let Err(e) =
+                    cycles::capture_dropped_tick(&cd_portfolio, &cd_monitor, &cd_cfg).await
+                {
+                    tracing::warn!(err = %e, "capture-dropped tick failed");
+                }
+                tokio::time::sleep(Duration::from_secs(cd_cfg.trust_refresh_mins * 60)).await;
+            }
+        });
+    }
+
+    // Hot-lane fast poll for the router follow-set (2026-07-04 capture-hardening,
+    // paper-only): fast-poll ONLY the follow-set wallets (from the shared slot the
+    // re-scorer publishes), ingest through the same dedup path, and run a scoped
+    // `proven_router`-only scoring pass so a routed wallet's fresh BUY becomes a
+    // signal in ≲30s instead of 1.5–3 min. Requires PROVEN_ROUTER (so a follow-set
+    // exists); off ⇒ never spawned ⇒ byte-identical.
+    if cfg.hot_lane && cfg.proven_router {
+        let hl_portfolio = Arc::clone(&portfolio);
+        let hl_monitor = Arc::clone(&monitor);
+        let hl_cfg = Arc::clone(&cfg);
+        let hl_router = Arc::clone(&router_set);
+        tokio::spawn(async move {
+            let interval = hl_cfg.hot_poll_secs.max(5);
+            let mut cursors: std::collections::HashMap<
+                String,
+                chrono::DateTime<chrono::Utc>,
+            > = std::collections::HashMap::new();
+            tracing::info!(
+                interval_secs = interval,
+                "Hot lane ON — fast-polling the router follow-set"
+            );
+            loop {
+                // Cheap clone of the shared follow-set; fail-closed while None/∅.
+                if let Some(set) = hl_router.read().await.clone()
+                    && let Err(e) = cycles::hot_lane_tick(
+                        &hl_portfolio,
+                        &hl_monitor,
+                        &hl_cfg,
+                        set,
+                        &mut cursors,
+                    )
+                    .await
+                    {
+                        tracing::warn!(err = %e, "hot-lane tick failed");
+                    }
+                tokio::time::sleep(Duration::from_secs(interval)).await;
+            }
+        });
+    }
+
     // Consensus detection loop.
     let co_portfolio = Arc::clone(&portfolio);
     let co_notifier = Arc::clone(&notifier);

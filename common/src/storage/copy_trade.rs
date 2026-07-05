@@ -64,6 +64,30 @@ impl PgPortfolio {
         Ok(rows.into_iter().map(|r| r.into_trader()).collect())
     }
 
+    /// Look up followed-trader rows for the given wallets, **regardless of active
+    /// status** (matched case-insensitively). The hot lane (capture-hardening
+    /// Item 2) uses this to attach real rank/pnl to the follow-set wallets' fresh
+    /// votes — a router-proven wallet may have dropped off the leaderboard
+    /// (active = FALSE) yet still be routed to, so `get_active_traders` is the
+    /// wrong lens here.
+    pub async fn traders_by_wallets(&self, wallets: &[String]) -> Result<Vec<FollowedTrader>> {
+        if wallets.is_empty() {
+            return Ok(Vec::new());
+        }
+        let lc: Vec<String> = wallets.iter().map(|w| w.to_lowercase()).collect();
+        let rows: Vec<FollowedTraderRow> = sqlx::query_as(
+            "SELECT id, proxy_wallet, username, source, rank, pnl, volume, win_rate, \
+                    added_at, last_checked_at, active, consensus_eligible, earned_eligible \
+             FROM followed_traders \
+             WHERE lower(proxy_wallet) = ANY($1)",
+        )
+        .bind(&lc)
+        .fetch_all(&self.pool)
+        .await
+        .context("traders_by_wallets")?;
+        Ok(rows.into_iter().map(|r| r.into_trader()).collect())
+    }
+
     /// Insert a new event into `copy_trade_events`.
     pub async fn save_copy_trade_event(&self, event: &NewCopyTradeEvent) -> Result<()> {
         sqlx::query(
