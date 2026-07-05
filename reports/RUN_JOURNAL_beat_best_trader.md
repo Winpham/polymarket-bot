@@ -93,3 +93,57 @@ WATCH-LIST: (1) topk k≈3 ensemble — forward-track meanΔ vs fleet-avg + rand
   frozen-screen selection is sharper. (2) dense_capture_coverage — market-key join DEFERRED for human
   safe-swap; then accrue to 50%. (3) mm_screen_refinement — relaxed=frozen on cohort (H7) but frozen
   SHARPER for the top-k operator; keep both objectives distinct. (4) soccer fade — RETIRED (artifact).
+
+---
+
+### Run beat-best-trader — cycle 3 (RELIABILITY PORTFOLIO) — 2026-07-05T21:45Z
+REFRAME (Tue): prior "everyone negative" = OBJECTIVE-FUNCTION artifact (variance-punishing, our-price,
+  thin-data LB), not fact. Select a WINNING PORTFOLIO by reliability at THEIR price; copyability is a
+  separate downstream filter. selection_null --calibrate PASS. Paper-only, nothing promoted, no Rust.
+THREAD R1 — factor library + GATED reliability composite (reliability_score.py, NEW, --selftest green):
+  · per-wallet event-clustered at THEIR fill price; unit = flat-shares per-event calibration gap (won-price).
+  · factors: RISK (downside dev, maxDD+Ulcer, CVaR5), CONSISTENCY (pos-window frac, cal_gap, loss streak),
+    STRENGTH (best sport×band cell + skill concentration, MM/bot-excluded directional), CONFIDENCE
+    (n_ev/n_days, cross-sport + both-halves stability, per-wallet Bernoulli-at-their-price skill null with
+    H0 mean pinned at 0 exactly — the exact "beat the prices you pay by more than luck" test).
+  · GATED (floor on every axis) then ranked by Sortino. LIVE: 66% of 121 scored wallets +EV at their price;
+    shortlist n=4 = djokowin/master-wuji/acorp/zhuz632. SANITY PARTIAL 1/5 named surface: master-wuji ok;
+    johndegen skilled(null_p .003) but MM-flagged (= Cycle-1 idiosyncratic-variance wallet → exclusion is
+    the gate working); PatienceCapital MM+neg; Sportbetting76/sport-intelligence miss skill-null. Gate
+    surfaced belief-blind winners NOT on the reputation list → not rubber-stamping names.
+THREAD R2 — RELIABILITY-PERSISTENCE (the GO/NO-GO) (reliability_persistence.py, NEW, --selftest green):
+  · leak-free per-wallet median-ts early/late split, each R1-scored. VERDICT = GO.
+  · reg_sortino rank early→late Spearman rho +0.220, boot CI95 [+0.03,+0.40], perm p_global 0.0070,
+    p_nstrata 0.0055 (n-tertile-stratified null AGREES → NOT a power confound; survives ×4 Bonferroni).
+    cal_gap +0.207 (.0085/.0055); pos_window_frac +0.264 (.002/.0005). Transition: early-top-Q → top-HALF
+    60% (chance 50%). Practical: early-selected 12 wallets → LATE cal_gap +0.052 vs random +0.019, beats-
+    random p=0.0445 (MARGINAL, would NOT survive Bonferroni).
+  · CAVEATS: effect modest (rho~0.22); practical profit-arm marginal; split is within-wallet-temporal NOT
+    single-calendar-forward → regime-shift persistence still months-bound. Strongest signal any cycle produced.
+THREAD R3 — correlation-diversified reliability-weighted BOOK (reliability_portfolio.py, NEW, --selftest green):
+  · shortlist mostly LOW-corr (median ~0.10; one +0.85 on 6 days). Inverse-downside equal-risk, 40% cap.
+  · Diversification HALVES drawdown: book maxDD 0.58 vs best-single(acorp) 1.14, IN-sample AND OUT-of-sample
+    (wts from early, eval late) → the "minimal risk/variance" axis Tue prioritized: WIN.
+  · Book LOSES to best single on SORTINO: 0.678<0.853 in-sample, 0.267<0.337 OOS (diluting the best name
+    drags return-per-risk down). posWin book 67% < best 81%.
+  · COPYABILITY LAST (reprice at our entry): book stays POSITIVE (totalPnL +2.89, Sortino +0.321, 0 dropped)
+    — but MODELED tax only, NOT fill/lag-validated → copyable-positive ≠ bankable.
+  · BELIEF-BLIND: selection-beats-random-book on Sortino p=0.093 (conservative inf-clamp) → NOT gate-clearing.
+    Nothing promoted.
+LEDGER: +3 informational rows (reliability_shortlist=BUILT, reliability_persistence=GO, reliability_book=
+  RISK-REDUCTION-ONLY). GO gates unchanged 2/4, real-money-eligible=False, binding=persistence(months).
+VERDICT THIS CYCLE: reframe VALIDATED at core (reliability real, prevalent, PERSISTS OOS — R2 GO is new
+  and survives the confound-controlled null) and honestly BOUNDED at edge (book = risk-reduction not a
+  return edge; loses to best single on Sortino; selection not distinguishable from random on Sortino).
+  Defensible product = "low-drawdown book of reliability-persistent specialists", NOT "out-returns the
+  best trader per unit risk". Nothing promoted.
+BINDING CONSTRAINT: persistence over independent non-expiring regimes (months) + fill/lag copyability.
+NEXT (single highest-leverage): GROW the shortlist past n=4 — R3 diversification is power-starved at 4
+  names (a +0.85 corr on 6 days can swing it). Accrue non-soccer regimes + RELAX the band scoping so
+  specialists' longshot/other-band skill enters the gate, then re-run R2/R3 as the shortlist widens.
+  That is what could turn "reliability persists (proven)" into "the book beats the best trader (now NO)".
+WATCH-LIST: (1) reliability_persistence — re-run as regimes accrue; watch whether rho holds on a single
+  calendar-forward holdout (stronger claim than within-wallet split). (2) reliability_book — re-benchmark
+  vs best-single-Sortino as the shortlist widens; the drawdown win is real now. (3) band scoping — the
+  favorite-band 0.45–0.90 gate under-credits longshot specialists (PatienceCapital etc.).
+REPORT: reports/RELIABILITY_PORTFOLIO_2026-07-05T214500Z.md
