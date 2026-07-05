@@ -1,0 +1,64 @@
+{
+  "dense_capture": {
+    "start_ts": "2026-07-03 20:09:20.806702+00",
+    "end_ts": "2026-07-05 20:20:15.964303+00",
+    "n_rows": 2999,
+    "n_signals": 162
+  },
+  "capture_scope_by_strategy": [
+    {
+      "strategy": "strict",
+      "n_signals": 152,
+      "n_rows": 2862
+    },
+    {
+      "strategy": "elite_fresh_fav",
+      "n_signals": 4,
+      "n_rows": 58
+    },
+    {
+      "strategy": "favorite",
+      "n_signals": 3,
+      "n_rows": 22
+    },
+    {
+      "strategy": "proven_router",
+      "n_signals": 3,
+      "n_rows": 57
+    }
+  ],
+  "favorite_family": {
+    "resolved_total": 416,
+    "resolved_pre_dense_start": 342,
+    "resolved_post_dense_start": 74
+  },
+  "coverage_signal_id_join_TODAY": {
+    "n_fam": 416,
+    "n_cov": 5,
+    "frac": 0.01201923076923077
+  },
+  "coverage_market_key_join_FIX": {
+    "n_fam": 416,
+    "n_cov": 63,
+    "frac": 0.15144230769230768
+  },
+  "post_dense_start_recoverable": {
+    "n_post": 74,
+    "n_recoverable": 62,
+    "frac": 0.8378378378378378
+  },
+  "lift": {
+    "immediate_coverage_x": 12.599999999999998,
+    "immediate_coverage_pp": 0.1394230769230769
+  },
+  "diagnosis": {
+    "primary_cause": "SIBLING-DEDUP CROWD-OUT: DISTINCT ON (condition_id,outcome_index) in dense_capture_candidates keys the trajectory to the earliest-fired sibling (usually strict); clv_lambda joins by signal_id and misses it.",
+    "secondary_cause": "TEMPORAL: dense capture began at start_ts; favorites detected earlier have no trajectory (pure accrual, resolves over weeks).",
+    "not_the_cause": "scope (DENSE_STRATEGIES already includes favorite,elite_fresh_fav) and capture-off (rows are being written)."
+  },
+  "fix_spec": {
+    "paper_safe_read_side": "clv_lambda TRAJ_SQL: join trajectory by (condition_id, outcome_index) at/before the signal's resolved_at, taking the MAX(ts) usable mid, INSTEAD OF t.signal_id = s.id. The CLV close is a market property so the sibling path is valid. Add as an opt-in --market-key-join; DEFER default swap for human review (it changes a gate input mid-run).",
+    "residual_is_accrual": "After the read-side fix, coverage is capped by post-dense-start favorites; it rises toward ~50% only as pre-start favorites age out and post-start ones accumulate (weeks) \u2014 no code lifts that.",
+    "optional_rust_capture_side": "If per-favorite anchoring is ever wanted (not needed for \u03bb\u0302), dense_capture_candidates could DISTINCT ON (condition_id, outcome_index, strategy) or prefer the favorite strategy in the ORDER BY \u2014 but this multiplies capture volume; the read-side market-key join is strictly better (zero extra capture, full recovery). NOT a threshold change; still DEFERRED (Rust touch)."
+  }
+}
