@@ -3,7 +3,7 @@
     {
       "gate": "edge_reality",
       "status": "INDETERMINATE",
-      "current": "coverage 0%, proxy \u03bb\u0302_lo 0.08",
+      "current": "coverage 1%, proxy \u03bb\u0302_lo 0.07",
       "threshold": "\u03bb\u0302_lo > 0.25 at \u226550% coverage",
       "needs": "deploy dense capture, accrue ~2\u20134 wk",
       "eta": "weeks"
@@ -19,7 +19,7 @@
     {
       "gate": "power",
       "status": "MET (caveat)",
-      "current": "137 events",
+      "current": "146 events",
       "threshold": "\u226530",
       "needs": "count OK; day-deflated SE on ~5 correlated days is the real limit (\u2282 persistence)",
       "eta": "none"
@@ -35,7 +35,7 @@
     {
       "gate": "copyability",
       "status": "MET",
-      "current": "favorite 69% survives, net +7.3%",
+      "current": "favorite 74% survives, net +7.7%",
       "threshold": "modeled realizable > 0",
       "needs": "\u2014",
       "eta": "none"
@@ -51,7 +51,7 @@
     {
       "gate": "operational",
       "status": "MET",
-      "current": "1862 trajectory rows",
+      "current": "2801 trajectory rows",
       "threshold": "dense capture writing + monitors live",
       "needs": "\u2014",
       "eta": "none"
@@ -63,6 +63,62 @@
       "threshold": "a durable, post-tournament soft pocket",
       "needs": "re-run softness_map as blind universe grows",
       "eta": "months"
+    },
+    {
+      "gate": "router_gate",
+      "status": "PENDING",
+      "current": "2 sigs / 2 events / 1 regimes since prereg",
+      "threshold": "\u226530 events / LB>3% / selection_null p\u22640.01 / \u22652 regimes",
+      "needs": "accrue proven_router fires past the prereg stamp",
+      "eta": "weeks"
+    },
+    {
+      "gate": "unified_book",
+      "status": "NOT_MET",
+      "current": "1/20 forward day-blocks",
+      "threshold": "\u226520",
+      "needs": "accrue forward-sealed day-blocks",
+      "eta": "weeks"
+    },
+    {
+      "gate": "beats_best_trader",
+      "status": "INDETERMINATE-BY-POWER",
+      "current": "best arm favorite LB -4.6% vs B_LB+3pp -8.2% \u2014 B_LB uninformative (thin per-wallet power) and/or arm LB\u22640",
+      "threshold": "B_LB -11.2% + 3pp",
+      "needs": "need \u226530 tailable events/wallet-regime so B_LB is a real floor; accrue months",
+      "eta": "months"
+    },
+    {
+      "gate": "router_vs_fleet",
+      "status": "NOT_MET",
+      "current": "fwd surplus -3.8% LB -16.7%, null p=0.6963036963036963",
+      "threshold": "surplus LB > 3% AND null p \u2264 0.01",
+      "needs": "router forward surplus is \u22480 / null-indistinguishable; accrue non-soccer regimes",
+      "eta": "months"
+    },
+    {
+      "gate": "router_vs_best",
+      "status": "INDETERMINATE-BY-POWER",
+      "current": "router raw -6.6% vs B_LB(overall) -11.2% \u2014 both negative, uninformative",
+      "threshold": "router LB > B_LB + 3pp, both meaningfully positive",
+      "needs": "B_LB uninformative: <30 tailable events/wallet-regime, effective_n\u22481-3 days; accrue months",
+      "eta": "months"
+    },
+    {
+      "gate": "fade_transfer",
+      "status": "NOT_MET",
+      "current": "1 soft cell(s), all = discovery cell (soccer/directional/b5); NO transfer",
+      "threshold": "\u22651 FDR-soft fade cell in a sport-regime NOT discovered on",
+      "needs": "band5 fade is soccer-confined (SOCCER-ARTIFACT); accrue non-soccer band5 population",
+      "eta": "months"
+    },
+    {
+      "gate": "mm_screen_refinement",
+      "status": "LEAD",
+      "current": "relaxed cohort-fwd -2.7% vs frozen -2.7% (relaxed \u2265 frozen); both NEGATIVE now",
+      "threshold": "relaxed \u2265 frozen on cohort fwd-return, forward-confirmed \u22651 more week",
+      "needs": "no-downside + recovers directional traders, but cohort return decayed negative; forward-confirm before any Rust change (Phase-1 STOP)",
+      "eta": "weeks"
     }
   ],
   "verdict": {
@@ -81,26 +137,26 @@
     "why": "edge is expiring-carried (57% of edge mass) and recurring regimes are below the floor \u2014 not yet certifiable",
     "recurring_regimes": [
       {
-        "regime": "mlb|2026-06",
-        "n_clusters": 1,
-        "edge_lb": null,
-        "net_taker_fee2": 0.3312110597704412,
-        "net_positive": false,
-        "clears_cluster_floor": false
-      },
-      {
         "regime": "nba/cbb|2026-07",
         "n_clusters": 3,
         "edge_lb": 0.20232636862349596,
-        "net_taker_fee2": 0.27123544081831036,
+        "net_taker_fee2": 0.34499170416714064,
         "net_positive": true,
+        "clears_cluster_floor": false
+      },
+      {
+        "regime": "mlb|2026-06",
+        "n_clusters": 1,
+        "edge_lb": null,
+        "net_taker_fee2": 0.3177972744810461,
+        "net_positive": false,
         "clears_cluster_floor": false
       },
       {
         "regime": "mlb|2026-07",
         "n_clusters": 4,
         "edge_lb": 0.08086751099804187,
-        "net_taker_fee2": 0.1674373078157874,
+        "net_taker_fee2": 0.17337510140213516,
         "net_positive": true,
         "clears_cluster_floor": false
       },
@@ -108,7 +164,7 @@
         "regime": "nba/cbb|2026-06",
         "n_clusters": 1,
         "edge_lb": null,
-        "net_taker_fee2": -0.6762938701351288,
+        "net_taker_fee2": -0.6025376067862984,
         "net_positive": false,
         "clears_cluster_floor": false
       }

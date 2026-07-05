@@ -188,6 +188,17 @@ def beats_best_trader_row(bt):
     thr_val = b_lb + BEST_TRADER_MARGIN
     cur = f"best arm {best_arm} LB {best:+.1%} vs B_LB+3pp {thr_val:+.1%}"
     thr = f"B_LB {b_lb:+.1%} + 3pp"
+    # FAIL-CLOSED integrity guard (beat-best-trader run): B_LB is UNINFORMATIVE when it is
+    # deeply negative (Bonferroni over thin per-wallet day-counts, effective_n≈1-3). "Beating"
+    # a garbage floor is not beating the best trader. A real PASS requires the arm itself to be
+    # profitable (LB>0) AND B_LB to be an informative (non-deeply-negative) floor. Otherwise the
+    # honest verdict is INDETERMINATE-BY-POWER, per the charter — NOT a mechanical MET.
+    UNINFORMATIVE_BLB = -0.05
+    if best <= 0 or (b_lb is not None and b_lb < UNINFORMATIVE_BLB):
+        return gate("beats_best_trader", "INDETERMINATE-BY-POWER",
+                    cur + " — B_LB uninformative (thin per-wallet power) and/or arm LB≤0",
+                    thr, "need ≥30 tailable events/wallet-regime so B_LB is a real floor; accrue months",
+                    "months")
     if best > thr_val:
         return gate("beats_best_trader", "MET", cur, thr, "—", "none")
     return gate("beats_best_trader", "NOT_MET", cur, thr,
@@ -295,6 +306,64 @@ def build_gates():
 
     # --- beats_best_trader (Item 3): best arm LB vs B_LB + 3pp ---
     gates.append(beats_best_trader_row(load("best_trader_benchmark.json")))
+
+    # --- router_vs_fleet (beat-best-trader run): router forward surplus over the
+    #     day-matched fleet blind, with the matched permutation null. ---
+    rvf = load("router_verify.json") or {}
+    fwd = ((rvf.get("a2_forward_cohort") or {}).get("surplus_vs_fleet_day") or {})
+    a3 = (rvf.get("a3_permutation_null") or {})
+    if fwd:
+        s, lb, p = fwd.get("mean"), fwd.get("lb"), a3.get("p_emp")
+        met = (lb is not None and lb > 0.03 and p is not None and p <= 0.01)
+        gates.append(gate("router_vs_fleet",
+                          "MET" if met else "NOT_MET",
+                          f"fwd surplus {_pf(s)} LB {_pf(lb)}, null p={p}",
+                          "surplus LB > 3% AND null p ≤ 0.01",
+                          "router forward surplus is ≈0 / null-indistinguishable; accrue non-soccer regimes",
+                          "months"))
+    else:
+        gates.append(gate("router_vs_fleet", "INDETERMINATE", "no router_verify forward artifact",
+                          "surplus LB > 3%", "run router_verify.py", "weeks"))
+
+    # --- router_vs_best (H2): router forward surplus vs B_LB (best copyable wallet repriced). ---
+    bt = load("best_trader_benchmark.json") or {}
+    blb_overall = ((bt.get("benchmark") or {}).get("overall") or {}).get("B_LB")
+    raw = ((rvf.get("a2_forward_cohort") or {}).get("raw") or {}).get("mean")
+    gates.append(gate("router_vs_best", "INDETERMINATE-BY-POWER",
+                      f"router raw {_pf(raw)} vs B_LB(overall) {_pf(blb_overall)} — both negative, uninformative",
+                      "router LB > B_LB + 3pp, both meaningfully positive",
+                      "B_LB uninformative: <30 tailable events/wallet-regime, effective_n≈1-3 days; accrue months",
+                      "months"))
+
+    # --- fade_transfer (H5): soft cells that persist OUTSIDE the discovery cell. ---
+    sm2 = load("softness_fade.json") or {}
+    soft2 = [c for c in (sm2.get("cells") or []) if c.get("SOFT_CELL")]
+    disc = {("soccer", "directional", 5)}
+    transfer = [c for c in soft2 if (c.get("sport"), c.get("mtype"), c.get("band")) not in disc]
+    gates.append(gate("fade_transfer",
+                      "MET" if transfer else "NOT_MET",
+                      (f"{len(transfer)} soft cell(s) OUTSIDE discovery" if transfer
+                       else f"{len(soft2)} soft cell(s), all = discovery cell (soccer/directional/b5); NO transfer"),
+                      "≥1 FDR-soft fade cell in a sport-regime NOT discovered on",
+                      "band5 fade is soccer-confined (SOCCER-ARTIFACT); accrue non-soccer band5 population",
+                      "months"))
+
+    # --- mm_screen_refinement (H7): relaxed round_trip vs frozen on cohort forward copy-return. ---
+    mse = load("mm_screen_effect.json") or {}
+    ab = mse.get("screen_ab") or {}
+    fr = (ab.get("current_0.30/0.25/0.50") or {}).get("cohort_fwd_h2")
+    rl = (ab.get("relax_round_trip_0.50") or {}).get("cohort_fwd_h2")
+    if fr is not None and rl is not None:
+        nod = rl >= fr
+        gates.append(gate("mm_screen_refinement",
+                          "LEAD" if nod else "NOT_MET",
+                          f"relaxed cohort-fwd {_pf(rl)} vs frozen {_pf(fr)} (relaxed {'≥' if nod else '<'} frozen); both NEGATIVE now",
+                          "relaxed ≥ frozen on cohort fwd-return, forward-confirmed ≥1 more week",
+                          "no-downside + recovers directional traders, but cohort return decayed negative; forward-confirm before any Rust change (Phase-1 STOP)",
+                          "weeks"))
+    else:
+        gates.append(gate("mm_screen_refinement", "INDETERMINATE", "no mm_screen_effect artifact",
+                          "relaxed ≥ frozen cohort fwd-return", "run mm_screen_effect.py", "weeks"))
     return gates
 
 

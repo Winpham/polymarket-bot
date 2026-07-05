@@ -1,30 +1,30 @@
 {
   "strategy": "favorite",
-  "n_total": 232,
-  "n_events": 113,
-  "n_traj": 0,
-  "n_fallback": 232,
+  "n_total": 309,
+  "n_events": 146,
+  "n_traj": 2,
+  "n_fallback": 307,
   "n_unusable": 0,
-  "trajectory_coverage": 0.0,
+  "trajectory_coverage": 0.006472491909385114,
   "usable_frac": 1.0,
-  "mean_clv": 0.017266193427282188,
+  "mean_clv": 0.014888575814134292,
   "clv_ci": [
-    0.008389195995445096,
-    0.026906475024937357
+    0.008155394480241178,
+    0.022457294708881536
   ],
-  "clv_z_approx": 3.6551524728415803,
-  "mean_surplus_delta": 0.11402492636849197,
-  "mean_resid": 0.09675873294120972,
-  "null_mu": -0.008774288296840292,
-  "null_sd": 0.007583959628452293,
-  "null_z": 3.4336261003325945,
+  "clv_z_approx": 4.0808015898845955,
+  "mean_surplus_delta": 0.10369763514092667,
+  "mean_resid": 0.0888090593267924,
+  "null_mu": -0.009769998082337906,
+  "null_sd": 0.00676678702983644,
+  "null_z": 3.6440594018618344,
   "null_p": 0.0,
   "null_draws": 2000,
-  "clv_explained_frac": 0.1514247277080749,
-  "lambda_hat": 0.1514247277080749,
+  "clv_explained_frac": 0.14357681150491514,
+  "lambda_hat": 0.14357681150491514,
   "lambda_ci": [
-    0.07637615088142144,
-    0.28740472203653605
+    0.07378121656218245,
+    0.2777107151967621
   ],
-  "verdict": "INDETERMINATE-BY-DATA (K1): trajectory coverage 0% < 50% \u2014 CLV is fallback-dominated. The mean_price proxy below is a WEAK, single-snapshot read, NOT a certified \u03bb."
+  "verdict": "INDETERMINATE-BY-DATA (K1): trajectory coverage 1% < 50% \u2014 CLV is fallback-dominated. The mean_price proxy below is a WEAK, single-snapshot read, NOT a certified \u03bb."
 }

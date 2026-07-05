@@ -4,59 +4,59 @@
     "follower_tax": 0.013,
     "decision_lag_s": 900,
     "band_spreads": {
-      "1": 0.012,
-      "2": 0.0075,
-      "3": 0.0186,
-      "4": 0.0071,
-      "5": 0.0258
+      "1": 0.0254,
+      "2": 0.0105,
+      "3": 0.0249,
+      "4": 0.0086,
+      "5": 0.0128
     },
     "band_spread_n": {
-      "1": 70,
-      "2": 71,
-      "3": 82,
-      "4": 65,
-      "5": 46
+      "1": 219,
+      "2": 169,
+      "3": 208,
+      "4": 225,
+      "5": 232
     }
   },
   "strategies": [
     {
       "strategy": "favorite",
-      "n_events": 115,
-      "avg_price": 0.8195399771688071,
+      "n_events": 146,
+      "avg_price": 0.8187525754414041,
       "band": 5,
-      "paper_edge": 0.10621879162039158,
-      "realizable_at_ask_direct": 0.0040000000000000036,
-      "ask_coverage": 5,
-      "band_spread": 0.025780434782608705,
-      "modeled_realizable_net": 0.07329716083032423,
-      "copyability_frac": 0.690058319362888,
+      "paper_edge": 0.1036976351409267,
+      "realizable_at_ask_direct": 0.10106818181818182,
+      "ask_coverage": 22,
+      "band_spread": 0.012803448275862049,
+      "modeled_realizable_net": 0.07683743695223713,
+      "copyability_frac": 0.7409757883852787,
       "ask_indeterminate": true
     },
     {
       "strategy": "elite_fresh_fav",
-      "n_events": 48,
-      "avg_price": 0.8874063550129957,
+      "n_events": 63,
+      "avg_price": 0.8841861801832933,
       "band": 5,
-      "paper_edge": 0.08705162310731539,
-      "realizable_at_ask_direct": -0.20333333333333334,
-      "ask_coverage": 3,
-      "band_spread": 0.025780434782608705,
-      "modeled_realizable_net": 0.043181135900724636,
-      "copyability_frac": 0.49604056029480176,
+      "paper_edge": 0.05619653934206346,
+      "realizable_at_ask_direct": -0.02013636363636362,
+      "ask_coverage": 11,
+      "band_spread": 0.012803448275862049,
+      "modeled_realizable_net": 0.02560260065774466,
+      "copyability_frac": 0.45559034341783666,
       "ask_indeterminate": true
     },
     {
       "strategy": "strict",
-      "n_events": 271,
-      "avg_price": 0.5000445332831801,
+      "n_events": 325,
+      "avg_price": 0.5036978833211702,
       "band": 3,
-      "paper_edge": 0.036329867542043676,
-      "realizable_at_ask_direct": -0.059295634920634895,
-      "ask_coverage": 21,
-      "band_spread": 0.01859268292682923,
-      "modeled_realizable_net": 0.0117270988660925,
-      "copyability_frac": 0.3227949799850223,
-      "ask_indeterminate": true
+      "paper_edge": 0.048356203522791325,
+      "realizable_at_ask_direct": -0.00568421985815602,
+      "ask_coverage": 47,
+      "band_spread": 0.02490192307692302,
+      "modeled_realizable_net": 0.020180846192572554,
+      "copyability_frac": 0.41733727469032766,
+      "ask_indeterminate": false
     }
   ]
 }
