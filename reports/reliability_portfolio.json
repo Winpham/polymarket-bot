@@ -1,0 +1,144 @@
+{
+  "meta": {
+    "weight_cap": 0.4,
+    "unit": "flat_shares_daily_return",
+    "fee": 0.02,
+    "n_null": 2000,
+    "seed": 20260705,
+    "shortlist": [
+      "djokowin",
+      "master-wuji",
+      "acorp",
+      "zhuz632"
+    ],
+    "gate_r2_verdict": "GO (reliability_persistence.json)",
+    "charter": "TRADER-RELIABILITY-PORTFOLIO-PLAN.md \u00a73"
+  },
+  "correlation_matrix": {
+    "djokowin|master-wuji": {
+      "corr": 0.10114,
+      "common_days": 18
+    },
+    "djokowin|acorp": {
+      "corr": -0.0085,
+      "common_days": 9
+    },
+    "djokowin|zhuz632": {
+      "corr": 0.85007,
+      "common_days": 6
+    },
+    "master-wuji|acorp": {
+      "corr": 0.18306,
+      "common_days": 14
+    },
+    "master-wuji|zhuz632": {
+      "corr": 0.05678,
+      "common_days": 12
+    },
+    "acorp|zhuz632": {
+      "corr": 0.26189,
+      "common_days": 12
+    }
+  },
+  "weights_their_price": {
+    "djokowin": 0.2693,
+    "master-wuji": 0.2455,
+    "acorp": 0.2361,
+    "zhuz632": 0.2491
+  },
+  "book_their_price": {
+    "n_days": 55,
+    "mean_day": 0.09635,
+    "downside_dev": 0.14207,
+    "sortino": 0.67818,
+    "max_drawdown": 0.57754,
+    "pos_window_frac": 0.67273,
+    "total_pnl": 5.29935
+  },
+  "best_single_reliable": {
+    "name": "acorp",
+    "stats": {
+      "n_days": 32,
+      "mean_day": 0.13841,
+      "downside_dev": 0.16228,
+      "sortino": 0.85291,
+      "max_drawdown": 1.13789,
+      "pos_window_frac": 0.8125,
+      "total_pnl": 4.42917
+    }
+  },
+  "book_vs_best_single_insample": {
+    "sortino_book": 0.67818,
+    "sortino_best": 0.85291,
+    "book_wins_sortino": false,
+    "maxdd_book": 0.57754,
+    "maxdd_best": 1.13789,
+    "book_wins_maxdd": true,
+    "poswin_book": 0.67273,
+    "poswin_best": 0.8125
+  },
+  "copyability": {
+    "book_before_trim_our_entry": {
+      "n_days": 55,
+      "mean_day": 0.05261,
+      "downside_dev": 0.16372,
+      "sortino": 0.32133,
+      "max_drawdown": 1.18767,
+      "pos_window_frac": 0.56364,
+      "total_pnl": 2.89336
+    },
+    "names_kept_after_trim": [
+      "djokowin",
+      "master-wuji",
+      "acorp",
+      "zhuz632"
+    ],
+    "names_dropped": [],
+    "book_after_trim_our_entry": {
+      "n_days": 55,
+      "mean_day": 0.05261,
+      "downside_dev": 0.16372,
+      "sortino": 0.32133,
+      "max_drawdown": 1.18767,
+      "pos_window_frac": 0.56364,
+      "total_pnl": 2.89336
+    },
+    "per_wallet_our_entry_total_pnl": {
+      "djokowin": 0.34031,
+      "master-wuji": 2.31394,
+      "acorp": 3.10348,
+      "zhuz632": 0.42218
+    }
+  },
+  "out_of_sample": {
+    "cut_day": "2026-05-25",
+    "book_late": {
+      "n_days": 28,
+      "mean_day": 0.0435,
+      "downside_dev": 0.16289,
+      "sortino": 0.26705,
+      "max_drawdown": 0.54696,
+      "pos_window_frac": 0.57143,
+      "total_pnl": 1.21798
+    },
+    "best_single_early": "acorp",
+    "best_single_late": {
+      "n_days": 16,
+      "mean_day": 0.07163,
+      "downside_dev": 0.21245,
+      "sortino": 0.33718,
+      "max_drawdown": 1.13789,
+      "pos_window_frac": 0.6875,
+      "total_pnl": 1.14615
+    },
+    "book_beats_best_single_sortino": false,
+    "book_beats_best_single_maxdd": true
+  },
+  "belief_blind_null": {
+    "book_sortino": 0.67818,
+    "random_book_sortino_mean_finite": 1.25007,
+    "random_no_downside_share": 0.0155,
+    "selection_beats_random_p": 0.09295352323838081,
+    "note": "p = P(random equal-size inverse-dd book Sortino >= reliable book); no-downside random books count as beating (conservative)"
+  }
+}
