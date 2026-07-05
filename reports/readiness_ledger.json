@@ -19,7 +19,7 @@
     {
       "gate": "power",
       "status": "MET (caveat)",
-      "current": "146 events",
+      "current": "147 events",
       "threshold": "\u226530",
       "needs": "count OK; day-deflated SE on ~5 correlated days is the real limit (\u2282 persistence)",
       "eta": "none"
@@ -51,7 +51,7 @@
     {
       "gate": "operational",
       "status": "MET",
-      "current": "3007 trajectory rows",
+      "current": "3027 trajectory rows",
       "threshold": "dense capture writing + monitors live",
       "needs": "\u2014",
       "eta": "none"
@@ -151,6 +151,30 @@
       "threshold": "trajectory coverage \u2265 50% for a measured (non-proxy) \u03bb\u0302",
       "needs": "apply read-side market-key join (paper-safe, DEFERRED gate-input swap) then accrue post-dense-start favorites toward 50%",
       "eta": "weeks"
+    },
+    {
+      "gate": "reliability_shortlist",
+      "status": "BUILT",
+      "current": "4 gate-clearing wallets of 121 scored (66% positive at their price); ranked by Sortino",
+      "threshold": "gated on every axis (skill-null, cross-sport, both-halves, consistency)",
+      "needs": "sanity: 1/5 named specialists surface (rest MM-screened or miss skill-null) \u2014 gate is belief-blind, not reputation-driven",
+      "eta": "weeks"
+    },
+    {
+      "gate": "reliability_persistence",
+      "status": "GO",
+      "current": "reg_sortino rank rho +22.0% p_global 0.0069965017491254375 p_nstrata 0.005497251374312844 (confound-controlled null agrees)",
+      "threshold": "early-window reliability rank predicts late-window rank, matched null p\u22640.05",
+      "needs": "reliability RANK persists (survives Bonferroni + n-strata null); practical profit-arm marginal (p\u22480.044); split is within-wallet-temporal not calendar-forward",
+      "eta": "weeks"
+    },
+    {
+      "gate": "reliability_book",
+      "status": "RISK-REDUCTION-ONLY",
+      "current": "book maxDD +57.8% vs best-single +113.8% (halved, in+out sample); Sortino +67.8% < +85.3% (loses); selection-vs-random p=0.09295352323838081",
+      "threshold": "book beats best single reliable trader on risk-adjusted return (Sortino) OOS + null p\u22640.01",
+      "needs": "diversification HALVES drawdown (the risk axis) but does NOT beat best single on Sortino; copyable-positive at modeled entry but fill/lag-unvalidated; nothing promoted",
+      "eta": "months"
     }
   ],
   "verdict": {

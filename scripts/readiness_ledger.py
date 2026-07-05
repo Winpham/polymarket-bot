@@ -425,6 +425,49 @@ def build_gates():
                           "apply read-side market-key join (paper-safe, DEFERRED gate-input swap) then "
                           "accrue post-dense-start favorites toward 50%",
                           "weeks"))
+
+    # --- reliability_shortlist (R1): gated reliability composite at THEIR price ---
+    rl = load("reliability_score.json") or {}
+    if rl:
+        m = rl.get("meta", {})
+        nsl = m.get("n_shortlist")
+        gates.append(gate("reliability_shortlist",
+                          "BUILT",
+                          f"{nsl} gate-clearing wallets of {m.get('n_wallets_scored')} scored "
+                          f"(66% positive at their price); ranked by Sortino",
+                          "gated on every axis (skill-null, cross-sport, both-halves, consistency)",
+                          "sanity: 1/5 named specialists surface (rest MM-screened or miss skill-null) "
+                          "— gate is belief-blind, not reputation-driven",
+                          "weeks"))
+
+    # --- reliability_persistence (R2): the GO/NO-GO — does reliability persist OOS? ---
+    rp = load("reliability_persistence.json") or {}
+    if rp:
+        rt = (rp.get("rank_tests") or {}).get("reg_sortino") or {}
+        gates.append(gate("reliability_persistence",
+                          "GO" if rp.get("verdict", "").startswith("GO") else
+                          ("NO-GO" if rp.get("verdict") == "NO-GO" else "INDETERMINATE-BY-POWER"),
+                          f"reg_sortino rank rho {_pf(rt.get('spearman'))} p_global {rt.get('perm_p_global')} "
+                          f"p_nstrata {rt.get('perm_p_nstrata')} (confound-controlled null agrees)",
+                          "early-window reliability rank predicts late-window rank, matched null p≤0.05",
+                          "reliability RANK persists (survives Bonferroni + n-strata null); practical "
+                          "profit-arm marginal (p≈0.044); split is within-wallet-temporal not calendar-forward",
+                          "weeks"))
+
+    # --- reliability_book (R3): diversified reliability-weighted book vs best single trader ---
+    rb = load("reliability_portfolio.json") or {}
+    if rb:
+        iw = rb.get("book_vs_best_single_insample", {})
+        nb = rb.get("belief_blind_null", {})
+        gates.append(gate("reliability_book",
+                          "RISK-REDUCTION-ONLY",
+                          f"book maxDD {_pf(iw.get('maxdd_book'))} vs best-single {_pf(iw.get('maxdd_best'))} "
+                          f"(halved, in+out sample); Sortino {_pf(iw.get('sortino_book'))} < "
+                          f"{_pf(iw.get('sortino_best'))} (loses); selection-vs-random p={nb.get('selection_beats_random_p')}",
+                          "book beats best single reliable trader on risk-adjusted return (Sortino) OOS + null p≤0.01",
+                          "diversification HALVES drawdown (the risk axis) but does NOT beat best single on "
+                          "Sortino; copyable-positive at modeled entry but fill/lag-unvalidated; nothing promoted",
+                          "months"))
     return gates
 
 
