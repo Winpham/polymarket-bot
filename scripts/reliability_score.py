@@ -190,7 +190,12 @@ def _null_p(evs):
 
 
 def score_wallet(rows):
-    evs = _events(rows)
+    return score_evs(_events(rows))
+
+
+def score_evs(evs):
+    """Score from pre-built per-event records (shape of _events output). Split out of score_wallet
+    so an event-pre-aggregated pipeline (drawdown_optimization.py) can reuse the IDENTICAL math."""
     rets = [e["ret"] for e in evs]
     n = len(rets)
     n_fills = sum(e["n_fills"] for e in evs)

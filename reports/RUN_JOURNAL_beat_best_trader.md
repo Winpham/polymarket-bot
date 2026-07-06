@@ -147,3 +147,55 @@ WATCH-LIST: (1) reliability_persistence — re-run as regimes accrue; watch whet
   vs best-single-Sortino as the shortlist widens; the drawdown win is real now. (3) band scoping — the
   favorite-band 0.45–0.90 gate under-credits longshot specialists (PatienceCapital etc.).
 REPORT: reports/RELIABILITY_PORTFOLIO_2026-07-05T214500Z.md
+
+---
+
+### Run beat-best-trader — cycle 4 (DRAWDOWN-TO-PROFIT OPTIMIZATION) — 2026-07-06T04:38Z
+OBJECTIVE SWITCH: primary metric = realizable (OUR-price) CALMAR = return/maxDD (NOT Sortino); MAR +
+  return/CVaR5 siblings. Instrument drawdown_optimization.py (NEW, --selftest green). Event-level SQL
+  aggregation proven IDENTICAL to the per-fill pipeline (134 wallets, max score-field diff 4.7e-14) —
+  built because the per-fill fetch (1.6M rows/105s) was the runtime wall. reliability_score.py: score_evs
+  split out of score_wallet (EXTEND, selftest green). Paper-only, nothing promoted, no Rust, DB read-only.
+O0 — reframe reproduced EXACTLY (frozen anchor): their-price book Calmar 0.167 > best-single 0.122;
+  tax collapses realizable Calmar to 0.044 (gap 0.123 = the target). Live (drifted) agrees: their 0.177.
+O1 — WEIGHTING HEAD-TO-HEAD (equal/inv-dd/risk-parity/HRP/max-Calmar), realizable OOS Calmar (early→late):
+  · WINNER = plain EQUAL (OOS 0.0265). RISK-PARITY ≡ EQUAL to 4dp + HRP≈equal → near-disjoint trading days
+    make the 0-fill covariance ~diagonal; covariance-aware methods add NOTHING (no usable corr structure).
+  · max-Calmar optimizer: best IS (our Calmar 0.0798, maxDD 0.775 — the ONLY method that cuts drawdown
+    below best-single at our price, ddRed/ret +6.29) but OVERFITS OOS (0.0028). inv-dd baseline OOS 0.0105.
+  · DECISIVE: at our price the generic diversified book has NEGATIVE ddRed/retGiveup (−5.75) — book maxDD
+    1.19 > best-single 1.14 → the Cycle-3 "halved drawdown" is a THEIR-PRICE property that repricing kills.
+O2 — WIDEN band 0.45–0.90 → 0.10–0.97 (pre-registered P1; P2 = cross-sport ≥1, sensitivity only). Pool
+  166, shortlist n=4 [Villson, zhuz632, master-wuji, djokowin]: acorp drops, VILLSON (longshot/other-band
+  specialist invisible to the favorite gate) ENTERS = the charter's mechanism working. Calmar-vs-#names
+  curve PEAKS OOS 0.2306 at n=3 BUT that book's IS Calmar = 0.0076, maxDD 1.93 (IS/OOS disagree 30×) →
+  PEAK IS A THIN-WINDOW ARTIFACT, not a stable frontier gain. Durable signal: Villson alone has the lowest
+  our-price IS drawdown of any name (0.46) but ZERO OOS coverage → a lead to accrue, not a result.
+O3 — TAX-AWARE: name-DROP filter (our Calmar≤0) drops 0 names (all widened names our-price-positive) →
+  recovers nothing. Tax-aware WEIGHTING (max-Calmar, narrow shortlist) 0.044→0.0798 IS = recovers ~29% of
+  the collapse by concentrating tax-robust low-drawdown names — but OOS 0.0028 (overfits). Lever exists,
+  points right in-sample, not bankable on current data.
+O4 — REBALANCING: UNTESTABLE / INSUFFICIENT-DATA — rolling re-score on a trailing half leaves 0 wallets
+  above the 30-event floor (roll_n=0). Months-of-data question; can't answer now.
+WORTH-IT GATE (belief-blind, realizable OOS Calmar): (1) refined book 0.1044 vs random equal-size book
+  mean −0.0225, p=0.120 (1455 draws, weighting held equal → isolates SELECTION) — NOT ≤0.05. (2) vs best
+  single reliable trader master-wuji 0.2113 → book LOSES. (3) selection_null --calibrate PASS.
+  → VERDICT = NOT WORTH-IT / INDETERMINATE-BY-POWER. Headline dd-reduction-per-return at our price = −7.79
+  (book ADDS drawdown per return). The value is diversification / the single best trader, NOT selection.
+VERDICT THIS CYCLE: the optimization is honest and DECISIVE — "not worth it on the current record." Right
+  objective (realizable Calmar) makes the failure legible: the drawdown edge lives at THEIR price, the
+  follower tax eats it, and NO weighting escapes OOS (sophisticated ones collapse to equal; max-Calmar
+  cuts our-price drawdown in-sample but overfits). Single strongest REALIZABLE approach is NOT a book —
+  it's following the single best reliability-persistent trader (master-wuji: our OOS Calmar 0.2113, maxDD
+  0.57), which dominates every optimized book at our price. Nothing promoted.
+BINDING CONSTRAINT: unchanged — OOS persistence across independent non-expiring regimes (months) +
+  fill/lag copyability. GO gates 2/4, real-money-eligible=False.
+NEXT (single highest-leverage): accrue forward days for VILLSON (only genuinely-low our-price drawdown
+  name, 0 OOS coverage) + forward-test the tax-aware max-Calmar weighting (only method that cuts our-price
+  drawdown) — both need weeks of forward data to move from in-sample lead to bankable; both gated behind
+  the same months-long persistence wall.
+WATCH-LIST: (1) Villson — low our-price IS drawdown (0.46), untested OOS; accrue. (2) max-Calmar weighting
+  — cuts our-price maxDD 1.14→0.77 IS; forward-test whether it survives (currently overfits 0.0028 OOS).
+  (3) covariance-aware weighting — worthless while trading days are near-disjoint; revisit only if overlap
+  grows. (4) reliability book at our price = risk-reduction ONLY at their price; repricing negates it.
+REPORT: reports/DRAWDOWN_OPTIMIZATION_2026-07-06T043802Z.md
