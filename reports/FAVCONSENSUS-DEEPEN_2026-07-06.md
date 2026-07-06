@@ -3,8 +3,10 @@
 **Honest headline: the favorite-consensus edge re-verified STRONGER on 3× the data — pooled
 surplus +8.4% over 101 super-events, selection-null p=0.0005 (the seed's binding p=0.034 failure
 now clears), positive in both disjoint time blocks and 4 sport-categories — but NOTHING CERTIFIES:
-the pooled Bonferroni lower bound (+2.0%) is still under the +3% tax margin, every single cell is
-under the 30-event floor, and the durable (recurring-regime) supply is only ~2.6 events/day.
+the pooled Bonferroni lower bound (+2.0%, and it survives a within-category composition attack at
++1.8%) is still under the +3% tax margin, every cell is under the 30-event floor, the one
+"near-certifying" cell (soccer|band4|B) was REFUTED by the verify pass as a composition artifact,
+and the durable (recurring-regime) supply is only ~2.6 events/day.
 The binding constraint is unchanged and now precisely priced: ACCRUAL, led by MLB (~8 days to its
 floor). The relational layer was tested at frozen parameters and KILLED. [H3/H5: see below.]**
 
@@ -54,15 +56,23 @@ On the longshot-bearing `strict` stream: flat-$ **−$4,575** vs flat-shares **+
 haircut + 2% fee buffer). On favorite-only both are positive (+$2,280 / +$1,751) — the flat-$
 catastrophe is specifically a longshot-inclusion artifact; sizing rule 3 unchanged.
 
-### H2 Regime cells — **0 CERTIFIED; 2 near-misses; abstention adds NOTHING**
-Family = 6 counted cells (Bonferroni 6). No cell reaches the 30-event floor.
-- `soccer|band4|B` **+17.0%, LB +5.7%, p=0.0065, 14 ev** — only the floor fails; BUT 16/45 block-B
-  events are still World Cup: this cell largely dies with the tournament. Not a durable target.
-- `tennis|band5|A` +12.9%, LB +10.3%, p=0.0005, 16 ev — Wimbledon = expiring; cannot certify by rule.
-- `mlb` pooled: **+22.4%, LB +16.3%, 14 ev** — every MLB sub-cell point-positive (+11..+31%).
-  The prime recurring target: ~16 more events ≈ **8 days** at the measured 2.0 ev/day.
+### H2 Regime cells — **0 CERTIFIED; 1 REFUTED by verify, 1 halved; abstention adds NOTHING**
+Family = 6 counted cells (Bonferroni 6). No cell reaches the 30-event floor. The verify pass (A6,
+below) showed the per-cell reads MUST use a within-category blind baseline — the global band
+baseline inflates any single-sport, derivative-heavy cell:
+- `soccer|band4|B` — **REFUTED (composition artifact).** Headline +17.0%/LB+5.7%/p=0.0065 collapses
+  against the soccer-derivatives blind baseline (+9.08% in that cell): surplus → +9.5%,
+  **LB → −1.1%, cat-matched p=0.016** (fails the ≤0.01 gate). The elite_fresh_fav failure mode,
+  caught before it entered the record. (Also mostly WC — expiring anyway.)
+- `tennis|band5|A` — **WEAKENED, still real-but-expiring**: honest within-cat magnitude **+7.4%**
+  (half the +12.9% headline), LB +5.0%, cat-matched p=0.001, 16 ev — Wimbledon; cannot certify by rule.
+- `mlb` pooled: **+22.4%, LB +16.3%, 14 ev — survives the within-cat attack** (MLB blind baseline is
+  NEGATIVE, so composition deflates, not inflates, this cell). But the record is 17-0 over 5 days —
+  an extreme small sample. The prime recurring target: ~16 more events ≈ **8 days** at 2.0 ev/day.
 - **Abstention (frozen rule): NO LIFT.** Full LB 2.80% vs abstained 2.74%; positive days 7/7 both
   ways. It dropped mostly-positive thin cells (esports). Reliability is SUPPLY, confirmed again.
+- **Instrument lesson (structural):** `regime_cell_scoreboard.py` cells are honest only with
+  within-category band baselines; adopt that before the next re-run.
 
 ### H4 Relational layer — **KILLED at frozen parameters (honest negative)**
 m=20, β=1, K=5, primary top-50%; L_ij learned from `loose` (2.1–2.6k pairs, 95–98% pick coverage —
@@ -81,9 +91,9 @@ rank-weighted consensus on this record; re-test only after a genuinely larger mu
   between +0.4¢ (60s) and +1.7¢ (15-min drift read).
 - **Tax-adjusted LBs (using the conservative, drift-inflated 1.74¢):** pooled favorite +1.96% →
   **+0.23%** (gate 3 fails harder — the pooled cell needs both accrual AND the tax bound tightened);
-  `soccer|band4|B` +5.69% → **+3.96%** and `tennis|band5|A` +10.26% → **+8.53%** — both SURVIVE the
-  tax and still fail only the 30-event floor; mlb +16.27% → **+14.54%** (soccer-derived tax; no MLB
-  trajectory yet).
+  `soccer|band4|B` +5.69% → +3.96% and `tennis|band5|A` +10.26% → +8.53% survive the tax
+  arithmetically (but see verify pass: C3 is REFUTED on the within-category baseline regardless, and
+  C4 halves); mlb +16.27% → **+14.54%** (soccer-derived tax; no MLB trajectory yet).
 - **Directional claim REFUTED on this data:** no band gradient (1.72¢≈1.75¢), and mlb/esports taxes
   are *smaller/negative* (−1.12¢/−2.20¢ on strict) vs soccer +0.43¢ — the "sharp-market copyability
   wall" does not show up in the dense-capture tax at this coverage. (Seed's MLB ~3¢ tax came from the
@@ -91,7 +101,22 @@ rank-weighted consensus on this record; re-test only after a genuinely larger mu
 - **Coverage is the limiter:** favorite trajectory coverage 2.2% (7 signals, 0 MLB). The capture
   cadence on favorite must tighten before its tax is trustworthy.
 
-### Adversarial verify pass — [PENDING agent]
+### Adversarial verify pass — **run, and it changed the verdicts**
+(`scripts/verify_favconsensus.py`, `reports/verify_favconsensus.json` — independent SQL, clustering,
+banding, permutation null (fresh seed 987654321); no generation-code reuse.)
+- A1 re-derivation: every headline number reproduces to <0.1pp (incl. exact n_ev).
+- A2 grading: zero cross-strategy outcome conflicts; zero out-of-bounds entries; zero
+  resolved-before-detected.
+- A3 leave-one-out: no single event flips/halves C2 or C3; but C2 = 17-0 (14 ev/5 days), C3 = 36-6.
+- A4 superkey honesty: no over-/under-merge on the mlb & soccer cells (derivatives collapse within
+  match; distinct dates stay distinct).
+- A5 fresh null: C1 p=0.0005 (identical), C3 p=0.005 (~claimed).
+- **A6 within-category baseline — the kill shot**: pooled C1 survives (−2.6% only → +8.2%, LB +1.8%,
+  still p=0.0005 → **CONFIRMED, thin**); `soccer|band4|B` **REFUTED** (LB −1.1%, p=0.016);
+  `tennis|band5|A` halved to +7.4% (LB +5.0%, p=0.001 → WEAKENED); `mlb` **CONFIRMED artifact-free**
+  (its blind baseline is negative) but power-limited.
+Single-pass positives once again did not survive intact — the within-category null is now a standing
+requirement for any cell-level claim.
 
 ## What to accrue next (the specific closers)
 1. **MLB**: 16 more favorite super-events ≈ 8 days. If the +22% surplus holds at n=30 it would clear
