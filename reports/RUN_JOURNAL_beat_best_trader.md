@@ -296,3 +296,35 @@ BINDING CONSTRAINT: the accrual horizon — independent non-soccer regime persis
 NEXT (on wake): re-run forward_track.py weekly; watch STATUS move off INDETERMINATE-BY-POWER as
   esports/NFL(Sept)/NBA(Oct) regimes accrue; escalate to Tue ONLY on a hand-verified GO-CANDIDATE.
 REPORTS: reports/PREREG_FORWARD_TRACK_2026-07-06T062517Z.md, reports/forward_track.json, HANDOFF-HUMAN-REVIEW.md
+
+================================================================================
+CYCLE 7 — CONSOLIDATION: FREEZE THE STANDARD + NON-REGRESSION GUARD
+UTC 2026-07-06T21:20Z · read-only · nothing promoted · nothing armed · no Rust · DB read-only
+--------------------------------------------------------------------------------
+CHARTER (Tue): "get rid of all the noise, make sure we don't regress from this system, only iterate and
+  improve upon this one, make it our current standard and focus — it's our current best and it should be
+  real." Honesty paramount: the standard rests on a REPRODUCIBLE, audited number, not a screenshot.
+
+C1 — SCREENSHOT RECONCILIATION (data forensics). Tue's screenshot: 349 bets / +$2,008 / +6.9% turnover /
+  "+63% on ~$3.2k working bankroll" / 06-29..07-06 / an Edge/bet column. It does NOT reconcile with the
+  canonical honest_paper_ledger (favorite+elite_fresh_fav = 229 bets, +$497, +2.2% ROI). RESOLVED:
+  · WHAT IT MEASURED = the honest-P&L tracker's REALIZABLE-EDGE view (outcome vs the mid we observed while
+    OPEN = CLV, minus a ~1c execution haircut), POOLED at flat stake, over the FULL 06-29..07-06 window.
+    Reproduced today (398 resolved signals; the screenshot's 349 = an earlier snapshot, fewer resolved):
+    realizable entry (mid+1c) pooled = +$2,123 / +5.33% ROI-turnover; CLV-mid pooled = +$2,427 / +6.10%.
+    "+6.9% turnover" ≈ the event-clustered honest_roi (favorite +8.36%, elite_fresh_fav +3.29%).
+    "+63% on ~$3.2k working bankroll" = total realizable P&L ÷ PEAK working capital (avg 8.95h to resolve
+    → capital recycles ~2.7×/day; ~$1.85k avg, ~$3.2k peak). That is a capital-VELOCITY return, NOT
+    ROI-on-turnover.
+  · WHY ~4× THE LEDGER (+$497): (1) the ledger starts 07-01 and NEVER recorded the two front-loaded days —
+    06-29 alone = +$1,026 (World Cup), 06-30 = −$151, = +$875 missing; (2) the screenshot POOLS every
+    signal fire (398) vs the ledger's deduped/appended 229 unique bets; (3) CLV/realizable-entry basis is
+    more favorable than resolved fills. Realizable pooled by resolved-day: 06-29 +$1026, 06-30 −$151,
+    07-01 +$475, 07-02 +$932, 07-03 −$71, 07-04 +$68, 07-05 −$283, 07-06 +$129.
+  · HONEST OR OPTIMISTIC: the realizable-edge BASIS is a legitimate designed metric (CLV−haircut = the
+    edge we could realize). The +63% HEADLINE is OPTIMISTIC — half the profit is one un-repeatable World
+    Cup day, it's return-on-working-capital (velocity leverage) not edge-on-turnover, and it's best-case
+    pooled CLV fills. THE SINGLE REPRODUCIBLE BASELINE TO TRUST = resolved-P&L +2.2% (229 bets, +$497).
+    Report the realizable +5–8% ONLY when explicitly labeled CLV/realizable-edge.
+  VERDICT: fully reconciled. The +63% is not a bug and not a lie — it's an optimistic FRAMING (working-
+  bankroll velocity × front-loaded regime × CLV basis) of a real but small, decaying edge. Baseline = +2.2%.
