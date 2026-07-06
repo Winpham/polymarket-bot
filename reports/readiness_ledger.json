@@ -3,7 +3,7 @@
     {
       "gate": "edge_reality",
       "status": "INDETERMINATE",
-      "current": "coverage 0%, proxy \u03bb\u0302_lo 0.08",
+      "current": "coverage 2%, proxy \u03bb\u0302_lo 0.08",
       "threshold": "\u03bb\u0302_lo > 0.25 at \u226550% coverage",
       "needs": "deploy dense capture, accrue ~2\u20134 wk",
       "eta": "weeks"
@@ -19,7 +19,7 @@
     {
       "gate": "power",
       "status": "MET (caveat)",
-      "current": "141 events",
+      "current": "158 events",
       "threshold": "\u226530",
       "needs": "count OK; day-deflated SE on ~5 correlated days is the real limit (\u2282 persistence)",
       "eta": "none"
@@ -35,7 +35,7 @@
     {
       "gate": "copyability",
       "status": "MET",
-      "current": "favorite 69% survives, net +7.3%",
+      "current": "favorite 74% survives, net +7.7%",
       "threshold": "modeled realizable > 0",
       "needs": "\u2014",
       "eta": "none"
@@ -51,7 +51,7 @@
     {
       "gate": "operational",
       "status": "MET",
-      "current": "2258 trajectory rows",
+      "current": "4463 trajectory rows",
       "threshold": "dense capture writing + monitors live",
       "needs": "\u2014",
       "eta": "none"
@@ -67,7 +67,7 @@
     {
       "gate": "router_gate",
       "status": "PENDING",
-      "current": "2 sigs / 2 events / 1 regimes since prereg",
+      "current": "4 sigs / 4 events / 1 regimes since prereg",
       "threshold": "\u226530 events / LB>3% / selection_null p\u22640.01 / \u22652 regimes",
       "needs": "accrue proven_router fires past the prereg stamp",
       "eta": "weeks"
@@ -82,11 +82,163 @@
     },
     {
       "gate": "beats_best_trader",
-      "status": "NOT_MET",
-      "current": "best arm favorite LB -7.1% vs B_LB+3pp +6.4%",
-      "threshold": "B_LB +3.4% + 3pp",
-      "needs": "arm LB must clear the copyable-best floor +3pp",
+      "status": "INDETERMINATE-BY-POWER",
+      "current": "best arm favorite LB -4.6% vs B_LB+3pp -8.2% \u2014 B_LB uninformative (thin per-wallet power) and/or arm LB\u22640",
+      "threshold": "B_LB -11.2% + 3pp",
+      "needs": "need \u226530 tailable events/wallet-regime so B_LB is a real floor; accrue months",
       "eta": "months"
+    },
+    {
+      "gate": "router_vs_fleet",
+      "status": "NOT_MET",
+      "current": "fwd surplus -3.8% LB -16.7%, null p=0.6963036963036963",
+      "threshold": "surplus LB > 3% AND null p \u2264 0.01",
+      "needs": "router forward surplus is \u22480 / null-indistinguishable; accrue non-soccer regimes",
+      "eta": "months"
+    },
+    {
+      "gate": "router_vs_best",
+      "status": "INDETERMINATE-BY-POWER",
+      "current": "router raw -6.6% vs B_LB(overall) -11.2% \u2014 both negative, uninformative",
+      "threshold": "router LB > B_LB + 3pp, both meaningfully positive",
+      "needs": "B_LB uninformative: <30 tailable events/wallet-regime, effective_n\u22481-3 days; accrue months",
+      "eta": "months"
+    },
+    {
+      "gate": "fade_transfer",
+      "status": "NOT_MET",
+      "current": "1 soft cell(s), all = discovery cell (soccer/directional/b5); NO transfer",
+      "threshold": "\u22651 FDR-soft fade cell in a sport-regime NOT discovered on",
+      "needs": "band5 fade is soccer-confined (SOCCER-ARTIFACT); accrue non-soccer band5 population",
+      "eta": "months"
+    },
+    {
+      "gate": "mm_screen_refinement",
+      "status": "NOT_MET",
+      "current": "relaxed cohort-fwd -4.3% vs frozen -4.1% (relaxed < frozen); both NEGATIVE now",
+      "threshold": "relaxed \u2265 frozen on cohort fwd-return, forward-confirmed \u22651 more week",
+      "needs": "no-downside + recovers directional traders, but cohort return decayed negative; forward-confirm before any Rust change (Phase-1 STOP)",
+      "eta": "weeks"
+    },
+    {
+      "gate": "decay_diagnosis",
+      "status": "RECOVERABLE",
+      "current": "soccer copy-edge +10.7%->+3.7% (intact=True); ts artifact ruled out",
+      "threshold": "distinguish mix/composition vs genuine soccer-edge decay",
+      "needs": "soccer edge intact-but-unpowered; pooled decay = composition + thin reversion; route per-cell (do not pool soccer w/ never-copy cells)",
+      "eta": "weeks"
+    },
+    {
+      "gate": "topk_ensemble",
+      "status": "INDETERMINATE-BY-POWER",
+      "current": "k=3 mean\u0394 +6.3% vs fleet-avg, CI[-16.8%,+29.4%], random-k null p=0.1809095452273863",
+      "threshold": "k-ensemble mean\u0394 CI-lo > 0 AND random-k null p \u2264 0.01, \u22652 regimes",
+      "needs": "k\u22483 is the operator sweet spot (beats k=1 router AND fleet-avg on point est), but CI straddles 0 / null p not gate-clearing; accrue regimes",
+      "eta": "months"
+    },
+    {
+      "gate": "fade_persistence",
+      "status": "ARTIFACT",
+      "current": "early -3.3% vs late +4.9% (sign flips), within-soccer null p=0.25237381309345325",
+      "threshold": "fade positive in BOTH soccer halves, day-bootstrap CI>0, within-soccer null p\u22640.05",
+      "needs": "fade is a few-day artifact within soccer (not just non-transfer); do NOT forward-track; needs a genuinely recurring soft cell",
+      "eta": "months"
+    },
+    {
+      "gate": "dense_capture_coverage",
+      "status": "PENDING",
+      "current": "coverage +1.2% (signal_id join) -> +15.1% with market-key fix (13x); root cause = sibling-dedup crowd-out",
+      "threshold": "trajectory coverage \u2265 50% for a measured (non-proxy) \u03bb\u0302",
+      "needs": "apply read-side market-key join (paper-safe, DEFERRED gate-input swap) then accrue post-dense-start favorites toward 50%",
+      "eta": "weeks"
+    },
+    {
+      "gate": "reliability_shortlist",
+      "status": "BUILT",
+      "current": "4 gate-clearing wallets of 121 scored (66% positive at their price); ranked by Sortino",
+      "threshold": "gated on every axis (skill-null, cross-sport, both-halves, consistency)",
+      "needs": "sanity: 1/5 named specialists surface (rest MM-screened or miss skill-null) \u2014 gate is belief-blind, not reputation-driven",
+      "eta": "weeks"
+    },
+    {
+      "gate": "reliability_persistence",
+      "status": "GO",
+      "current": "reg_sortino rank rho +22.0% p_global 0.0069965017491254375 p_nstrata 0.005497251374312844 (confound-controlled null agrees)",
+      "threshold": "early-window reliability rank predicts late-window rank, matched null p\u22640.05",
+      "needs": "reliability RANK persists (survives Bonferroni + n-strata null); practical profit-arm marginal (p\u22480.044); split is within-wallet-temporal not calendar-forward",
+      "eta": "weeks"
+    },
+    {
+      "gate": "reliability_book",
+      "status": "RISK-REDUCTION-ONLY",
+      "current": "book maxDD +57.8% vs best-single +113.8% (halved, in+out sample); Sortino +67.8% < +85.3% (loses); selection-vs-random p=0.09295352323838081",
+      "threshold": "book beats best single reliable trader on risk-adjusted return (Sortino) OOS + null p\u22640.01",
+      "needs": "diversification HALVES drawdown (the risk axis) but does NOT beat best single on Sortino; copyable-positive at modeled entry but fill/lag-unvalidated; nothing promoted",
+      "eta": "months"
+    },
+    {
+      "gate": "real_follower_tax",
+      "status": "MEASURED (thin)",
+      "current": "real tax mkt-clustered +1.0% / pooled +1.3% vs MODELED +2.9%; coverage +8.0% (12174/152354 fills, 153 mkts)",
+      "threshold": "measured tax on \u226550% coverage, stable across \u22655 independent regimes",
+      "needs": "REAL tax < MODELED (partial modeling artifact) BUT ~8% coverage, ~2.3d capture, capture-burst-adjacent bias \u2014 INDETERMINATE-BY-POWER; DEFERRED live/Rust swap",
+      "eta": "weeks"
+    },
+    {
+      "gate": "realizable_edge_on_measured_tax",
+      "status": "NOT_MET",
+      "current": "refined OOS Calmar +12.6%(clust)/+15.7%(pool) still < best-single +26.3%; belief-blind p\u22480.1005/0.0999",
+      "threshold": "a play beats random book (p\u22640.05) AND best single on realizable Calmar at MEASURED tax",
+      "needs": "lighter measured tax lifts realizable Calmar ~15-50% but the best single trader ALSO improves and still dominates; selection-p invariant to tax level (~0.10). WALL CONFIRMED \u2014 forward accrual only; NO play forward-tracked (T4 skipped)",
+      "eta": "months"
+    },
+    {
+      "gate": "edge_reality_recovered",
+      "status": "INDETERMINATE",
+      "current": "market-key join recovers coverage +19.9% (vs 2% signal_id); \u03bb\u0302 +13.6% CI-lo +6.5% (<< 0.25 floor); CLV-null p=0.0",
+      "threshold": "\u03bb\u0302 CI-lo > 0.25 at \u226550% coverage",
+      "needs": "coverage 2%->20% (real recovery) but still <50% and \u03bb\u0302-lo far below floor \u2014 edge remains mostly FLB-bias; informational (DEFERRED default-swap of the GO gate input)",
+      "eta": "weeks"
+    },
+    {
+      "gate": "forward_play_A_tail",
+      "status": "INDETERMINATE-BY-POWER",
+      "current": "0 fwd events / 0 days / 0 non-soccer regimes; realizable Calmar n/a; first-binding=power_events",
+      "threshold": "clears every forward gate (power/Calmar/beats-best/selection_null/promotion/pilot/\u22652 non-soccer regimes/\u03bb\u0302\u22650.25) \u2192 GO-CANDIDATE (ESCALATE)",
+      "needs": "accrue >= 30 forward resolved events",
+      "eta": "weeks"
+    },
+    {
+      "gate": "forward_play_B_dabosshogg",
+      "status": "INDETERMINATE-BY-POWER",
+      "current": "0 fwd events / 0 days / 0 non-soccer regimes; realizable Calmar n/a; first-binding=power_events",
+      "threshold": "clears every forward gate (power/Calmar/beats-best/selection_null/promotion/pilot/\u22652 non-soccer regimes/\u03bb\u0302\u22650.25) \u2192 GO-CANDIDATE (ESCALATE)",
+      "needs": "accrue >= 30 forward resolved events",
+      "eta": "weeks"
+    },
+    {
+      "gate": "forward_play_C_book",
+      "status": "INDETERMINATE-BY-POWER",
+      "current": "0 fwd events / 0 days / 0 non-soccer regimes; realizable Calmar n/a; first-binding=power_events",
+      "threshold": "clears every forward gate (power/Calmar/beats-best/selection_null/promotion/pilot/\u22652 non-soccer regimes/\u03bb\u0302\u22650.25) \u2192 GO-CANDIDATE (ESCALATE)",
+      "needs": "accrue >= 30 forward resolved events",
+      "eta": "weeks"
+    },
+    {
+      "gate": "standard_champion",
+      "status": "STANDARD",
+      "current": "favorite surplus +8.0% (z 4.28, p 0.0, LB +4.9%); realizable +5.3%; resolved-P&L +2.2% over 229 bets",
+      "threshold": "the frozen standard (favorite-tilted consensus); challengers must beat it OOS + clear belief-blind",
+      "needs": "iterate only via standard_guard.py --challenger; adopt NOTHING that does not beat the champion",
+      "eta": "none"
+    },
+    {
+      "gate": "standard_regression",
+      "status": "HEALTHY",
+      "current": "belief-blind LB +4.9% vs floor +0.0% \u2014 belief-blind LB +4.92% > +0.00%, p_emp 0.0000, 158 ev",
+      "threshold": "champion belief-blind LB must stay > +0.0% (pre-registered)",
+      "needs": "none \u2014 standard holding; keep watching forward",
+      "eta": "none"
     }
   ],
   "verdict": {
@@ -105,26 +257,26 @@
     "why": "edge is expiring-carried (57% of edge mass) and recurring regimes are below the floor \u2014 not yet certifiable",
     "recurring_regimes": [
       {
-        "regime": "mlb|2026-06",
-        "n_clusters": 1,
-        "edge_lb": null,
-        "net_taker_fee2": 0.3312110597704412,
-        "net_positive": false,
-        "clears_cluster_floor": false
-      },
-      {
         "regime": "nba/cbb|2026-07",
         "n_clusters": 3,
         "edge_lb": 0.20232636862349596,
-        "net_taker_fee2": 0.27123544081831036,
+        "net_taker_fee2": 0.34499170416714064,
         "net_positive": true,
+        "clears_cluster_floor": false
+      },
+      {
+        "regime": "mlb|2026-06",
+        "n_clusters": 1,
+        "edge_lb": null,
+        "net_taker_fee2": 0.3177972744810461,
+        "net_positive": false,
         "clears_cluster_floor": false
       },
       {
         "regime": "mlb|2026-07",
         "n_clusters": 4,
         "edge_lb": 0.08086751099804187,
-        "net_taker_fee2": 0.1674373078157874,
+        "net_taker_fee2": 0.17337510140213516,
         "net_positive": true,
         "clears_cluster_floor": false
       },
@@ -132,7 +284,7 @@
         "regime": "nba/cbb|2026-06",
         "n_clusters": 1,
         "edge_lb": null,
-        "net_taker_fee2": -0.6762938701351288,
+        "net_taker_fee2": -0.6025376067862984,
         "net_positive": false,
         "clears_cluster_floor": false
       }

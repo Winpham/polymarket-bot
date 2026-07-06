@@ -1,0 +1,124 @@
+{
+  "meta": {
+    "min_half_events": 15,
+    "eps_sortino": 0.1,
+    "n_perm": 2000,
+    "n_boot": 2000,
+    "seed": 20260705,
+    "split": "per-wallet median event-time (leak-free)",
+    "n_pairs": 121,
+    "charter": "TRADER-RELIABILITY-PORTFOLIO-PLAN.md \u00a75"
+  },
+  "verdict": "GO",
+  "verdict_summary": {
+    "spearman": 0.21962471209863163,
+    "boot_ci95": [
+      0.033902152297127446,
+      0.3959882513559385
+    ],
+    "perm_p_global": 0.0069965017491254375,
+    "perm_p_nstrata": 0.005497251374312844,
+    "practical_late_positive": true,
+    "practical_beats_random_p": 0.04447776111944028
+  },
+  "rank_tests": {
+    "reg_sortino": {
+      "metric": "reg_sortino",
+      "spearman": 0.21962471209863163,
+      "boot_ci95": [
+        0.033902152297127446,
+        0.3959882513559385
+      ],
+      "perm_p_global": 0.0069965017491254375,
+      "perm_p_nstrata": 0.005497251374312844,
+      "n_pairs": 121
+    },
+    "cal_gap": {
+      "metric": "cal_gap",
+      "spearman": 0.2074447906787698,
+      "boot_ci95": [
+        0.019789467978059135,
+        0.38208737781843444
+      ],
+      "perm_p_global": 0.00849575212393803,
+      "perm_p_nstrata": 0.005497251374312844,
+      "n_pairs": 121
+    },
+    "pos_window_frac": {
+      "metric": "pos_window_frac",
+      "spearman": 0.2638798372548121,
+      "boot_ci95": [
+        0.07890842282973204,
+        0.4457045376685314
+      ],
+      "perm_p_global": 0.001999000499750125,
+      "perm_p_nstrata": 0.0004997501249375312,
+      "n_pairs": 121
+    }
+  },
+  "transition_matrix_regsortino": [
+    [
+      12,
+      12,
+      4,
+      3
+    ],
+    [
+      3,
+      8,
+      9,
+      10
+    ],
+    [
+      8,
+      6,
+      11,
+      5
+    ],
+    [
+      8,
+      4,
+      6,
+      12
+    ]
+  ],
+  "top_quartile_retention": 0.4,
+  "top_quartile_to_top_half": 0.6,
+  "bottom_quartile_retention": 0.3870967741935484,
+  "practical": {
+    "n_early_eligible": 44,
+    "n_selected": 12,
+    "selected_wallets": [
+      "0x3dfb153c197d4c19d3b31c1ecd2c7b6860eeabaf",
+      "0x42c99f38d2b951b0dc8e8bd5371fa80c9dd19623",
+      "0xd1ed12197b7dc22dede923727e9b714024dbd7cb",
+      "0x83255595ba1fadd2e734cb30a0fb8110301a19cc",
+      "0xf1528f12e645462c344799b62b1b421a6a4c64aa",
+      "0x65018f9fc473f6e920b8929a375d39c26a461220",
+      "0x9cb990f1862568a63d8601efeebe0304225c32f2",
+      "0xe9a6ed2e4d4ee8ce47cd47cac834746dc4cf627b",
+      "0x99e42eb9038705165b22f821e27659c1dc41e4c4",
+      "0x96a3a4d0f0a91074a43ce8dc39d1f092a717d944",
+      "0x5b4ec9c06b284ee52c41a761974d836992880232",
+      "0x92d8a88f0a9fef812bdf5628770d6a0ecee39762"
+    ],
+    "late_cal_gap_selected": 0.05188379643150376,
+    "late_cal_gap_random_mean": 0.01874318684673015,
+    "late_positive": true,
+    "beats_random_p": 0.04447776111944028,
+    "selected_usernames": [
+      "0x3DFb153c197D4C19D3B31c1ecD2c7B6860eeabAf-1722957908185",
+      "TRCM",
+      "curie",
+      "Mind.The.Gap",
+      "phonesculptor",
+      "cnyek",
+      "jtwyslljy",
+      "Oneger",
+      "acorp",
+      "master-wuji",
+      "ramadamaramadam",
+      "pfk.bgd"
+    ]
+  }
+}

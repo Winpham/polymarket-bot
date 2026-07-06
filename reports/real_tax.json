@@ -1,0 +1,560 @@
+{
+  "meta": {
+    "follower_tax_const": 0.013,
+    "decision_lag_s": 900,
+    "dense_start": "2026-07-03 20:00",
+    "guard": [
+      0.02,
+      0.98
+    ],
+    "band_spreads_modeled": {
+      "1": 0.0231,
+      "2": 0.01,
+      "3": 0.0278,
+      "4": 0.0079,
+      "5": 0.0106
+    },
+    "modeled_tax_by_band": {
+      "1": 0.0361,
+      "2": 0.023,
+      "3": 0.0408,
+      "4": 0.0209,
+      "5": 0.0236
+    },
+    "posture": "PAPER-ONLY, read-only, nothing promoted, no Rust",
+    "method": "REAL tax = earliest captured ASK on same market in [fill_ts, fill_ts+lag] minus trader fill price; market-key join (Cycle-2 fix), research-layer."
+  },
+  "overall": {
+    "n_fills": 152354,
+    "n_matched": 12174,
+    "coverage": 0.0799,
+    "n_markets": 153,
+    "real_tax_median": 0.01,
+    "real_tax_iqr": [
+      0.0,
+      0.01
+    ],
+    "real_tax_pooled_mean": 0.0134,
+    "real_tax_market_clustered_mean": 0.0102,
+    "modeled_tax": null,
+    "real_lt_modeled_median": null,
+    "real_lt_modeled_clustered": null,
+    "modeled_tax_fillwt": 0.0289
+  },
+  "by_band": {
+    "b1": {
+      "n_fills": 18408,
+      "n_matched": 1908,
+      "coverage": 0.1037,
+      "n_markets": 26,
+      "real_tax_median": 0.01,
+      "real_tax_iqr": [
+        0.001,
+        0.01
+      ],
+      "real_tax_pooled_mean": 0.0072,
+      "real_tax_market_clustered_mean": 0.0223,
+      "modeled_tax": 0.0361,
+      "real_lt_modeled_median": true,
+      "real_lt_modeled_clustered": true
+    },
+    "b2": {
+      "n_fills": 17284,
+      "n_matched": 947,
+      "coverage": 0.0548,
+      "n_markets": 29,
+      "real_tax_median": 0.0,
+      "real_tax_iqr": [
+        -0.01,
+        0.01
+      ],
+      "real_tax_pooled_mean": 0.0057,
+      "real_tax_market_clustered_mean": 0.0273,
+      "modeled_tax": 0.023,
+      "real_lt_modeled_median": true,
+      "real_lt_modeled_clustered": false
+    },
+    "b3": {
+      "n_fills": 44877,
+      "n_matched": 2735,
+      "coverage": 0.0609,
+      "n_markets": 45,
+      "real_tax_median": 0.01,
+      "real_tax_iqr": [
+        0.0,
+        0.01
+      ],
+      "real_tax_pooled_mean": 0.0116,
+      "real_tax_market_clustered_mean": 0.0259,
+      "modeled_tax": 0.0408,
+      "real_lt_modeled_median": true,
+      "real_lt_modeled_clustered": true
+    },
+    "b4": {
+      "n_fills": 30944,
+      "n_matched": 1973,
+      "coverage": 0.0638,
+      "n_markets": 44,
+      "real_tax_median": 0.01,
+      "real_tax_iqr": [
+        0.0092,
+        0.02
+      ],
+      "real_tax_pooled_mean": 0.0245,
+      "real_tax_market_clustered_mean": 0.0235,
+      "modeled_tax": 0.0209,
+      "real_lt_modeled_median": true,
+      "real_lt_modeled_clustered": false
+    },
+    "b5": {
+      "n_fills": 40841,
+      "n_matched": 4611,
+      "coverage": 0.1129,
+      "n_markets": 49,
+      "real_tax_median": 0.01,
+      "real_tax_iqr": [
+        0.002,
+        0.02
+      ],
+      "real_tax_pooled_mean": 0.0138,
+      "real_tax_market_clustered_mean": 0.0092,
+      "modeled_tax": 0.0236,
+      "real_lt_modeled_median": true,
+      "real_lt_modeled_clustered": true
+    }
+  },
+  "by_sport_band": {
+    "lol|b1": {
+      "sport": "lol",
+      "band": 1,
+      "n_fills": 104,
+      "n_matched": 93,
+      "coverage": 0.8942,
+      "n_markets": 1,
+      "real_tax_median": 0.0,
+      "real_tax_iqr": [
+        -0.0,
+        0.01
+      ],
+      "real_tax_pooled_mean": 0.0048,
+      "real_tax_market_clustered_mean": 0.0048,
+      "modeled_tax": 0.0361,
+      "real_lt_modeled_median": true,
+      "real_lt_modeled_clustered": true
+    },
+    "lol|b2": {
+      "sport": "lol",
+      "band": 2,
+      "n_fills": 7,
+      "n_matched": 7,
+      "coverage": 1.0,
+      "n_markets": 1,
+      "real_tax_median": 0.03,
+      "real_tax_iqr": [
+        0.021,
+        0.04
+      ],
+      "real_tax_pooled_mean": 0.0301,
+      "real_tax_market_clustered_mean": 0.0301,
+      "modeled_tax": 0.023,
+      "real_lt_modeled_median": false,
+      "real_lt_modeled_clustered": false
+    },
+    "lol|b3": {
+      "sport": "lol",
+      "band": 3,
+      "n_fills": 51,
+      "n_matched": 44,
+      "coverage": 0.8627,
+      "n_markets": 1,
+      "real_tax_median": -0.01,
+      "real_tax_iqr": [
+        -0.01,
+        0.01
+      ],
+      "real_tax_pooled_mean": 0.0011,
+      "real_tax_market_clustered_mean": 0.0011,
+      "modeled_tax": 0.0408,
+      "real_lt_modeled_median": true,
+      "real_lt_modeled_clustered": true
+    },
+    "lol|b4": {
+      "sport": "lol",
+      "band": 4,
+      "n_fills": 24,
+      "n_matched": 6,
+      "coverage": 0.25,
+      "n_markets": 1,
+      "real_tax_median": 0.125,
+      "real_tax_iqr": [
+        0.12,
+        0.15
+      ],
+      "real_tax_pooled_mean": 0.14,
+      "real_tax_market_clustered_mean": 0.14,
+      "modeled_tax": 0.0209,
+      "real_lt_modeled_median": false,
+      "real_lt_modeled_clustered": false
+    },
+    "lol|b5": {
+      "sport": "lol",
+      "band": 5,
+      "n_fills": 598,
+      "n_matched": 252,
+      "coverage": 0.4214,
+      "n_markets": 1,
+      "real_tax_median": 0.03,
+      "real_tax_iqr": [
+        0.01,
+        0.05
+      ],
+      "real_tax_pooled_mean": 0.033,
+      "real_tax_market_clustered_mean": 0.033,
+      "modeled_tax": 0.0236,
+      "real_lt_modeled_median": false,
+      "real_lt_modeled_clustered": false
+    },
+    "mlb|b1": {
+      "sport": "mlb",
+      "band": 1,
+      "n_fills": 60,
+      "n_matched": 4,
+      "coverage": 0.0667,
+      "n_markets": 1,
+      "real_tax_median": 0.005,
+      "real_tax_iqr": [
+        0.0,
+        0.02
+      ],
+      "real_tax_pooled_mean": 0.0025,
+      "real_tax_market_clustered_mean": 0.0025,
+      "modeled_tax": 0.0361,
+      "real_lt_modeled_median": true,
+      "real_lt_modeled_clustered": true
+    },
+    "mlb|b2": {
+      "sport": "mlb",
+      "band": 2,
+      "n_fills": 357,
+      "n_matched": 59,
+      "coverage": 0.1653,
+      "n_markets": 6,
+      "real_tax_median": 0.0,
+      "real_tax_iqr": [
+        -0.01,
+        0.01
+      ],
+      "real_tax_pooled_mean": 0.0036,
+      "real_tax_market_clustered_mean": 0.0023,
+      "modeled_tax": 0.023,
+      "real_lt_modeled_median": true,
+      "real_lt_modeled_clustered": true
+    },
+    "mlb|b3": {
+      "sport": "mlb",
+      "band": 3,
+      "n_fills": 1755,
+      "n_matched": 387,
+      "coverage": 0.2205,
+      "n_markets": 16,
+      "real_tax_median": 0.01,
+      "real_tax_iqr": [
+        0.0,
+        0.02
+      ],
+      "real_tax_pooled_mean": 0.0159,
+      "real_tax_market_clustered_mean": 0.0325,
+      "modeled_tax": 0.0408,
+      "real_lt_modeled_median": true,
+      "real_lt_modeled_clustered": true
+    },
+    "mlb|b4": {
+      "sport": "mlb",
+      "band": 4,
+      "n_fills": 1204,
+      "n_matched": 162,
+      "coverage": 0.1346,
+      "n_markets": 8,
+      "real_tax_median": 0.01,
+      "real_tax_iqr": [
+        0.003,
+        0.02
+      ],
+      "real_tax_pooled_mean": 0.0078,
+      "real_tax_market_clustered_mean": 0.0094,
+      "modeled_tax": 0.0209,
+      "real_lt_modeled_median": true,
+      "real_lt_modeled_clustered": true
+    },
+    "mlb|b5": {
+      "sport": "mlb",
+      "band": 5,
+      "n_fills": 642,
+      "n_matched": 0,
+      "coverage": 0.0,
+      "n_markets": 0,
+      "real_tax_median": null,
+      "real_tax_iqr": [
+        null,
+        null
+      ],
+      "real_tax_pooled_mean": null,
+      "real_tax_market_clustered_mean": null,
+      "modeled_tax": 0.0236,
+      "real_lt_modeled_median": null,
+      "real_lt_modeled_clustered": null
+    },
+    "other|b1": {
+      "sport": "other",
+      "band": 1,
+      "n_fills": 10,
+      "n_matched": 0,
+      "coverage": 0.0,
+      "n_markets": 0,
+      "real_tax_median": null,
+      "real_tax_iqr": [
+        null,
+        null
+      ],
+      "real_tax_pooled_mean": null,
+      "real_tax_market_clustered_mean": null,
+      "modeled_tax": 0.0361,
+      "real_lt_modeled_median": null,
+      "real_lt_modeled_clustered": null
+    },
+    "other|b2": {
+      "sport": "other",
+      "band": 2,
+      "n_fills": 4,
+      "n_matched": 0,
+      "coverage": 0.0,
+      "n_markets": 0,
+      "real_tax_median": null,
+      "real_tax_iqr": [
+        null,
+        null
+      ],
+      "real_tax_pooled_mean": null,
+      "real_tax_market_clustered_mean": null,
+      "modeled_tax": 0.023,
+      "real_lt_modeled_median": null,
+      "real_lt_modeled_clustered": null
+    },
+    "other|b4": {
+      "sport": "other",
+      "band": 4,
+      "n_fills": 32,
+      "n_matched": 2,
+      "coverage": 0.0625,
+      "n_markets": 1,
+      "real_tax_median": 0.005,
+      "real_tax_iqr": [
+        0.0,
+        0.01
+      ],
+      "real_tax_pooled_mean": 0.005,
+      "real_tax_market_clustered_mean": 0.005,
+      "modeled_tax": 0.0209,
+      "real_lt_modeled_median": true,
+      "real_lt_modeled_clustered": true
+    },
+    "other|b5": {
+      "sport": "other",
+      "band": 5,
+      "n_fills": 6,
+      "n_matched": 0,
+      "coverage": 0.0,
+      "n_markets": 0,
+      "real_tax_median": null,
+      "real_tax_iqr": [
+        null,
+        null
+      ],
+      "real_tax_pooled_mean": null,
+      "real_tax_market_clustered_mean": null,
+      "modeled_tax": 0.0236,
+      "real_lt_modeled_median": null,
+      "real_lt_modeled_clustered": null
+    },
+    "soccer|b1": {
+      "sport": "soccer",
+      "band": 1,
+      "n_fills": 17942,
+      "n_matched": 1811,
+      "coverage": 0.1009,
+      "n_markets": 24,
+      "real_tax_median": 0.01,
+      "real_tax_iqr": [
+        0.01,
+        0.01
+      ],
+      "real_tax_pooled_mean": 0.0074,
+      "real_tax_market_clustered_mean": 0.0239,
+      "modeled_tax": 0.0361,
+      "real_lt_modeled_median": true,
+      "real_lt_modeled_clustered": true
+    },
+    "soccer|b2": {
+      "sport": "soccer",
+      "band": 2,
+      "n_fills": 15466,
+      "n_matched": 845,
+      "coverage": 0.0546,
+      "n_markets": 21,
+      "real_tax_median": 0.0,
+      "real_tax_iqr": [
+        -0.01,
+        0.01
+      ],
+      "real_tax_pooled_mean": 0.0057,
+      "real_tax_market_clustered_mean": 0.0354,
+      "modeled_tax": 0.023,
+      "real_lt_modeled_median": true,
+      "real_lt_modeled_clustered": false
+    },
+    "soccer|b3": {
+      "sport": "soccer",
+      "band": 3,
+      "n_fills": 41330,
+      "n_matched": 2248,
+      "coverage": 0.0544,
+      "n_markets": 23,
+      "real_tax_median": 0.01,
+      "real_tax_iqr": [
+        0.0,
+        0.01
+      ],
+      "real_tax_pooled_mean": 0.0105,
+      "real_tax_market_clustered_mean": 0.0234,
+      "modeled_tax": 0.0408,
+      "real_lt_modeled_median": true,
+      "real_lt_modeled_clustered": true
+    },
+    "soccer|b4": {
+      "sport": "soccer",
+      "band": 4,
+      "n_fills": 27394,
+      "n_matched": 1643,
+      "coverage": 0.06,
+      "n_markets": 28,
+      "real_tax_median": 0.01,
+      "real_tax_iqr": [
+        0.01,
+        0.01
+      ],
+      "real_tax_pooled_mean": 0.0261,
+      "real_tax_market_clustered_mean": 0.0266,
+      "modeled_tax": 0.0209,
+      "real_lt_modeled_median": true,
+      "real_lt_modeled_clustered": false
+    },
+    "soccer|b5": {
+      "sport": "soccer",
+      "band": 5,
+      "n_fills": 38581,
+      "n_matched": 4252,
+      "coverage": 0.1102,
+      "n_markets": 47,
+      "real_tax_median": 0.01,
+      "real_tax_iqr": [
+        0.0012,
+        0.014
+      ],
+      "real_tax_pooled_mean": 0.0126,
+      "real_tax_market_clustered_mean": 0.0085,
+      "modeled_tax": 0.0236,
+      "real_lt_modeled_median": true,
+      "real_lt_modeled_clustered": true
+    },
+    "tennis|b1": {
+      "sport": "tennis",
+      "band": 1,
+      "n_fills": 292,
+      "n_matched": 0,
+      "coverage": 0.0,
+      "n_markets": 0,
+      "real_tax_median": null,
+      "real_tax_iqr": [
+        null,
+        null
+      ],
+      "real_tax_pooled_mean": null,
+      "real_tax_market_clustered_mean": null,
+      "modeled_tax": 0.0361,
+      "real_lt_modeled_median": null,
+      "real_lt_modeled_clustered": null
+    },
+    "tennis|b2": {
+      "sport": "tennis",
+      "band": 2,
+      "n_fills": 1450,
+      "n_matched": 36,
+      "coverage": 0.0248,
+      "n_markets": 1,
+      "real_tax_median": 0.0,
+      "real_tax_iqr": [
+        0.0,
+        0.01
+      ],
+      "real_tax_pooled_mean": 0.0044,
+      "real_tax_market_clustered_mean": 0.0044,
+      "modeled_tax": 0.023,
+      "real_lt_modeled_median": true,
+      "real_lt_modeled_clustered": true
+    },
+    "tennis|b3": {
+      "sport": "tennis",
+      "band": 3,
+      "n_fills": 1741,
+      "n_matched": 56,
+      "coverage": 0.0322,
+      "n_markets": 5,
+      "real_tax_median": 0.035,
+      "real_tax_iqr": [
+        0.01,
+        0.06
+      ],
+      "real_tax_pooled_mean": 0.0356,
+      "real_tax_market_clustered_mean": 0.0208,
+      "modeled_tax": 0.0408,
+      "real_lt_modeled_median": true,
+      "real_lt_modeled_clustered": true
+    },
+    "tennis|b4": {
+      "sport": "tennis",
+      "band": 4,
+      "n_fills": 2290,
+      "n_matched": 160,
+      "coverage": 0.0699,
+      "n_markets": 6,
+      "real_tax_median": 0.012,
+      "real_tax_iqr": [
+        0.0,
+        0.04
+      ],
+      "real_tax_pooled_mean": 0.0214,
+      "real_tax_market_clustered_mean": 0.0116,
+      "modeled_tax": 0.0209,
+      "real_lt_modeled_median": true,
+      "real_lt_modeled_clustered": true
+    },
+    "tennis|b5": {
+      "sport": "tennis",
+      "band": 5,
+      "n_fills": 1014,
+      "n_matched": 107,
+      "coverage": 0.1055,
+      "n_markets": 1,
+      "real_tax_median": 0.01,
+      "real_tax_iqr": [
+        0.01,
+        0.03
+      ],
+      "real_tax_pooled_mean": 0.0164,
+      "real_tax_market_clustered_mean": 0.0164,
+      "modeled_tax": 0.0236,
+      "real_lt_modeled_median": true,
+      "real_lt_modeled_clustered": true
+    }
+  }
+}

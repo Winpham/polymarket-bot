@@ -92,6 +92,27 @@ WHERE t.mid IS NOT NULL
   )
 """.format(lo=GUARD_LO, hi=GUARD_HI)
 
+# Cycle-5 T1 — MARKET-KEY join (Cycle-2 dense-capture fix, read-side): the CLV close is a MARKET
+# property, so a sibling-anchored trajectory on the SAME (condition_id,outcome_index) is a valid
+# close for the favorite that DISTINCT-ON crowded out. For each resolved signal, take the latest
+# non-degenerate mid from ANY signal sharing the market, at/before that signal's own resolved_at.
+# Recovers the sibling-keyed coverage clv_lambda's signal_id join misses (1.2% -> ~15% on favorites).
+MARKET_KEY_TRAJ_SQL = """
+WITH cap AS (
+  SELECT s.condition_id, s.outcome_index, t.ts, t.mid
+  FROM signal_price_trajectory t JOIN consensus_signals s ON s.id = t.signal_id
+  WHERE t.mid IS NOT NULL AND t.mid BETWEEN {lo} AND {hi})
+SELECT f.id AS signal_id, (
+  SELECT c.mid FROM cap c
+  WHERE c.condition_id = f.condition_id AND c.outcome_index = f.outcome_index
+    AND (f.resolved_at IS NULL OR c.ts <= f.resolved_at)
+  ORDER BY c.ts DESC LIMIT 1) AS mid
+FROM consensus_signals f
+WHERE f.resolved AND f.initial_mean_price IS NOT NULL
+  AND EXISTS (SELECT 1 FROM cap c WHERE c.condition_id = f.condition_id
+              AND c.outcome_index = f.outcome_index)
+""".format(lo=GUARD_LO, hi=GUARD_HI)
+
 
 def q(sql):
     out = subprocess.run(PG + ["-f", "-"], input=sql, capture_output=True, text=True)
@@ -108,9 +129,10 @@ def band(p):  # mirror of width_bucket(p,0,1,5)
     return int(p * 5.0) + 1
 
 
-def fetch():
+def fetch(market_key=False):
     sig = q(SIG_SQL)
-    traj = {r["signal_id"]: float(r["mid"]) for r in q(TRAJ_SQL)}
+    traj_sql = MARKET_KEY_TRAJ_SQL if market_key else TRAJ_SQL
+    traj = {r["signal_id"]: float(r["mid"]) for r in q(traj_sql) if r["mid"] not in (None, "")}
     rows = []
     for r in sig:
         entry = float(r["entry"])
@@ -190,8 +212,8 @@ def selection_null(picks_meta, blind_cells, rng, n_perm):
     return draws
 
 
-def measure(strategy, draws, seed):
-    rows = fetch()
+def measure(strategy, draws, seed, market_key=False):
+    rows = fetch(market_key=market_key)
     rng = random.Random(seed)
 
     # blind CLV universe for the selection-matched null
@@ -268,7 +290,8 @@ def measure(strategy, draws, seed):
     lam_lo, lam_hi = block_bootstrap_ci(events, lam_of, rng, n=draws)
 
     return {
-        "strategy": strategy, "n_total": n_total, "n_events": n_ev,
+        "strategy": strategy, "join": "market_key" if market_key else "signal_id",
+        "n_total": n_total, "n_events": n_ev,
         "n_traj": n_traj, "n_fallback": n_fallback, "n_unusable": n_unusable,
         "trajectory_coverage": coverage, "usable_frac": usable_frac,
         "mean_clv": mean_clv, "clv_ci": [clv_lo, clv_hi], "clv_z_approx": clv_z,
@@ -372,16 +395,20 @@ def main():
     ap.add_argument("--draws", type=int, default=DEFAULT_DRAWS)
     ap.add_argument("--seed", type=int, default=DEFAULT_SEED)
     ap.add_argument("--selftest", action="store_true")
+    ap.add_argument("--market-key-join", action="store_true",
+                    help="Cycle-5 T1: join trajectory by (condition_id,outcome_index) not signal_id "
+                         "(recovers sibling-crowded coverage). DEFERRED as default (changes a gate input).")
     args = ap.parse_args()
 
     if args.selftest:
         sys.exit(selftest())
 
-    res = measure(args.strategy, args.draws, args.seed)
+    res = measure(args.strategy, args.draws, args.seed, market_key=args.market_key_join)
     print_report(res)
     res["verdict"] = verdict(res)
     os.makedirs(REPORT_DIR, exist_ok=True)
-    path = os.path.join(REPORT_DIR, "clv_lambda.json")
+    suffix = "_marketkey" if args.market_key_join else ""
+    path = os.path.join(REPORT_DIR, f"clv_lambda{suffix}.json")
     with open(path, "w") as f:
         json.dump(res, f, indent=2)
     print(f"\nwrote {path}")

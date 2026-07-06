@@ -1,0 +1,452 @@
+{
+  "meta": {
+    "objective": "realizable(OUR-price) CALMAR = mean_day/maxDD",
+    "siblings": [
+      "MAR=total_pnl/maxDD",
+      "ret_cvar5=mean_day/|CVaR5|"
+    ],
+    "cap": 0.4,
+    "seed": 20260706,
+    "n_null": 2000,
+    "tax_mode": "real_clustered",
+    "tax_by_band": {
+      "1": 0.0223,
+      "2": 0.0273,
+      "3": 0.0259,
+      "4": 0.0235,
+      "5": 0.0092
+    },
+    "posture": "PAPER-ONLY, nothing promoted, no Rust, DB read-only",
+    "cycle3_frozen_anchor": "reports/reliability_portfolio.json"
+  },
+  "O0_reframe": {
+    "their_price": {
+      "book_calmar": 0.1668,
+      "best_single_calmar": 0.1216
+    },
+    "oos_their": {
+      "book_calmar": 0.0795,
+      "best_single_calmar": 0.0629
+    },
+    "our_price": {
+      "book_calmar": 0.0443
+    },
+    "reframe_confirmed": true,
+    "tax_collapse": {
+      "their": 0.1668,
+      "our": 0.0443,
+      "gap": 0.1225
+    }
+  },
+  "baseline": {
+    "shortlist": [
+      "master-wuji",
+      "djokowin",
+      "zhuz632",
+      "acorp"
+    ],
+    "n": 4,
+    "oos_cut": "2026-05-26",
+    "pool_size": 135
+  },
+  "O1_weighting": {
+    "best_single_our_IS": {
+      "name": "master-wuji",
+      "n_days": 32,
+      "mean_day": 0.1063,
+      "total_pnl": 3.4001,
+      "max_drawdown": 0.8869,
+      "calmar": 0.1198,
+      "mar": 3.8338,
+      "ret_cvar5": 0.1962,
+      "sortino": 0.486,
+      "pos_window_frac": 0.7188
+    },
+    "best_single_our_OOS": {
+      "name": "master-wuji",
+      "n_days": 20,
+      "mean_day": 0.1318,
+      "total_pnl": 2.637,
+      "max_drawdown": 0.5568,
+      "calmar": 0.2368,
+      "mar": 4.7358,
+      "ret_cvar5": 0.2368,
+      "sortino": 0.6983,
+      "pos_window_frac": 0.75
+    },
+    "table": [
+      {
+        "method": "equal",
+        "their_calmar_IS": 0.1731,
+        "our_calmar_IS": 0.0652,
+        "our_maxdd_IS": 0.9911,
+        "our_calmar_OOS": 0.0374,
+        "ret_giveup_vs_best": 0.0416,
+        "dd_reduction_vs_best": -0.1042,
+        "dd_red_per_ret_sacrificed": -2.504
+      },
+      {
+        "method": "inv_dd",
+        "their_calmar_IS": 0.1734,
+        "our_calmar_IS": 0.0694,
+        "our_maxdd_IS": 0.9413,
+        "our_calmar_OOS": 0.0164,
+        "ret_giveup_vs_best": 0.0409,
+        "dd_reduction_vs_best": -0.0544,
+        "dd_red_per_ret_sacrificed": -1.331
+      },
+      {
+        "method": "risk_parity",
+        "their_calmar_IS": 0.1731,
+        "our_calmar_IS": 0.0652,
+        "our_maxdd_IS": 0.9911,
+        "our_calmar_OOS": 0.0374,
+        "ret_giveup_vs_best": 0.0416,
+        "dd_reduction_vs_best": -0.1042,
+        "dd_red_per_ret_sacrificed": -2.504
+      },
+      {
+        "method": "hrp",
+        "their_calmar_IS": 0.1731,
+        "our_calmar_IS": 0.0652,
+        "our_maxdd_IS": 0.9911,
+        "our_calmar_OOS": 0.031,
+        "ret_giveup_vs_best": 0.0416,
+        "dd_reduction_vs_best": -0.1042,
+        "dd_red_per_ret_sacrificed": -2.504
+      },
+      {
+        "method": "max_calmar",
+        "their_calmar_IS": 0.1713,
+        "our_calmar_IS": 0.1067,
+        "our_maxdd_IS": 0.74,
+        "our_calmar_OOS": 0.0069,
+        "ret_giveup_vs_best": 0.0273,
+        "dd_reduction_vs_best": 0.1469,
+        "dd_red_per_ret_sacrificed": 5.386
+      }
+    ],
+    "winner_by_realizable_OOS_calmar": "equal",
+    "detail": {
+      "equal": {
+        "is_our": {
+          "n_days": 56,
+          "mean_day": 0.0646,
+          "total_pnl": 3.6185,
+          "max_drawdown": 0.9911,
+          "calmar": 0.0652,
+          "mar": 3.6509,
+          "ret_cvar5": 0.1322,
+          "sortino": 0.4108,
+          "pos_window_frac": 0.5893
+        },
+        "oos_our": {
+          "n_days": 26,
+          "mean_day": 0.0294,
+          "total_pnl": 0.7643,
+          "max_drawdown": 0.7863,
+          "calmar": 0.0374,
+          "mar": 0.9721,
+          "ret_cvar5": 0.0528,
+          "sortino": 0.1633,
+          "pos_window_frac": 0.5
+        },
+        "weights": {
+          "0x96a3a4d0f0a91074a43ce8dc39d1f092a717d944": 0.25,
+          "0x1420b746dea30e05b387ab880f9d3ec5bc579daa": 0.25,
+          "0xa6d188fb70c2e2e9ad411c42c02379ed3020286a": 0.25,
+          "0x99e42eb9038705165b22f821e27659c1dc41e4c4": 0.25
+        }
+      },
+      "inv_dd": {
+        "is_our": {
+          "n_days": 56,
+          "mean_day": 0.0654,
+          "total_pnl": 3.6608,
+          "max_drawdown": 0.9413,
+          "calmar": 0.0694,
+          "mar": 3.8892,
+          "ret_cvar5": 0.1328,
+          "sortino": 0.4173,
+          "pos_window_frac": 0.5893
+        },
+        "oos_our": {
+          "n_days": 26,
+          "mean_day": 0.0157,
+          "total_pnl": 0.4082,
+          "max_drawdown": 0.9557,
+          "calmar": 0.0164,
+          "mar": 0.4271,
+          "ret_cvar5": 0.0282,
+          "sortino": 0.081,
+          "pos_window_frac": 0.5385
+        },
+        "weights": {
+          "0x96a3a4d0f0a91074a43ce8dc39d1f092a717d944": 0.2391,
+          "0x1420b746dea30e05b387ab880f9d3ec5bc579daa": 0.1966,
+          "0xa6d188fb70c2e2e9ad411c42c02379ed3020286a": 0.2693,
+          "0x99e42eb9038705165b22f821e27659c1dc41e4c4": 0.295
+        }
+      },
+      "risk_parity": {
+        "is_our": {
+          "n_days": 56,
+          "mean_day": 0.0646,
+          "total_pnl": 3.6185,
+          "max_drawdown": 0.9911,
+          "calmar": 0.0652,
+          "mar": 3.6509,
+          "ret_cvar5": 0.1322,
+          "sortino": 0.4108,
+          "pos_window_frac": 0.5893
+        },
+        "oos_our": {
+          "n_days": 26,
+          "mean_day": 0.0294,
+          "total_pnl": 0.7643,
+          "max_drawdown": 0.7863,
+          "calmar": 0.0374,
+          "mar": 0.9721,
+          "ret_cvar5": 0.0528,
+          "sortino": 0.1633,
+          "pos_window_frac": 0.5
+        },
+        "weights": {
+          "0x1420b746dea30e05b387ab880f9d3ec5bc579daa": 0.25,
+          "0x96a3a4d0f0a91074a43ce8dc39d1f092a717d944": 0.25,
+          "0x99e42eb9038705165b22f821e27659c1dc41e4c4": 0.25,
+          "0xa6d188fb70c2e2e9ad411c42c02379ed3020286a": 0.25
+        }
+      },
+      "hrp": {
+        "is_our": {
+          "n_days": 56,
+          "mean_day": 0.0646,
+          "total_pnl": 3.6185,
+          "max_drawdown": 0.9911,
+          "calmar": 0.0652,
+          "mar": 3.6509,
+          "ret_cvar5": 0.1322,
+          "sortino": 0.4108,
+          "pos_window_frac": 0.5893
+        },
+        "oos_our": {
+          "n_days": 26,
+          "mean_day": 0.026,
+          "total_pnl": 0.6767,
+          "max_drawdown": 0.8396,
+          "calmar": 0.031,
+          "mar": 0.806,
+          "ret_cvar5": 0.0467,
+          "sortino": 0.1426,
+          "pos_window_frac": 0.5385
+        },
+        "weights": {
+          "0x1420b746dea30e05b387ab880f9d3ec5bc579daa": 0.25,
+          "0x96a3a4d0f0a91074a43ce8dc39d1f092a717d944": 0.25,
+          "0x99e42eb9038705165b22f821e27659c1dc41e4c4": 0.25,
+          "0xa6d188fb70c2e2e9ad411c42c02379ed3020286a": 0.25
+        }
+      },
+      "max_calmar": {
+        "is_our": {
+          "n_days": 56,
+          "mean_day": 0.079,
+          "total_pnl": 4.423,
+          "max_drawdown": 0.74,
+          "calmar": 0.1067,
+          "mar": 5.9771,
+          "ret_cvar5": 0.1508,
+          "sortino": 0.4344,
+          "pos_window_frac": 0.6429
+        },
+        "oos_our": {
+          "n_days": 26,
+          "mean_day": 0.0072,
+          "total_pnl": 0.1883,
+          "max_drawdown": 1.0563,
+          "calmar": 0.0069,
+          "mar": 0.1782,
+          "ret_cvar5": 0.013,
+          "sortino": 0.0351,
+          "pos_window_frac": 0.5385
+        },
+        "weights": {
+          "0x1420b746dea30e05b387ab880f9d3ec5bc579daa": 0.0082,
+          "0x96a3a4d0f0a91074a43ce8dc39d1f092a717d944": 0.4,
+          "0x99e42eb9038705165b22f821e27659c1dc41e4c4": 0.2931,
+          "0xa6d188fb70c2e2e9ad411c42c02379ed3020286a": 0.2986
+        }
+      }
+    }
+  },
+  "O2_widen": {
+    "prereg": [
+      "P1: band 0.45-0.90 -> 0.10-0.97 (admit longshot+other), all else frozen, MM/bot ON",
+      "P2: cross_sport floor 2 -> 1 on frozen band 0.45-0.90"
+    ],
+    "bonferroni_note": "2 relaxations x 5 weightings tested this cycle; adjust any single p accordingly",
+    "P1_widened": {
+      "pool_size": 168,
+      "shortlist_n": 5,
+      "shortlist": [
+        "TheVeryGoodCow",
+        "Villson",
+        "zhuz632",
+        "master-wuji",
+        "djokowin"
+      ]
+    },
+    "P2_cross_sport_relaxed": {
+      "shortlist_n": 7,
+      "shortlist": [
+        "cnyek",
+        "RISK-IS-NEVER-OK",
+        "master-wuji",
+        "djokowin",
+        "zhuz632",
+        "Oneger",
+        "acorp"
+      ]
+    },
+    "curve_widened_band": [
+      {
+        "n_names": 1,
+        "names_added": "TheVeryGoodCow",
+        "our_calmar_IS": 0.3376,
+        "our_maxdd_IS": 0.2402,
+        "our_calmar_OOS": null,
+        "our_meanday_IS": 0.0811
+      },
+      {
+        "n_names": 2,
+        "names_added": "Villson",
+        "our_calmar_IS": 0.0975,
+        "our_maxdd_IS": 0.4275,
+        "our_calmar_OOS": null,
+        "our_meanday_IS": 0.0417
+      },
+      {
+        "n_names": 3,
+        "names_added": "zhuz632",
+        "our_calmar_IS": 0.0496,
+        "our_maxdd_IS": 0.9169,
+        "our_calmar_OOS": null,
+        "our_meanday_IS": 0.0455
+      },
+      {
+        "n_names": 4,
+        "names_added": "master-wuji",
+        "our_calmar_IS": 0.0094,
+        "our_maxdd_IS": 1.7267,
+        "our_calmar_OOS": 0.2575,
+        "our_meanday_IS": 0.0162
+      },
+      {
+        "n_names": 5,
+        "names_added": "djokowin",
+        "our_calmar_IS": 0.026,
+        "our_maxdd_IS": 1.3143,
+        "our_calmar_OOS": 0.1256,
+        "our_meanday_IS": 0.0342
+      }
+    ],
+    "peak_OOS": {
+      "n_names": 4,
+      "names_added": "master-wuji",
+      "our_calmar_IS": 0.0094,
+      "our_maxdd_IS": 1.7267,
+      "our_calmar_OOS": 0.2575,
+      "our_meanday_IS": 0.0162
+    },
+    "peak_IS": {
+      "n_names": 1,
+      "names_added": "TheVeryGoodCow",
+      "our_calmar_IS": 0.3376,
+      "our_maxdd_IS": 0.2402,
+      "our_calmar_OOS": null,
+      "our_meanday_IS": 0.0811
+    },
+    "widening_helps": true,
+    "baseline_n4_oos_calmar": 0.0374
+  },
+  "O3_tax_aware": {
+    "per_name": [
+      {
+        "name": "TheVeryGoodCow",
+        "their_calmar": 0.7881,
+        "our_calmar": 0.3376,
+        "tax_meanday": 0.0347,
+        "our_meanday": 0.0811
+      },
+      {
+        "name": "Villson",
+        "their_calmar": 0.245,
+        "our_calmar": 0.1272,
+        "tax_meanday": 0.0338,
+        "our_meanday": 0.0544
+      },
+      {
+        "name": "zhuz632",
+        "their_calmar": 0.0973,
+        "our_calmar": 0.0497,
+        "tax_meanday": 0.0358,
+        "our_meanday": 0.0523
+      },
+      {
+        "name": "master-wuji",
+        "their_calmar": 0.0792,
+        "our_calmar": 0.0365,
+        "tax_meanday": 0.0349,
+        "our_meanday": 0.0624
+      },
+      {
+        "name": "djokowin",
+        "their_calmar": 0.0361,
+        "our_calmar": 0.0084,
+        "tax_meanday": 0.0333,
+        "our_meanday": 0.0131
+      }
+    ],
+    "names_dropped_tax_calmar_le0": [],
+    "filter_drop_book_before_our_calmar_IS": 0.026,
+    "filter_drop_book_after_our_calmar_IS": 0.026,
+    "cycle3_collapse": {
+      "their": 0.1668,
+      "our": 0.0443,
+      "gap": 0.1225
+    },
+    "tax_aware_weighting_max_calmar_our_calmar_IS": 0.1067,
+    "baseline_invdd_our_calmar_IS": 0.0694,
+    "recovered_by_max_calmar_frac_IS": 0.51,
+    "max_calmar_our_calmar_OOS": 0.0069,
+    "note": "name-DROP filter recovers ~nothing (Calmar>0 too weak); tax-aware WEIGHTING (max_calmar) recovers materially IN-SAMPLE but the OOS column shows it overfits."
+  },
+  "O4_rebalance": {
+    "verdict": "INSUFFICIENT-DATA-AFTER-RESCORE",
+    "roll_n": 0,
+    "static_n": 5
+  },
+  "WORTH_IT_GATE": {
+    "refined_book": [
+      "TheVeryGoodCow",
+      "Villson",
+      "zhuz632",
+      "master-wuji",
+      "djokowin"
+    ],
+    "refined_our_calmar_OOS": 0.1256,
+    "beats_best_single_our_OOS": false,
+    "best_single_our_OOS_calmar": 0.2368,
+    "belief_blind": {
+      "p": 0.1005,
+      "n_draws": 1601,
+      "refined_our_oos_calmar": 0.1256,
+      "weighting": "equal",
+      "random_calmar_mean": -0.0137,
+      "note": "random equal-size book, weighting held equal -> isolates SELECTION; our-price OOS Calmar"
+    },
+    "dd_red_per_ret_sacrificed_our": -5.93,
+    "verdict": "INDETERMINATE-BY-POWER"
+  }
+}

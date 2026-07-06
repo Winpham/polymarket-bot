@@ -1,0 +1,224 @@
+{
+  "meta": {
+    "cycle": 8,
+    "posture": "PAPER-ONLY; adopts/arms/promotes NOTHING; no Rust; DB read-only; cost-zero",
+    "seed": 20260702,
+    "n_perm": 2000,
+    "power_floor_events": 30,
+    "calibrate_pass": true,
+    "champion": {
+      "arms": [
+        "favorite",
+        "elite_fresh_fav"
+      ],
+      "realizable_roi_family": 0.049246061970580464,
+      "realizable_events": 139,
+      "belief_blind_favorite": {
+        "events": 164,
+        "observed": 0.07848541439404837,
+        "null_sigma": 0.019287623872189793,
+        "z": 4.122457762351401,
+        "p_emp": 0.0,
+        "belief_blind_lb": 0.04685371124365711,
+        "non_soccer_regimes_positive": 3
+      }
+    },
+    "decision_rule": "ADOPT iff beats champion realizable OOS AND belief-blind gate (p<=0.01, calibrate PASS, LB>3%, >=2 non-soccer regimes); else INDETERMINATE-BY-POWER (pre-register) if promising-but-underpowered, else CHAMPION-STANDS."
+  },
+  "challengers": {
+    "1_reliable_backed": {
+      "desc": "favorite events with >=1 durably-reliable backer (reliability_score skill pool)",
+      "reliable_pool_size": 10,
+      "shortlist_size": 3,
+      "belief_blind": {
+        "events": 13,
+        "observed": 0.10655449639156264,
+        "underpowered": true
+      },
+      "realizable_roi": 0.09204129721398374,
+      "realizable_events": 11,
+      "realizable_delta_vs_champ": 0.04279523524340328,
+      "delta_ci90": [
+        -0.1932206813619523,
+        0.24987190919237526
+      ],
+      "verdict": "INDETERMINATE-BY-POWER",
+      "adopt": false,
+      "reasons": [
+        "belief-blind underpowered: 13 events < 30 floor (or null unmatchable)"
+      ]
+    },
+    "2_clean_backers": {
+      "desc": "favorite events whose backer pool is majority-directional (drop MM/bot-dominated)",
+      "dirty_wallets_flagged": 418,
+      "favorite_events_total": 164,
+      "favorite_events_kept": 11,
+      "belief_blind": {
+        "events": 11,
+        "observed": 0.01365814316696352,
+        "underpowered": true
+      },
+      "realizable_roi": -0.1386101481629092,
+      "realizable_events": 8,
+      "realizable_delta_vs_champ": -0.18785621013348966,
+      "delta_ci90": [
+        -0.5410210339361069,
+        0.11407222996937293
+      ],
+      "verdict": "INDETERMINATE-BY-POWER",
+      "adopt": false,
+      "reasons": [
+        "belief-blind underpowered: 11 events < 30 floor (or null unmatchable)"
+      ]
+    },
+    "3_midband_consensus": {
+      "desc": "strict consensus restricted to band 0.35-0.65; combined favorite+midband book",
+      "midband_standalone": {
+        "belief_blind": {
+          "events": 229,
+          "observed": 0.040051827934145225,
+          "null_mu": -0.0001462327563973584,
+          "null_sigma": 0.02322502690701798,
+          "z": 1.7308079276496255,
+          "p_emp": 0.041,
+          "belief_blind_lb": 0.00196278380663574,
+          "non_soccer_regimes_positive": 4,
+          "regime_surplus": {
+            "soccer": 0.05771063234141345,
+            "tennis": 0.009990117556879856,
+            "mlb": 0.030374347870594533,
+            "other": 0.11973573303758056,
+            "cs2": 0.02838759089596226
+          },
+          "underpowered": false
+        },
+        "realizable_roi": -0.020286204368082133,
+        "realizable_events": 207
+      },
+      "combined_book": {
+        "belief_blind": {
+          "events": 323,
+          "observed": 0.04746247905979619,
+          "null_mu": -0.0008317576807560588,
+          "null_sigma": 0.01465704681083585,
+          "z": 3.2949500239603973,
+          "p_emp": 0.001,
+          "belief_blind_lb": 0.023424922290025397,
+          "non_soccer_regimes_positive": 4,
+          "regime_surplus": {
+            "soccer": 0.06504327726318013,
+            "tennis": 0.01899707131542976,
+            "mlb": 0.049124731468283674,
+            "other": 0.0819649912824229,
+            "cs2": 0.02838759089596226
+          },
+          "underpowered": false
+        },
+        "realizable_roi": 0.010113154606284987,
+        "realizable_events": 294,
+        "realizable_delta_vs_champ": -0.03913290736429548,
+        "delta_ci90": [
+          -0.1086500665585805,
+          0.03455937133910171
+        ]
+      },
+      "day_return_corr_fav_vs_midband": 0.05342599087914709,
+      "corr_n_days": 8,
+      "verdict": "CHAMPION-STANDS",
+      "adopt": false,
+      "reasons": [
+        "beats champion realizable edge: 0.010113154606284987 > 0.049246061970580464 = False",
+        "selection_null p<= 0.01: True (p=0.001)",
+        "--calibrate PASS: True",
+        "promotion_verdict LB> 3%: False (LB=+2.34%)",
+        ">=2 disjoint NON-soccer regimes: True (4)"
+      ],
+      "note": "diversification value requires LOW corr AND midband standalone selection-real"
+    },
+    "4_clv_exit": {
+      "desc": "OVERLAY: exit favorite positions at a CLV target vs hold-to-resolution (selection UNCHANGED)",
+      "overlay": {
+        "target_0.03": {
+          "hold": {
+            "events": 139,
+            "mean": 0.0666732131494099,
+            "sd": 0.4143329713652331,
+            "max_drawdown": 4.727423190614999
+          },
+          "exit": {
+            "events": 139,
+            "mean": 0.05038812692667243,
+            "sd": 0.40852902689728976,
+            "max_drawdown": 4.95926967576875
+          },
+          "exit_fraction": 0.7711267605633803,
+          "mean_delta": -0.016285086222737465,
+          "sd_delta": -0.005803944467943356
+        },
+        "target_0.05": {
+          "hold": {
+            "events": 139,
+            "mean": 0.0666732131494099,
+            "sd": 0.4143329713652331,
+            "max_drawdown": 4.727423190614999
+          },
+          "exit": {
+            "events": 139,
+            "mean": 0.05372051179969186,
+            "sd": 0.4096327876176321,
+            "max_drawdown": 4.942184217754192
+          },
+          "exit_fraction": 0.7147887323943662,
+          "mean_delta": -0.012952701349718036,
+          "sd_delta": -0.0047001837476010055
+        },
+        "target_0.08": {
+          "hold": {
+            "events": 139,
+            "mean": 0.0666732131494099,
+            "sd": 0.4143329713652331,
+            "max_drawdown": 4.727423190614999
+          },
+          "exit": {
+            "events": 139,
+            "mean": 0.05650844327491808,
+            "sd": 0.4100449657045539,
+            "max_drawdown": 4.91026007892074
+          },
+          "exit_fraction": 0.5950704225352113,
+          "mean_delta": -0.010164769874491816,
+          "sd_delta": -0.004288005660679217
+        },
+        "_coverage": {
+          "favorite_with_last_price": 284
+        }
+      },
+      "verdict": "OVERLAY (risk-adjusted axis; not a selection challenger \u2014 cannot ADOPT via belief-blind)",
+      "adopt": false
+    },
+    "5_conviction_sizing": {
+      "desc": "OVERLAY: size favorite bets by conviction (net_quality pct, cap 3%) vs flat 1% (selection UNCHANGED)",
+      "overlay": {
+        "flat_1pct": {
+          "final_wealth": 1.173421071253793,
+          "log_growth": 0.15992347478301802,
+          "total_return": 0.1734210712537929,
+          "max_drawdown_frac": 0.0423755595227217,
+          "calmar": 4.092478617557955
+        },
+        "conviction_1to3pct": {
+          "final_wealth": 1.4482080498746517,
+          "log_growth": 0.3703269644950795,
+          "total_return": 0.4482080498746517,
+          "max_drawdown_frac": 0.08164910910053258,
+          "calmar": 5.489442013663418
+        },
+        "log_growth_delta": 0.2104034897120615,
+        "n_events_sequence": 284,
+        "note": "selection UNCHANGED; compounding/risk-adjusted overlay only, not a selection edge"
+      },
+      "verdict": "OVERLAY (compounding axis; not a selection challenger \u2014 cannot ADOPT via belief-blind)",
+      "adopt": false
+    }
+  }
+}
