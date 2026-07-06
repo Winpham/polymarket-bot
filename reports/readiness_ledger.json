@@ -19,7 +19,7 @@
     {
       "gate": "power",
       "status": "MET (caveat)",
-      "current": "156 events",
+      "current": "158 events",
       "threshold": "\u226530",
       "needs": "count OK; day-deflated SE on ~5 correlated days is the real limit (\u2282 persistence)",
       "eta": "none"
@@ -51,7 +51,7 @@
     {
       "gate": "operational",
       "status": "MET",
-      "current": "3894 trajectory rows",
+      "current": "4463 trajectory rows",
       "threshold": "dense capture writing + monitors live",
       "needs": "\u2014",
       "eta": "none"
@@ -223,6 +223,22 @@
       "threshold": "clears every forward gate (power/Calmar/beats-best/selection_null/promotion/pilot/\u22652 non-soccer regimes/\u03bb\u0302\u22650.25) \u2192 GO-CANDIDATE (ESCALATE)",
       "needs": "accrue >= 30 forward resolved events",
       "eta": "weeks"
+    },
+    {
+      "gate": "standard_champion",
+      "status": "STANDARD",
+      "current": "favorite surplus +8.0% (z 4.28, p 0.0, LB +4.9%); realizable +5.3%; resolved-P&L +2.2% over 229 bets",
+      "threshold": "the frozen standard (favorite-tilted consensus); challengers must beat it OOS + clear belief-blind",
+      "needs": "iterate only via standard_guard.py --challenger; adopt NOTHING that does not beat the champion",
+      "eta": "none"
+    },
+    {
+      "gate": "standard_regression",
+      "status": "HEALTHY",
+      "current": "belief-blind LB +4.9% vs floor +0.0% \u2014 belief-blind LB +4.92% > +0.00%, p_emp 0.0000, 158 ev",
+      "threshold": "champion belief-blind LB must stay > +0.0% (pre-registered)",
+      "needs": "none \u2014 standard holding; keep watching forward",
+      "eta": "none"
     }
   ],
   "verdict": {
