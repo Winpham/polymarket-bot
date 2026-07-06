@@ -366,3 +366,53 @@ NEXT: forward accrual (forward_track.py weekly) + standard_guard.py weekly to wa
   any proposed iteration goes through standard_guard.py --challenger before it can be considered.
 REPORTS: reports/STANDARD-BASELINE.md, reports/baseline_champion.json, scripts/standard_guard.py,
   reports/standard_guard.json, HANDOFF-HUMAN-REVIEW.md (WIN #3).
+
+================================================================================
+CYCLE 8 — CONSOLIDATE-AND-IMPROVE (2026-07-06T21:55Z) — apply accumulated learnings as CHALLENGERS
+================================================================================
+GOAL: iterate the frozen STANDARD (favorite-tilted consensus champion) via champion-challenger — adopt
+  ONLY what beats the champion OOS on realizable AND clears belief-blind; pre-register promising-but-
+  underpowered; NEVER manufacture a win. NEW: scripts/consolidate_challengers.py (--selftest 7/7 green;
+  reuses selection_null null-math + standard_guard.judge_challenger verbatim; realizable metric verified
+  in selftest to reproduce the guard's band-tax formula). Report: reports/CONSOLIDATE_IMPROVE_2026-07-06T215541Z.md
+  + reports/consolidate_challengers.json + PREREG seal reports/PREREG_CONSOLIDATE_2026-07-06T215541Z.md.
+CHAMPION (live this run): realizable +4.92% (139 ev) · belief-blind favorite LB +4.69% p 0.000 (164 ev) ·
+  calibrate PASS · resolved +2.43% · REGRESSION STATUS HEALTHY.
+RESULT — NO CHALLENGER ADOPTS; CHAMPION STANDS UNCHANGED (baseline_champion.json + STANDARD-BASELINE.md
+  NOT modified). Ranked by realizable Δ (90% event-bootstrap CI):
+  C1 reliability-weighted (reliable-backed subset): +9.20% realizable, Δ +4.28% [CI −19.3%,+25.0%] →
+     INDETERMINATE-BY-POWER. FINDING: reliability-scored durable traders are NEAR-DISJOINT from favorite
+     consensus backers (shortlist overlap 0 ev; skill-pool overlap 13/164 ev). Can't concentrate on
+     reliable backers because they aren't the backers. Pre-registered (blocked on accrual).
+  C3 mid-band consensus add-on: standalone marginally selection-real (229 ev, +4.0%, p 0.041, LB +0.20%,
+     4 non-soccer regimes+) AND day-return corr with favorite = 0.05 (beautifully uncorrelated) BUT
+     realizable −2.0% after tax → combined book +1.01% (Δ −3.91% [−10.9%,+3.5%]) DILUTES the champion.
+     The selection≠realizable trap again. CHAMPION-STANDS. Pre-registered: viable diversifier ONLY if the
+     realizable tax is cut (see C6).
+  C2 backer-quality screen (majority-directional; drop MM/bot): keeps only 11/164 ev, realizable −13.9%
+     (Δ −18.8% [−54%,+11%]) → INDETERMINATE-BY-POWER, leans REFUTED. FINDING: ~93% of favorite events have
+     backer pools our MM/bot screen flags — the favorite edge RIDES ON high-volume/MM-flagged wallets;
+     screening them out kills edge + sample. Do not apply. DISCARDED.
+  C4 CLV-exit overlay (284 ev): early-exit LOWERS mean (−1.0..−1.6%), barely cuts variance, slightly RAISES
+     drawdown at every target → REFUTED. Favorites should be HELD to resolution (full 1−entry payoff beats a
+     small locked CLV move). Champion's hold posture correct. DISCARDED.
+  C5 conviction-weighted sizing overlay: log-growth +0.21, Calmar 5.49 vs 4.09 BUT max drawdown DOUBLES
+     (8.2% vs 4.2%); same selection ⇒ leverage not edge; single 8-day path, cannot clear belief-blind.
+     PRE-REGISTERED (needs multi-path CI + ruin analysis); not adopted.
+  C6 entry-timing/tax reduction = HIGHEST-LEVERAGE next improvement (DEFERRED live change): real measured
+     tax ~1.0-1.3¢ vs the conservative band-aware ~2.3¢ the guard scores; favorite CLV +1.3¢ (z=3.5);
+     dense at-open capture recovers ~84% post-dense, 12.6× coverage. Cutting tax adds ≈+1.5-2% realizable
+     to the CHAMPION'S OWN edge and could rescue the uncorrelated mid-band stream (C3) into a real
+     diversifier. LIVE capture change → DEFERRED to human review (no Rust/config touched here).
+VERDICT (critical-partner honest): nothing beat the champion at current power — the EXPECTED outcome on ~8
+  correlated World-Cup-front-loaded days. Delivered a ranked, CI'd, pre-registered improvement pipeline +
+  two clean refutations (CLV-exit; backer-quality screen), not a forced upgrade. Two structural findings:
+  (a) our reliability instrument's population ≠ the consensus backer population; (b) the favorite edge is
+  carried by high-volume/MM-flagged backers, not "clean" ones.
+BINDING CONSTRAINT: unchanged — non-expiring regime persistence (MONTHS) + the realizable tax (C6 lever).
+  GO gates 2/4, real_money_eligible=False. Promoted/armed/adopted NOTHING; no Rust; DB read-only; Max-only.
+NEXT: pull the C6 dense-capture lever (DEFERRED human review) — the one improvement that lifts the champion
+  itself; re-run consolidate_challengers.py weekly to re-judge the 3 pre-registered forward challengers as
+  events accrue.
+REPORTS: reports/CONSOLIDATE_IMPROVE_2026-07-06T215541Z.md, reports/consolidate_challengers.json,
+  scripts/consolidate_challengers.py, reports/PREREG_CONSOLIDATE_2026-07-06T215541Z.md.
