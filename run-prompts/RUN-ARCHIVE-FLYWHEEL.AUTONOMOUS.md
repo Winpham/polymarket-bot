@@ -13,6 +13,24 @@ the earned-eligibility machinery this builds on), `scripts/asof_slice_scores.sql
 
 ---
 
+## SOURCE OF TRUTH — read these first (added after the forge stress-test, 2026-07-02)
+- `run-prompts/RUN-ARCHIVE-FLYWHEEL.FORGE_PLAN.md` — **the implementation blueprint. Items 1-9
+  carry the actual types, SQL, bash, checkpoint protocol, and file:line integration points.
+  Implement to it.** Where this brief's phase text conflicts with the FORGE_PLAN, the FORGE_PLAN
+  wins — notably: parity is a **checked-in per-column ledger over count-based strategies**
+  (a scalar tolerance is provably impossible — `initial_mean_price` is stored in neither
+  substrate and `observed_votes` is overwritten every cycle); the replay decision point is
+  **first-fire, not peak**; the sweep substrate is `trader_fills` (atoms are the frozen-rank
+  parity path only); the registry is a **generated view** (verdict_cli over the real gate);
+  the ghost floor permutes at **event level**; slots are **one typed serde JSON env**
+  (`REPLAY_ARMS`); and every DB-mutating step sources the **throwaway guard** (:55497 assert).
+- `run-prompts/RUN-ARCHIVE-FLYWHEEL.FORGE_DEBATES.md` — why each design was chosen and the
+  verification findings that killed the rejected approaches. Don't re-litigate them.
+- This brief remains the mission/philosophy/discipline source of truth (motto, gate doctrine,
+  rejected approaches, acceptance).
+
+---
+
 ## 0. The one-sentence mission
 Build the **archive flywheel**: an as-of **replay engine** over the full 400k-resolved-fill
 archive that evaluates strategy candidates at ~10× the event-N of any forward record, a

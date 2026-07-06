@@ -1,0 +1,56 @@
+{
+ "meta": {
+  "seed": 20260702,
+  "n_worlds": 6000,
+  "point": 0.125,
+  "SE": 0.087972800679983,
+  "df": 3,
+  "policy": "flat_shares_capped",
+  "posterior": "true=point+SE*t(df=3)"
+ },
+ "posterior_edge": {
+  "mean_true_surplus": 0.12616673026772401,
+  "p_edge_le_0": 0.1285,
+  "p_edge_le_3pct": 0.18516666666666667,
+  "q05": -0.07876228085297052,
+  "q50": 0.12480170516088054,
+  "q95": 0.3373246130414642
+ },
+ "by_bankroll": {
+  "1000": {
+   "median_pnl": -1315.857309446878,
+   "p_net_negative_12mo": 0.6881666666666667,
+   "p5_pnl": -8235.299790117628,
+   "worst_decile_terminal": -4884.55408061404,
+   "p_maxdd_over_30pct": 0.8813333333333333,
+   "p_ruin_20pct": 0.6425
+  },
+  "5000": {
+   "median_pnl": -2058.4678109445504,
+   "p_net_negative_12mo": 0.704,
+   "p5_pnl": -10568.326840560721,
+   "worst_decile_terminal": -3319.4923817076324,
+   "p_maxdd_over_30pct": 0.638,
+   "p_ruin_20pct": 0.363
+  },
+  "25000": {
+   "median_pnl": -2026.9878370975166,
+   "p_net_negative_12mo": 0.7008333333333333,
+   "p5_pnl": -18690.16773991949,
+   "worst_decile_terminal": 12001.487498592023,
+   "p_maxdd_over_30pct": 0.22116666666666668,
+   "p_ruin_20pct": 0.0435
+  }
+ },
+ "forward_wait": {
+  "fav_events_per_day_observed": 18.0,
+  "weeks_to_N50_by_rate": {
+   "optimistic_8_per_day": 0.9,
+   "central_4_per_day": 1.8,
+   "drought_2_per_day": 3.6
+  },
+  "binding_constraint": "5 distinct regimes, NOT event count",
+  "regimes_now": "2 established (tennis, soccer) + 2 lucky N<10 slivers (mlb, other)",
+  "regime_wait_note": "new regimes accrue only as new sport seasons open; reaching 5 ESTABLISHED regimes is calendar-bound, plausibly 2-6 months spanning multiple sport seasons, and is INDETERMINATE from 4 days"
+ }
+}

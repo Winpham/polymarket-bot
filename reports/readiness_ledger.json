@@ -19,7 +19,7 @@
     {
       "gate": "power",
       "status": "MET (caveat)",
-      "current": "137 events",
+      "current": "141 events",
       "threshold": "\u226530",
       "needs": "count OK; day-deflated SE on ~5 correlated days is the real limit (\u2282 persistence)",
       "eta": "none"
@@ -51,7 +51,7 @@
     {
       "gate": "operational",
       "status": "MET",
-      "current": "1862 trajectory rows",
+      "current": "2258 trajectory rows",
       "threshold": "dense capture writing + monitors live",
       "needs": "\u2014",
       "eta": "none"
@@ -62,6 +62,30 @@
       "current": "1 FDR-soft cell(s): soccer/directional/b5 NO +8.2%",
       "threshold": "a durable, post-tournament soft pocket",
       "needs": "re-run softness_map as blind universe grows",
+      "eta": "months"
+    },
+    {
+      "gate": "router_gate",
+      "status": "PENDING",
+      "current": "2 sigs / 2 events / 1 regimes since prereg",
+      "threshold": "\u226530 events / LB>3% / selection_null p\u22640.01 / \u22652 regimes",
+      "needs": "accrue proven_router fires past the prereg stamp",
+      "eta": "weeks"
+    },
+    {
+      "gate": "unified_book",
+      "status": "NOT_MET",
+      "current": "1/20 forward day-blocks",
+      "threshold": "\u226520",
+      "needs": "accrue forward-sealed day-blocks",
+      "eta": "weeks"
+    },
+    {
+      "gate": "beats_best_trader",
+      "status": "NOT_MET",
+      "current": "best arm favorite LB -7.1% vs B_LB+3pp +6.4%",
+      "threshold": "B_LB +3.4% + 3pp",
+      "needs": "arm LB must clear the copyable-best floor +3pp",
       "eta": "months"
     }
   ],

@@ -1,0 +1,18 @@
+COMPOSITE BAD-LIFE MC · 10000 worlds · 12 mo · kelly_eighth_capped · operator pulls after 4 red weeks
+  bankroll   med P&L  P(net<0)  P(DD>30%)   medDD  P(ruin) wrst-dec term
+     $1000      -657     85.7%      90.8%   72.6%    39.8%           +10
+     $5000     -3284     84.9%      89.9%   72.5%    39.7%           +49
+    $25000    -14653     82.7%      87.7%   67.3%    34.9%          +322
+
+HUMAN-FACTOR MATRIX (B=$5k, 10000 worlds):
+  PULL & edge-gone (correct kill) :  2326
+  PULL & edge-intact (FALSE ALARM):  4544
+  HOLD & edge-gone (missed)       :   643
+  HOLD & edge-intact (correct)    :  2487
+  P(operator pulls) = 68.7%
+  P(a pull is a FALSE ALARM | pulled) = 66.1%
+  longest underwater: median 49 wk, p90 52 wk
+
+flat-shares @ $5k: med P&L -1833, P(net<0) 76.8%
+
+artifact -> reports/stress/bad_life_mc.json

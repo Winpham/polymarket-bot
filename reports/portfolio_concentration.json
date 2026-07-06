@@ -18,49 +18,49 @@
  },
  "strategies": {
   "favorite": {
-   "n_events": 95,
+   "n_events": 97,
    "match": {
-    "icc": 0.07900176371946345,
-    "m_bar": 1.3380281690140845,
-    "k_groups": 71,
-    "n_events": 95,
-    "design_effect": 1.0267048215389736,
-    "n_eff": 92.52902879875471,
-    "icc_raw": 0.05571340461425658
+    "icc": 0.06511303517240283,
+    "m_bar": 1.3287671232876712,
+    "k_groups": 73,
+    "n_events": 97,
+    "design_effect": 1.0214070252621599,
+    "n_eff": 94.9670382138829,
+    "icc_raw": 0.036635485661144156
    },
    "slate": {
-    "icc": 0.0,
-    "m_bar": 7.3076923076923075,
+    "icc": 0.00756551207008297,
+    "m_bar": 7.461538461538462,
     "k_groups": 13,
-    "n_events": 95,
-    "design_effect": 1.0,
-    "n_eff": 95.0,
+    "n_events": 97,
+    "design_effect": 1.0488848472220746,
+    "n_eff": 92.47916990783138,
     "icc_raw": 0.0,
     "n_eff_ci": [
-     51.14843550275842,
-     95.0
+     49.43481078538537,
+     97.0
     ]
    },
    "regime": {
-    "icc": 0.03610833848473006,
-    "m_bar": 23.75,
+    "icc": 0.04073238417580379,
+    "m_bar": 24.25,
     "k_groups": 4,
-    "n_events": 95,
-    "design_effect": 1.8214647005276088,
-    "n_eff": 52.15582820379782,
-    "icc_raw": 0.009923756061057339
+    "n_events": 97,
+    "design_effect": 1.9470279320874382,
+    "n_eff": 49.819521539172186,
+    "icc_raw": 0.011035205933082716
    },
    "hhi_regime": {
-    "hhi_count": 0.37551246537396127,
-    "eff_buckets_count": 2.663027441723222,
+    "hhi_count": 0.3801679243277713,
+    "eff_buckets_count": 2.6304165501817165,
     "buckets": {
      "soccer": {
       "n_events": 34,
-      "pnl": 154.6
+      "pnl": 156.5
      },
      "tennis": {
-      "n_events": 46,
-      "pnl": 461.3
+      "n_events": 48,
+      "pnl": 505.1
      },
      "other": {
       "n_events": 6,
@@ -71,48 +71,48 @@
       "pnl": 195.5
      }
     },
-    "total_pnl": 901.8,
+    "total_pnl": 947.5,
     "top_bucket": "tennis",
-    "top_pnl_share_of_gross_gain": 0.5115,
-    "top_pnl_share_of_net": 0.5115
+    "top_pnl_share_of_gross_gain": 0.533,
+    "top_pnl_share_of_net": 0.533
    },
    "hhi_event_day": {
-    "hhi_count": 0.29905817174515237,
-    "eff_buckets_count": 3.343831048536495,
+    "hhi_count": 0.29939419704538206,
+    "eff_buckets_count": 3.3400780972665958,
     "buckets": {
      "2026-06-29": {
       "n_events": 37,
       "pnl": 317.5
      },
      "2026-06-30": {
-      "n_events": 12,
-      "pnl": 10.9
+      "n_events": 10,
+      "pnl": -2.7
      },
      "2026-07-01": {
-      "n_events": 31,
-      "pnl": 353.8
+      "n_events": 32,
+      "pnl": 355.4
      },
      "2026-07-02": {
-      "n_events": 15,
-      "pnl": 219.7
+      "n_events": 18,
+      "pnl": 277.3
      }
     },
-    "total_pnl": 901.8,
+    "total_pnl": 947.5,
     "top_bucket": "2026-07-01",
-    "top_pnl_share_of_gross_gain": 0.3923,
-    "top_pnl_share_of_net": 0.3923
+    "top_pnl_share_of_gross_gain": 0.374,
+    "top_pnl_share_of_net": 0.3751
    },
    "hhi_tournament": {
-    "hhi_count": 0.37285318559556796,
-    "eff_buckets_count": 2.682020802377414,
+    "hhi_count": 0.37761717504516956,
+    "eff_buckets_count": 2.6481846327047562,
     "buckets": {
      "fifwc": {
       "n_events": 34,
-      "pnl": 154.6
+      "pnl": 156.5
      },
      "tennis-slam": {
-      "n_events": 46,
-      "pnl": 461.3
+      "n_events": 48,
+      "pnl": 505.1
      },
      "lol": {
       "n_events": 3,
@@ -135,52 +135,52 @@
       "pnl": 14.7
      }
     },
-    "total_pnl": 901.8,
+    "total_pnl": 947.5,
     "top_bucket": "tennis-slam",
-    "top_pnl_share_of_gross_gain": 0.5115,
-    "top_pnl_share_of_net": 0.5115
+    "top_pnl_share_of_gross_gain": 0.533,
+    "top_pnl_share_of_net": 0.533
    }
   },
   "elite_fresh_fav": {
-   "n_events": 39,
+   "n_events": 40,
    "match": {
     "icc": 0.0,
-    "m_bar": 1.3928571428571428,
-    "k_groups": 28,
-    "n_events": 39,
+    "m_bar": 1.3793103448275863,
+    "k_groups": 29,
+    "n_events": 40,
     "design_effect": 1.0,
-    "n_eff": 39.0,
+    "n_eff": 40.0,
     "icc_raw": 0.0
    },
    "slate": {
     "icc": 0.0,
-    "m_bar": 4.875,
+    "m_bar": 5.0,
     "k_groups": 8,
-    "n_events": 39,
+    "n_events": 40,
     "design_effect": 1.0,
-    "n_eff": 39.0,
-    "icc_raw": 0.027075767251724614,
+    "n_eff": 40.0,
+    "icc_raw": 0.06316645673322403,
     "n_eff_ci": [
-     39.0,
-     39.0
+     33.28840733634593,
+     40.0
     ]
    },
    "regime": {
     "icc": 0.0,
-    "m_bar": 13.0,
+    "m_bar": 13.333333333333334,
     "k_groups": 3,
-    "n_events": 39,
+    "n_events": 40,
     "design_effect": 1.0,
-    "n_eff": 39.0,
-    "icc_raw": 0.1612209935207833
+    "n_eff": 40.0,
+    "icc_raw": 0.1836075541539981
    },
    "hhi_regime": {
-    "hhi_count": 0.4766600920447074,
-    "eff_buckets_count": 2.097931034482759,
+    "hhi_count": 0.47624999999999995,
+    "eff_buckets_count": 2.0997375328083994,
     "buckets": {
      "tennis": {
-      "n_events": 18,
-      "pnl": 210.0
+      "n_events": 19,
+      "pnl": 227.3
      },
      "soccer": {
       "n_events": 20,
@@ -191,14 +191,14 @@
       "pnl": 9.8
      }
     },
-    "total_pnl": 310.8,
+    "total_pnl": 328.2,
     "top_bucket": "tennis",
-    "top_pnl_share_of_gross_gain": 0.6755,
-    "top_pnl_share_of_net": 0.6755
+    "top_pnl_share_of_gross_gain": 0.6927,
+    "top_pnl_share_of_net": 0.6927
    },
    "hhi_event_day": {
-    "hhi_count": 0.3951347797501643,
-    "eff_buckets_count": 2.5307820299500836,
+    "hhi_count": 0.37875000000000003,
+    "eff_buckets_count": 2.6402640264026402,
     "buckets": {
      "2026-06-29": {
       "n_events": 22,
@@ -213,22 +213,22 @@
       "pnl": 58.1
      },
      "2026-07-02": {
-      "n_events": 2,
-      "pnl": 23.7
+      "n_events": 3,
+      "pnl": 41.1
      }
     },
-    "total_pnl": 310.8,
+    "total_pnl": 328.2,
     "top_bucket": "2026-06-29",
-    "top_pnl_share_of_gross_gain": 0.5923,
-    "top_pnl_share_of_net": 0.5923
+    "top_pnl_share_of_gross_gain": 0.561,
+    "top_pnl_share_of_net": 0.561
    },
    "hhi_tournament": {
-    "hhi_count": 0.4766600920447074,
-    "eff_buckets_count": 2.097931034482759,
+    "hhi_count": 0.47624999999999995,
+    "eff_buckets_count": 2.0997375328083994,
     "buckets": {
      "tennis-slam": {
-      "n_events": 18,
-      "pnl": 210.0
+      "n_events": 19,
+      "pnl": 227.3
      },
      "fifwc": {
       "n_events": 20,
@@ -239,124 +239,124 @@
       "pnl": 9.8
      }
     },
-    "total_pnl": 310.8,
+    "total_pnl": 328.2,
     "top_bucket": "tennis-slam",
-    "top_pnl_share_of_gross_gain": 0.6755,
-    "top_pnl_share_of_net": 0.6755
+    "top_pnl_share_of_gross_gain": 0.6927,
+    "top_pnl_share_of_net": 0.6927
    }
   },
   "strict": {
-   "n_events": 228,
+   "n_events": 236,
    "match": {
-    "icc": 0.34282781581477423,
-    "m_bar": 1.2596685082872927,
-    "k_groups": 181,
-    "n_events": 228,
-    "design_effect": 1.089021587532013,
-    "n_eff": 209.36224094207654,
-    "icc_raw": 0.3427947435786668
+    "icc": 0.35859312919431585,
+    "m_bar": 1.2486772486772486,
+    "k_groups": 189,
+    "n_events": 236,
+    "design_effect": 1.0891739527626076,
+    "n_eff": 216.67796902542867,
+    "icc_raw": 0.36412308532318854
    },
    "slate": {
-    "icc": 0.01625272218236277,
-    "m_bar": 12.0,
+    "icc": 0.0,
+    "m_bar": 12.421052631578947,
     "k_groups": 19,
-    "n_events": 228,
-    "design_effect": 1.1787799440059905,
-    "n_eff": 193.4203251076363,
-    "icc_raw": 0.020298601232122383,
+    "n_events": 236,
+    "design_effect": 1.0,
+    "n_eff": 236.0,
+    "icc_raw": 0.0,
     "n_eff_ci": [
-     125.52051348280446,
-     228.0
+     173.66173623504883,
+     236.0
     ]
    },
    "regime": {
     "icc": 0.0,
-    "m_bar": 45.6,
+    "m_bar": 47.2,
     "k_groups": 5,
-    "n_events": 228,
+    "n_events": 236,
     "design_effect": 1.0,
-    "n_eff": 228.0,
-    "icc_raw": 0.002500521959611225
+    "n_eff": 236.0,
+    "icc_raw": 0.0
    },
    "hhi_regime": {
-    "hhi_count": 0.33668051708217916,
-    "eff_buckets_count": 2.970174837161467,
+    "hhi_count": 0.3403476012640046,
+    "eff_buckets_count": 2.9381726102553283,
     "buckets": {
      "tennis": {
-      "n_events": 110,
-      "pnl": -239.4
+      "n_events": 116,
+      "pnl": -34.4
      },
      "soccer": {
       "n_events": 59,
-      "pnl": 381.5
+      "pnl": 386.7
      },
      "mlb": {
-      "n_events": 42,
-      "pnl": 127.8
+      "n_events": 43,
+      "pnl": 84.4
      },
      "other": {
       "n_events": 11,
-      "pnl": 153.1
+      "pnl": 149.6
      },
      "cs2": {
-      "n_events": 6,
-      "pnl": 0.2
+      "n_events": 7,
+      "pnl": -59.5
      }
     },
-    "total_pnl": 423.1,
+    "total_pnl": 526.7,
     "top_bucket": "soccer",
-    "top_pnl_share_of_gross_gain": 0.5758,
-    "top_pnl_share_of_net": 0.9016
+    "top_pnl_share_of_gross_gain": 0.623,
+    "top_pnl_share_of_net": 0.7341
    },
    "hhi_event_day": {
-    "hhi_count": 0.27797014465989534,
-    "eff_buckets_count": 3.5975086505190315,
+    "hhi_count": 0.27273053720195345,
+    "eff_buckets_count": 3.6666227781435157,
     "buckets": {
      "2026-07-01": {
-      "n_events": 70,
-      "pnl": 254.9
+      "n_events": 72,
+      "pnl": 226.5
      },
      "2026-06-29": {
       "n_events": 81,
-      "pnl": 80.3
+      "pnl": 84.1
      },
      "2026-07-02": {
-      "n_events": 35,
-      "pnl": 54.1
+      "n_events": 42,
+      "pnl": 173.7
      },
      "2026-06-30": {
-      "n_events": 42,
-      "pnl": 33.7
+      "n_events": 41,
+      "pnl": 42.4
      }
     },
-    "total_pnl": 423.1,
+    "total_pnl": 526.7,
     "top_bucket": "2026-07-01",
-    "top_pnl_share_of_gross_gain": 0.6025,
-    "top_pnl_share_of_net": 0.6025
+    "top_pnl_share_of_gross_gain": 0.43,
+    "top_pnl_share_of_net": 0.43
    },
    "hhi_tournament": {
-    "hhi_count": 0.33494921514312087,
-    "eff_buckets_count": 2.985527222605101,
+    "hhi_count": 0.3387316862970412,
+    "eff_buckets_count": 2.9521891232905744,
     "buckets": {
      "tennis-slam": {
-      "n_events": 110,
-      "pnl": -239.4
+      "n_events": 116,
+      "pnl": -34.4
      },
      "fifwc": {
       "n_events": 59,
-      "pnl": 381.5
+      "pnl": 386.7
      },
      "mlb": {
-      "n_events": 42,
-      "pnl": 127.8
+      "n_events": 43,
+      "pnl": 84.4
      },
      "lol": {
       "n_events": 5,
       "pnl": 75.7
      },
      "cs2": {
-      "n_events": 6,
-      "pnl": 0.2
+      "n_events": 7,
+      "pnl": -59.5
      },
      "colorado": {
       "n_events": 1,
@@ -364,7 +364,7 @@
      },
      "other": {
       "n_events": 1,
-      "pnl": 7.4
+      "pnl": 3.8
      },
      "world": {
       "n_events": 1,
@@ -383,40 +383,40 @@
       "pnl": 38.7
      }
     },
-    "total_pnl": 423.1,
+    "total_pnl": 526.7,
     "top_bucket": "fifwc",
-    "top_pnl_share_of_gross_gain": 0.5738,
-    "top_pnl_share_of_net": 0.9016
+    "top_pnl_share_of_gross_gain": 0.6208,
+    "top_pnl_share_of_net": 0.7341
    }
   }
  },
  "cross_strategy": {
   "favorite\u2229elite_fresh_fav": {
-   "n_a": 95,
-   "n_b": 39,
-   "shared": 39,
+   "n_a": 97,
+   "n_b": 40,
+   "shared": 40,
    "share_of_b_in_a": 1.0,
-   "share_of_a_in_b": 0.4105,
-   "union_deduped": 95,
+   "share_of_a_in_b": 0.4124,
+   "union_deduped": 97,
    "independent_bets_added_by_b": 0
   },
   "favorite\u2229strict": {
-   "n_a": 95,
-   "n_b": 228,
-   "shared": 95,
-   "share_of_b_in_a": 0.4167,
+   "n_a": 97,
+   "n_b": 236,
+   "shared": 97,
+   "share_of_b_in_a": 0.411,
    "share_of_a_in_b": 1.0,
-   "union_deduped": 228,
-   "independent_bets_added_by_b": 133
+   "union_deduped": 236,
+   "independent_bets_added_by_b": 139
   },
   "elite_fresh_fav\u2229strict": {
-   "n_a": 39,
-   "n_b": 228,
-   "shared": 39,
-   "share_of_b_in_a": 0.1711,
+   "n_a": 40,
+   "n_b": 236,
+   "shared": 40,
+   "share_of_b_in_a": 0.1695,
    "share_of_a_in_b": 1.0,
-   "union_deduped": 228,
-   "independent_bets_added_by_b": 189
+   "union_deduped": 236,
+   "independent_bets_added_by_b": 196
   }
  }
 }

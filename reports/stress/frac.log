@@ -1,0 +1,25 @@
+FIXED-% OF BANKROLL sizing (scale-invariant: same risk at any $ bankroll)
+P&L shown as % of starting bankroll/yr.
+
+=== ADVERSE world ===
+   bet %  medP&L%  p5 P&L% P(net<0) P(DD>30)   medDD  P(ruin)
+     1%   -18.1%   -73.4%    78.9%    40.3%   23.8%     2.6%
+     2%   -34.1%   -93.3%    79.7%    67.7%   42.7%    15.7%
+     3%   -47.9%   -98.4%    80.5%    82.5%   57.7%    26.9%
+     5%   -66.6%   -99.9%    81.1%    94.9%   75.9%    41.9%
+
+=== POSTERIOR world ===
+   bet %  medP&L%  p5 P&L% P(net<0) P(DD>30)   medDD  P(ruin)
+     1%   -19.2%   -85.2%    71.9%    42.7%   24.4%     7.9%
+     2%   -35.7%   -97.9%    72.5%    64.4%   43.6%    21.3%
+     3%   -49.5%   -99.7%    73.0%    76.4%   58.6%    30.9%
+     5%   -69.0%  -100.0%    73.0%    89.0%   77.5%    44.5%
+
+=== FRIENDLY world ===
+   bet %  medP&L%  p5 P&L% P(net<0) P(DD>30)   medDD  P(ruin)
+     1%   +46.0%   +11.1%     0.4%     0.0%    5.5%     0.0%
+     2%  +110.9%   +22.4%     0.5%     0.2%   10.8%     0.0%
+     3%  +200.6%   +34.0%     0.5%     3.2%   15.9%     0.0%
+     5%  +490.3%   +55.7%     0.9%    30.8%   25.6%     0.0%
+
+artifact -> reports/stress/frac_sizing.json

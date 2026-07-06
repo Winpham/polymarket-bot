@@ -30,7 +30,7 @@
      "n_clusters": 3,
      "surplus": -0.005660454945908455,
      "lb": -0.3866421061169561,
-     "net_taker": -0.055663230126311816,
+     "net_taker": -0.05566323012631182,
      "net_taker_lb": -0.43379741039316416,
      "mass": -0.08490682418862683,
      "hi": 0.3753211962251392
@@ -40,8 +40,8 @@
      "n_clusters": 3,
      "surplus": 0.08744692155553688,
      "lb": -0.20774406512100427,
-     "net_taker": 0.039192908106446586,
-     "net_taker_lb": -0.258179691778927,
+     "net_taker": 0.03919290810644657,
+     "net_taker_lb": -0.2581796917789271,
      "mass": 2.2736199604439586,
      "hi": 0.382637908232078
     },
@@ -51,54 +51,54 @@
     "n_recurring_regimes": 4,
     "real_transfer_count": 2,
     "required": 2,
-    "p_conc": 0.994,
+    "p_conc": 0.993,
     "concentration_flagged": false,
     "count_ok": true,
-    "min_p_conc": 0.217,
+    "min_p_conc": 0.24,
     "guard_can_fire": false,
-    "p_beat": 0.188,
+    "p_beat": 0.206,
     "beat_null_can_pass": false,
-    "null_mean": 0.977,
+    "null_mean": 0.973,
     "null_dist": {
-     "0": 217,
-     "1": 595,
-     "2": 182,
-     "3": 6
+     "0": 240,
+     "1": 554,
+     "2": 199,
+     "3": 7
     },
     "per_regime": {
      "mlb|2026-07": {
       "n_events": 11,
-      "held_surplus": 0.21330181190566186,
-      "held_lb": 0.08086751099804187,
-      "fit_surplus": 0.16730668790954492,
+      "held_surplus": 0.21109181260772872,
+      "held_lb": 0.08085673343894037,
+      "fit_surplus": 0.1656880264743519,
       "transfers": true
      },
      "mlb|2026-06": {
       "n_events": 2,
-      "held_surplus": 0.3650705821334758,
+      "held_surplus": 0.3602145978278968,
       "held_lb": null,
-      "fit_surplus": 0.17466792627683989,
+      "fit_surplus": 0.17304726012502225,
       "transfers": false
      },
      "nba/cbb|2026-07": {
       "n_events": 3,
       "held_surplus": 0.30556427779597145,
       "held_lb": 0.20232636862349596,
-      "fit_surplus": 0.1738190875022597,
+      "fit_surplus": 0.17138894743880093,
       "transfers": true
      },
      "nba/cbb|2026-06": {
       "n_events": 1,
       "held_surplus": -0.6429938701975964,
       "held_lb": null,
-      "fit_surplus": 0.24957212053857164,
+      "fit_surplus": 0.24744574798304525,
       "transfers": false
      }
     },
     "passes": true,
     "guard_inert_note": "permutation null non-discriminating on this data (guard cannot fire, beat-null cannot pass) \u2192 leg(b) is a RAW count, not a passed test"
    },
-   "expiring_edge_mass_share": 0.5719427528760835,
+   "expiring_edge_mass_share": 0.5728010893734863,
    "verdict": "SOCCER-ARTIFACT",
    "why": "edge is expiring-carried (57% of edge mass) and recurring regimes are below the floor \u2014 not yet certifiable"
   },

@@ -1,0 +1,32 @@
+{
+ "meta": {
+  "seed": 20260702,
+  "n": 6000,
+  "policy": "flat_shares",
+  "world": "FRIENDLY",
+  "edge_mult": 1.0
+ },
+ "by_bankroll": {
+  "1000": {
+   "median_pnl": 3928.610292165094,
+   "p_net_negative_12mo": 0.004166666666666667,
+   "p_maxdd_over_30pct": 0.3135,
+   "p_ruin_20pct": 0.006166666666666667,
+   "p5_pnl": 1162.2180906840383
+  },
+  "5000": {
+   "median_pnl": 3944.3747404601954,
+   "p_net_negative_12mo": 0.003833333333333333,
+   "p_maxdd_over_30pct": 0.0005,
+   "p_ruin_20pct": 0.0,
+   "p5_pnl": 1247.1973660482793
+  },
+  "25000": {
+   "median_pnl": 3914.76362875614,
+   "p_net_negative_12mo": 0.0045,
+   "p_maxdd_over_30pct": 0.0,
+   "p_ruin_20pct": 0.0,
+   "p5_pnl": 1217.290442973313
+  }
+ }
+}

@@ -1,0 +1,253 @@
+{
+ "meta": {
+  "c": 0.85,
+  "fee": 0.02,
+  "p_good": 0.9,
+  "p_null": 0.85,
+  "n_bets": 10,
+  "days": 250,
+  "trials": 20000,
+  "rhos": [
+   0.0,
+   0.05,
+   0.2,
+   0.5
+  ],
+  "deploy": [
+   0.05,
+   0.1,
+   0.2,
+   0.4
+  ],
+  "roi_per_bet_good": 0.038823529411764784,
+  "roi_per_bet_null": -0.01999999999999999
+ },
+ "good": {
+  "rho0.0_dep0.05": {
+   "median_return": 0.617783845243379,
+   "p5_return": 0.39618105108471124,
+   "p_ruin": 0.0,
+   "p_maxdd_over_30": 0.0,
+   "p_net_negative": 0.0
+  },
+  "rho0.0_dep0.1": {
+   "median_return": 1.5951970700004763,
+   "p5_return": 0.9318652955675046,
+   "p_ruin": 0.0,
+   "p_maxdd_over_30": 0.0,
+   "p_net_negative": 0.0
+  },
+  "rho0.0_dep0.2": {
+   "median_return": 5.511918349189275,
+   "p5_return": 2.5999919681620227,
+   "p_ruin": 0.0,
+   "p_maxdd_over_30": 0.00275,
+   "p_net_negative": 0.0
+  },
+  "rho0.0_dep0.4": {
+   "median_return": 36.00359399065751,
+   "p5_return": 10.211069709492829,
+   "p_ruin": 0.0,
+   "p_maxdd_over_30": 0.2625,
+   "p_net_negative": 0.0
+  },
+  "rho0.05_dep0.05": {
+   "median_return": 0.6168845803995184,
+   "p5_return": 0.37887427594228873,
+   "p_ruin": 0.0,
+   "p_maxdd_over_30": 0.0,
+   "p_net_negative": 0.0
+  },
+  "rho0.05_dep0.1": {
+   "median_return": 1.5894057407924915,
+   "p5_return": 0.881563002847418,
+   "p_ruin": 0.0,
+   "p_maxdd_over_30": 0.0,
+   "p_net_negative": 0.0
+  },
+  "rho0.05_dep0.2": {
+   "median_return": 5.453073709166633,
+   "p5_return": 2.394590673444685,
+   "p_ruin": 0.0,
+   "p_maxdd_over_30": 0.0103,
+   "p_net_negative": 0.0
+  },
+  "rho0.05_dep0.4": {
+   "median_return": 34.55524900076915,
+   "p5_return": 8.693446309462097,
+   "p_ruin": 0.0,
+   "p_maxdd_over_30": 0.4488,
+   "p_net_negative": 5e-05
+  },
+  "rho0.2_dep0.05": {
+   "median_return": 0.6142330629602304,
+   "p5_return": 0.3270504877646139,
+   "p_ruin": 0.0,
+   "p_maxdd_over_30": 0.0,
+   "p_net_negative": 5e-05
+  },
+  "rho0.2_dep0.1": {
+   "median_return": 1.5723021535797912,
+   "p5_return": 0.732048572961693,
+   "p_ruin": 0.0,
+   "p_maxdd_over_30": 0.0008,
+   "p_net_negative": 5e-05
+  },
+  "rho0.2_dep0.2": {
+   "median_return": 5.256209026967374,
+   "p5_return": 1.8020025878899113,
+   "p_ruin": 0.0,
+   "p_maxdd_over_30": 0.1181,
+   "p_net_negative": 0.0001
+  },
+  "rho0.2_dep0.4": {
+   "median_return": 29.83237442248675,
+   "p5_return": 4.931618799613122,
+   "p_ruin": 5e-05,
+   "p_maxdd_over_30": 0.8686,
+   "p_net_negative": 0.0002
+  },
+  "rho0.5_dep0.05": {
+   "median_return": 0.6132527422197822,
+   "p5_return": 0.22577941006570623,
+   "p_ruin": 0.0,
+   "p_maxdd_over_30": 0.0003,
+   "p_net_negative": 0.0022
+  },
+  "rho0.5_dep0.1": {
+   "median_return": 1.5345996114192362,
+   "p5_return": 0.45156313995204167,
+   "p_ruin": 0.0,
+   "p_maxdd_over_30": 0.0529,
+   "p_net_negative": 0.0033
+  },
+  "rho0.5_dep0.2": {
+   "median_return": 4.754285900835011,
+   "p5_return": 0.8295086494581796,
+   "p_ruin": 0.0,
+   "p_maxdd_over_30": 0.64915,
+   "p_net_negative": 0.0062
+  },
+  "rho0.5_dep0.4": {
+   "median_return": 19.27810614647602,
+   "p5_return": 0.8010265232575908,
+   "p_ruin": 0.01275,
+   "p_maxdd_over_30": 0.9985,
+   "p_net_negative": 0.0207
+  }
+ },
+ "null": {
+  "rho0.0_dep0.05": {
+   "median_return": -0.22551640329179667,
+   "p5_return": -0.3510435330026198,
+   "p_ruin": 0.0,
+   "p_maxdd_over_30": 0.2429,
+   "p_net_negative": 0.9951
+  },
+  "rho0.0_dep0.1": {
+   "median_return": -0.40687362503826496,
+   "p5_return": -0.5838741455227064,
+   "p_ruin": 0.0,
+   "p_maxdd_over_30": 0.8924,
+   "p_net_negative": 0.9956
+  },
+  "rho0.0_dep0.2": {
+   "median_return": -0.6638973446866371,
+   "p5_return": -0.8351449203682759,
+   "p_ruin": 0.13745,
+   "p_maxdd_over_30": 0.9963,
+   "p_net_negative": 0.99635
+  },
+  "rho0.0_dep0.4": {
+   "median_return": -0.906659391872247,
+   "p5_return": -0.9780007745926463,
+   "p_ruin": 0.8567,
+   "p_maxdd_over_30": 1.0,
+   "p_net_negative": 0.9981
+  },
+  "rho0.05_dep0.05": {
+   "median_return": -0.22624271877612556,
+   "p5_return": -0.36016235155503495,
+   "p_ruin": 0.0,
+   "p_maxdd_over_30": 0.27335,
+   "p_net_negative": 0.98825
+  },
+  "rho0.05_dep0.1": {
+   "median_return": -0.4091052951455816,
+   "p5_return": -0.5974517354936831,
+   "p_ruin": 0.0,
+   "p_maxdd_over_30": 0.8923,
+   "p_net_negative": 0.9902
+  },
+  "rho0.05_dep0.2": {
+   "median_return": -0.6690979313712659,
+   "p5_return": -0.8485810035996215,
+   "p_ruin": 0.1691,
+   "p_maxdd_over_30": 0.9968,
+   "p_net_negative": 0.993
+  },
+  "rho0.05_dep0.4": {
+   "median_return": -0.9132057353483122,
+   "p5_return": -0.9824320133667845,
+   "p_ruin": 0.86175,
+   "p_maxdd_over_30": 1.0,
+   "p_net_negative": 0.99615
+  },
+  "rho0.2_dep0.05": {
+   "median_return": -0.22801715190982397,
+   "p5_return": -0.39208473795277765,
+   "p_ruin": 0.0,
+   "p_maxdd_over_30": 0.3616,
+   "p_net_negative": 0.96815
+  },
+  "rho0.2_dep0.1": {
+   "median_return": -0.41525057683788336,
+   "p5_return": -0.6396847449952867,
+   "p_ruin": 0.0002,
+   "p_maxdd_over_30": 0.89525,
+   "p_net_negative": 0.97305
+  },
+  "rho0.2_dep0.2": {
+   "median_return": -0.686393286058372,
+   "p5_return": -0.8830915231891681,
+   "p_ruin": 0.26745,
+   "p_maxdd_over_30": 0.99665,
+   "p_net_negative": 0.98025
+  },
+  "rho0.2_dep0.4": {
+   "median_return": -0.9322305705895311,
+   "p5_return": -0.9912106365761006,
+   "p_ruin": 0.87375,
+   "p_maxdd_over_30": 1.0,
+   "p_net_negative": 0.99065
+  },
+  "rho0.5_dep0.05": {
+   "median_return": -0.23177703597624388,
+   "p5_return": -0.4510529160218546,
+   "p_ruin": 0.0,
+   "p_maxdd_over_30": 0.5077,
+   "p_net_negative": 0.9152
+  },
+  "rho0.5_dep0.1": {
+   "median_return": -0.43313107202840595,
+   "p5_return": -0.7132014084753538,
+   "p_ruin": 0.00795,
+   "p_maxdd_over_30": 0.92965,
+   "p_net_negative": 0.92755
+  },
+  "rho0.5_dep0.2": {
+   "median_return": -0.72891866643979,
+   "p5_return": -0.9333650584365034,
+   "p_ruin": 0.4322,
+   "p_maxdd_over_30": 0.9988,
+   "p_net_negative": 0.94825
+  },
+  "rho0.5_dep0.4": {
+   "median_return": -0.9660031307797298,
+   "p5_return": -0.998301690868986,
+   "p_ruin": 0.91055,
+   "p_maxdd_over_30": 1.0,
+   "p_net_negative": 0.97815
+  }
+ }
+}

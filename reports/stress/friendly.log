@@ -1,0 +1,7 @@
+FRIENDLY-WORLD sensitivity (flat-shares, edge_mult=1.0) — does it STILL fail?
+    bankroll    medP&L  P(net<0)  P(DD>30%)  P(ruin)        p5
+       $1000     +3929      0.4%      31.4%     0.6%     +1162
+       $5000     +3944      0.4%       0.1%     0.0%     +1247
+      $25000     +3915      0.4%       0.0%     0.0%     +1217
+
+artifact -> reports/stress/friendly_sensitivity.json

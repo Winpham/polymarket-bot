@@ -1,0 +1,13 @@
+PHASE 3 — EDGE DRAWN FROM POSTERIOR (not point estimate)
+  posterior true surplus: q05=-7.9% q50=+12.5% q95=+33.7%
+  P(true edge <= 0) = 12.8%   P(true edge <= +3%) = 18.5%
+
+  flat-SHARES policy, edge ~ posterior:
+    bankroll    medP&L  P(net<0)  P(DD>30%)  P(ruin)    p5 P&L
+       $1000     -1316     68.8%      88.1%    64.2%     -8235
+       $5000     -2058     70.4%      63.8%    36.3%    -10568
+      $25000     -2027     70.1%      22.1%     4.3%    -18690
+
+  forward wait to gate: {'optimistic_8_per_day': 0.9, 'central_4_per_day': 1.8, 'drought_2_per_day': 3.6}  (binding: 5 distinct regimes, NOT event count)
+
+artifact -> reports/stress/phase3_posterior.json

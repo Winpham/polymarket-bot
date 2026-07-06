@@ -1,0 +1,1 @@
+2026-07-03T18:50:27Z  0 FORWARD  |  INDETERMINATE-BY-POWER: 0/20 forward day-blocks accrued

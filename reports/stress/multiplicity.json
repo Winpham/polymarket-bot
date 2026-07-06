@@ -1,0 +1,189 @@
+{
+ "meta": {
+  "seed": 20260702,
+  "n_perm": 4000,
+  "k_tested": 13,
+  "n_searches": 400,
+  "K_arms_per_search": 13,
+  "margin": 0.03,
+  "p_bar": 0.01
+ },
+ "real_family": [
+  {
+   "n": 237,
+   "surplus": 0.0362972070729006,
+   "lb": 0.0007712976410482811,
+   "p": 0.017,
+   "n_pos_regimes": 4,
+   "gate_lb_gt_margin": false,
+   "null_p_le_bar": false,
+   "regimes_ge_2": true,
+   "certified": false,
+   "strategy": "count"
+  },
+  {
+   "n": 40,
+   "surplus": 0.09223291622432975,
+   "lb": 0.0678549627430011,
+   "p": 0.0,
+   "n_pos_regimes": 3,
+   "gate_lb_gt_margin": true,
+   "null_p_le_bar": true,
+   "regimes_ge_2": true,
+   "certified": true,
+   "strategy": "elite_fresh_fav"
+  },
+  {
+   "n": 195,
+   "surplus": 0.03558961477104597,
+   "lb": -0.00465622849492664,
+   "p": 0.026,
+   "n_pos_regimes": 4,
+   "gate_lb_gt_margin": false,
+   "null_p_le_bar": false,
+   "regimes_ge_2": true,
+   "certified": false,
+   "strategy": "elite_gated"
+  },
+  {
+   "n": 98,
+   "surplus": 0.10600240850910125,
+   "lb": 0.06404685215736763,
+   "p": 0.0,
+   "n_pos_regimes": 4,
+   "gate_lb_gt_margin": true,
+   "null_p_le_bar": true,
+   "regimes_ge_2": true,
+   "certified": true,
+   "strategy": "favorite"
+  },
+  {
+   "n": 1,
+   "certified": false,
+   "reason": "below floor",
+   "strategy": "favorite_tail"
+  },
+  {
+   "n": 217,
+   "surplus": 0.03770906222183459,
+   "lb": -0.001075703383161708,
+   "p": 0.02,
+   "n_pos_regimes": 4,
+   "gate_lb_gt_margin": false,
+   "null_p_le_bar": false,
+   "regimes_ge_2": true,
+   "certified": false,
+   "strategy": "fresh2h"
+  },
+  {
+   "n": 101,
+   "surplus": 0.037369005588567795,
+   "lb": -0.017101929334647485,
+   "p": 0.065,
+   "n_pos_regimes": 3,
+   "gate_lb_gt_margin": false,
+   "null_p_le_bar": false,
+   "regimes_ge_2": true,
+   "certified": false,
+   "strategy": "longshot"
+  },
+  {
+   "n": 455,
+   "surplus": 0.0054095744929586725,
+   "lb": -0.017432341795510155,
+   "p": 0.2805,
+   "n_pos_regimes": 5,
+   "gate_lb_gt_margin": false,
+   "null_p_le_bar": false,
+   "regimes_ge_2": true,
+   "certified": false,
+   "strategy": "loose"
+  },
+  {
+   "n": 3,
+   "certified": false,
+   "reason": "below floor",
+   "strategy": "nonsports"
+  },
+  {
+   "n": 234,
+   "surplus": 0.03596079789524492,
+   "lb": -1.0780273497261461e-05,
+   "p": 0.02025,
+   "n_pos_regimes": 4,
+   "gate_lb_gt_margin": false,
+   "null_p_le_bar": false,
+   "regimes_ge_2": true,
+   "certified": false,
+   "strategy": "sports_only"
+  },
+  {
+   "n": 237,
+   "surplus": 0.03629720707290061,
+   "lb": 0.000771297641048295,
+   "p": 0.01625,
+   "n_pos_regimes": 4,
+   "gate_lb_gt_margin": false,
+   "null_p_le_bar": false,
+   "regimes_ge_2": true,
+   "certified": false,
+   "strategy": "strict"
+  },
+  {
+   "n": 14,
+   "surplus": 0.20843512221468843,
+   "lb": 0.09127056443100098,
+   "p": 0.0095,
+   "n_pos_regimes": 4,
+   "gate_lb_gt_margin": true,
+   "null_p_le_bar": true,
+   "regimes_ge_2": true,
+   "certified": true,
+   "strategy": "strict_retuned"
+  },
+  {
+   "n": 59,
+   "surplus": 0.04577044407729006,
+   "lb": -0.03709191470207385,
+   "p": 0.1465,
+   "n_pos_regimes": 2,
+   "gate_lb_gt_margin": false,
+   "null_p_le_bar": false,
+   "regimes_ge_2": true,
+   "certified": false,
+   "strategy": "tight_cluster"
+  },
+  {
+   "n": 53,
+   "surplus": 0.0784997393613979,
+   "lb": 0.003000541269821244,
+   "p": 0.01775,
+   "n_pos_regimes": 3,
+   "gate_lb_gt_margin": false,
+   "null_p_le_bar": false,
+   "regimes_ge_2": true,
+   "certified": false,
+   "strategy": "trust_weighted"
+  },
+  {
+   "n": 237,
+   "surplus": 0.036297207072900586,
+   "lb": 0.0007712976410482672,
+   "p": 0.0165,
+   "n_pos_regimes": 4,
+   "gate_lb_gt_margin": false,
+   "null_p_le_bar": false,
+   "regimes_ge_2": true,
+   "certified": false,
+   "strategy": "whales"
+  }
+ ],
+ "favorite_p": 0.0,
+ "favorite_bonferroni_p": 0.0,
+ "n_arms_certified_real": 3,
+ "synthetic_null": {
+  "p_any_arm_certifies_per_search": 0.075,
+  "mean_arms_certified_per_search": 0.075,
+  "median_best_of_K_p": 0.0525
+ }
+}

@@ -1,0 +1,154 @@
+{
+ "meta": {
+  "window_s": 300,
+  "size_caps": [
+   10,
+   25,
+   50,
+   100,
+   250,
+   1000
+  ],
+  "delta": 0.0,
+  "note": "maker BUY @anchor; direct=sell-fav\u2264L, complement=buy-dog\u22651\u2212L (mint); chronological fill; rebate UNMODELED; queue capture=100% (UPPER bound)",
+  "universe_caveat": "trader_fills = 489 TRACKED sharp wallets only (489/489 \u2208 followed_traders), CO-DIRECTIONAL with us. LOWER BOUND on true fill capacity; retail counterparty absent. Resolves 'can't fill vs the sharks' (yes, dead end); does NOT resolve full-market maker fill rate (needs full public trade tape or forward live quoting). Adverse gap overstated."
+ },
+ "direct_only": {
+  "n_signals": 309,
+  "n_with_eligible_flow": 4,
+  "n_day_clusters_filled": 2,
+  "median_eligible_usd_all": 0.0,
+  "mean_eligible_usd_all": 3.62,
+  "median_eligible_usd_filled": 106.92,
+  "fillability_by_cap": [
+   {
+    "size_cap": 10,
+    "pct_signals_any_fill": 0.0129,
+    "mean_fill_frac_all": 0.0116,
+    "median_fill_frac_filled": 1.0,
+    "mean_deployed_per_filled": 8.93,
+    "total_deployed_window": 35.72
+   },
+   {
+    "size_cap": 25,
+    "pct_signals_any_fill": 0.0129,
+    "mean_fill_frac_all": 0.0104,
+    "median_fill_frac_filled": 1.0,
+    "mean_deployed_per_filled": 20.18,
+    "total_deployed_window": 80.72
+   },
+   {
+    "size_cap": 50,
+    "pct_signals_any_fill": 0.0129,
+    "mean_fill_frac_all": 0.0101,
+    "median_fill_frac_filled": 1.0,
+    "mean_deployed_per_filled": 38.93,
+    "total_deployed_window": 155.72
+   },
+   {
+    "size_cap": 100,
+    "pct_signals_any_fill": 0.0129,
+    "mean_fill_frac_all": 0.0099,
+    "median_fill_frac_filled": 1.0,
+    "mean_deployed_per_filled": 76.43,
+    "total_deployed_window": 305.72
+   },
+   {
+    "size_cap": 250,
+    "pct_signals_any_fill": 0.0129,
+    "mean_fill_frac_all": 0.0061,
+    "median_fill_frac_filled": 0.4277,
+    "mean_deployed_per_filled": 117.39,
+    "total_deployed_window": 469.56
+   },
+   {
+    "size_cap": 1000,
+    "pct_signals_any_fill": 0.0129,
+    "mean_fill_frac_all": 0.0036,
+    "median_fill_frac_filled": 0.1069,
+    "mean_deployed_per_filled": 279.38,
+    "total_deployed_window": 1117.52
+   }
+  ],
+  "flow_selection": {
+   "wr_all": 0.9061,
+   "wr_fillable": 0.5,
+   "wr_noflow": 0.9115,
+   "gap_fillable_minus_noflow": -0.4115
+  },
+  "raw_favorite_return": {
+   "note": "won/L\u22121 over fillable signals; BASE-RATE dominated, NOT edge. Baselined edge = regime_net_edge maker LB (+0.28%). Size-invariant.",
+   "mean": -0.2688,
+   "cluster_robust_lb": -2.5772
+  }
+ },
+ "direct_plus_complement": {
+  "n_signals": 309,
+  "n_with_eligible_flow": 59,
+  "n_day_clusters_filled": 6,
+  "median_eligible_usd_all": 0.0,
+  "mean_eligible_usd_all": 260.65,
+  "median_eligible_usd_filled": 109.68,
+  "fillability_by_cap": [
+   {
+    "size_cap": 10,
+    "pct_signals_any_fill": 0.1909,
+    "mean_fill_frac_all": 0.1745,
+    "median_fill_frac_filled": 1.0,
+    "mean_deployed_per_filled": 9.14,
+    "total_deployed_window": 539.16
+   },
+   {
+    "size_cap": 25,
+    "pct_signals_any_fill": 0.1909,
+    "mean_fill_frac_all": 0.1658,
+    "median_fill_frac_filled": 1.0,
+    "mean_deployed_per_filled": 21.71,
+    "total_deployed_window": 1280.65
+   },
+   {
+    "size_cap": 50,
+    "pct_signals_any_fill": 0.1909,
+    "mean_fill_frac_all": 0.1513,
+    "median_fill_frac_filled": 1.0,
+    "mean_deployed_per_filled": 39.61,
+    "total_deployed_window": 2337.07
+   },
+   {
+    "size_cap": 100,
+    "pct_signals_any_fill": 0.1909,
+    "mean_fill_frac_all": 0.1303,
+    "median_fill_frac_filled": 1.0,
+    "mean_deployed_per_filled": 68.22,
+    "total_deployed_window": 4024.74
+   },
+   {
+    "size_cap": 250,
+    "pct_signals_any_fill": 0.1909,
+    "mean_fill_frac_all": 0.0992,
+    "median_fill_frac_filled": 0.4387,
+    "mean_deployed_per_filled": 129.9,
+    "total_deployed_window": 7664.21
+   },
+   {
+    "size_cap": 1000,
+    "pct_signals_any_fill": 0.1909,
+    "mean_fill_frac_all": 0.0689,
+    "median_fill_frac_filled": 0.1097,
+    "mean_deployed_per_filled": 360.71,
+    "total_deployed_window": 21281.95
+   }
+  ],
+  "flow_selection": {
+   "wr_all": 0.9061,
+   "wr_fillable": 0.8983,
+   "wr_noflow": 0.908,
+   "gap_fillable_minus_noflow": -0.0097
+  },
+  "raw_favorite_return": {
+   "note": "won/L\u22121 over fillable signals; BASE-RATE dominated, NOT edge. Baselined edge = regime_net_edge maker LB (+0.28%). Size-invariant.",
+   "mean": 0.0737,
+   "cluster_robust_lb": -0.0351
+  }
+ }
+}

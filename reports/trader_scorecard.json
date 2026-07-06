@@ -16,35 +16,40 @@
       "sbr": 0.5
     },
     "band_spreads": {
-      "1": 0.0077,
-      "2": 0.0078,
-      "3": 0.0181,
-      "4": 0.0069,
-      "5": 0.0142
+      "1": 0.026,
+      "2": 0.0109,
+      "3": 0.0211,
+      "4": 0.0081,
+      "5": 0.013
     },
     "prereg": "PREREG_2026-07-04T094304Z_proven_router.md"
   },
   "followset": [
-    "0x5b4ec9c06b284ee52c41a761974d836992880232",
+    "0x1420b746dea30e05b387ab880f9d3ec5bc579daa",
     "0x65018f9fc473f6e920b8929a375d39c26a461220",
+    "0x96a3a4d0f0a91074a43ce8dc39d1f092a717d944",
     "0x99e42eb9038705165b22f821e27659c1dc41e4c4",
     "0xe9a6ed2e4d4ee8ce47cd47cac834746dc4cf627b"
   ],
-  "followset_live": [],
+  "followset_live": [
+    "0x1420b746dea30e05b387ab880f9d3ec5bc579daa",
+    "0x5b4ec9c06b284ee52c41a761974d836992880232",
+    "0x65018f9fc473f6e920b8929a375d39c26a461220",
+    "0x96a3a4d0f0a91074a43ce8dc39d1f092a717d944",
+    "0x99e42eb9038705165b22f821e27659c1dc41e4c4",
+    "0xe9a6ed2e4d4ee8ce47cd47cac834746dc4cf627b"
+  ],
   "drift": {
-    "script_only": [
-      "0x5b4ec9c06b284ee52c41a761974d836992880232",
-      "0x65018f9fc473f6e920b8929a375d39c26a461220",
-      "0x99e42eb9038705165b22f821e27659c1dc41e4c4",
-      "0xe9a6ed2e4d4ee8ce47cd47cac834746dc4cf627b"
-    ],
-    "live_only": []
+    "script_only": [],
+    "live_only": [
+      "0x5b4ec9c06b284ee52c41a761974d836992880232"
+    ]
   },
-  "n_wallets_scored": 412,
+  "n_wallets_scored": 419,
   "distribution_top": [
     {
       "wallet": "0xbbd339eb192219358de7b92f70f595e41471641b",
-      "copy_return": 1.0584,
+      "copy_return": 1.0458,
       "n_events": 1,
       "n_fills": 93,
       "n_days": 1,
@@ -52,7 +57,7 @@
     },
     {
       "wallet": "0x8cb4ca5af7d9361322340bb307a828d288c91057",
-      "copy_return": 1.0161,
+      "copy_return": 1.004,
       "n_events": 1,
       "n_fills": 145,
       "n_days": 1,
@@ -60,23 +65,15 @@
     },
     {
       "wallet": "0xed64a7bf029040aa331abc87902434d815ef217d",
-      "copy_return": 0.9754,
+      "copy_return": 0.9639,
       "n_events": 1,
       "n_fills": 173,
       "n_days": 1,
       "mm_excluded": false
     },
     {
-      "wallet": "0x6100acd1f9ebe426750cb5cf7bc89e262beaed95",
-      "copy_return": 0.8737,
-      "n_events": 1,
-      "n_fills": 55,
-      "n_days": 1,
-      "mm_excluded": true
-    },
-    {
       "wallet": "0x96cfcb0c30942cfcd1cdf76c7d408794d66b1acb",
-      "copy_return": 0.8627,
+      "copy_return": 0.8524,
       "n_events": 1,
       "n_fills": 101,
       "n_days": 1,
@@ -84,15 +81,23 @@
     },
     {
       "wallet": "0x3f87d51f27ba6e19ec52aaeebb68559a839c742c",
-      "copy_return": 0.8624,
+      "copy_return": 0.8521,
       "n_events": 1,
       "n_fills": 100,
       "n_days": 1,
       "mm_excluded": false
     },
     {
+      "wallet": "0x6100acd1f9ebe426750cb5cf7bc89e262beaed95",
+      "copy_return": 0.8389,
+      "n_events": 1,
+      "n_fills": 59,
+      "n_days": 1,
+      "mm_excluded": true
+    },
+    {
       "wallet": "0x2e25b222e2080c377fc1fb2b9f926315f0f4d49e",
-      "copy_return": 0.8466,
+      "copy_return": 0.8365,
       "n_events": 2,
       "n_fills": 162,
       "n_days": 2,
@@ -100,7 +105,7 @@
     },
     {
       "wallet": "0xb22598b366c9ec16a3e97dc90e09dd5fd8dc3d54",
-      "copy_return": 0.838,
+      "copy_return": 0.828,
       "n_events": 5,
       "n_fills": 71,
       "n_days": 4,
@@ -108,7 +113,7 @@
     },
     {
       "wallet": "0x55d94368a50750f264cf42096e9034315d9c832c",
-      "copy_return": 0.8115,
+      "copy_return": 0.8015,
       "n_events": 2,
       "n_fills": 49,
       "n_days": 1,
@@ -116,7 +121,7 @@
     },
     {
       "wallet": "0x3a6a2e7a7707c720219228eb8efa7398bc0e458e",
-      "copy_return": 0.7944,
+      "copy_return": 0.7848,
       "n_events": 1,
       "n_fills": 71,
       "n_days": 1,
@@ -124,15 +129,15 @@
     },
     {
       "wallet": "0x25d3d4e435ac54775b873708c25705321c31efe2",
-      "copy_return": 0.7309,
+      "copy_return": 0.722,
       "n_events": 2,
       "n_fills": 161,
       "n_days": 2,
-      "mm_excluded": false
+      "mm_excluded": true
     },
     {
       "wallet": "0xbc11a64ab34a03a043fbe80598fa065ee87eeec6",
-      "copy_return": 0.7278,
+      "copy_return": 0.7189,
       "n_events": 1,
       "n_fills": 168,
       "n_days": 1,
@@ -140,7 +145,7 @@
     },
     {
       "wallet": "0x412fe1a101554f0b382181c3af932e4b2d8030fa",
-      "copy_return": 0.7139,
+      "copy_return": 0.7059,
       "n_events": 6,
       "n_fills": 134,
       "n_days": 4,
@@ -148,7 +153,7 @@
     },
     {
       "wallet": "0xc6a63ad5a788a576d4acc9911c50fef9fde49458",
-      "copy_return": 0.6813,
+      "copy_return": 0.6727,
       "n_events": 2,
       "n_fills": 226,
       "n_days": 2,
@@ -156,7 +161,7 @@
     },
     {
       "wallet": "0xc1da9728491b4d25480a771bbf932dbeddc5fefa",
-      "copy_return": 0.6716,
+      "copy_return": 0.6633,
       "n_events": 1,
       "n_fills": 48,
       "n_days": 1,
@@ -164,7 +169,7 @@
     },
     {
       "wallet": "0x8a260ebadf8ef07e693dd1b0be120b3330dd73c3",
-      "copy_return": 0.6449,
+      "copy_return": 0.6369,
       "n_events": 3,
       "n_fills": 92,
       "n_days": 3,
@@ -172,63 +177,55 @@
     },
     {
       "wallet": "0x882f2a4c805d12717cc5cf97018413d296aba8c0",
-      "copy_return": 0.5899,
+      "copy_return": 0.5849,
       "n_events": 4,
       "n_fills": 218,
       "n_days": 3,
       "mm_excluded": false
     },
     {
-      "wallet": "0xab6a7da501eb0f53ab56f758e7c399f9249a2978",
-      "copy_return": 0.5899,
-      "n_events": 1,
-      "n_fills": 33,
-      "n_days": 1,
-      "mm_excluded": false
-    },
-    {
       "wallet": "0xa800d978a3ee5795d6958b21c9a4feb1e629bd7a",
-      "copy_return": 0.5888,
+      "copy_return": 0.5841,
       "n_events": 3,
       "n_fills": 126,
       "n_days": 2,
       "mm_excluded": false
     },
     {
+      "wallet": "0xab6a7da501eb0f53ab56f758e7c399f9249a2978",
+      "copy_return": 0.5824,
+      "n_events": 1,
+      "n_fills": 33,
+      "n_days": 1,
+      "mm_excluded": false
+    },
+    {
       "wallet": "0xbee54d90051720e27921dc6874f02d646ffca636",
-      "copy_return": 0.583,
+      "copy_return": 0.5779,
       "n_events": 2,
       "n_fills": 106,
       "n_days": 2,
       "mm_excluded": false
     },
     {
-      "wallet": "0xb1ca909e848cc24ec4e220ce1c453bc290c51705",
-      "copy_return": 0.5801,
-      "n_events": 2,
-      "n_fills": 55,
-      "n_days": 3,
-      "mm_excluded": false
-    },
-    {
-      "wallet": "0xe405483ff60ab58ce973479d3317045549fec67e",
-      "copy_return": 0.576,
-      "n_events": 3,
-      "n_fills": 85,
-      "n_days": 2,
-      "mm_excluded": false
-    },
-    {
       "wallet": "0x9a5462ab1c4d54c016dfa25a29be8a617d387191",
-      "copy_return": 0.5634,
+      "copy_return": 0.5546,
       "n_events": 3,
       "n_fills": 97,
       "n_days": 2,
       "mm_excluded": true
     },
     {
+      "wallet": "0xe405483ff60ab58ce973479d3317045549fec67e",
+      "copy_return": 0.55,
+      "n_events": 3,
+      "n_fills": 94,
+      "n_days": 2,
+      "mm_excluded": false
+    },
+    {
       "wallet": "0x664ce9fb97ae1bbd538d7381b2f4e92dab16f49c",
-      "copy_return": 0.5501,
+      "copy_return": 0.5472,
       "n_events": 1,
       "n_fills": 144,
       "n_days": 1,
@@ -236,23 +233,23 @@
     },
     {
       "wallet": "0x547f2917d51f2e63ab382dcf641d4e0240162937",
-      "copy_return": 0.5019,
-      "n_events": 7,
-      "n_fills": 226,
+      "copy_return": 0.5111,
+      "n_events": 9,
+      "n_fills": 277,
       "n_days": 4,
       "mm_excluded": false
     },
     {
-      "wallet": "0x38337de21ff0bb0a11a40761507d51e318d633d1",
-      "copy_return": 0.4864,
-      "n_events": 12,
-      "n_fills": 72,
-      "n_days": 4,
+      "wallet": "0xb1ca909e848cc24ec4e220ce1c453bc290c51705",
+      "copy_return": 0.4578,
+      "n_events": 3,
+      "n_fills": 58,
+      "n_days": 5,
       "mm_excluded": false
     },
     {
       "wallet": "0xb45a797faa52b0fd8adc56d30382022b7b12192c",
-      "copy_return": 0.4507,
+      "copy_return": 0.4483,
       "n_events": 1,
       "n_fills": 178,
       "n_days": 1,
@@ -260,87 +257,71 @@
     },
     {
       "wallet": "0x5d0c2108a8d50bafc16a4f8200281a0e822dbceb",
-      "copy_return": 0.4428,
+      "copy_return": 0.4388,
       "n_events": 3,
       "n_fills": 73,
       "n_days": 2,
       "mm_excluded": false
     },
     {
-      "wallet": "0xc96e5287ab294ac0388c2ddb00180fc464cff1f9",
-      "copy_return": 0.3993,
-      "n_events": 8,
-      "n_fills": 79,
-      "n_days": 4,
-      "mm_excluded": false
-    },
-    {
       "wallet": "0x336bf6f91a4619d54f0711a20fe468adf4d71233",
-      "copy_return": 0.3993,
+      "copy_return": 0.3962,
       "n_events": 5,
       "n_fills": 114,
       "n_days": 3,
       "mm_excluded": false
     },
     {
+      "wallet": "0xc96e5287ab294ac0388c2ddb00180fc464cff1f9",
+      "copy_return": 0.3938,
+      "n_events": 8,
+      "n_fills": 79,
+      "n_days": 4,
+      "mm_excluded": false
+    },
+    {
       "wallet": "0x4cc3522b689a6bf1fb4a2444c523e7776db47552",
-      "copy_return": 0.3886,
+      "copy_return": 0.3863,
       "n_events": 1,
       "n_fills": 43,
       "n_days": 1,
       "mm_excluded": true
     },
     {
-      "wallet": "0x4f1af091d122e76fa5b1a8ec115c554ec481bc89",
-      "copy_return": 0.3841,
-      "n_events": 18,
-      "n_fills": 48,
-      "n_days": 8,
-      "mm_excluded": true
-    },
-    {
       "wallet": "0xa49becb692927d455924583b5e3e5788246f4c40",
-      "copy_return": 0.3782,
+      "copy_return": 0.3769,
       "n_events": 6,
       "n_fills": 82,
       "n_days": 4,
       "mm_excluded": false
     },
     {
-      "wallet": "0xba389f76b0119aed07c53c9029852664bd97e406",
-      "copy_return": 0.3758,
-      "n_events": 11,
-      "n_fills": 303,
+      "wallet": "0xf751fbd76257ad498e02c1da257ac6e31df0fec8",
+      "copy_return": 0.3619,
+      "n_events": 18,
+      "n_fills": 744,
       "n_days": 7,
-      "mm_excluded": false
-    },
-    {
-      "wallet": "0xbacd00c9080a82ded56f504ee8810af732b0ab35",
-      "copy_return": 0.3593,
-      "n_events": 3,
-      "n_fills": 54,
-      "n_days": 5,
       "mm_excluded": true
     },
     {
+      "wallet": "0x928b90b268dab17900ba166072480b7ecbb6ccf4",
+      "copy_return": 0.3442,
+      "n_events": 7,
+      "n_fills": 110,
+      "n_days": 2,
+      "mm_excluded": false
+    },
+    {
       "wallet": "0x095fbca2e0eaf0c9841005135427e1e0117190b2",
-      "copy_return": 0.3432,
+      "copy_return": 0.3384,
       "n_events": 8,
       "n_fills": 556,
       "n_days": 5,
       "mm_excluded": false
     },
     {
-      "wallet": "0xf751fbd76257ad498e02c1da257ac6e31df0fec8",
-      "copy_return": 0.3307,
-      "n_events": 17,
-      "n_fills": 644,
-      "n_days": 6,
-      "mm_excluded": true
-    },
-    {
       "wallet": "0xbc43c8bfbc4d77c2fc9011adad38ba43b88996d3",
-      "copy_return": 0.3306,
+      "copy_return": 0.3296,
       "n_events": 4,
       "n_fills": 404,
       "n_days": 3,
@@ -348,7 +329,7 @@
     },
     {
       "wallet": "0x088ba59031e4bac4cc7b344581e3d908258221cc",
-      "copy_return": 0.3235,
+      "copy_return": 0.3195,
       "n_events": 14,
       "n_fills": 200,
       "n_days": 8,
@@ -356,48 +337,72 @@
     },
     {
       "wallet": "0x54525ee78bd513b0bf75f94e560158f6fc35d448",
-      "copy_return": 0.3108,
+      "copy_return": 0.3091,
       "n_events": 5,
       "n_fills": 304,
       "n_days": 3,
       "mm_excluded": false
+    },
+    {
+      "wallet": "0x447d7eb8ecb8930e7b5f353b4298e2562d905eea",
+      "copy_return": 0.3072,
+      "n_events": 10,
+      "n_fills": 1201,
+      "n_days": 3,
+      "mm_excluded": true
+    },
+    {
+      "wallet": "0x4f1af091d122e76fa5b1a8ec115c554ec481bc89",
+      "copy_return": 0.3051,
+      "n_events": 19,
+      "n_fills": 49,
+      "n_days": 9,
+      "mm_excluded": true
+    },
+    {
+      "wallet": "0x9b89ef1f344d3e17b37ccdff3bccf62d04f04244",
+      "copy_return": 0.3045,
+      "n_events": 11,
+      "n_fills": 155,
+      "n_days": 5,
+      "mm_excluded": true
     }
   ],
   "persistence_with_mm": {
-    "corr_h1_h2": 0.28775154155751215,
-    "n_wallets": 194,
+    "corr_h1_h2": 0.29120017718341573,
+    "n_wallets": 201,
     "n_mm_excluded": 0,
     "forward_h2_return": {
       "gte10": {
-        "mean": 0.029699917421811974,
-        "n": 55
+        "mean": 0.00404439787711746,
+        "n": 57
       },
       "mid": {
-        "mean": -0.0009000970707032638,
-        "n": 38
+        "mean": -0.022096105623071825,
+        "n": 37
       },
       "neg": {
-        "mean": -0.10236435966255569,
-        "n": 101
+        "mean": -0.11593028150717662,
+        "n": 107
       }
     }
   },
   "persistence_mm_excluded": {
-    "corr_h1_h2": 0.20848337112815638,
-    "n_wallets": 96,
-    "n_mm_excluded": 170,
+    "corr_h1_h2": 0.19369476290785032,
+    "n_wallets": 103,
+    "n_mm_excluded": 171,
     "forward_h2_return": {
       "gte10": {
-        "mean": 0.08765949730665645,
-        "n": 34
+        "mean": 0.04309596284702314,
+        "n": 36
       },
       "mid": {
-        "mean": -0.02676838527856415,
-        "n": 16
+        "mean": -0.024478985957576884,
+        "n": 17
       },
       "neg": {
-        "mean": -0.03465122974563406,
-        "n": 46
+        "mean": -0.06033157531802998,
+        "n": 50
       }
     }
   }
