@@ -239,3 +239,60 @@ DECISION: the follower tax is a PARTIAL MODELING ARTIFACT (real ≈ ⅓-1× of m
 LEDGER DELTA: +3 informational rows (real_follower_tax=MEASURED-thin; edge_reality_recovered=INDETERMINATE;
   realizable_edge_on_measured_tax=NOT_MET). GO gates 2/4; real-money-eligible=False; binding=persistence
   (months). REPORT: reports/REAL_TAX_MEASUREMENT_2026-07-06T050603Z.md
+
+================================================================================
+CYCLE 6 — FORWARD-TRACK INSTRUMENT + HUMAN-REVIEW HANDOFF (the dormancy setup)
+SEAL 2026-07-06T06:25:17Z · read-only · nothing promoted · nothing armed · no Rust · DB read-only
+--------------------------------------------------------------------------------
+CHARTER: this is ENGINEERING/SETUP, not more research. Freeze the candidate plays into a pre-registered,
+  gated, forward-accruing instrument that auto-flags GO if an edge ever emerges; write a clean handoff for
+  the two real wins; then go dormant. Promote NOTHING, arm NOTHING, change NO Rust.
+TUE REFINEMENT (folded into the seal BEFORE finalizing): anti-longshot/reliability-of-source screen +
+  high-volume/long-term floors, and a candidate re-rank.
+F1 — PREREG SEAL (reports/PREREG_FORWARD_TRACK_2026-07-06T062517Z.md, FROZEN):
+  · PLAYS: PLAY-A=master-wuji (single-best reliable TAIL, 103 ev, 19% LS, +12.4%); PLAY-B=DaBossHogg
+    (best high-volume LOW-longshot alternative, 282 ev, 2% LS, +4.4% — highest volume / near-zero longshot,
+    the purest durable-skill diversifier); PLAY-C=equal-weight survivor BOOK {master-wuji, acorp,
+    Sportbetting76, DaBossHogg} (the diversification benchmark; equal-wt because Cycle-4 proved equal wins OOS).
+  · EXCLUDED (screen working): Villson (57 ev < 100 high-volume floor — only ever admitted when Cycle-4
+    widened into the longshot band); djokowin (53% longshot > 40% cap); pfk.bgd (58% longshot > cap, the
+    archetype). PLAY-B re-picked to DaBossHogg (Villson dropped).
+  · FROZEN ELIGIBILITY: relaxed round_trip τ=0.50 + directional net-maker (no arbers/MM/bots); ANTI-LONGSHOT
+    (price<0.35): ≥40% longshot-exposure ⇒ exclude; drop-best-3-events must not flip realizable ROI ≤0;
+    longshot-stripped profitability >0 at corrected tax. HIGH-VOLUME/LONG-TERM: ≥100 events, ≥20 active days,
+    positive corrected-tax ROI in BOTH time-halves (sustained, not recent-only).
+  · METRIC: realizable Calmar at the MEASURED band-aware tax (~1.0¢; Win #1 baked in via real_tax.json
+    market-clustered per band, NOT the old flat 0.013), forward-only (first_seen ≥ SEAL), event-clustered.
+  · GATE (all, forward-only): power ≥30 ev; realizable Calmar >0; beats a RANDOM equal-size book belief-blind
+    p≤0.01; beats the single-best benchmark; selection_null p≤0.01 + --calibrate PASS; promotion_verdict
+    (≥30 ev, Bonferroni, day-deflated SE, LB>0.03); pilot_verdict (LB>0.02, ≥50 ev, ≥5 +regimes, ≥70% +,
+    liq≥$2000); persistence ≥2 DISJOINT NON-SOCCER regimes (soccer alone NEVER counts); real λ̂ CI-lo ≥0.25.
+    GO-CANDIDATE ⇒ loud ESCALATE-TO-HUMAN (a GO on thin data is more likely a bug; demand the months).
+F2 — forward_track.py (NEW, --selftest green): read-only snapshot; re-runnable with NO code change; just
+  accrues. Per play: forward realizable Calmar at measured tax + ordered gate + STATUS (HOLD /
+  INDETERMINATE-BY-POWER / GO-CANDIDATE) + first binding failure + accrued ev/days/non-soccer-regimes +
+  needs/ETA; writes reports/forward_track.json; GO-CANDIDATE ⇒ escalate banner (never auto-promote/arm).
+  Expensive nulls (checks 3/5/6/7) are DOWNSTREAM of the power+persistence accrual gates that bind for
+  months → reported PENDING, re-computed by companion instruments in the accrual cycle. selftest covers:
+  clears-all⇒GO-CANDIDATE+escalate; thin⇒INDETERMINATE-BY-POWER(power_events); powered+unprofitable⇒HOLD;
+  1-regime⇒persistence binds; pending-null⇒no false GO. LIVE (at seal): all 3 plays INDETERMINATE-BY-POWER
+  (0 forward events — EXPECTED), no GO-CANDIDATE, no escalation.
+F3 — readiness_ledger +3 forward-track rows (EXTEND, --selftest green): forward_track_rows() (pure) reads
+  forward_track.json → forward_play_A_tail / forward_play_B_dabosshogg / forward_play_C_book (informational,
+  NOT GO gates). Live: all 3 INDETERMINATE-BY-POWER; GO gates unchanged 2/4; real-money-eligible=False;
+  binding=persistence(months).
+F4 — HANDOFF-HUMAN-REVIEW.md (NEW): two DEFERRED wins (D29 Phase-1 STOP — NOT applied). #1 tax correction:
+  FOLLOWER_TAX=0.013 (copyability.py:41 / trader_scorecard.py:42 / regime_edge.py:56) + band_spread ≈2.9¢
+  overstates the real ~1.0¢ band-aware; per-band measured value proposed; Rust EXEC_HAIRCUT default 0.01
+  already matches; caveat 8% coverage/~2.3d ⇒ forward-confirm. #2 dense-capture join: promote clv_lambda
+  MARKET_KEY_TRAJ_SQL to the default so clv_lambda.json (the edge_reality GO-gate input) carries recovered
+  coverage 2%→19.9%; residual to 50% = pure temporal accrual (342 pre-dense-start favorites); λ̂-lo 0.065<<0.25.
+  Plus HOW TO CHECK IN: weekly `python3 scripts/forward_track.py` + what STATUS/accrual/first-binding to watch.
+VERDICT THIS CYCLE: the dormancy instrument is BUILT and clean enough to sit unattended for months. Nothing
+  promoted, nothing armed, no Rust touched. Currently all-INDETERMINATE-BY-POWER (0 forward events — the
+  expected state at seal). The ONLY lever left is forward accrual of independent NON-SOCCER regimes.
+BINDING CONSTRAINT: the accrual horizon — independent non-soccer regime persistence (MONTHS). GO gates 2/4,
+  real-money-eligible=False.
+NEXT (on wake): re-run forward_track.py weekly; watch STATUS move off INDETERMINATE-BY-POWER as
+  esports/NFL(Sept)/NBA(Oct) regimes accrue; escalate to Tue ONLY on a hand-verified GO-CANDIDATE.
+REPORTS: reports/PREREG_FORWARD_TRACK_2026-07-06T062517Z.md, reports/forward_track.json, HANDOFF-HUMAN-REVIEW.md
