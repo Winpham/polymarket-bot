@@ -523,7 +523,46 @@ def build_gates():
     # (independent NON-SOCCER regime persistence, MONTHS). Reads reports/forward_track.json.
     for row in forward_track_rows(load("forward_track.json")):
         gates.append(row)
+
+    # ============================ Cycle-7 rows (STANDARD GUARD non-regression) =================
+    # The frozen STANDARD (favorite-tilted consensus) champion metrics + regression status. Reads
+    # reports/standard_guard.json. Informational (NOT GO gates): tracks whether our current best system
+    # is still belief-blind-real and has not silently regressed. See reports/STANDARD-BASELINE.md.
+    for row in standard_rows(load("standard_guard.json")):
+        gates.append(row)
     return gates
+
+
+def standard_rows(sg):
+    """Pure: map standard_guard.json to two informational ledger rows — `standard_champion` (the frozen
+    standard's belief-blind + realizable + resolved-P&L read) and `standard_regression` (HEALTHY /
+    REGRESSION-ALARM / INDETERMINATE-BY-POWER against the pre-registered belief-blind floor). Returns []
+    when the artifact is missing. Informational only — NEVER a GO gate."""
+    if not sg:
+        return []
+    ch = sg.get("champion") or {}
+    key = ch.get("key_arm_metrics") or {}
+    led = ch.get("resolved_ledger") or {}
+    reg = sg.get("regression") or {}
+    champ = gate(
+        "standard_champion",
+        "STANDARD",
+        (f"favorite surplus {_pf(key.get('observed'))} (z {key.get('z')}, p {key.get('p_emp')}, "
+         f"LB {_pf(key.get('belief_blind_lb'))}); realizable {_pf(ch.get('realizable_roi_family'))}; "
+         f"resolved-P&L {_pf(led.get('roi_on_turnover'))} over {led.get('bets')} bets"),
+        "the frozen standard (favorite-tilted consensus); challengers must beat it OOS + clear belief-blind",
+        "iterate only via standard_guard.py --challenger; adopt NOTHING that does not beat the champion",
+        "none")
+    alarm = reg.get("status") == "REGRESSION-ALARM"
+    regr = gate(
+        "standard_regression",
+        reg.get("status", "INDETERMINATE-BY-POWER"),
+        f"belief-blind LB {_pf(reg.get('belief_blind_lb'))} vs floor {_pf(reg.get('floor'))} — {reg.get('reason')}",
+        f"champion belief-blind LB must stay > {_pf(reg.get('floor'))} (pre-registered)",
+        ("ESCALATE — the standard itself may be dying (regime change); do not silently regress"
+         if alarm else "none — standard holding; keep watching forward"),
+        "weeks" if alarm else "none")
+    return [champ, regr]
 
 
 def forward_track_rows(ft):
@@ -748,6 +787,26 @@ def selftest():
     c9 = forward_track_rows(None) == []                            # graceful when artifact missing
     ok = ok and c9
     print(f"  [{'ok' if c9 else 'FAIL'}] forward-track rows graceful when artifact missing")
+
+    # --- Cycle-7 standard-guard rows (pure, fixture JSON) ---
+    sg_fix = {"champion": {"key_arm_metrics": {"observed": 0.0806, "z": 4.28, "p_emp": 0.0,
+                           "belief_blind_lb": 0.0493}, "realizable_roi_family": 0.0525,
+                           "resolved_ledger": {"bets": 229, "roi_on_turnover": 0.0217}},
+              "regression": {"status": "HEALTHY", "reason": "LB +4.93% > 0", "belief_blind_lb": 0.0493,
+                             "floor": 0.0}}
+    srows = standard_rows(sg_fix)
+    c10 = (len(srows) == 2 and srows[0]["gate"] == "standard_champion"
+           and srows[1]["gate"] == "standard_regression" and srows[1]["status"] == "HEALTHY"
+           and all(r["gate"] not in GO_GATES for r in srows))       # informational only
+    ok = ok and c10
+    print(f"  [{'ok' if c10 else 'FAIL'}] standard-guard rows: champion+regression, informational (not GO gates)")
+    alarm_fix = dict(sg_fix, regression={"status": "REGRESSION-ALARM", "reason": "LB<=0",
+                                         "belief_blind_lb": -0.01, "floor": 0.0})
+    c11 = (standard_rows(alarm_fix)[1]["status"] == "REGRESSION-ALARM"
+           and standard_rows(alarm_fix)[1]["eta"] == "weeks"        # alarm escalates
+           and standard_rows(None) == [])                           # graceful when artifact missing
+    ok = ok and c11
+    print(f"  [{'ok' if c11 else 'FAIL'}] standard-guard: alarm escalates + graceful when missing")
 
     print("selftest:", "PASS" if ok else "FAIL")
     sys.exit(0 if ok else 1)
