@@ -1,0 +1,58 @@
+{
+  "n_wallets": 116,
+  "cohort": "non-MM directional",
+  "min_ev_half": 10,
+  "fleet_late_surplus": 0.018024679743752547,
+  "tau2": 0.002443805119745162,
+  "signals": {
+    "mean_surplus": {
+      "persistence_spearman": -0.03708914773382539,
+      "persistence_ci95": [
+        -0.21018246140239566,
+        0.14182005544682372
+      ],
+      "top_tercile_late_surplus_mean": 0.021862793009597866,
+      "top_tercile_late_LB": -0.004283868105524145,
+      "k_top": 38,
+      "GATE_PASS": false,
+      "verdict": "NULL"
+    },
+    "sign_consistency": {
+      "persistence_spearman": 0.01922012231577258,
+      "persistence_ci95": [
+        -0.16977638254177943,
+        0.2115958101584804
+      ],
+      "top_tercile_late_surplus_mean": 0.0021017059850862436,
+      "top_tercile_late_LB": -0.020031449679108426,
+      "k_top": 38,
+      "GATE_PASS": false,
+      "verdict": "NULL"
+    },
+    "eb_shrinkage": {
+      "persistence_spearman": 0.029723599738592243,
+      "persistence_ci95": [
+        -0.12917107312477166,
+        0.19513358044819049
+      ],
+      "top_tercile_late_surplus_mean": 0.00883695090079647,
+      "top_tercile_late_LB": -0.012731667307833544,
+      "k_top": 38,
+      "GATE_PASS": false,
+      "verdict": "NULL"
+    },
+    "calibration_slope": {
+      "persistence_spearman": 0.08336600930304079,
+      "persistence_ci95": [
+        -0.10659226985891013,
+        0.26496396957601764
+      ],
+      "top_tercile_late_surplus_mean": 0.02679386527941934,
+      "top_tercile_late_LB": 0.005033087948810095,
+      "k_top": 38,
+      "GATE_PASS": false,
+      "verdict": "NULL"
+    }
+  },
+  "verdict": "ALL NULL \u2014 no reduced-variance retrospective signal persists"
+}

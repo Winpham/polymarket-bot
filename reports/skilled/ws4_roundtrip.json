@@ -1,0 +1,41 @@
+{
+  "axis": "round-trip realized trading PnL (timing, not direction)",
+  "copyable_non_MM": {
+    "n_wallets": 33,
+    "min_rt_per_half": 8,
+    "persistence_spearman": 0.6203208556149733,
+    "persistence_ci95": [
+      0.30445004198152814,
+      0.828389475448299
+    ],
+    "top_tercile_late_rate_mean": 0.5860444887412012,
+    "top_tercile_late_rate_LB": 0.3915129177236272,
+    "fleet_late_rate": 0.20696891980392665,
+    "GATE_PASS": true,
+    "verdict": "TIMING SIGNAL SURVIVES-INSAMPLE -> WS-5"
+  },
+  "all_incl_MM": {
+    "n_wallets": 104,
+    "min_rt_per_half": 8,
+    "persistence_spearman": 0.5734129947722181,
+    "persistence_ci95": [
+      0.4113629208266853,
+      0.7116646921328168
+    ],
+    "top_tercile_late_rate_mean": 0.5105438958186194,
+    "top_tercile_late_rate_LB": 0.3907633034206181,
+    "fleet_late_rate": 0.21956416712476548,
+    "GATE_PASS": true,
+    "verdict": "TIMING SIGNAL SURVIVES-INSAMPLE -> WS-5"
+  },
+  "cross_prediction_timing_to_copyable_direction": {
+    "n": 30,
+    "spearman": 0.28587319243604004,
+    "ci95": [
+      -0.06767924949743132,
+      0.5730537586437653
+    ],
+    "copyable_selector": false
+  },
+  "verdict": "REAL-BUT-UNCOPYABLE: round-trip timing PnL persists (\u03c1\u22480.62) but is a trading mechanism a follower can't replicate; as a SELECTOR of copyable directional edge it is INDETERMINATE-BY-POWER (cross-pred \u03c1=0.29, CI includes 0, n=30) \u2014 forward-accrual candidate"
+}

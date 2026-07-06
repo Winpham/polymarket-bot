@@ -1,0 +1,122 @@
+{
+  "n_wallets": 100,
+  "n_A_fit": 51,
+  "n_B_test": 49,
+  "cohort": "non-MM directional",
+  "min_ev_half": 10,
+  "bonferroni_alpha": 0.008333333333333333,
+  "attrs": {
+    "entry_lateness": {
+      "in_sample_A_spearman": 0.05773755656108597,
+      "learned_sign": 1.0,
+      "out_cohort_B_spearman_oriented": -0.02816326530612245,
+      "out_cohort_B_ci95": [
+        -0.3146710257458112,
+        0.2647134018509996
+      ],
+      "GATE_LB_pos": false
+    },
+    "price_std": {
+      "in_sample_A_spearman": 0.07013574660633484,
+      "learned_sign": 1.0,
+      "out_cohort_B_spearman_oriented": -0.16244897959183674,
+      "out_cohort_B_ci95": [
+        -0.4053639846743295,
+        0.11463177799356059
+      ],
+      "GATE_LB_pos": false
+    },
+    "frac_in_band": {
+      "in_sample_A_spearman": 0.07697006721579044,
+      "learned_sign": 1.0,
+      "out_cohort_B_spearman_oriented": 0.15842240878646766,
+      "out_cohort_B_ci95": [
+        -0.13545816733067728,
+        0.41693494813224996
+      ],
+      "GATE_LB_pos": false
+    },
+    "betsize_cv": {
+      "in_sample_A_spearman": -0.18588235294117647,
+      "learned_sign": -1.0,
+      "out_cohort_B_spearman_oriented": -0.16938775510204082,
+      "out_cohort_B_ci95": [
+        -0.48865262727458597,
+        0.169050051072523
+      ],
+      "GATE_LB_pos": false
+    },
+    "sport_hhi": {
+      "in_sample_A_spearman": -0.17199144990953993,
+      "learned_sign": -1.0,
+      "out_cohort_B_spearman_oriented": 0.15140394001923776,
+      "out_cohort_B_ci95": [
+        -0.16971670748797418,
+        0.4497757195753894
+      ],
+      "GATE_LB_pos": false
+    },
+    "early_fpd": {
+      "in_sample_A_spearman": -0.1939366515837104,
+      "learned_sign": -1.0,
+      "out_cohort_B_spearman_oriented": 0.00020408163265306123,
+      "out_cohort_B_ci95": [
+        -0.30648952478283087,
+        0.30097583405711953
+      ],
+      "GATE_LB_pos": false
+    }
+  },
+  "reverse_fold": {
+    "entry_lateness": {
+      "out_cohort_A_spearman_oriented": -0.05773755656108597,
+      "ci95": [
+        -0.3299188686941939,
+        0.23758559702507823
+      ],
+      "GATE_LB_pos": false
+    },
+    "price_std": {
+      "out_cohort_A_spearman_oriented": -0.07013574660633484,
+      "ci95": [
+        -0.3243831640058055,
+        0.1973159231048241
+      ],
+      "GATE_LB_pos": false
+    },
+    "frac_in_band": {
+      "out_cohort_A_spearman_oriented": 0.07697006721579044,
+      "ci95": [
+        -0.1930556185123068,
+        0.34296977660972405
+      ],
+      "GATE_LB_pos": false
+    },
+    "betsize_cv": {
+      "out_cohort_A_spearman_oriented": -0.18588235294117647,
+      "ci95": [
+        -0.43651369490295666,
+        0.09582331867035508
+      ],
+      "GATE_LB_pos": false
+    },
+    "sport_hhi": {
+      "out_cohort_A_spearman_oriented": 0.17199144990953993,
+      "ci95": [
+        -0.10499116880920495,
+        0.42634326087459534
+      ],
+      "GATE_LB_pos": false
+    },
+    "early_fpd": {
+      "out_cohort_A_spearman_oriented": 0.1939366515837104,
+      "ci95": [
+        -0.09267983330313463,
+        0.47050829029627617
+      ],
+      "GATE_LB_pos": false
+    }
+  },
+  "survivors_both_folds": [],
+  "verdict": "NULL \u2014 no structural attribute generalizes out-of-cohort forward"
+}
