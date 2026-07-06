@@ -8,7 +8,9 @@ the pooled Bonferroni lower bound (+2.0%, and it survives a within-category comp
 "near-certifying" cell (soccer|band4|B) was REFUTED by the verify pass as a composition artifact,
 and the durable (recurring-regime) supply is only ~2.6 events/day.
 The binding constraint is unchanged and now precisely priced: ACCRUAL, led by MLB (~8 days to its
-floor). The relational layer was tested at frozen parameters and KILLED. [H3/H5: see below.]**
+floor). The relational layer was tested at frozen parameters and KILLED; all three routing
+enrichments are power-starved at the follow-set level; the copy tax is finally measured and small
+(~+0.4¢ at 60-80s). Certified: 0. No real money.**
 
 Prereg (frozen before outcomes): `PREREG_20260706T000604Z_favconsensus_deepen.md`. Statistic:
 `a = won − at-fire entry`, surplus over 5-band-matched `_blind`, super-event clustered
@@ -80,7 +82,23 @@ no longer data-starved). odd→even lift +0.53pp, even→odd **−0.10pp** → f
 Sensitivity (top-25/75%) shows the same inconsistency. Co-agreement adds no ordering signal beyond
 rank-weighted consensus on this record; re-test only after a genuinely larger multi-tournament record.
 
-### H3 Routing enrichments — [PENDING agent]
+### H3 Routing enrichments — **all three INDETERMINATE-BY-POWER; the constraint is follow-set size**
+(`scripts/routing_enrich.py`, `reports/routing_enrich.json`; frozen scorecard ≥100 fills / ≥15 days /
+≥+10% copy-return, UNION MM-exclusion, repriced entry +1.3¢+spread −2% fee, whole-super-event
+median-time H1/H2 split, Bonferroni 3, seed 20260706. 838k in-band fills → 8,457 super-events.)
+1. **Regime-conditional scorecard**: per-sport follow-set (6 wallet-sport pairs) H2 forward
+   **−0.271** vs global (3 wallets) **+0.146**; D=−0.416, LB −0.96 / UB +0.13 on 9-11 super-events →
+   indeterminate; if anything the per-sport split fragments an already tiny follow-set.
+2. **Conviction ≥$1k**: +0.128 vs +0.146 all-fills; D=−0.018 ± 0.167 → pure noise; the mine's
+   ">$10k fills were +8.7%" does not translate into a usable forward filter at follow-set scale.
+3. **Survivorship correction** (measurement): bias is UPWARD +0.064 — but from 5 recovered fills of
+   1 dropped wallet; directionally as feared, magnitudinally unmeasured. Keep recovered fills in all
+   forward reads.
+Root cause everywhere: the frozen bar admits ~3-4 wallets (= the deployed follow-set), whose forward
+footprint is ~10 super-events per half. **Routing enrichments are supply-starved at the follow-set
+level; no enrichment idea can be judged until the wallet universe × forward window grows.**
+Data-quality find (flagged for ops): `trader_fills.resolved_at` is a recent backfill (~7 days) and
+is UNUSABLE as an event clock — instruments must use per-super-event MAX(ts). Documented in the JSON.
 
 ### H5 Copyability tax — **MEASURED (first real number); small, and NOT sharp-sport-graded**
 (`scripts/copy_tax.py`, `reports/copy_tax.json`; measurement only.)
@@ -118,6 +136,42 @@ banding, permutation null (fresh seed 987654321); no generation-code reuse.)
 Single-pass positives once again did not survive intact — the within-category null is now a standing
 requirement for any cell-level claim.
 
+## Verdict table (one line per hypothesis)
+
+| Hypothesis | Verdict | Lower bound | Failing gate |
+|---|---|---|---|
+| H1.1 pooled favorite | **INDETERMINATE-BY-POWER** | LB +1.96% (within-cat +1.8%; after drift-tax +0.23%) | LB < +3% margin |
+| H1.2 sweet-spot ordering | CONFIRMED (ordering only) | band5 LB +2.75% / band4 −0.20% | per-band LB < margin |
+| H1.3 longshot block | seed claim WEAKENED → INDETERMINATE | LB −2.7% | (rule stands on LB<0) |
+| H1.4 flat-shares vs flat-$ | CONFIRMED | sign flip reproduces (−$4,575 vs +$2,654) | — |
+| H2 soccer\|band4\|B | **REFUTED** (composition) | within-cat LB −1.1%, p=0.016 | baseline honesty |
+| H2 tennis\|band5\|A | INDETERMINATE + expiring | within-cat +7.4%, LB +5.0% | floor 16/30 + expiring rule |
+| H2 mlb pooled | **INDETERMINATE-BY-POWER (prime target)** | LB +16.3% (within-cat-proof) | floor 14/30, 17-0 sample |
+| H2 abstention | NO LIFT | ΔLB −0.06pp | — |
+| H3.1 regime-conditional routing | INDETERMINATE-BY-POWER | LB −0.96 | N≈10 super-events |
+| H3.2 conviction ≥$1k | INDETERMINATE-BY-POWER | LB −0.37 | N≈11, D≈0 |
+| H3.3 survivorship bias | measured UPWARD (+0.064, N=5) | — | measurement only |
+| H4 relational layer | **KILLED** | even→odd lift −0.10pp | both-halves rule |
+| H5 copy tax | MEASURED: ~+0.4¢ @60-80s; +1.74¢ @15min drift | — | favorite coverage 2.2% |
+
+**Certified: 0.** Nothing moves to real money. The gate held against three separate mirages this
+run (composition cell, tennis magnitude, single-pass positives) — the process is doing its job.
+
+## 5-dimension self-audit
+- **Novelty**: first measured copy tax; first regime-typed supply rates; relational layer finally
+  testable and tested; within-category baseline requirement discovered. No rebuilt wheels — every
+  instrument extends superkey/selection_null/taxonomy conventions.
+- **Rigor**: prereg frozen before outcomes; all thresholds frozen (one deviation: H1.3's longshot
+  read used the `longshot` strategy arm as "consensus-on-longshots" — noted, faithful to intent);
+  independent adversarial verify with fresh code/seed refuted one claim and halved another —
+  generation and verification stayed separate.
+- **Leak-safety**: whole-super-event splits everywhere; as-of entries; verify A2 found zero grading
+  conflicts; H3 flagged and routed around the resolved_at backfill trap; no within-event splits.
+- **Realizability**: every positive stated with tax-adjusted LB; fee kept as buffer; favorite tax
+  read honestly labeled as drift-bounded; no paper headline promoted to "profit."
+- **Reliability**: quantified as supply (2.6 recurring ev/day), not tuned into existence; abstention
+  honestly reported as no-lift; MLB accrual distance stated in days, not vibes.
+
 ## What to accrue next (the specific closers)
 1. **MLB**: 16 more favorite super-events ≈ 8 days. If the +22% surplus holds at n=30 it would clear
    LB>3% with room — the first plausible CERTIFIED non-soccer cell.
@@ -128,3 +182,8 @@ requirement for any cell-level claim.
    tax become trustworthy at ~2 weeks of coverage.
 4. Wimbledon ends ~Jul 12: expect favorite supply to drop from ~14 to ~3-5 ev/day; do not read the
    volume cliff as edge decay.
+5. **Follow-set growth** (H3's binding constraint): the +10% frozen bar admits 3-4 wallets; routing
+   enrichments become judgeable only as more wallets accrue ≥100 fills/≥15 days — a function of the
+   560-wallet capture universe aging, not of new ideas.
+6. **Tighten favorite's capture cadence** so its tax read is a real 60s number (currently 895s
+   median lag, 2.2% coverage) — ops change, paper-only, no alert path.
