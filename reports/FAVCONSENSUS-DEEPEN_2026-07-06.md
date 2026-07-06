@@ -188,10 +188,13 @@ was itself audited (`scripts/audit_{pnl_books,entry_realism,risk_realism}.py` + 
   human-actionable in real time.
 - **Risk realism:** at the measured edge, game-clustered bootstrap gives **P(negative day) ≈ 16%**
   (worst sim day −$800 at these units); ONE stacked game flipping makes the busiest day negative
-  (K=1 → −$823; one WC exact-score game held 32% of bankroll); expected upsets ≈ 9/40 games — the
-  benign week just landed them on small exposures. $3.2k bankroll breaches in 17% of −5pp-stress
-  paths and peak capital doubles to ~$6.9k if resolutions lag +12h. Post-tournament (3-5 bets/day):
-  expect **2-3 negative days/week** even with the edge intact (~+$17-24/day expected at 100sh).
+  (K=1 → −$823; Brazil–Japan alone = $1,261 across ~15 correlated legs = 40% of that slate, and a
+  heavy-favorite loss is an ordinary ~1-in-6 event); expected upsets ≈ 9/40 games — the benign week
+  just landed them on small exposures. **$3.2k bankroll is NOT adequate**: true headroom was $59
+  before any loss; it breaches in 17% of −5pp-stress paths (52% at −10pp) and peak capital doubles
+  to ~$6.9k if resolutions lag +12h. Post-tournament (3-5 bets/day; 89% of this record's supply was
+  WC+Wimbledon): expect **2-3 negative days/week** even with the edge intact (~+$17-24/day at 100sh),
+  3-4/week under no-edge.
 - **Edge reality re-affirmed:** clustered no-edge null rejects at p=1.6e-5 (z 4.16); MLB is now
   18-0 (p=0.005 under null). The edge is real; the *presentation* was flattered by at-fire pricing,
   detection-date accounting, and a benign-sample tournament week.
