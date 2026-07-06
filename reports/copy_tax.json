@@ -1,0 +1,1176 @@
+{
+  "prereg": "PREREG_20260706T000604Z_favconsensus_deepen.md",
+  "measurement_only": true,
+  "definition": "tax = first_executable_ask(secs_after_fire>=60) - at_fire_mean_price; rows without a >=60s executable point EXCLUDED (no imputation); 2% fee NOT netted.",
+  "follower_tax_proxy_ref": 0.0071,
+  "favorite": {
+    "pooled": {
+      "n": 7,
+      "mean": 0.017351892603816057,
+      "median": 0.014999999798674057,
+      "sd": 0.01433017332151481,
+      "label": "favorite pooled",
+      "n_graded": 325,
+      "coverage": 0.021538461538461538,
+      "n_super_events": 6,
+      "median_lag_s": 895,
+      "proxy_capture_drift": {
+        "n": 7,
+        "mean": 0.011280464032387518,
+        "median": 0.009999999798674164,
+        "sd": 0.012080110360379278
+      },
+      "proxy_ask_haircut": {
+        "n": 7,
+        "mean": -0.000357142857142913,
+        "median": 0.004999999999999893,
+        "sd": 0.014214764289622366
+      }
+    },
+    "band4": {
+      "n": 3,
+      "mean": 0.01720319543553202,
+      "median": 0.014999999798674057,
+      "sd": 0.009391050545715242,
+      "label": "favorite band4",
+      "n_graded": 134,
+      "coverage": 0.022388059701492536,
+      "n_super_events": 3,
+      "median_lag_s": 900,
+      "proxy_capture_drift": {
+        "n": 3,
+        "mean": 0.01553652876886539,
+        "median": 0.009999999798674164,
+        "sd": 0.014983087474045666
+      },
+      "proxy_ask_haircut": {
+        "n": 3,
+        "mean": 0.004999999999999931,
+        "median": 0.004999999999999893,
+        "sd": 6.409875621278546e-17
+      }
+    },
+    "band5": {
+      "n": 4,
+      "mean": 0.017463415480029082,
+      "median": 0.017321722865590528,
+      "sd": 0.018758317816303334,
+      "label": "favorite band5",
+      "n_graded": 191,
+      "coverage": 0.020942408376963352,
+      "n_super_events": 3,
+      "median_lag_s": 894.5,
+      "proxy_capture_drift": {
+        "n": 4,
+        "mean": 0.008088415480029115,
+        "median": 0.005357126433466086,
+        "sd": 0.010511733451055596
+      },
+      "proxy_ask_haircut": {
+        "n": 4,
+        "mean": -0.0043750000000000455,
+        "median": -0.0012500000000000289,
+        "sd": 0.018812119320622343
+      }
+    },
+    "by_band_cat": {
+      "band4|esports": {
+        "n": 0,
+        "mean": null,
+        "median": null,
+        "sd": null,
+        "label": "favorite band4|esports",
+        "n_graded": 5,
+        "coverage": 0.0,
+        "n_super_events": 0,
+        "median_lag_s": null,
+        "proxy_capture_drift": {
+          "n": 0,
+          "mean": null,
+          "median": null,
+          "sd": null
+        },
+        "proxy_ask_haircut": {
+          "n": 0,
+          "mean": null,
+          "median": null,
+          "sd": null
+        }
+      },
+      "band4|mlb": {
+        "n": 0,
+        "mean": null,
+        "median": null,
+        "sd": null,
+        "label": "favorite band4|mlb",
+        "n_graded": 10,
+        "coverage": 0.0,
+        "n_super_events": 0,
+        "median_lag_s": null,
+        "proxy_capture_drift": {
+          "n": 0,
+          "mean": null,
+          "median": null,
+          "sd": null
+        },
+        "proxy_ask_haircut": {
+          "n": 0,
+          "mean": null,
+          "median": null,
+          "sd": null
+        }
+      },
+      "band4|nba/cbb": {
+        "n": 0,
+        "mean": null,
+        "median": null,
+        "sd": null,
+        "label": "favorite band4|nba/cbb",
+        "n_graded": 4,
+        "coverage": 0.0,
+        "n_super_events": 0,
+        "median_lag_s": null,
+        "proxy_capture_drift": {
+          "n": 0,
+          "mean": null,
+          "median": null,
+          "sd": null
+        },
+        "proxy_ask_haircut": {
+          "n": 0,
+          "mean": null,
+          "median": null,
+          "sd": null
+        }
+      },
+      "band4|other": {
+        "n": 0,
+        "mean": null,
+        "median": null,
+        "sd": null,
+        "label": "favorite band4|other",
+        "n_graded": 1,
+        "coverage": 0.0,
+        "n_super_events": 0,
+        "median_lag_s": null,
+        "proxy_capture_drift": {
+          "n": 0,
+          "mean": null,
+          "median": null,
+          "sd": null
+        },
+        "proxy_ask_haircut": {
+          "n": 0,
+          "mean": null,
+          "median": null,
+          "sd": null
+        }
+      },
+      "band4|soccer": {
+        "n": 2,
+        "mean": 0.018304793253961005,
+        "median": 0.018304793253961005,
+        "sd": 0.013003943793440208,
+        "label": "favorite band4|soccer",
+        "n_graded": 82,
+        "coverage": 0.024390243902439025,
+        "n_super_events": 2,
+        "median_lag_s": 482.0,
+        "proxy_capture_drift": {
+          "n": 2,
+          "mean": 0.018304793253961005,
+          "median": 0.018304793253961005,
+          "sd": 0.020075011605305688
+        },
+        "proxy_ask_haircut": {
+          "n": 2,
+          "mean": 0.004999999999999949,
+          "median": 0.004999999999999949,
+          "sd": 7.850462293418876e-17
+        }
+      },
+      "band4|tennis": {
+        "n": 1,
+        "mean": 0.014999999798674057,
+        "median": 0.014999999798674057,
+        "sd": null,
+        "label": "favorite band4|tennis",
+        "n_graded": 32,
+        "coverage": 0.03125,
+        "n_super_events": 1,
+        "median_lag_s": 900,
+        "proxy_capture_drift": {
+          "n": 1,
+          "mean": 0.009999999798674164,
+          "median": 0.009999999798674164,
+          "sd": null
+        },
+        "proxy_ask_haircut": {
+          "n": 1,
+          "mean": 0.004999999999999893,
+          "median": 0.004999999999999893,
+          "sd": null
+        }
+      },
+      "band5|esports": {
+        "n": 0,
+        "mean": null,
+        "median": null,
+        "sd": null,
+        "label": "favorite band5|esports",
+        "n_graded": 5,
+        "coverage": 0.0,
+        "n_super_events": 0,
+        "median_lag_s": null,
+        "proxy_capture_drift": {
+          "n": 0,
+          "mean": null,
+          "median": null,
+          "sd": null
+        },
+        "proxy_ask_haircut": {
+          "n": 0,
+          "mean": null,
+          "median": null,
+          "sd": null
+        }
+      },
+      "band5|mlb": {
+        "n": 0,
+        "mean": null,
+        "median": null,
+        "sd": null,
+        "label": "favorite band5|mlb",
+        "n_graded": 7,
+        "coverage": 0.0,
+        "n_super_events": 0,
+        "median_lag_s": null,
+        "proxy_capture_drift": {
+          "n": 0,
+          "mean": null,
+          "median": null,
+          "sd": null
+        },
+        "proxy_ask_haircut": {
+          "n": 0,
+          "mean": null,
+          "median": null,
+          "sd": null
+        }
+      },
+      "band5|politics/elections": {
+        "n": 0,
+        "mean": null,
+        "median": null,
+        "sd": null,
+        "label": "favorite band5|politics/elections",
+        "n_graded": 2,
+        "coverage": 0.0,
+        "n_super_events": 0,
+        "median_lag_s": null,
+        "proxy_capture_drift": {
+          "n": 0,
+          "mean": null,
+          "median": null,
+          "sd": null
+        },
+        "proxy_ask_haircut": {
+          "n": 0,
+          "mean": null,
+          "median": null,
+          "sd": null
+        }
+      },
+      "band5|soccer": {
+        "n": 4,
+        "mean": 0.017463415480029082,
+        "median": 0.017321722865590528,
+        "sd": 0.018758317816303334,
+        "label": "favorite band5|soccer",
+        "n_graded": 154,
+        "coverage": 0.025974025974025976,
+        "n_super_events": 3,
+        "median_lag_s": 894.5,
+        "proxy_capture_drift": {
+          "n": 4,
+          "mean": 0.008088415480029115,
+          "median": 0.005357126433466086,
+          "sd": 0.010511733451055596
+        },
+        "proxy_ask_haircut": {
+          "n": 4,
+          "mean": -0.0043750000000000455,
+          "median": -0.0012500000000000289,
+          "sd": 0.018812119320622343
+        }
+      },
+      "band5|tennis": {
+        "n": 0,
+        "mean": null,
+        "median": null,
+        "sd": null,
+        "label": "favorite band5|tennis",
+        "n_graded": 23,
+        "coverage": 0.0,
+        "n_super_events": 0,
+        "median_lag_s": null,
+        "proxy_capture_drift": {
+          "n": 0,
+          "mean": null,
+          "median": null,
+          "sd": null
+        },
+        "proxy_ask_haircut": {
+          "n": 0,
+          "mean": null,
+          "median": null,
+          "sd": null
+        }
+      }
+    }
+  },
+  "strict": {
+    "pooled": {
+      "n": 169,
+      "mean": 0.00391556268584191,
+      "median": 0.005245900045257379,
+      "sd": 0.05844972588847203,
+      "label": "strict pooled",
+      "n_graded": 1012,
+      "coverage": 0.16699604743083005,
+      "n_super_events": 39,
+      "median_lag_s": 81,
+      "proxy_capture_drift": {
+        "n": 163,
+        "mean": -0.0034128865686450624,
+        "median": 0.001915830807273755,
+        "sd": 0.08362682241513814
+      },
+      "proxy_ask_haircut": {
+        "n": 160,
+        "mean": 0.009987499999999998,
+        "median": 0.0050000000000000044,
+        "sd": 0.05356920962760031
+      }
+    },
+    "band4": {
+      "n": 30,
+      "mean": -0.003333024901848299,
+      "median": 0.005614179209448067,
+      "sd": 0.05379735543291691,
+      "label": "strict band4",
+      "n_graded": 164,
+      "coverage": 0.18292682926829268,
+      "n_super_events": 17,
+      "median_lag_s": 81.0,
+      "proxy_capture_drift": {
+        "n": 30,
+        "mean": -0.006199691568514968,
+        "median": 0.001026130002056258,
+        "sd": 0.045091351187568754
+      },
+      "proxy_ask_haircut": {
+        "n": 30,
+        "mean": -0.004666666666666675,
+        "median": 0.0050000000000000044,
+        "sd": 0.036006065900195144
+      }
+    },
+    "band5": {
+      "n": 52,
+      "mean": 0.008247013671001762,
+      "median": 0.006195397486882082,
+      "sd": 0.017956253190042373,
+      "label": "strict band5",
+      "n_graded": 209,
+      "coverage": 0.24880382775119617,
+      "n_super_events": 9,
+      "median_lag_s": 79.0,
+      "proxy_capture_drift": {
+        "n": 48,
+        "mean": -0.004027523565542775,
+        "median": 0.004565676915065986,
+        "sd": 0.04258725893207722
+      },
+      "proxy_ask_haircut": {
+        "n": 45,
+        "mean": 0.008711111111111104,
+        "median": 0.0050000000000000044,
+        "sd": 0.027392452694975384
+      }
+    },
+    "by_band_cat": {
+      "band1|esports": {
+        "n": 1,
+        "mean": -0.010454548429597227,
+        "median": -0.010454548429597227,
+        "sd": null,
+        "label": "strict band1|esports",
+        "n_graded": 4,
+        "coverage": 0.25,
+        "n_super_events": 1,
+        "median_lag_s": 76,
+        "proxy_capture_drift": {
+          "n": 1,
+          "mean": 0.26454545157040277,
+          "median": 0.26454545157040277,
+          "sd": null
+        },
+        "proxy_ask_haircut": {
+          "n": 1,
+          "mean": 0.255,
+          "median": 0.255,
+          "sd": null
+        }
+      },
+      "band1|mlb": {
+        "n": 0,
+        "mean": null,
+        "median": null,
+        "sd": null,
+        "label": "strict band1|mlb",
+        "n_graded": 4,
+        "coverage": 0.0,
+        "n_super_events": 0,
+        "median_lag_s": null,
+        "proxy_capture_drift": {
+          "n": 0,
+          "mean": null,
+          "median": null,
+          "sd": null
+        },
+        "proxy_ask_haircut": {
+          "n": 0,
+          "mean": null,
+          "median": null,
+          "sd": null
+        }
+      },
+      "band1|other": {
+        "n": 0,
+        "mean": null,
+        "median": null,
+        "sd": null,
+        "label": "strict band1|other",
+        "n_graded": 9,
+        "coverage": 0.0,
+        "n_super_events": 0,
+        "median_lag_s": null,
+        "proxy_capture_drift": {
+          "n": 0,
+          "mean": null,
+          "median": null,
+          "sd": null
+        },
+        "proxy_ask_haircut": {
+          "n": 0,
+          "mean": null,
+          "median": null,
+          "sd": null
+        }
+      },
+      "band1|soccer": {
+        "n": 19,
+        "mean": 0.01426213336561008,
+        "median": 0.006264709198095596,
+        "sd": 0.02419952441395563,
+        "label": "strict band1|soccer",
+        "n_graded": 146,
+        "coverage": 0.13013698630136986,
+        "n_super_events": 6,
+        "median_lag_s": 75,
+        "proxy_capture_drift": {
+          "n": 18,
+          "mean": 0.010570441347659632,
+          "median": 0.0014656942365054992,
+          "sd": 0.03406554490371678
+        },
+        "proxy_ask_haircut": {
+          "n": 18,
+          "mean": 0.029944444444444447,
+          "median": 0.0050000000000000044,
+          "sd": 0.11743707813234046
+        }
+      },
+      "band1|tennis": {
+        "n": 0,
+        "mean": null,
+        "median": null,
+        "sd": null,
+        "label": "strict band1|tennis",
+        "n_graded": 29,
+        "coverage": 0.0,
+        "n_super_events": 0,
+        "median_lag_s": null,
+        "proxy_capture_drift": {
+          "n": 0,
+          "mean": null,
+          "median": null,
+          "sd": null
+        },
+        "proxy_ask_haircut": {
+          "n": 0,
+          "mean": null,
+          "median": null,
+          "sd": null
+        }
+      },
+      "band2|esports": {
+        "n": 0,
+        "mean": null,
+        "median": null,
+        "sd": null,
+        "label": "strict band2|esports",
+        "n_graded": 2,
+        "coverage": 0.0,
+        "n_super_events": 0,
+        "median_lag_s": null,
+        "proxy_capture_drift": {
+          "n": 0,
+          "mean": null,
+          "median": null,
+          "sd": null
+        },
+        "proxy_ask_haircut": {
+          "n": 0,
+          "mean": null,
+          "median": null,
+          "sd": null
+        }
+      },
+      "band2|mlb": {
+        "n": 2,
+        "mean": -0.022903233735311307,
+        "median": -0.022903233735311307,
+        "sd": 0.05246274997170737,
+        "label": "strict band2|mlb",
+        "n_graded": 17,
+        "coverage": 0.11764705882352941,
+        "n_super_events": 2,
+        "median_lag_s": 82.5,
+        "proxy_capture_drift": {
+          "n": 2,
+          "mean": 0.0770967662646887,
+          "median": 0.0770967662646887,
+          "sd": 0.12431394532492947
+        },
+        "proxy_ask_haircut": {
+          "n": 2,
+          "mean": 0.015000000000000013,
+          "median": 0.015000000000000013,
+          "sd": 0.014142135623730963
+        }
+      },
+      "band2|nba/cbb": {
+        "n": 0,
+        "mean": null,
+        "median": null,
+        "sd": null,
+        "label": "strict band2|nba/cbb",
+        "n_graded": 1,
+        "coverage": 0.0,
+        "n_super_events": 0,
+        "median_lag_s": null,
+        "proxy_capture_drift": {
+          "n": 0,
+          "mean": null,
+          "median": null,
+          "sd": null
+        },
+        "proxy_ask_haircut": {
+          "n": 0,
+          "mean": null,
+          "median": null,
+          "sd": null
+        }
+      },
+      "band2|soccer": {
+        "n": 21,
+        "mean": -0.014329465654663785,
+        "median": -8.326672684688674e-17,
+        "sd": 0.11037353613877117,
+        "label": "strict band2|soccer",
+        "n_graded": 102,
+        "coverage": 0.20588235294117646,
+        "n_super_events": 7,
+        "median_lag_s": 84,
+        "proxy_capture_drift": {
+          "n": 20,
+          "mean": -0.027403547580875223,
+          "median": -0.0052380953424631255,
+          "sd": 0.09595855918051156
+        },
+        "proxy_ask_haircut": {
+          "n": 20,
+          "mean": -0.004474999999999996,
+          "median": 0.0050000000000000044,
+          "sd": 0.024761746282267096
+        }
+      },
+      "band2|tennis": {
+        "n": 1,
+        "mean": 0.00534883510089032,
+        "median": 0.00534883510089032,
+        "sd": null,
+        "label": "strict band2|tennis",
+        "n_graded": 30,
+        "coverage": 0.03333333333333333,
+        "n_super_events": 1,
+        "median_lag_s": 80,
+        "proxy_capture_drift": {
+          "n": 1,
+          "mean": 0.010348835100890297,
+          "median": 0.010348835100890297,
+          "sd": null
+        },
+        "proxy_ask_haircut": {
+          "n": 1,
+          "mean": -0.004999999999999977,
+          "median": -0.004999999999999977,
+          "sd": null
+        }
+      },
+      "band3|esports": {
+        "n": 0,
+        "mean": null,
+        "median": null,
+        "sd": null,
+        "label": "strict band3|esports",
+        "n_graded": 12,
+        "coverage": 0.0,
+        "n_super_events": 0,
+        "median_lag_s": null,
+        "proxy_capture_drift": {
+          "n": 0,
+          "mean": null,
+          "median": null,
+          "sd": null
+        },
+        "proxy_ask_haircut": {
+          "n": 0,
+          "mean": null,
+          "median": null,
+          "sd": null
+        }
+      },
+      "band3|mlb": {
+        "n": 15,
+        "mean": -0.006309660935768822,
+        "median": -0.0049999991848482805,
+        "sd": 0.08756195268575723,
+        "label": "strict band3|mlb",
+        "n_graded": 108,
+        "coverage": 0.1388888888888889,
+        "n_super_events": 12,
+        "median_lag_s": 75,
+        "proxy_capture_drift": {
+          "n": 15,
+          "mean": 0.013190339064231182,
+          "median": 0.029414227879505428,
+          "sd": 0.1523694319514327
+        },
+        "proxy_ask_haircut": {
+          "n": 15,
+          "mean": 0.02606666666666668,
+          "median": 0.0050000000000000044,
+          "sd": 0.06126256916708914
+        }
+      },
+      "band3|nba/cbb": {
+        "n": 0,
+        "mean": null,
+        "median": null,
+        "sd": null,
+        "label": "strict band3|nba/cbb",
+        "n_graded": 4,
+        "coverage": 0.0,
+        "n_super_events": 0,
+        "median_lag_s": null,
+        "proxy_capture_drift": {
+          "n": 0,
+          "mean": null,
+          "median": null,
+          "sd": null
+        },
+        "proxy_ask_haircut": {
+          "n": 0,
+          "mean": null,
+          "median": null,
+          "sd": null
+        }
+      },
+      "band3|other": {
+        "n": 1,
+        "mean": 0.0,
+        "median": 0.0,
+        "sd": null,
+        "label": "strict band3|other",
+        "n_graded": 0,
+        "coverage": null,
+        "n_super_events": 1,
+        "median_lag_s": 80,
+        "proxy_capture_drift": {
+          "n": 1,
+          "mean": -0.0050000000000000044,
+          "median": -0.0050000000000000044,
+          "sd": null
+        },
+        "proxy_ask_haircut": {
+          "n": 1,
+          "mean": 0.0050000000000000044,
+          "median": 0.0050000000000000044,
+          "sd": null
+        }
+      },
+      "band3|soccer": {
+        "n": 24,
+        "mean": 0.014381585895831682,
+        "median": 0.004563847785631958,
+        "sd": 0.05345177887079413,
+        "label": "strict band3|soccer",
+        "n_graded": 126,
+        "coverage": 0.19047619047619047,
+        "n_super_events": 9,
+        "median_lag_s": 79.5,
+        "proxy_capture_drift": {
+          "n": 24,
+          "mean": -0.02247258077083499,
+          "median": -0.0008111607632291795,
+          "sd": 0.1189033708877964
+        },
+        "proxy_ask_haircut": {
+          "n": 24,
+          "mean": 0.008562499999999995,
+          "median": 0.0050000000000000044,
+          "sd": 0.013855867145286348
+        }
+      },
+      "band3|tennis": {
+        "n": 3,
+        "mean": 0.054404469402629885,
+        "median": 0.031395306702872605,
+        "sd": 0.09617781780906118,
+        "label": "strict band3|tennis",
+        "n_graded": 45,
+        "coverage": 0.06666666666666667,
+        "n_super_events": 3,
+        "median_lag_s": 92,
+        "proxy_capture_drift": {
+          "n": 3,
+          "mean": 0.03273780273596324,
+          "median": 0.016395306702872592,
+          "sd": 0.07543060673156246
+        },
+        "proxy_ask_haircut": {
+          "n": 3,
+          "mean": 0.004999999999999986,
+          "median": 0.0050000000000000044,
+          "sd": 0.009999999999999981
+        }
+      },
+      "band4|esports": {
+        "n": 0,
+        "mean": null,
+        "median": null,
+        "sd": null,
+        "label": "strict band4|esports",
+        "n_graded": 8,
+        "coverage": 0.0,
+        "n_super_events": 0,
+        "median_lag_s": null,
+        "proxy_capture_drift": {
+          "n": 0,
+          "mean": null,
+          "median": null,
+          "sd": null
+        },
+        "proxy_ask_haircut": {
+          "n": 0,
+          "mean": null,
+          "median": null,
+          "sd": null
+        }
+      },
+      "band4|mlb": {
+        "n": 3,
+        "mean": -0.027905904831944255,
+        "median": 0.0003333333333337407,
+        "sd": 0.05918156575182534,
+        "label": "strict band4|mlb",
+        "n_graded": 17,
+        "coverage": 0.17647058823529413,
+        "n_super_events": 3,
+        "median_lag_s": 65,
+        "proxy_capture_drift": {
+          "n": 3,
+          "mean": 0.00709409516805574,
+          "median": 0.006866653585691829,
+          "sd": 0.011876116153353171
+        },
+        "proxy_ask_haircut": {
+          "n": 3,
+          "mean": -0.0050000000000000044,
+          "median": 0.0050000000000000044,
+          "sd": 0.036055512754639925
+        }
+      },
+      "band4|nba/cbb": {
+        "n": 0,
+        "mean": null,
+        "median": null,
+        "sd": null,
+        "label": "strict band4|nba/cbb",
+        "n_graded": 4,
+        "coverage": 0.0,
+        "n_super_events": 0,
+        "median_lag_s": null,
+        "proxy_capture_drift": {
+          "n": 0,
+          "mean": null,
+          "median": null,
+          "sd": null
+        },
+        "proxy_ask_haircut": {
+          "n": 0,
+          "mean": null,
+          "median": null,
+          "sd": null
+        }
+      },
+      "band4|other": {
+        "n": 1,
+        "mean": 0.015000007687794858,
+        "median": 0.015000007687794858,
+        "sd": null,
+        "label": "strict band4|other",
+        "n_graded": 2,
+        "coverage": 0.5,
+        "n_super_events": 1,
+        "median_lag_s": 72,
+        "proxy_capture_drift": {
+          "n": 1,
+          "mean": 0.010000007687794854,
+          "median": 0.010000007687794854,
+          "sd": null
+        },
+        "proxy_ask_haircut": {
+          "n": 1,
+          "mean": 0.0050000000000000044,
+          "median": 0.0050000000000000044,
+          "sd": null
+        }
+      },
+      "band4|soccer": {
+        "n": 22,
+        "mean": -0.006771951728938842,
+        "median": 0.0010581405041356629,
+        "sd": 0.056094900267494384,
+        "label": "strict band4|soccer",
+        "n_graded": 97,
+        "coverage": 0.2268041237113402,
+        "n_super_events": 9,
+        "median_lag_s": 84.5,
+        "proxy_capture_drift": {
+          "n": 22,
+          "mean": -0.010181042638029759,
+          "median": -0.003941859495864342,
+          "sd": 0.05175982640312988
+        },
+        "proxy_ask_haircut": {
+          "n": 22,
+          "mean": 0.0029545454545454523,
+          "median": 0.0050000000000000044,
+          "sd": 0.015710103733182632
+        }
+      },
+      "band4|tennis": {
+        "n": 4,
+        "mean": 0.029427474447310864,
+        "median": 0.012205882252278255,
+        "sd": 0.03717275284027941,
+        "label": "strict band4|tennis",
+        "n_graded": 36,
+        "coverage": 0.1111111111111111,
+        "n_super_events": 4,
+        "median_lag_s": 71.0,
+        "proxy_capture_drift": {
+          "n": 4,
+          "mean": 0.001677474447310895,
+          "median": 0.007205882252278306,
+          "sd": 0.018541693112151255
+        },
+        "proxy_ask_haircut": {
+          "n": 4,
+          "mean": -0.04875000000000004,
+          "median": -0.015000000000000069,
+          "sd": 0.08300351398183894
+        }
+      },
+      "band5|esports": {
+        "n": 1,
+        "mean": -0.03349823910380323,
+        "median": -0.03349823910380323,
+        "sd": null,
+        "label": "strict band5|esports",
+        "n_graded": 5,
+        "coverage": 0.2,
+        "n_super_events": 1,
+        "median_lag_s": 99,
+        "proxy_capture_drift": {
+          "n": 1,
+          "mean": -0.04349823910380324,
+          "median": -0.04349823910380324,
+          "sd": null
+        },
+        "proxy_ask_haircut": {
+          "n": 1,
+          "mean": 0.020000000000000018,
+          "median": 0.020000000000000018,
+          "sd": null
+        }
+      },
+      "band5|mlb": {
+        "n": 0,
+        "mean": null,
+        "median": null,
+        "sd": null,
+        "label": "strict band5|mlb",
+        "n_graded": 3,
+        "coverage": 0.0,
+        "n_super_events": 0,
+        "median_lag_s": null,
+        "proxy_capture_drift": {
+          "n": 0,
+          "mean": null,
+          "median": null,
+          "sd": null
+        },
+        "proxy_ask_haircut": {
+          "n": 0,
+          "mean": null,
+          "median": null,
+          "sd": null
+        }
+      },
+      "band5|politics/elections": {
+        "n": 0,
+        "mean": null,
+        "median": null,
+        "sd": null,
+        "label": "strict band5|politics/elections",
+        "n_graded": 2,
+        "coverage": 0.0,
+        "n_super_events": 0,
+        "median_lag_s": null,
+        "proxy_capture_drift": {
+          "n": 0,
+          "mean": null,
+          "median": null,
+          "sd": null
+        },
+        "proxy_ask_haircut": {
+          "n": 0,
+          "mean": null,
+          "median": null,
+          "sd": null
+        }
+      },
+      "band5|soccer": {
+        "n": 50,
+        "mean": 0.008309359188382725,
+        "median": 0.006195397486882082,
+        "sd": 0.01641850460678583,
+        "label": "strict band5|soccer",
+        "n_graded": 176,
+        "coverage": 0.2840909090909091,
+        "n_super_events": 7,
+        "median_lag_s": 78.0,
+        "proxy_capture_drift": {
+          "n": 46,
+          "mean": 0.0012674373343693794,
+          "median": 0.004775750268995349,
+          "sd": 0.030088499861411377
+        },
+        "proxy_ask_haircut": {
+          "n": 43,
+          "mean": 0.008767441860465108,
+          "median": 0.0050000000000000044,
+          "sd": 0.027902753925615364
+        }
+      },
+      "band5|tennis": {
+        "n": 1,
+        "mean": 0.04687499057675859,
+        "median": 0.04687499057675859,
+        "sd": null,
+        "label": "strict band5|tennis",
+        "n_graded": 23,
+        "coverage": 0.043478260869565216,
+        "n_super_events": 1,
+        "median_lag_s": 95,
+        "proxy_capture_drift": {
+          "n": 1,
+          "mean": -0.2081250094232414,
+          "median": -0.2081250094232414,
+          "sd": null
+        },
+        "proxy_ask_haircut": {
+          "n": 1,
+          "mean": -0.0050000000000000044,
+          "median": -0.0050000000000000044,
+          "sd": null
+        }
+      }
+    }
+  },
+  "realizable_after_tax": [
+    {
+      "positive": "H1.1 favorite pooled",
+      "band_for_tax": "pooled",
+      "cat_for_tax": "*",
+      "surplus_ev": 0.08390915200699507,
+      "lb_ev": 0.019646887341734323,
+      "matched_tax": 0.017351892603816057,
+      "tax_source": "band:pooled (N=7; pooled|* had N<5)",
+      "surplus_minus_tax": 0.06655725940317901,
+      "realizable_lb_after_tax": 0.0022949947379182663
+    },
+    {
+      "positive": "H1.2 band5",
+      "band_for_tax": "band5",
+      "cat_for_tax": "*",
+      "surplus_ev": 0.07276707227913515,
+      "lb_ev": 0.027473741334225747,
+      "matched_tax": 0.017351892603816057,
+      "tax_source": "pooled favorite (N=7; band5|* & band5 below N floor)",
+      "surplus_minus_tax": 0.05541517967531909,
+      "realizable_lb_after_tax": 0.01012184873040969
+    },
+    {
+      "positive": "H1 cat:esports",
+      "band_for_tax": "pooled",
+      "cat_for_tax": "esports",
+      "surplus_ev": 0.15332425584024123,
+      "lb_ev": 0.09311589918273491,
+      "matched_tax": 0.017351892603816057,
+      "tax_source": "band:pooled (N=7; pooled|esports had N<5)",
+      "surplus_minus_tax": 0.13597236323642517,
+      "realizable_lb_after_tax": 0.07576400657891885
+    },
+    {
+      "positive": "H1 cat:mlb",
+      "band_for_tax": "pooled",
+      "cat_for_tax": "mlb",
+      "surplus_ev": 0.22380328970228458,
+      "lb_ev": 0.1627120721797849,
+      "matched_tax": 0.017351892603816057,
+      "tax_source": "band:pooled (N=7; pooled|mlb had N<5)",
+      "surplus_minus_tax": 0.20645139709846852,
+      "realizable_lb_after_tax": 0.14536017957596883
+    },
+    {
+      "positive": "H1 cat:soccer",
+      "band_for_tax": "pooled",
+      "cat_for_tax": "soccer",
+      "surplus_ev": 0.06318623422234207,
+      "lb_ev": 0.010459733325128541,
+      "matched_tax": 0.017351892603816057,
+      "tax_source": "band:pooled (N=7; pooled|soccer had N<5)",
+      "surplus_minus_tax": 0.04583434161852601,
+      "realizable_lb_after_tax": -0.006892159278687516
+    },
+    {
+      "positive": "H1 block:A_le_0701",
+      "band_for_tax": "pooled",
+      "cat_for_tax": "*",
+      "surplus_ev": 0.08449886526724319,
+      "lb_ev": 0.004741050780016687,
+      "matched_tax": 0.017351892603816057,
+      "tax_source": "band:pooled (N=7; pooled|* had N<5)",
+      "surplus_minus_tax": 0.06714697266342713,
+      "realizable_lb_after_tax": -0.01261084182379937
+    },
+    {
+      "positive": "H2 soccer|band4|B",
+      "band_for_tax": "band4",
+      "cat_for_tax": "soccer",
+      "surplus_ev": 0.16996916933618444,
+      "lb_ev": 0.05694359414852801,
+      "matched_tax": 0.017351892603816057,
+      "tax_source": "pooled favorite (N=7; band4|soccer & band4 below N floor)",
+      "surplus_minus_tax": 0.15261727673236838,
+      "realizable_lb_after_tax": 0.03959170154471195
+    },
+    {
+      "positive": "H2 tennis|band5|A",
+      "band_for_tax": "band5",
+      "cat_for_tax": "tennis",
+      "surplus_ev": 0.1285244379519297,
+      "lb_ev": 0.1026374275460053,
+      "matched_tax": 0.017351892603816057,
+      "tax_source": "pooled favorite (N=7; band5|tennis & band5 below N floor)",
+      "surplus_minus_tax": 0.11117254534811363,
+      "realizable_lb_after_tax": 0.08528553494218924
+    }
+  ],
+  "directional": {
+    "favorite_band4": {
+      "mean": 0.01720319543553202,
+      "n": 3
+    },
+    "favorite_band5": {
+      "mean": 0.017463415480029082,
+      "n": 4
+    },
+    "strict_band4": {
+      "mean": -0.003333024901848299,
+      "n": 30
+    },
+    "strict_band5": {
+      "mean": 0.008247013671001762,
+      "n": 52
+    },
+    "by_sport": {
+      "mlb": {
+        "favorite": {
+          "mean": null,
+          "n": 0
+        },
+        "strict": {
+          "mean": -0.011208454800149386,
+          "n": 20
+        }
+      },
+      "soccer": {
+        "favorite": {
+          "mean": 0.01774387473800639,
+          "n": 6
+        },
+        "strict": {
+          "mean": 0.004277241456478634,
+          "n": 136
+        }
+      },
+      "esports": {
+        "favorite": {
+          "mean": null,
+          "n": 0
+        },
+        "strict": {
+          "mean": -0.021976393766700228,
+          "n": 2
+        }
+      },
+      "tennis": {
+        "favorite": {
+          "mean": 0.014999999798674057,
+          "n": 1
+        },
+        "strict": {
+          "mean": 0.03701634796386467,
+          "n": 9
+        }
+      }
+    }
+  }
+}
