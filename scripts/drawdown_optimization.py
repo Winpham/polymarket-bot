@@ -298,23 +298,39 @@ def _spread_case(spreads):
     return f"(CASE width_bucket(price, 0.0, 1.0, 5) {parts} ELSE 0.0 END)" if parts else "0.0"
 
 
+# --- Cycle-5 T3: MEASURED follower-tax override (reports/real_tax.json). When set, the OUR-price
+# reprice uses the per-band REAL tax measured from captured asks INSTEAD OF the modeled
+# (FOLLOWER_TAX + band_spread). Bands with no measured tax fall back to FOLLOWER_TAX. ---
+_TAX_BY_BAND = None
+_TAX_MODE = "modeled"
+
+
+def _our_tax_case(spreads):
+    """SQL expression: the per-fill follower tax ADDED to trader price to get OUR entry.
+    Default = MODELED (FOLLOWER_TAX + band_spread). If _TAX_BY_BAND set = MEASURED real tax."""
+    if _TAX_BY_BAND is None:
+        return f"({tsc.FOLLOWER_TAX} + {_spread_case(spreads)})"
+    parts = " ".join(f"WHEN {int(b)} THEN {float(t):.6f}" for b, t in sorted(_TAX_BY_BAND.items()))
+    return f"(CASE width_bucket(price, 0.0, 1.0, 5) {parts} ELSE {tsc.FOLLOWER_TAX} END)"
+
+
 def fetch_events(band_lo, band_hi):
     """ONE aggregated query per band -> per-(wallet, event) records, event-clustered in SQL. Returns
     {wallet: [event-dicts]} matching reliability_score._events shape PLUS a precomputed OUR-price pnl.
     This is EXACT: 'their' = avg(won-price), 'our' = avg((won-reprice)-fee*reprice) per event, the
     same statistics as reliability_score._events / reliability_portfolio._event_pnl, but the 1.6M-fill
     scan is aggregated server-side (the per-fill fetch was the runtime bottleneck: 105s just to parse)."""
-    key = ("ev", band_lo, band_hi)
+    key = ("ev", band_lo, band_hi, _TAX_MODE)
     if key in _CACHE:
         return _CACHE[key]
     spreads = _shared()["spreads"]
-    sc = _spread_case(spreads)
+    tax = _our_tax_case(spreads)
     sql = f"""
       WITH f AS (
         SELECT lower(wallet) AS wallet, COALESCE(event_slug, condition_id) AS ev,
                price::float8 AS price, outcome_won::int AS won, COALESCE(sport,'other') AS sport,
                EXTRACT(EPOCH FROM ts) AS ts, (ts AT TIME ZONE 'UTC')::date AS day,
-               (price + {tsc.FOLLOWER_TAX} + {sc}) AS e
+               (price + {tax}) AS e
         FROM trader_fills
         WHERE side='BUY' AND resolved AND outcome_won IS NOT NULL
           AND price >= {band_lo} AND price < {band_hi}
@@ -484,16 +500,31 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--selftest", action="store_true")
     ap.add_argument("--quick", action="store_true")
+    ap.add_argument("--real-tax", choices=["clustered", "pooled"], default=None,
+                    help="Cycle-5 T3: substitute the MEASURED per-band follower tax "
+                         "(reports/real_tax.json) for the modeled (FOLLOWER_TAX+spread) our-price reprice.")
     args = ap.parse_args()
     if args.selftest:
         selftest()
         return
+    global _TAX_BY_BAND, _TAX_MODE
+    if args.real_tax:
+        rt = json.load(open(os.path.join(os.path.dirname(REPORT), "real_tax.json")))
+        fld = "real_tax_market_clustered_mean" if args.real_tax == "clustered" else "real_tax_pooled_mean"
+        _TAX_BY_BAND = {int(k[1:]): v[fld] for k, v in rt["by_band"].items()
+                        if v.get(fld) is not None}
+        _TAX_MODE = f"real_{args.real_tax}"
+        print(f"[T3] MEASURED tax override ({args.real_tax}): "
+              + ", ".join(f"b{b}={t:.4f}" for b, t in sorted(_TAX_BY_BAND.items())))
     n_null = 300 if args.quick else N_NULL
     rng = random.Random(SEED)
 
     out = {"meta": {"objective": "realizable(OUR-price) CALMAR = mean_day/maxDD",
                     "siblings": ["MAR=total_pnl/maxDD", "ret_cvar5=mean_day/|CVaR5|"],
                     "cap": CAP, "seed": SEED, "n_null": n_null,
+                    "tax_mode": _TAX_MODE,
+                    "tax_by_band": ({str(k): round(v, 4) for k, v in sorted(_TAX_BY_BAND.items())}
+                                    if _TAX_BY_BAND else "modeled: FOLLOWER_TAX(0.013)+band_spread"),
                     "posture": "PAPER-ONLY, nothing promoted, no Rust, DB read-only",
                     "cycle3_frozen_anchor": "reports/reliability_portfolio.json"}}
 
@@ -676,7 +707,8 @@ def main():
     out["WORTH_IT_GATE"]["verdict"] = verdict
 
     os.makedirs(os.path.dirname(REPORT), exist_ok=True)
-    with open(REPORT, "w") as f:
+    report_path = REPORT if _TAX_BY_BAND is None else REPORT.replace(".json", f"_{_TAX_MODE}.json")
+    with open(report_path, "w") as f:
         json.dump(out, f, indent=2, default=str)
 
     # ---- console digest ----
@@ -701,7 +733,7 @@ def main():
     print(f"\nWORTH-IT GATE: refined our OOS Calmar {g['refined_our_calmar_OOS']} | beats best single={g['beats_best_single_our_OOS']}"
           f" | belief-blind p={gate.get('p')} -> {verdict}")
     print(f"  dd-reduction per return sacrificed (our price): {g['dd_red_per_ret_sacrificed_our']}")
-    print(f"\nwrote {REPORT}")
+    print(f"\nwrote {report_path}")
 
 
 def rebalance_test(byw, scored, names, wfn):
