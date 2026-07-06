@@ -328,3 +328,41 @@ C1 — SCREENSHOT RECONCILIATION (data forensics). Tue's screenshot: 349 bets / 
     Report the realizable +5–8% ONLY when explicitly labeled CLV/realizable-edge.
   VERDICT: fully reconciled. The +63% is not a bug and not a lie — it's an optimistic FRAMING (working-
   bankroll velocity × front-loaded regime × CLV basis) of a real but small, decaying edge. Baseline = +2.2%.
+
+C2 — FREEZE THE STANDARD (reports/STANDARD-BASELINE.md + reports/baseline_champion.json). Standard defined
+  by CONFIG not a peak: favorite (price_band 0.65-0.98) + elite_fresh_fav (require_elite, 0.80-0.97,
+  180min) on the strict base params (consensus.rs::default_portfolio). Belief-blind evidence (fresh
+  selection_null, 2000 draws seed 20260702): favorite 158 ev, surplus +8.06% over blind, z=4.28,
+  p_emp=0.0000 SELECTION-REAL, LB(1.64σ) +4.93%>0, positive in 3 disjoint NON-soccer regimes (tennis/mlb/
+  other). Audited metrics BOTH labeled: (a) resolved-P&L +2.2% (229 bets, +$497 — THE baseline, decaying);
+  (b) realizable-edge/CLV +5-8% (the tracker's designed metric). Standard = METHODOLOGY + belief-blind
+  edge, NOT the peak. Frozen champion snapshot written for the guard to reference.
+C3 — RETIRE THE NOISE. The ~14 net-negative arms (loose −$14.8k, fresh2h −$6.0k, whales/count/strict ~−$5.9k
+  each, sports_only/trust_weighted/longshot/elite_gated, strict_retuned, trusted_only, tight_cluster,
+  nonsports, proven_router) documented as DEPRECATED/non-focus in STANDARD-BASELINE.md + HANDOFF WIN #3.
+  Rust NOT touched (D29 Phase-1 STOP). DEFERRED human-review item: narrow live LEDGER_STRATEGIES=
+  favorite,elite_fresh_fav (paper append only — keep SCORING the arms, they are the belief-blind comparison
+  set the guard needs). KEY INSIGHT surfaced: several retired arms are selection-REAL (strict/count/whales
+  +4.7%, trust_weighted +6.7%) yet net-NEGATIVE in P&L — because they trade the FLB-losing longshots. The
+  favorite-tilted standard is the one whose selection surplus AND realizable P&L both survive; that is why
+  the standard is favorite, and why a challenger must beat it on the REALIZABLE metric, not just selection.
+C4 — NON-REGRESSION GUARD (scripts/standard_guard.py, --selftest 12/12 green; reports/standard_guard.json).
+  Champion-challenger: measures the champion on the honest belief-blind metric (reuses selection_null.py by
+  subprocess — no logic dup), judges a challenger (--challenger STRAT: ADOPT only if beats champion OOS on
+  realizable edge AND clears belief-blind gate p≤0.01/calibrate-PASS/promotion-LB>3%/≥2 non-soccer regimes;
+  else CHAMPION-STANDS), and raises a loud REGRESSION-ALARM if the champion's own belief-blind LB drops ≤0.
+  LIVE: REGRESSION STATUS = HEALTHY (favorite LB +4.94%>0, p 0.0000, 158 ev). --challenger strict correctly
+  returns CHAMPION-STANDS (selection-real but loses on realizable −3.3% vs +5.3%). Folded standard_champion
+  + standard_regression informational rows into readiness_ledger.py (--selftest green); GO verdict UNCHANGED
+  (2/4, real_money_eligible=False, binding=persistence months).
+VERDICT THIS CYCLE (critical-partner honest): the STANDARD is frozen, belief-blind-validated, and guarded
+  against silent regression — the DISCIPLINE Tue asked for is now structural. But the honest baseline is
+  small and fragile: resolved-P&L only +2.2% and DECAYING post-World-Cup, the belief-blind edge is carried
+  by EXPIRING regimes, and it is NOT real-money-eligible (binding = non-expiring regime persistence over
+  MONTHS). The value is the protected, non-regressing standard + the champion-challenger loop, NOT an
+  inflated number. Screenshot's +63% = optimistic working-bankroll-velocity framing of this same edge.
+BINDING CONSTRAINT: unchanged — non-expiring regime persistence (MONTHS). GO gates 2/4, eligible=False.
+NEXT: forward accrual (forward_track.py weekly) + standard_guard.py weekly to watch REGRESSION STATUS;
+  any proposed iteration goes through standard_guard.py --challenger before it can be considered.
+REPORTS: reports/STANDARD-BASELINE.md, reports/baseline_champion.json, scripts/standard_guard.py,
+  reports/standard_guard.json, HANDOFF-HUMAN-REVIEW.md (WIN #3).
