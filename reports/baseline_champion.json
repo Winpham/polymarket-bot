@@ -1,0 +1,123 @@
+{
+  "_doc": "FROZEN CHAMPION SNAPSHOT — the current STANDARD (favorite-tilted consensus). Written by Cycle-7 CONSOLIDATION. The standard is defined by CONFIG (see config block), NOT by any peak number. Every metric below is reproducible from the queries named in _reproduce. PAPER-ONLY. Nothing promoted, nothing armed, no Rust touched, DB read-only.",
+  "frozen_at_utc": "2026-07-06T21:20:00Z",
+  "cycle": 7,
+  "branch": "run/beat-best-trader",
+  "posture": "PAPER-ONLY; promotes NOTHING; arms NOTHING; no Rust/migration edits; DB read-only; cost-zero (Max-only)",
+
+  "config": {
+    "_doc": "The champion is the favorite-tilted consensus family: `favorite` + `elite_fresh_fav`. Defined in copy-trading-bot/src/scanner/consensus.rs::default_portfolio. Base params = ConsensusParams::default (the `strict` baseline). DO NOT change these to chase a number — a config change is a CHALLENGER, which must beat the champion via scripts/standard_guard.py before adoption.",
+    "source": "copy-trading-bot/src/scanner/consensus.rs::default_portfolio",
+    "base_strict_params": {
+      "min_backers": 3,
+      "max_opposers": 1,
+      "max_price_std": 0.10,
+      "max_age_mins": 2880,
+      "strong_net": 4,
+      "elite_net": 6,
+      "elite_rank": 10,
+      "weight_mode": "Quality",
+      "sports_mode": "Include"
+    },
+    "strategies": {
+      "favorite": {
+        "params": "base + price_band (0.65, 0.98)",
+        "role": "the load-bearing arm — belief-blind SELECTION-REAL",
+        "alerting": false
+      },
+      "elite_fresh_fav": {
+        "params": "base + require_elite=true + price_band (0.80, 0.97) + max_age_mins=180",
+        "role": "elite-gated fresh favorite tail; positive but power-limited (indeterminate on its own)",
+        "alerting": false
+      }
+    }
+  },
+
+  "belief_blind_evidence": {
+    "_doc": "The evidence the edge is REAL and not a favorite-longshot selection artifact. Selection-matched null: surplus vs the band-matched `_blind` baseline, only the SELECTION randomized. Reproduce: python3 scripts/selection_null.py (2000 draws, seed 20260702).",
+    "instrument": "scripts/selection_null.py",
+    "n_perm": 2000,
+    "seed": 20260702,
+    "favorite": {
+      "events": 158,
+      "observed_surplus_over_blind": 0.0806,
+      "null_mean": -0.0013,
+      "null_sigma": 0.0191,
+      "z": 4.28,
+      "p_emp": 0.0000,
+      "belief_blind_lb_1p64sigma": 0.0493,
+      "verdict": "SELECTION-REAL",
+      "bonferroni_note": "14 strategies tested; ×14 leaves favorite p still << 0.01 (p_emp < 1/2000)"
+    },
+    "elite_fresh_fav": {
+      "events": 68,
+      "observed_surplus_over_blind": 0.0310,
+      "z": 1.42,
+      "p_emp": 0.069,
+      "verdict": "indeterminate (power-limited; part of the family, not independently significant)"
+    },
+    "favorite_regime_persistence": {
+      "_doc": "surplus vs regime x band-matched blind baseline; rule (c) = >0 in >=2 disjoint sport-regimes. Favorite is positive in ALL regimes it appears. BUT these are mostly EXPIRING regimes (World-Cup soccer, Wimbledon tennis) — the binding wall is NON-EXPIRING persistence over months.",
+      "soccer": {"events": 70, "surplus": 0.0598},
+      "tennis": {"events": 57, "surplus": 0.0595},
+      "other":  {"events": 16, "surplus": 0.0758},
+      "mlb":    {"events": 15, "surplus": 0.2367},
+      "disjoint_non_soccer_positive": 3
+    }
+  },
+
+  "audited_metrics": {
+    "_doc": "TWO honest numbers, LABELED. (1) resolved-P&L = the canonical honest_paper_ledger, the number to treat as the baseline's TRUE realized performance. (2) realizable-edge = the CLV-minus-haircut view (the tracker's designed metric). They differ ~4x — the gap is the pre-ledger front-loaded window + pooled-vs-dedup + entry basis (see C1 reconciliation in RUN_JOURNAL). NEITHER is the screenshot's +63% headline (that is P&L / working-bankroll, a capital-velocity framing, optimistic).",
+
+    "resolved_pnl_canonical": {
+      "_doc": "THE audited baseline. honest_paper_ledger, flat $100 stake, entry = COALESCE(entry_ask, mid+1c haircut), pnl = stake*((won-entry)/entry - fee). 07-01..07-06 (ledger start). Reproduce: SELECT strategy, COUNT(*), SUM(pnl), SUM(stake) FROM honest_paper_ledger WHERE strategy IN ('favorite','elite_fresh_fav') GROUP BY strategy.",
+      "basis": "resolved-P&L (realized, event-dedup, flat $100)",
+      "window": "2026-07-01 .. 2026-07-06",
+      "favorite":        {"bets": 156, "pnl_usd": 582.87, "turnover_usd": 15600.0, "roi_on_turnover": 0.0374},
+      "elite_fresh_fav": {"bets": 73,  "pnl_usd": -86.32, "turnover_usd": 7300.0,  "roi_on_turnover": -0.0118},
+      "combined":        {"bets": 229, "pnl_usd": 496.55, "turnover_usd": 22900.0, "roi_on_turnover": 0.0217},
+      "day_by_day_pnl": {
+        "2026-07-01": 134.55,
+        "2026-07-02": 852.09,
+        "2026-07-03": -139.46,
+        "2026-07-04": -37.99,
+        "2026-07-05": -389.37,
+        "2026-07-06": 76.73
+      },
+      "regime_note": "World-Cup-front-loaded and DECAYING: 07-02 peak +$852, then 07-03..05 = -$566, 07-06 +$77. The standard is the METHODOLOGY + belief-blind edge, NOT this unrepeatable peak."
+    },
+
+    "realizable_edge_clv": {
+      "_doc": "The tracker's designed 'realizable' view: outcome vs the mid we observed while open (CLV) minus an execution haircut, event-clustered. honest_pnl_by_strategy logic over the FULL consensus_signals record (06-29..07-06). This is a LEGITIMATE metric but is regime-dependent and front-loaded; the screenshot's +6.9%/+$2,008 is this view at an earlier snapshot.",
+      "basis": "realizable-edge (CLV - 1c haircut), event-clustered honest_roi",
+      "window": "2026-06-29 .. 2026-07-06 (full consensus_signals)",
+      "favorite":        {"distinct_events": 134, "honest_roi": 0.0836, "clv_roi": 0.0836, "hit_rate": 0.8652},
+      "elite_fresh_fav": {"distinct_events": 68,  "honest_roi": 0.0329, "clv_roi": 0.0466, "hit_rate": 0.9231},
+      "pooled_flat100_full_window": {
+        "realizable_entry_mid_plus_1c": {"signals": 398, "pnl_usd": 2123.31, "roi_on_turnover": 0.0533},
+        "clv_mid": {"signals": 398, "pnl_usd": 2427.33, "roi_on_turnover": 0.0610}
+      },
+      "band_aware_tax_event_clustered": {
+        "_doc": "at the MEASURED band-aware follower tax (real_tax.json: b1 .0223 b2 .0273 b3 .0259 b4 .0235 b5 .0092). NOTE: at event-clustering the raw honest_roi LB straddles 0 (noisy binary outcomes) — the belief-blind SIGNIFICANCE lives in the selection_null surplus (z=4.28), not a t-test vs 0.",
+        "full_record": {"events": 138, "mean_honest_roi": 0.0509},
+        "trailing_3d":  {"events": 32,  "mean_honest_roi": 0.0205},
+        "last_day":     {"events": 6,   "mean_honest_roi": 0.0155}
+      }
+    }
+  },
+
+  "regression_floor": {
+    "_doc": "Pre-registered floor the champion must not drop below (enforced by scripts/standard_guard.py). Keyed on the belief-blind selection surplus (the honest, band-matched metric), NOT raw P&L (too noisy) and NOT the peak (unrepeatable).",
+    "metric": "favorite selection-surplus belief-blind lower bound (observed - 1.64*null_sigma)",
+    "floor": 0.0,
+    "power_floor_events": 30,
+    "today_value": 0.0493,
+    "today_status": "HEALTHY (LB +4.93% > 0, p_emp 0.0000, 158 ev)"
+  },
+
+  "honest_caveats": [
+    "The resolved-P&L baseline is only +2.2% on turnover over 229 bets and is DECAYING post-World-Cup (07-03..06 net negative ex-07-06). The VALUE is the DISCIPLINE (a protected, belief-blind-validated standard with a non-regression guard), not an inflated number.",
+    "The belief-blind edge (favorite p=0.0000) is real but the regimes carrying it are largely EXPIRING (World Cup, Wimbledon). The standing binding constraint is NON-EXPIRING regime persistence over MONTHS (see readiness_ledger persistence gate = NOT_MET).",
+    "Real-money eligibility is UNCHANGED: 2/4 GO gates, real_money_eligible=False. This consolidation promotes nothing and arms nothing."
+  ]
+}
