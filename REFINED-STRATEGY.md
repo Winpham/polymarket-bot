@@ -70,6 +70,44 @@ consensus on them *lost* badly (band 1: 76 bets, 3.9% hit, −$5,821 at $100 fla
 Note: `favorite` / `elite_fresh_fav` already implement most of this — the refinement is **sizing
 discipline + skip-longshots + real-time execution**, not a new model.
 
+## Re-verification on 7 days × top-250 universe (2026-07-06, favconsensus-deepen run)
+Everything OUTSIDE this section is the SEED record (~2.4 days, ~89% soccer) — preserved for diff.
+Full report: `reports/FAVCONSENSUS-DEEPEN_2026-07-06.md`; prereg
+`reports/PREREG_20260706T000604Z_favconsensus_deepen.md` (frozen before outcomes); adversarial
+verify `reports/verify_favconsensus.json`. What changed on 3× the data:
+
+- **The core edge re-verified STRONGER and is no longer soccer-carried.** Pooled favorite
+  surplus-over-blind **+8.39%** over **101 super-events / 7 days** (soccer now 22% of events);
+  selection-null **p=0.0005** (the seed's binding p=0.034 failure CLEARS; post-seed block alone
+  p=0.0095); mirror/placebo/split-half/odd-even all clean; survives a within-CATEGORY composition
+  attack (+8.2%, LB +1.8%). **Still not certified:** ev-clustered Bonferroni LB **+1.96%** < the
+  +3% margin → INDETERMINATE-BY-POWER; ~143 super-events closes it if the surplus holds.
+- **The band table above is composition-inflated for single-sport cells.** New standing rule
+  (verify attack A6): any cell-level claim must use the **within-category** blind baseline — it
+  REFUTED one near-certifying cell (soccer|band4|postWC: LB −1.1%, p=0.016 — the elite_fresh_fav
+  failure mode again) and HALVED another (Wimbledon band5: +12.9%→+7.4%, LB +5.0%, p=0.001,
+  expiring anyway). Sweet-spot ordering (band4 ≥ band5) holds; neither band certifies alone.
+- **Longshot rule stands, basis WEAKENED:** consensus-on-longshots is now point-POSITIVE (raw
+  +2.3%, surplus +4.7%, LB −2.7%, 93 ev; flat-shares after costs −$428). "SKIP <45¢" is justified
+  by the negative LB and negative realizable $, NOT by "loses hard" — stop quoting −$5,821.
+- **flat-SHARES vs flat-$ reproduces exactly** (strict flat-$ −$4,575 vs flat-shares +$2,654 after
+  1¢+2%); favorite-only is positive under both sizings.
+- **MLB is the prime recurring cell:** +22.4%, composition-attack-proof (MLB blind baseline is
+  NEGATIVE), LB +16.3% — but it is a 17-0 record over 14 events/5 days. Floor (30 ev) closes in
+  ~8 days at the measured 2.0 ev/day. Would be the first durable non-soccer regime.
+- **Copyability tax finally MEASURED** (dense capture live 07-03): true ~60-80s executable tax ≈
+  **+0.4¢** pooled (strict, N=169, cov 16.7%); the favorite stream's +1.74¢ read is 15-min capture
+  DRIFT, not spread (favorite cadence too coarse — tighten it). No band gradient; MLB tax NOT
+  larger (−1.1¢) — the sharp-market wall does not appear in the dense-capture tax at this coverage.
+  Tax-adjusted pooled LB: +0.23% (conservative drift-inflated haircut).
+- **Relational layer (ladder L5) tested and KILLED at frozen params** (m=20, β=1, K=5; 2.1-2.6k
+  learned pairs, 95-98% coverage — no longer data-starved): odd→even +0.53pp, even→odd −0.10pp →
+  no consistent lift over rank-weighted. Negative recorded; re-test only on a materially larger
+  multi-tournament record.
+- **Abstention adds nothing** (LB 2.80%→2.74%; positive days 7/7 both ways) — reliability is
+  SUPPLY. Recurring-regime favorite supply = **2.6 ev/day** (MLB 2.0 + WNBA 0.6); the ~14/day flood
+  is expiring tournaments (Wimbledon ends ~Jul 12 — the coming volume cliff is calendar, not decay).
+
 ## The consensus-signal ladder (what we have; what we're researching)
 The engine is NOT a raw count. Levels, simplest→richest, each gated by the belief-blind gate:
 1. **count** — `net_count = n_backers − n_opposers`. (baseline)
@@ -222,3 +260,9 @@ market-type × band` map separates **softness** (opportunity size, blind-pool-kn
 - **Posture:** keep accruing across the World Cup ending + other sports; re-run the as-of pre-flight
   each block; promote nothing until ≥2 cross-sport cells clear `lo > 3%` on disjoint cuts. The
   relational layer waits for data. No real money until the gate says yes.
+- **Posture update (2026-07-06, favconsensus-deepen):** still nothing certified, but the picture
+  sharpened — the pooled edge is real-not-artifact (p=0.0005, composition-attack-proof) and purely
+  ACCRUAL-gated; the ONE cell worth watching is MLB (~8 days to its floor); expect the supply cliff
+  at Wimbledon's end (recurring supply = 2.6 ev/day); relational is DEAD at frozen params; cell
+  claims now require the within-category baseline; keep DENSE_CAPTURE on and tighten favorite's
+  capture cadence so the tax read stops being drift.
