@@ -172,6 +172,32 @@ run (composition cell, tennis magnitude, single-pass positives) — the process 
 - **Reliability**: quantified as supply (2.6 recurring ev/day), not tuned into existence; abstention
   honestly reported as no-lift; MLB accrual distance stated in days, not vibes.
 
+## P&L-realism audit addendum (2026-07-06, three independent adversarial auditors)
+The per-day profit picture (349 picks, +$2,008 net, 91% wr, "7/8 days positive", $3.2k bankroll)
+was itself audited (`scripts/audit_{pnl_books,entry_realism,risk_realism}.py` + JSONs). Verdicts:
+- **Totals/bankroll VERIFIED** (independent re-derivation within 2%; zero voids, zero double-counts;
+  the only exclusion = 16 open picks, mark-to-market −$6 — no hidden losers).
+- **"No losing day" REFUTED** — detection-date accounting artifact. Cash-basis (settlement-date)
+  rebuild flips Jul-05 to **−$281**; losses resolve ~3× slower than wins (mean 17.6h vs 6.4h), so
+  recent days always read optimistically.
+- **Entry realism: headline OVERSTATED.** Sign survives all four entry conventions, but at the
+  honest follower entry (first observed price) the edge is **+4.8%/bet, +1.6%/day** (vs +7.6/+5.8
+  claimed); worst-defensible +3.3%/bet ≈ breakeven/day; negative days 2→3. The 22% of picks with NO
+  observable follower price are the best ones on paper (98.7% wr, +15.9%/bet) — the record leans on
+  bets a follower likely couldn't place. Favorite fires silently (no alerts) — the record was never
+  human-actionable in real time.
+- **Risk realism:** at the measured edge, game-clustered bootstrap gives **P(negative day) ≈ 16%**
+  (worst sim day −$800 at these units); ONE stacked game flipping makes the busiest day negative
+  (K=1 → −$823; one WC exact-score game held 32% of bankroll); expected upsets ≈ 9/40 games — the
+  benign week just landed them on small exposures. $3.2k bankroll breaches in 17% of −5pp-stress
+  paths and peak capital doubles to ~$6.9k if resolutions lag +12h. Post-tournament (3-5 bets/day):
+  expect **2-3 negative days/week** even with the edge intact (~+$17-24/day expected at 100sh).
+- **Edge reality re-affirmed:** clustered no-edge null rejects at p=1.6e-5 (z 4.16); MLB is now
+  18-0 (p=0.005 under null). The edge is real; the *presentation* was flattered by at-fire pricing,
+  detection-date accounting, and a benign-sample tournament week.
+**Honest deployable picture: ~+3-5%/bet, ~0-2%/day on turnover, several losing days per month,
+bankroll buffer ~2× peak (≈$7k at 100sh units).**
+
 ## What to accrue next (the specific closers)
 1. **MLB**: 16 more favorite super-events ≈ 8 days. If the +22% surplus holds at n=30 it would clear
    LB>3% with room — the first plausible CERTIFIED non-soccer cell.
