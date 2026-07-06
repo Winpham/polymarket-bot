@@ -3,7 +3,7 @@
     {
       "gate": "edge_reality",
       "status": "INDETERMINATE",
-      "current": "coverage 1%, proxy \u03bb\u0302_lo 0.07",
+      "current": "coverage 2%, proxy \u03bb\u0302_lo 0.08",
       "threshold": "\u03bb\u0302_lo > 0.25 at \u226550% coverage",
       "needs": "deploy dense capture, accrue ~2\u20134 wk",
       "eta": "weeks"
@@ -19,7 +19,7 @@
     {
       "gate": "power",
       "status": "MET (caveat)",
-      "current": "147 events",
+      "current": "155 events",
       "threshold": "\u226530",
       "needs": "count OK; day-deflated SE on ~5 correlated days is the real limit (\u2282 persistence)",
       "eta": "none"
@@ -51,7 +51,7 @@
     {
       "gate": "operational",
       "status": "MET",
-      "current": "3027 trajectory rows",
+      "current": "3745 trajectory rows",
       "threshold": "dense capture writing + monitors live",
       "needs": "\u2014",
       "eta": "none"
@@ -67,7 +67,7 @@
     {
       "gate": "router_gate",
       "status": "PENDING",
-      "current": "2 sigs / 2 events / 1 regimes since prereg",
+      "current": "4 sigs / 4 events / 1 regimes since prereg",
       "threshold": "\u226530 events / LB>3% / selection_null p\u22640.01 / \u22652 regimes",
       "needs": "accrue proven_router fires past the prereg stamp",
       "eta": "weeks"
@@ -175,6 +175,30 @@
       "threshold": "book beats best single reliable trader on risk-adjusted return (Sortino) OOS + null p\u22640.01",
       "needs": "diversification HALVES drawdown (the risk axis) but does NOT beat best single on Sortino; copyable-positive at modeled entry but fill/lag-unvalidated; nothing promoted",
       "eta": "months"
+    },
+    {
+      "gate": "real_follower_tax",
+      "status": "MEASURED (thin)",
+      "current": "real tax mkt-clustered +1.0% / pooled +1.3% vs MODELED +2.9%; coverage +8.0% (12174/152354 fills, 153 mkts)",
+      "threshold": "measured tax on \u226550% coverage, stable across \u22655 independent regimes",
+      "needs": "REAL tax < MODELED (partial modeling artifact) BUT ~8% coverage, ~2.3d capture, capture-burst-adjacent bias \u2014 INDETERMINATE-BY-POWER; DEFERRED live/Rust swap",
+      "eta": "weeks"
+    },
+    {
+      "gate": "realizable_edge_on_measured_tax",
+      "status": "NOT_MET",
+      "current": "refined OOS Calmar +12.6%(clust)/+15.7%(pool) still < best-single +26.3%; belief-blind p\u22480.1005/0.0999",
+      "threshold": "a play beats random book (p\u22640.05) AND best single on realizable Calmar at MEASURED tax",
+      "needs": "lighter measured tax lifts realizable Calmar ~15-50% but the best single trader ALSO improves and still dominates; selection-p invariant to tax level (~0.10). WALL CONFIRMED \u2014 forward accrual only; NO play forward-tracked (T4 skipped)",
+      "eta": "months"
+    },
+    {
+      "gate": "edge_reality_recovered",
+      "status": "INDETERMINATE",
+      "current": "market-key join recovers coverage +19.9% (vs 2% signal_id); \u03bb\u0302 +13.6% CI-lo +6.5% (<< 0.25 floor); CLV-null p=0.0",
+      "threshold": "\u03bb\u0302 CI-lo > 0.25 at \u226550% coverage",
+      "needs": "coverage 2%->20% (real recovery) but still <50% and \u03bb\u0302-lo far below floor \u2014 edge remains mostly FLB-bias; informational (DEFERRED default-swap of the GO gate input)",
+      "eta": "weeks"
     }
   ],
   "verdict": {

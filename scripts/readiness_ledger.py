@@ -468,6 +468,54 @@ def build_gates():
                           "diversification HALVES drawdown (the risk axis) but does NOT beat best single on "
                           "Sortino; copyable-positive at modeled entry but fill/lag-unvalidated; nothing promoted",
                           "months"))
+
+    # ============================ Cycle-5 rows (REAL follower-tax measurement) ================
+    # --- real_follower_tax (T2): MEASURED tax vs the MODELED (0.013+spread) every verdict rests on ---
+    rt = load("real_tax.json") or {}
+    if rt:
+        ov = rt.get("overall", {})
+        gates.append(gate("real_follower_tax",
+                          "MEASURED (thin)",
+                          f"real tax mkt-clustered {_pf(ov.get('real_tax_market_clustered_mean'))} / "
+                          f"pooled {_pf(ov.get('real_tax_pooled_mean'))} vs MODELED "
+                          f"{_pf(ov.get('modeled_tax_fillwt'))}; coverage {_pf(ov.get('coverage'))} "
+                          f"({ov.get('n_matched')}/{ov.get('n_fills')} fills, {ov.get('n_markets')} mkts)",
+                          "measured tax on ≥50% coverage, stable across ≥5 independent regimes",
+                          "REAL tax < MODELED (partial modeling artifact) BUT ~8% coverage, ~2.3d capture, "
+                          "capture-burst-adjacent bias — INDETERMINATE-BY-POWER; DEFERRED live/Rust swap",
+                          "weeks"))
+
+    # --- realizable_edge_on_measured_tax (T3): does any play survive the measured tax? ---
+    dr = load("drawdown_optimization_real_pooled.json") or {}
+    drc = load("drawdown_optimization_real_clustered.json") or {}
+    if dr and drc:
+        gp = dr.get("WORTH_IT_GATE", {})
+        gc = drc.get("WORTH_IT_GATE", {})
+        gates.append(gate("realizable_edge_on_measured_tax",
+                          "NOT_MET",
+                          f"refined OOS Calmar {_pf(gc.get('refined_our_calmar_OOS'))}(clust)/"
+                          f"{_pf(gp.get('refined_our_calmar_OOS'))}(pool) still < best-single "
+                          f"{_pf(gp.get('best_single_our_OOS_calmar'))}; belief-blind p≈"
+                          f"{gc.get('belief_blind',{}).get('p')}/{gp.get('belief_blind',{}).get('p')}",
+                          "a play beats random book (p≤0.05) AND best single on realizable Calmar at MEASURED tax",
+                          "lighter measured tax lifts realizable Calmar ~15-50% but the best single trader "
+                          "ALSO improves and still dominates; selection-p invariant to tax level (~0.10). "
+                          "WALL CONFIRMED — forward accrual only; NO play forward-tracked (T4 skipped)",
+                          "months"))
+
+    # --- edge_reality_recovered (T2 λ̂): market-key-join λ̂ on recovered dense-capture coverage ---
+    clvmk = load("clv_lambda_marketkey.json") or {}
+    if clvmk:
+        lo = (clvmk.get("lambda_ci") or [None, None])[0]
+        gates.append(gate("edge_reality_recovered",
+                          "INDETERMINATE",
+                          f"market-key join recovers coverage {_pf(clvmk.get('trajectory_coverage'))} "
+                          f"(vs 2% signal_id); λ̂ {_pf(clvmk.get('lambda_hat'))} CI-lo {_pf(lo)} "
+                          f"(<< {MIN_LAMBDA} floor); CLV-null p={clvmk.get('null_p')}",
+                          f"λ̂ CI-lo > {MIN_LAMBDA} at ≥{COVERAGE_FLOOR:.0%} coverage",
+                          "coverage 2%->20% (real recovery) but still <50% and λ̂-lo far below floor — edge "
+                          "remains mostly FLB-bias; informational (DEFERRED default-swap of the GO gate input)",
+                          "weeks"))
     return gates
 
 

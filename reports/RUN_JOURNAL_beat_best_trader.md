@@ -199,3 +199,43 @@ WATCH-LIST: (1) Villson — low our-price IS drawdown (0.46), untested OOS; accr
   (3) covariance-aware weighting — worthless while trading days are near-disjoint; revisit only if overlap
   grows. (4) reliability book at our price = risk-reduction ONLY at their price; repricing negates it.
 REPORT: reports/DRAWDOWN_OPTIMIZATION_2026-07-06T043802Z.md
+
+================================================================================
+CYCLE 5 — REAL FOLLOWER-TAX MEASUREMENT (the decisive modeling-artifact test)
+UTC 2026-07-06T05:06Z · selection_null --calibrate PASS · read-only · nothing promoted · no Rust
+--------------------------------------------------------------------------------
+PREMISE: every Cycle 1-4 realizable verdict rests on a MODELED follower tax (FOLLOWER_TAX 0.013 +
+  band_spread ≈ 2.9¢). Nobody MEASURED it. Dense capture (signal_price_trajectory, ASK column, live
+  since 07-03 20:09) now lets us read the real executable ask on a captured market → measure the real tax.
+T1 — COVERAGE RECOVERY (clv_lambda.py --market-key-join, Cycle-2 fix in research layer): join trajectory
+  by (condition_id,outcome_index) not signal_id. Trajectory coverage 2.0% (7 closes) → 19.9% (69 closes),
+  ~10x — the real recovered coverage (Cycle-2 projected ~15%). Still <50% (K1) → λ̂ fallback-mixed.
+  clv_lambda default λ̂ join NOT swapped (GO-gate input; DEFERRED for human review).
+T2 — REAL TAX (real_tax.py NEW): real entry = earliest captured ASK in [fill_ts, fill_ts+900s]; real tax
+  = ask − trader fill price. 12174/152354 fills matched (coverage 8.0%, 153 markets). REAL tax median 1.0¢,
+  market-clustered mean 1.0¢, pooled 1.3¢ vs MODELED 2.9¢ (fill-wt). Per band real<modeled in b1/b3/b5
+  (incl book's band-5 favorites 0.9¢ vs 2.4¢), ≈equal b2/b4. → MODELED tax OVERSTATES the real cost;
+  FOLLOWER_TAX=0.013 looks too high. THIN: 8% coverage, ~2.3d capture, capture-burst-adjacent bias →
+  INDETERMINATE-BY-POWER, directionally real<modeled. REAL λ̂ (recovered market-key sample) = 0.136,
+  CI [0.065, 0.276] — CI-lo 0.065 << 0.25 floor; CLV+ (null p=0.0000) but only ~14% of surplus → edge
+  still mostly FLB-bias, NOT information. λ̂ does NOT clear the floor.
+T3 — RE-DECIDE (drawdown_optimization.py --real-tax clustered|pooled, EXTEND): substitute measured per-band
+  tax; re-run realizable-Calmar + belief-blind gate on identical data.
+    tax mode | refined OOS Calmar | best-single(master-wuji) OOS Calmar | beats best | belief-blind p
+    modeled  |   0.1061           | 0.2113                              | NO         | 0.103
+    real clus|   0.1256           | 0.2368                              | NO         | 0.1005
+    real pool|   0.1573           | 0.2633                              | NO         | 0.0999
+  Lighter tax lifts realizable Calmar ~15-50% (max-Calmar IS-recovery 28%→51%→66%, still overfits OOS) BUT
+  (1) the best single trader improves in lockstep and STILL dominates every book; (2) belief-blind
+  selection p stays ≈0.10 REGARDLESS of tax — a common price shift can't change whether selection beats a
+  random book (even zero tax wouldn't); (3) book dd-reduction-per-return vs best single stays NEGATIVE
+  (-7.67→-5.93→-4.02). VERDICT under all three: NOT_MET / INDETERMINATE-BY-POWER — unchanged.
+T4 — SKIPPED: no surviving realizable edge to pre-register. Honest next step = forward accrual of
+  independent non-soccer regimes (persistence wall) + promote the dense-capture market-key join to a real
+  gate input (DEFERRED, human + Rust review).
+DECISION: the follower tax is a PARTIAL MODELING ARTIFACT (real ≈ ⅓-1× of modeled) — but correcting it
+  changes the LEVEL, not the VERDICT. The WALL IS REAL. Optimization on the current record is OVER; only
+  forward accrual remains.
+LEDGER DELTA: +3 informational rows (real_follower_tax=MEASURED-thin; edge_reality_recovered=INDETERMINATE;
+  realizable_edge_on_measured_tax=NOT_MET). GO gates 2/4; real-money-eligible=False; binding=persistence
+  (months). REPORT: reports/REAL_TAX_MEASUREMENT_2026-07-06T050603Z.md
