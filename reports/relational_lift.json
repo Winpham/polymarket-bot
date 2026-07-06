@@ -1,0 +1,103 @@
+{
+  "prereg": "PREREG_20260706T000604Z_favconsensus_deepen.md",
+  "params": {
+    "m": 20,
+    "beta": 1.0,
+    "top_k": 5,
+    "primary_frac": 0.5
+  },
+  "directions": [
+    {
+      "train": "odd",
+      "eval": "even",
+      "n_train_picks": 1466,
+      "n_eval_picks": 168,
+      "n_pairs_learned": 2586,
+      "coverage": 0.9523809523809523,
+      "base_top50": {
+        "n_picks": 84,
+        "n_ev": 37,
+        "surplus": 0.09889522040866687,
+        "se": 0.04286352199603694
+      },
+      "rel_top50": {
+        "n_picks": 84,
+        "n_ev": 38,
+        "surplus": 0.10422735615307906,
+        "se": 0.04205817893057277
+      },
+      "base_top25": {
+        "n_picks": 42,
+        "n_ev": 19,
+        "surplus": 0.12148606357215005,
+        "se": 0.052204901026116954
+      },
+      "rel_top25": {
+        "n_picks": 42,
+        "n_ev": 20,
+        "surplus": 0.12393962870562485,
+        "se": 0.049584664505378906
+      },
+      "base_top75": {
+        "n_picks": 126,
+        "n_ev": 49,
+        "surplus": 0.127403836683646,
+        "se": 0.03371546089245535
+      },
+      "rel_top75": {
+        "n_picks": 126,
+        "n_ev": 48,
+        "surplus": 0.12086831430242108,
+        "se": 0.034408168413403356
+      },
+      "rel_beats_base_primary": true
+    },
+    {
+      "train": "even",
+      "eval": "odd",
+      "n_train_picks": 1463,
+      "n_eval_picks": 157,
+      "n_pairs_learned": 2078,
+      "coverage": 0.9808917197452229,
+      "base_top50": {
+        "n_picks": 78,
+        "n_ev": 27,
+        "surplus": 0.010856191514651517,
+        "se": 0.06511636438761333
+      },
+      "rel_top50": {
+        "n_picks": 78,
+        "n_ev": 27,
+        "surplus": 0.009940561228346478,
+        "se": 0.06502245595352066
+      },
+      "base_top25": {
+        "n_picks": 39,
+        "n_ev": 19,
+        "surplus": -0.025938907753692845,
+        "se": 0.08191871632450896
+      },
+      "rel_top25": {
+        "n_picks": 39,
+        "n_ev": 20,
+        "surplus": -0.017309445157137622,
+        "se": 0.0781876050013983
+      },
+      "base_top75": {
+        "n_picks": 117,
+        "n_ev": 35,
+        "surplus": 0.05482772949004676,
+        "se": 0.05167973459148242
+      },
+      "rel_top75": {
+        "n_picks": 117,
+        "n_ev": 35,
+        "surplus": 0.054827729490046766,
+        "se": 0.051679734591482424
+      },
+      "rel_beats_base_primary": false
+    }
+  ],
+  "pass_primary_both_halves": false,
+  "verdict": "KILLED (no lift over rank-weighted)"
+}
