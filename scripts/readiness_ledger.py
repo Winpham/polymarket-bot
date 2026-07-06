@@ -516,7 +516,35 @@ def build_gates():
                           "coverage 2%->20% (real recovery) but still <50% and λ̂-lo far below floor — edge "
                           "remains mostly FLB-bias; informational (DEFERRED default-swap of the GO gate input)",
                           "weeks"))
+
+    # ============================ Cycle-6 rows (FORWARD-TRACK accrual instrument) ==============
+    # Per frozen play (PREREG_FORWARD_TRACK): the forward (post-seal) readiness STATUS, its accrual
+    # counts, and the first binding failure. Informational (NOT GO gates). Binding = accrual horizon
+    # (independent NON-SOCCER regime persistence, MONTHS). Reads reports/forward_track.json.
+    for row in forward_track_rows(load("forward_track.json")):
+        gates.append(row)
     return gates
+
+
+def forward_track_rows(ft):
+    """Pure: map forward_track.json to informational ledger rows (one per frozen play). Returns [] when
+    the artifact is missing. Binding = the accrual horizon (non-soccer regime persistence, months)."""
+    if not ft:
+        return []
+    rows = []
+    for pid, p in (ft.get("plays") or {}).items():
+        cal = p.get("realizable_calmar")
+        rows.append(gate(
+            f"forward_{pid}",
+            p.get("status", "INDETERMINATE-BY-POWER"),
+            (f"{p.get('n_events', 0)} fwd events / {p.get('n_days', 0)} days / "
+             f"{p.get('non_soccer_regimes', 0)} non-soccer regimes; realizable Calmar "
+             f"{_pf(cal) if cal is not None else 'n/a'}; first-binding={p.get('first_binding')}"),
+            "clears every forward gate (power/Calmar/beats-best/selection_null/promotion/pilot/"
+            "≥2 non-soccer regimes/λ̂≥0.25) → GO-CANDIDATE (ESCALATE)",
+            p.get("needs", "accrue forward non-soccer regimes"),
+            p.get("eta", "months")))
+    return rows
 
 
 def verdict(gates):
@@ -700,6 +728,26 @@ def selftest():
     c7 = all(n not in GO_GATES for n in ("router_gate", "unified_book", "beats_best_trader"))
     ok = ok and c7
     print(f"  [{'ok' if c7 else 'FAIL'}] new rows are informational (not GO gates)")
+
+    # --- Cycle-6 forward-track rows (pure, fixture JSON) ---
+    ft_fix = {"plays": {
+        "play_A_tail": {"status": "INDETERMINATE-BY-POWER", "n_events": 0, "n_days": 0,
+                        "non_soccer_regimes": 0, "realizable_calmar": None,
+                        "first_binding": "power_events", "needs": "accrue >= 30 forward events",
+                        "eta": "weeks"},
+        "play_C_book": {"status": "GO-CANDIDATE", "n_events": 120, "n_days": 40,
+                        "non_soccer_regimes": 4, "realizable_calmar": 0.3,
+                        "first_binding": None, "needs": "ESCALATE", "eta": "none"}}}
+    frows = forward_track_rows(ft_fix)
+    c8 = (len(frows) == 2
+          and frows[0]["gate"] == "forward_play_A_tail" and frows[0]["status"] == "INDETERMINATE-BY-POWER"
+          and any(r["status"] == "GO-CANDIDATE" for r in frows)
+          and all(r["gate"] not in GO_GATES for r in frows))       # informational only
+    ok = ok and c8
+    print(f"  [{'ok' if c8 else 'FAIL'}] forward-track rows: per-play, informational (not GO gates)")
+    c9 = forward_track_rows(None) == []                            # graceful when artifact missing
+    ok = ok and c9
+    print(f"  [{'ok' if c9 else 'FAIL'}] forward-track rows graceful when artifact missing")
 
     print("selftest:", "PASS" if ok else "FAIL")
     sys.exit(0 if ok else 1)

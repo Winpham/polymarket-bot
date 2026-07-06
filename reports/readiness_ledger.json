@@ -19,7 +19,7 @@
     {
       "gate": "power",
       "status": "MET (caveat)",
-      "current": "155 events",
+      "current": "156 events",
       "threshold": "\u226530",
       "needs": "count OK; day-deflated SE on ~5 correlated days is the real limit (\u2282 persistence)",
       "eta": "none"
@@ -51,7 +51,7 @@
     {
       "gate": "operational",
       "status": "MET",
-      "current": "3745 trajectory rows",
+      "current": "3894 trajectory rows",
       "threshold": "dense capture writing + monitors live",
       "needs": "\u2014",
       "eta": "none"
@@ -198,6 +198,30 @@
       "current": "market-key join recovers coverage +19.9% (vs 2% signal_id); \u03bb\u0302 +13.6% CI-lo +6.5% (<< 0.25 floor); CLV-null p=0.0",
       "threshold": "\u03bb\u0302 CI-lo > 0.25 at \u226550% coverage",
       "needs": "coverage 2%->20% (real recovery) but still <50% and \u03bb\u0302-lo far below floor \u2014 edge remains mostly FLB-bias; informational (DEFERRED default-swap of the GO gate input)",
+      "eta": "weeks"
+    },
+    {
+      "gate": "forward_play_A_tail",
+      "status": "INDETERMINATE-BY-POWER",
+      "current": "0 fwd events / 0 days / 0 non-soccer regimes; realizable Calmar n/a; first-binding=power_events",
+      "threshold": "clears every forward gate (power/Calmar/beats-best/selection_null/promotion/pilot/\u22652 non-soccer regimes/\u03bb\u0302\u22650.25) \u2192 GO-CANDIDATE (ESCALATE)",
+      "needs": "accrue >= 30 forward resolved events",
+      "eta": "weeks"
+    },
+    {
+      "gate": "forward_play_B_dabosshogg",
+      "status": "INDETERMINATE-BY-POWER",
+      "current": "0 fwd events / 0 days / 0 non-soccer regimes; realizable Calmar n/a; first-binding=power_events",
+      "threshold": "clears every forward gate (power/Calmar/beats-best/selection_null/promotion/pilot/\u22652 non-soccer regimes/\u03bb\u0302\u22650.25) \u2192 GO-CANDIDATE (ESCALATE)",
+      "needs": "accrue >= 30 forward resolved events",
+      "eta": "weeks"
+    },
+    {
+      "gate": "forward_play_C_book",
+      "status": "INDETERMINATE-BY-POWER",
+      "current": "0 fwd events / 0 days / 0 non-soccer regimes; realizable Calmar n/a; first-binding=power_events",
+      "threshold": "clears every forward gate (power/Calmar/beats-best/selection_null/promotion/pilot/\u22652 non-soccer regimes/\u03bb\u0302\u22650.25) \u2192 GO-CANDIDATE (ESCALATE)",
+      "needs": "accrue >= 30 forward resolved events",
       "eta": "weeks"
     }
   ],
