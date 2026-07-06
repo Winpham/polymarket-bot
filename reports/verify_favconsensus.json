@@ -1,0 +1,492 @@
+{
+  "n_fav": 325,
+  "n_blind": 15550,
+  "blind_edges": {
+    "1": {
+      "edge": -0.029584270216082745,
+      "n_ev": 1497
+    },
+    "2": {
+      "edge": -0.015180347104195144,
+      "n_ev": 1576
+    },
+    "3": {
+      "edge": 0.003912201031275441,
+      "n_ev": 3390
+    },
+    "4": {
+      "edge": 0.015053199098722065,
+      "n_ev": 1434
+    },
+    "5": {
+      "edge": 0.017108604078218004,
+      "n_ev": 1130
+    }
+  },
+  "A1": {
+    "C1": {
+      "recomputed": {
+        "n_rows": 325,
+        "surplus": 0.08455617049849455,
+        "se": 0.0286697994090341,
+        "n_ev": 101,
+        "lb": 0.02029560390319883
+      },
+      "d_surplus_pp": 0.065,
+      "d_lb_pp": 0.065,
+      "d_n_ev": 0,
+      "flag": false
+    },
+    "C2": {
+      "recomputed": {
+        "n_rows": 17,
+        "surplus": 0.22449952121475067,
+        "se": 0.0274162148640461,
+        "n_ev": 14,
+        "lb": 0.16304874243787448
+      },
+      "d_surplus_pp": 0.07,
+      "d_lb_pp": 0.034,
+      "d_n_ev": 0,
+      "flag": false
+    },
+    "C3": {
+      "recomputed": {
+        "n_rows": 42,
+        "surplus": 0.17074146814631447,
+        "se": 0.047212418081482986,
+        "n_ev": 14,
+        "lb": 0.06491942548165341
+      },
+      "d_surplus_pp": 0.077,
+      "d_lb_pp": 0.798,
+      "d_n_ev": 0,
+      "flag": false
+    },
+    "C4": {
+      "recomputed": {
+        "n_rows": 16,
+        "surplus": 0.12852329411143212,
+        "se": 0.010813378796214948,
+        "n_ev": 16,
+        "lb": 0.10428615738297045
+      },
+      "d_surplus_pp": 0.0,
+      "d_lb_pp": 0.165,
+      "d_n_ev": 0,
+      "flag": false
+    }
+  },
+  "A2": {
+    "total_grade_conflicts": 0,
+    "conflicts_touching_favorite": 0,
+    "conflict_examples": [],
+    "fav_entry_oob": 0,
+    "fav_resolved_before_detected": 0
+  },
+  "A3": {
+    "C2_mlb": {
+      "base_surplus": 0.22449952121475067,
+      "n_ev": 14,
+      "days": [
+        "2026-06-30",
+        "2026-07-01",
+        "2026-07-02",
+        "2026-07-03",
+        "2026-07-04"
+      ],
+      "n_days": 5,
+      "wins": 17,
+      "losses": 0,
+      "loo_min": 0.2160035793317151,
+      "loo_max": 0.23673860777574823,
+      "flips_sign": false,
+      "halves": false
+    },
+    "C3_soccer_b4_B": {
+      "base_surplus": 0.17074146814631447,
+      "n_ev": 14,
+      "days": [
+        "2026-07-02",
+        "2026-07-03",
+        "2026-07-04",
+        "2026-07-05"
+      ],
+      "n_days": 4,
+      "wins": 36,
+      "losses": 6,
+      "loo_min": 0.15938350141641303,
+      "loo_max": 0.20043793060234075,
+      "flips_sign": false,
+      "halves": false
+    }
+  },
+  "A4": {
+    "mlb": {
+      "n_super_events": 14,
+      "detail": {
+        "mlb-sd-chc-2026-07-01": {
+          "n_rows": 1,
+          "slugs": [
+            "mlb-sd-chc-2026-07-01-spread-away-1pt5"
+          ],
+          "event_slugs": [
+            "mlb-sd-chc-2026-07-01"
+          ]
+        },
+        "mlb-laa-sea-2026-06-29": {
+          "n_rows": 2,
+          "slugs": [
+            "mlb-laa-sea-2026-06-29",
+            "mlb-laa-sea-2026-06-29-total-9pt5"
+          ],
+          "event_slugs": [
+            "mlb-laa-sea-2026-06-29"
+          ]
+        },
+        "mlb-tex-cle-2026-06-30": {
+          "n_rows": 1,
+          "slugs": [
+            "mlb-tex-cle-2026-06-30"
+          ],
+          "event_slugs": [
+            "mlb-tex-cle-2026-06-30"
+          ]
+        },
+        "mlb-cws-bal-2026-06-29": {
+          "n_rows": 1,
+          "slugs": [
+            "mlb-cws-bal-2026-06-29"
+          ],
+          "event_slugs": [
+            "mlb-cws-bal-2026-06-29"
+          ]
+        },
+        "mlb-cin-mil-2026-06-29": {
+          "n_rows": 1,
+          "slugs": [
+            "mlb-cin-mil-2026-06-29"
+          ],
+          "event_slugs": [
+            "mlb-cin-mil-2026-06-29"
+          ]
+        },
+        "mlb-nym-tor-2026-06-29": {
+          "n_rows": 2,
+          "slugs": [
+            "mlb-nym-tor-2026-06-29",
+            "mlb-nym-tor-2026-06-29-spread-home-1pt5"
+          ],
+          "event_slugs": [
+            "mlb-nym-tor-2026-06-29"
+          ]
+        },
+        "mlb-lad-oak-2026-06-29": {
+          "n_rows": 1,
+          "slugs": [
+            "mlb-lad-oak-2026-06-29"
+          ],
+          "event_slugs": [
+            "mlb-lad-oak-2026-06-29"
+          ]
+        },
+        "mlb-sf-ari-2026-06-29": {
+          "n_rows": 2,
+          "slugs": [
+            "mlb-sf-ari-2026-06-29",
+            "mlb-sf-ari-2026-06-29-total-9pt5"
+          ],
+          "event_slugs": [
+            "mlb-sf-ari-2026-06-29"
+          ]
+        },
+        "mlb-min-hou-2026-06-29": {
+          "n_rows": 1,
+          "slugs": [
+            "mlb-min-hou-2026-06-29-spread-home-1pt5"
+          ],
+          "event_slugs": [
+            "mlb-min-hou-2026-06-29"
+          ]
+        },
+        "mlb-mia-col-2026-06-30": {
+          "n_rows": 1,
+          "slugs": [
+            "mlb-mia-col-2026-06-30"
+          ],
+          "event_slugs": [
+            "mlb-mia-col-2026-06-30"
+          ]
+        },
+        "mlb-stl-atl-2026-07-01": {
+          "n_rows": 1,
+          "slugs": [
+            "mlb-stl-atl-2026-07-01"
+          ],
+          "event_slugs": [
+            "mlb-stl-atl-2026-07-01"
+          ]
+        },
+        "mlb-laa-sea-2026-07-02": {
+          "n_rows": 1,
+          "slugs": [
+            "mlb-laa-sea-2026-07-02"
+          ],
+          "event_slugs": [
+            "mlb-laa-sea-2026-07-02"
+          ]
+        },
+        "mlb-sd-lad-2026-07-03": {
+          "n_rows": 1,
+          "slugs": [
+            "mlb-sd-lad-2026-07-03"
+          ],
+          "event_slugs": [
+            "mlb-sd-lad-2026-07-03"
+          ]
+        },
+        "mlb-sd-lad-2026-07-04": {
+          "n_rows": 1,
+          "slugs": [
+            "mlb-sd-lad-2026-07-04"
+          ],
+          "event_slugs": [
+            "mlb-sd-lad-2026-07-04"
+          ]
+        }
+      }
+    },
+    "soccer_b4_B": {
+      "n_super_events": 14,
+      "detail": {
+        "fifwc-arg-cvi-2026-07-03": {
+          "n_rows": 5,
+          "slugs": [
+            "fifwc-arg-cvi-2026-07-03-first-half-total-0pt5",
+            "fifwc-arg-cvi-2026-07-03-halftime-result-draw",
+            "fifwc-arg-cvi-2026-07-03-halftime-result-home",
+            "fifwc-arg-cvi-2026-07-03-spread-home-1pt5",
+            "fifwc-arg-cvi-2026-07-03-team-total-home-1pt5"
+          ],
+          "event_slugs": [
+            "fifwc-arg-cvi-2026-07-03-halftime-result",
+            "fifwc-arg-cvi-2026-07-03-more-markets"
+          ]
+        },
+        "fifwc-bra-nor-2026-07-05": {
+          "n_rows": 3,
+          "slugs": [
+            "fifwc-bra-nor-2026-07-05-draw",
+            "fifwc-bra-nor-2026-07-05-team-to-advance",
+            "fifwc-bra-nor-2026-07-05-total-1pt5"
+          ],
+          "event_slugs": [
+            "fifwc-bra-nor-2026-07-05",
+            "fifwc-bra-nor-2026-07-05-more-markets"
+          ]
+        },
+        "chi-jin-xin-2026-07-04": {
+          "n_rows": 2,
+          "slugs": [
+            "chi-jin-xin-2026-07-04-draw",
+            "chi-jin-xin-2026-07-04-total-1pt5"
+          ],
+          "event_slugs": [
+            "chi-jin-xin-2026-07-04",
+            "chi-jin-xin-2026-07-04-more-markets"
+          ]
+        },
+        "fifwc-esp-aut-2026-07-02": {
+          "n_rows": 5,
+          "slugs": [
+            "fifwc-esp-aut-2026-07-02-first-half-total-0pt5",
+            "fifwc-esp-aut-2026-07-02-first-to-score-home",
+            "fifwc-esp-aut-2026-07-02-halftime-result-draw",
+            "fifwc-esp-aut-2026-07-02-team-total-home-1pt5",
+            "fifwc-esp-aut-2026-07-02-total-1pt5"
+          ],
+          "event_slugs": [
+            "fifwc-esp-aut-2026-07-02-first-to-score",
+            "fifwc-esp-aut-2026-07-02-halftime-result",
+            "fifwc-esp-aut-2026-07-02-more-markets"
+          ]
+        },
+        "fifwc-usa-bih-2026-07-01": {
+          "n_rows": 1,
+          "slugs": [
+            "fifwc-usa-bih-2026-07-01-first-half-total-0pt5"
+          ],
+          "event_slugs": [
+            ""
+          ]
+        },
+        "fifwc-civ-nor-2026-06-30": {
+          "n_rows": 1,
+          "slugs": [
+            "fifwc-civ-nor-2026-06-30-draw"
+          ],
+          "event_slugs": [
+            "fifwc-civ-nor-2026-06-30"
+          ]
+        },
+        "fifwc-mex-ecu-2026-06-30": {
+          "n_rows": 2,
+          "slugs": [
+            "fifwc-mex-ecu-2026-06-30-spread-home-2pt5",
+            "fifwc-mex-ecu-2026-06-30-team-total-home-0pt5"
+          ],
+          "event_slugs": [
+            "fifwc-mex-ecu-2026-06-30-more-markets"
+          ]
+        },
+        "fifwc-prt-hrv-2026-07-02": {
+          "n_rows": 2,
+          "slugs": [
+            "fifwc-prt-hrv-2026-07-02-spread-home-1pt5",
+            "fifwc-prt-hrv-2026-07-02-team-to-advance"
+          ],
+          "event_slugs": [
+            "fifwc-prt-hrv-2026-07-02-more-markets"
+          ]
+        },
+        "fifwc-fra-swe-2026-06-30": {
+          "n_rows": 1,
+          "slugs": [
+            "fifwc-fra-swe-2026-06-30-total-4pt5"
+          ],
+          "event_slugs": [
+            "fifwc-fra-swe-2026-06-30-more-markets"
+          ]
+        },
+        "fifwc-par-fra-2026-07-04": {
+          "n_rows": 4,
+          "slugs": [
+            "fifwc-par-fra-2026-07-04-first-half-total-0pt5",
+            "fifwc-par-fra-2026-07-04-spread-away-2pt5",
+            "fifwc-par-fra-2026-07-04-team-total-away-1pt5",
+            "fifwc-par-fra-2026-07-04-total-3pt5"
+          ],
+          "event_slugs": [
+            "fifwc-par-fra-2026-07-04-more-markets"
+          ]
+        },
+        "fifwc-col-gha-2026-07-03": {
+          "n_rows": 6,
+          "slugs": [
+            "fifwc-col-gha-2026-07-03-col",
+            "fifwc-col-gha-2026-07-03-exact-score-2-0",
+            "fifwc-col-gha-2026-07-03-first-half-total-0pt5",
+            "fifwc-col-gha-2026-07-03-first-to-score-home",
+            "fifwc-col-gha-2026-07-03-team-to-advance",
+            "fifwc-col-gha-2026-07-03-total-1pt5"
+          ],
+          "event_slugs": [
+            "fifwc-col-gha-2026-07-03",
+            "fifwc-col-gha-2026-07-03-exact-score",
+            "fifwc-col-gha-2026-07-03-first-to-score",
+            "fifwc-col-gha-2026-07-03-more-markets"
+          ]
+        },
+        "fifwc-can-mar-2026-07-04": {
+          "n_rows": 2,
+          "slugs": [
+            "fifwc-can-mar-2026-07-04-draw",
+            "fifwc-can-mar-2026-07-04-total-3pt5"
+          ],
+          "event_slugs": [
+            "fifwc-can-mar-2026-07-04",
+            "fifwc-can-mar-2026-07-04-more-markets"
+          ]
+        },
+        "fifwc-che-alg-2026-07-02": {
+          "n_rows": 5,
+          "slugs": [
+            "fifwc-che-alg-2026-07-02-alg",
+            "fifwc-che-alg-2026-07-02-team-to-advance",
+            "fifwc-che-alg-2026-07-02-team-total-home-0pt5",
+            "fifwc-che-alg-2026-07-02-total-1pt5",
+            "fifwc-che-alg-2026-07-02-total-3pt5"
+          ],
+          "event_slugs": [
+            "fifwc-che-alg-2026-07-02",
+            "fifwc-che-alg-2026-07-02-more-markets"
+          ]
+        },
+        "fifwc-aus-egy-2026-07-03": {
+          "n_rows": 3,
+          "slugs": [
+            "fifwc-aus-egy-2026-07-03-aus",
+            "fifwc-aus-egy-2026-07-03-team-total-away-0pt5",
+            "fifwc-aus-egy-2026-07-03-total-2pt5"
+          ],
+          "event_slugs": [
+            "fifwc-aus-egy-2026-07-03",
+            "fifwc-aus-egy-2026-07-03-more-markets"
+          ]
+        }
+      }
+    }
+  },
+  "A5": {
+    "C1_p": 0.0004997501249375312,
+    "C3_p": 0.00399800099950025,
+    "claimed_C1_p": 0.0005,
+    "claimed_C3_p": 0.0065
+  },
+  "A6": {
+    "pooled_global_baseline": {
+      "surplus": 0.08455617049849455,
+      "lb": 0.02029560390319883,
+      "n_ev": 101
+    },
+    "pooled_within_category": {
+      "surplus": 0.08239852923923578,
+      "lb": 0.01777719065920512,
+      "n_ev": 101,
+      "n_rows": 325
+    },
+    "pooled_reduction_pct": 2.6,
+    "dropped_fav_rows": 0,
+    "cells": {
+      "C2_mlb": {
+        "name": "C2_mlb",
+        "global_surplus": 0.22449952121475067,
+        "global_lb": 0.16304874243787448,
+        "withincat_surplus": 0.21997427960240748,
+        "withincat_lb": 0.13603467305785888,
+        "n_ev": 14,
+        "reduction_pct": 2.0,
+        "cat_matched_perm_p": 0.004997501249375313,
+        "cat_band_blind_edge": {
+          "mlb|band4": -0.012741533654037115
+        }
+      },
+      "C3_soccer_b4_B": {
+        "name": "C3_soccer_b4_B",
+        "global_surplus": 0.17074146814631447,
+        "global_lb": 0.06491942548165341,
+        "withincat_surplus": 0.09501212374694988,
+        "withincat_lb": -0.010809918917711173,
+        "n_ev": 14,
+        "reduction_pct": 44.4,
+        "cat_matched_perm_p": 0.015992003998001,
+        "cat_band_blind_edge": {
+          "soccer|band4": 0.09078254349808668
+        }
+      },
+      "C4_tennis_b5_A": {
+        "name": "C4_tennis_b5_A",
+        "global_surplus": 0.12852329411143212,
+        "global_lb": 0.10428615738297045,
+        "withincat_surplus": 0.07439881032899194,
+        "withincat_lb": 0.050161673600530254,
+        "n_ev": 16,
+        "reduction_pct": 42.1,
+        "cat_matched_perm_p": 0.0009995002498750624,
+        "cat_band_blind_edge": {
+          "tennis|band5": 0.07123308786065818
+        }
+      }
+    }
+  }
+}

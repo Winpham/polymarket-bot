@@ -1,0 +1,106 @@
+{
+  "meta": {
+    "prereg": "PREREG_20260706T000604Z_favconsensus_deepen.md#H3",
+    "seed": 20260706,
+    "n_boot": 2000,
+    "bonferroni_k": 3,
+    "z_bonferroni": 2.128045234184983,
+    "fee": 0.02,
+    "follower_tax": 0.013,
+    "band": [
+      0.45,
+      0.9
+    ],
+    "window_days": 365,
+    "conviction_usd": 1000.0,
+    "membership": {
+      "min_fills": 100,
+      "min_days": 15,
+      "min_return": 0.1
+    },
+    "mm_exclusion": "UNION(microstructure is_mm, followed_traders.trader_type='bot')",
+    "cluster_key": "superkey.super_event (match-level)",
+    "sport_category": "market_taxonomy.category(slug,title)",
+    "reprice": "price + follower_tax + band_spread; ret=(won-e)/e - fee (mirrors trader_scorecard.py)",
+    "event_clock": "per-super_event MAX(ts) (resolved_at degenerate: only last ~7d populated); split whole-event so leak-free",
+    "band_spreads": {
+      "1": 0.0232,
+      "2": 0.0099,
+      "3": 0.0245,
+      "4": 0.0079,
+      "5": 0.0106
+    }
+  },
+  "data": {
+    "n_fills": 838173,
+    "n_super_events": 8457,
+    "dropped_no_superkey": 0,
+    "midpoint": 1782895228.0,
+    "n_events": 8457,
+    "n_events_h1": 4228,
+    "n_events_h2": 4229
+  },
+  "test1_regime_conditional_scorecard": {
+    "global_followset_n": 3,
+    "global_followset": [
+      "0x65018f9fc473f6e920b8929a375d39c26a461220",
+      "0x96a3a4d0f0a91074a43ce8dc39d1f092a717d944",
+      "0xe9a6ed2e4d4ee8ce47cd47cac834746dc4cf627b"
+    ],
+    "per_sport_followset_n": 6,
+    "per_sport_followsets": {
+      "econ/other": [
+        "0xe9514aa0b925353ea0d5e32978d636ec25ebde18"
+      ],
+      "esports": [
+        "0x99e42eb9038705165b22f821e27659c1dc41e4c4"
+      ],
+      "nba/cbb": [
+        "0x1420b746dea30e05b387ab880f9d3ec5bc579daa",
+        "0x96a3a4d0f0a91074a43ce8dc39d1f092a717d944"
+      ],
+      "other": [
+        "0xac4773707daddd3792efed5a91f5ec7651a7d234"
+      ],
+      "soccer": [
+        "0xe9a6ed2e4d4ee8ce47cd47cac834746dc4cf627b"
+      ]
+    },
+    "forward_copy_return_global_a": 0.14548648332819722,
+    "forward_copy_return_persport_b": -0.27077017324823455,
+    "difference_b_minus_a": -0.41625665657643174,
+    "cluster_robust_se": 0.25619455767837807,
+    "bonferroni3_lb": -0.9614502640680339,
+    "n_events_a": 11,
+    "n_events_b": 9,
+    "n_days_a": 5,
+    "n_days_b": 5,
+    "verdict": "indeterminate-by-power (CI straddles 0)"
+  },
+  "test2_conviction_weighting": {
+    "global_followset_n": 3,
+    "forward_copy_return_all_a": 0.14548648332819722,
+    "forward_copy_return_ge1k_b": 0.1276108933751749,
+    "difference_b_minus_a": -0.017875589953022325,
+    "cluster_robust_se": 0.16725652407808697,
+    "bonferroni3_lb": -0.37380503890374117,
+    "conviction_usd": 1000.0,
+    "n_events_a": 11,
+    "n_events_b": 11,
+    "n_days_a": 5,
+    "n_days_b": 5,
+    "verdict": "indeterminate-by-power (CI straddles 0)"
+  },
+  "test3_survivorship_correction": {
+    "global_followset_n": 3,
+    "forward_copy_return_with_recovered": 0.14548648332819722,
+    "forward_copy_return_without_recovered": 0.08134869294585459,
+    "bias_with_minus_without": 0.06413779038234263,
+    "bias_direction": "upward: recovered fills raise the forward read",
+    "n_recovered_fills_in_followset_h2": 5,
+    "n_recovered_wallets_in_followset": 1,
+    "n_events_with": 11,
+    "n_events_without": 11,
+    "note": "measurement only, no certification (prereg H3.3)"
+  }
+}

@@ -1,0 +1,226 @@
+{
+  "prereg": "PREREG_20260706T000604Z_favconsensus_deepen.md",
+  "k_bonferroni_cells": 6,
+  "cells": [
+    {
+      "cell": "esports|band4|A",
+      "n_rows": 5,
+      "n_ev": 2,
+      "surplus": 0.23046609668653478,
+      "se": 0.02057928512617231,
+      "counted": false
+    },
+    {
+      "cell": "esports|band5|A",
+      "n_rows": 3,
+      "n_ev": 3,
+      "surplus": 0.1481154391692294,
+      "se": 0.018135734709000876,
+      "counted": false
+    },
+    {
+      "cell": "esports|band5|B",
+      "n_rows": 2,
+      "n_ev": 2,
+      "surplus": 0.09195127141389331,
+      "se": 0.024058731651613763,
+      "counted": false
+    },
+    {
+      "cell": "mlb|band4|A",
+      "n_rows": 4,
+      "n_ev": 4,
+      "surplus": 0.3018530575746191,
+      "se": 0.013824010217047347,
+      "counted": false
+    },
+    {
+      "cell": "mlb|band4|B",
+      "n_rows": 6,
+      "n_ev": 6,
+      "surplus": 0.30514331312149834,
+      "se": 0.006208346986943901,
+      "counted": false
+    },
+    {
+      "cell": "mlb|band5|B",
+      "n_rows": 7,
+      "n_ev": 6,
+      "surplus": 0.11515773806997047,
+      "se": 0.016918463465951144,
+      "counted": false
+    },
+    {
+      "cell": "nba/cbb|band4|A",
+      "n_rows": 2,
+      "n_ev": 2,
+      "surplus": -0.23665882752625722,
+      "se": 0.4391666672592165,
+      "counted": false
+    },
+    {
+      "cell": "nba/cbb|band4|B",
+      "n_rows": 2,
+      "n_ev": 2,
+      "surplus": 0.3078450599456614,
+      "se": 0.007170557854513315,
+      "counted": false
+    },
+    {
+      "cell": "other|band4|B",
+      "n_rows": 1,
+      "n_ev": 1,
+      "surplus": -0.720825490221057,
+      "se": null,
+      "counted": false
+    },
+    {
+      "cell": "politics/elections|band5|A",
+      "n_rows": 2,
+      "n_ev": 2,
+      "surplus": 0.08876260317499668,
+      "se": 0.0625299313072828,
+      "counted": false
+    },
+    {
+      "cell": "soccer|band4|A",
+      "n_rows": 40,
+      "n_ev": 11,
+      "surplus": 0.03432251186786885,
+      "se": 0.0955680287200644,
+      "counted": true,
+      "lb": -0.19446541839644052,
+      "p_perm": 0.29985007496251875,
+      "events_needed_margin": 30817,
+      "gates": {
+        "lb_gt_margin": false,
+        "floor_30": false,
+        "null_p": false
+      },
+      "verdict": "INDETERMINATE-BY-POWER"
+    },
+    {
+      "cell": "soccer|band4|B",
+      "n_rows": 42,
+      "n_ev": 14,
+      "surplus": 0.16996916933618444,
+      "se": 0.047212418081482986,
+      "counted": true,
+      "lb": 0.05694359414852801,
+      "p_perm": 0.006496751624187906,
+      "events_needed_margin": 30,
+      "gates": {
+        "lb_gt_margin": true,
+        "floor_30": false,
+        "null_p": true
+      },
+      "verdict": "INDETERMINATE-BY-POWER"
+    },
+    {
+      "cell": "soccer|band5|A",
+      "n_rows": 70,
+      "n_ev": 11,
+      "surplus": 0.017532569639044825,
+      "se": 0.031018814277578126,
+      "counted": true,
+      "lb": -0.05672584515579919,
+      "p_perm": 0.2653673163418291,
+      "events_needed_margin": null,
+      "gates": {
+        "lb_gt_margin": false,
+        "floor_30": false,
+        "null_p": false
+      },
+      "verdict": "INDETERMINATE-BY-POWER"
+    },
+    {
+      "cell": "soccer|band5|B",
+      "n_rows": 84,
+      "n_ev": 16,
+      "surplus": 0.028721908631727182,
+      "se": 0.025253331680189527,
+      "counted": true,
+      "lb": -0.03173405728876338,
+      "p_perm": 0.18990504747626186,
+      "events_needed_margin": null,
+      "gates": {
+        "lb_gt_margin": false,
+        "floor_30": false,
+        "null_p": false
+      },
+      "verdict": "INDETERMINATE-BY-POWER"
+    },
+    {
+      "cell": "tennis|band4|A",
+      "n_rows": 28,
+      "n_ev": 28,
+      "surplus": 0.08827550720769516,
+      "se": 0.0721571514480724,
+      "counted": true,
+      "lb": -0.08446725577143512,
+      "p_perm": 0.15342328835582209,
+      "events_needed_margin": 247,
+      "gates": {
+        "lb_gt_margin": false,
+        "floor_30": false,
+        "null_p": false
+      },
+      "verdict": "INDETERMINATE-BY-POWER"
+    },
+    {
+      "cell": "tennis|band4|B",
+      "n_rows": 4,
+      "n_ev": 4,
+      "surplus": -0.224542626387614,
+      "se": 0.29354234243325744,
+      "counted": false
+    },
+    {
+      "cell": "tennis|band5|A",
+      "n_rows": 16,
+      "n_ev": 16,
+      "surplus": 0.1285244379519297,
+      "se": 0.010813378796214952,
+      "counted": true,
+      "lb": 0.1026374275460053,
+      "p_perm": 0.0004997501249375312,
+      "events_needed_margin": 30,
+      "gates": {
+        "lb_gt_margin": true,
+        "floor_30": false,
+        "null_p": true
+      },
+      "verdict": "INDETERMINATE-BY-POWER"
+    },
+    {
+      "cell": "tennis|band5|B",
+      "n_rows": 7,
+      "n_ev": 7,
+      "surplus": 0.014109017827716484,
+      "se": 0.14152668256670953,
+      "counted": false
+    }
+  ],
+  "abstention": {
+    "abstained_cats": [
+      "esports",
+      "nba/cbb",
+      "other",
+      "politics/elections"
+    ],
+    "full": {
+      "n_ev": 101,
+      "surplus": 0.08414653625721423,
+      "lb": 0.027953845370234716,
+      "pos_days": 7,
+      "n_days": 7
+    },
+    "abstain": {
+      "n_ev": 87,
+      "surplus": 0.08661427762736575,
+      "lb": 0.027431126286579295,
+      "pos_days": 7,
+      "n_days": 7
+    }
+  }
+}

@@ -1,0 +1,334 @@
+{
+  "meta": {
+    "seed": 20260706,
+    "n_boot": 2000,
+    "n_picks": 349,
+    "n_games": 147,
+    "n_days": 8,
+    "bankroll": 3200.0,
+    "stress_model": "game-correlated adverse flip s=clip(delta/w,0,1)"
+  },
+  "R1_day_bootstrap": {
+    "per_day": {
+      "2026-06-29": {
+        "n_games": 40,
+        "actual_pnl": 677.05,
+        "stress": {
+          "0.00": {
+            "p_negative_day": 0.012,
+            "p5_pnl": 163.88,
+            "worst_sim_pnl": -374.54
+          },
+          "0.05": {
+            "p_negative_day": 0.1985,
+            "p5_pnl": -634.62,
+            "worst_sim_pnl": -2282.22
+          },
+          "0.10": {
+            "p_negative_day": 0.4305,
+            "p5_pnl": -1258.6,
+            "worst_sim_pnl": -3400.38
+          }
+        }
+      },
+      "2026-06-30": {
+        "n_games": 13,
+        "actual_pnl": 61.46,
+        "stress": {
+          "0.00": {
+            "p_negative_day": 0.342,
+            "p5_pnl": -189.8,
+            "worst_sim_pnl": -476.99
+          },
+          "0.05": {
+            "p_negative_day": 0.5495,
+            "p5_pnl": -618.21,
+            "worst_sim_pnl": -1872.06
+          },
+          "0.10": {
+            "p_negative_day": 0.717,
+            "p5_pnl": -896.1,
+            "worst_sim_pnl": -1845.47
+          }
+        }
+      },
+      "2026-07-01": {
+        "n_games": 24,
+        "actual_pnl": 678.91,
+        "stress": {
+          "0.00": {
+            "p_negative_day": 0.0,
+            "p5_pnl": 350.3,
+            "worst_sim_pnl": 87.87
+          },
+          "0.05": {
+            "p_negative_day": 0.1725,
+            "p5_pnl": -686.35,
+            "worst_sim_pnl": -2566.62
+          },
+          "0.10": {
+            "p_negative_day": 0.3855,
+            "p5_pnl": -1338.01,
+            "worst_sim_pnl": -3978.11
+          }
+        }
+      },
+      "2026-07-02": {
+        "n_games": 23,
+        "actual_pnl": 771.98,
+        "stress": {
+          "0.00": {
+            "p_negative_day": 0.0,
+            "p5_pnl": 422.93,
+            "worst_sim_pnl": 29.05
+          },
+          "0.05": {
+            "p_negative_day": 0.099,
+            "p5_pnl": -189.26,
+            "worst_sim_pnl": -1800.98
+          },
+          "0.10": {
+            "p_negative_day": 0.2625,
+            "p5_pnl": -594.09,
+            "worst_sim_pnl": -1589.42
+          }
+        }
+      },
+      "2026-07-03": {
+        "n_games": 17,
+        "actual_pnl": 193.74,
+        "stress": {
+          "0.00": {
+            "p_negative_day": 0.154,
+            "p5_pnl": -130.68,
+            "worst_sim_pnl": -486.23
+          },
+          "0.05": {
+            "p_negative_day": 0.429,
+            "p5_pnl": -571.15,
+            "worst_sim_pnl": -2030.03
+          },
+          "0.10": {
+            "p_negative_day": 0.6535,
+            "p5_pnl": -952.12,
+            "worst_sim_pnl": -2066.95
+          }
+        }
+      },
+      "2026-07-04": {
+        "n_games": 14,
+        "actual_pnl": 191.85,
+        "stress": {
+          "0.00": {
+            "p_negative_day": 0.198,
+            "p5_pnl": -219.09,
+            "worst_sim_pnl": -799.65
+          },
+          "0.05": {
+            "p_negative_day": 0.4105,
+            "p5_pnl": -958.8,
+            "worst_sim_pnl": -2515.39
+          },
+          "0.10": {
+            "p_negative_day": 0.573,
+            "p5_pnl": -1347.02,
+            "worst_sim_pnl": -4830.36
+          }
+        }
+      },
+      "2026-07-05": {
+        "n_games": 9,
+        "actual_pnl": 179.05,
+        "stress": {
+          "0.00": {
+            "p_negative_day": 0.166,
+            "p5_pnl": -111.67,
+            "worst_sim_pnl": -385.44
+          },
+          "0.05": {
+            "p_negative_day": 0.2945,
+            "p5_pnl": -806.53,
+            "worst_sim_pnl": -1816.41
+          },
+          "0.10": {
+            "p_negative_day": 0.417,
+            "p5_pnl": -1045.48,
+            "worst_sim_pnl": -2863.75
+          }
+        }
+      },
+      "2026-07-06": {
+        "n_games": 7,
+        "actual_pnl": 6.87,
+        "stress": {
+          "0.00": {
+            "p_negative_day": 0.444,
+            "p5_pnl": -154.01,
+            "worst_sim_pnl": -318.83
+          },
+          "0.05": {
+            "p_negative_day": 0.5975,
+            "p5_pnl": -407.9,
+            "worst_sim_pnl": -994.09
+          },
+          "0.10": {
+            "p_negative_day": 0.7225,
+            "p5_pnl": -517.7,
+            "worst_sim_pnl": -1350.25
+          }
+        }
+      }
+    },
+    "aggregate": {
+      "0.00": {
+        "worst_sim_day_pnl": -799.65,
+        "mean_p_negative_day": 0.1645,
+        "max_p_negative_day": 0.444
+      },
+      "0.05": {
+        "worst_sim_day_pnl": -2566.62,
+        "mean_p_negative_day": 0.3439,
+        "max_p_negative_day": 0.5975
+      },
+      "0.10": {
+        "worst_sim_day_pnl": -4830.36,
+        "mean_p_negative_day": 0.5202,
+        "max_p_negative_day": 0.7225
+      }
+    }
+  },
+  "R2_upset_slate": {
+    "busiest_day": "2026-06-29",
+    "n_games": 40,
+    "n_picks": 73,
+    "base_day_pnl": 677.05,
+    "K_table": [
+      {
+        "K": 0,
+        "day_pnl": 677.05,
+        "flipped_exposure": 0
+      },
+      {
+        "K": 1,
+        "day_pnl": -822.95,
+        "flipped_exposure": 1261.22
+      },
+      {
+        "K": 2,
+        "day_pnl": -1722.95,
+        "flipped_exposure": 2177.74
+      },
+      {
+        "K": 3,
+        "day_pnl": -2122.95,
+        "flipped_exposure": 2496.55
+      },
+      {
+        "K": 4,
+        "day_pnl": -2422.95,
+        "flipped_exposure": 2726.84
+      },
+      {
+        "K": 5,
+        "day_pnl": -2622.95,
+        "flipped_exposure": 2938.65
+      }
+    ],
+    "first_negative_K": 1,
+    "cost_of_K3": 2800.0,
+    "p_ge3_upsets_binomial_p018": 0.9831,
+    "p_ge3_upsets_poisson_binomial": 0.9972,
+    "p_top3_exposure_all_upset": 0.0054,
+    "expected_upsets_of_40": 8.91
+  },
+  "R3_bankroll": {
+    "delta": 0.05,
+    "peak_concurrent_capital": 3141.37,
+    "peak_concurrent_positions": 38,
+    "peak_concurrent_capital_plus12h": 6879.84,
+    "peak_concurrent_positions_plus12h": 83,
+    "p1_min_free_capital": -1398.66,
+    "p50_min_free_capital": 601.34,
+    "p99_drawdown": 2681.06,
+    "p50_drawdown": 818.64,
+    "breach_paths": 333,
+    "breach_frac": 0.1665,
+    "bankroll": 3200.0
+  },
+  "R3_bankroll_stress10": {
+    "delta": 0.1,
+    "peak_concurrent_capital": 3141.37,
+    "peak_concurrent_positions": 38,
+    "peak_concurrent_capital_plus12h": 6879.84,
+    "peak_concurrent_positions_plus12h": 83,
+    "p1_min_free_capital": -2761.93,
+    "p50_min_free_capital": -98.66,
+    "p99_drawdown": 4692.08,
+    "p50_drawdown": 1598.67,
+    "breach_paths": 1035,
+    "breach_frac": 0.5175,
+    "bankroll": 3200.0
+  },
+  "R4_post_tournament": {
+    "recurring_n": 22,
+    "recurring_per_day": 2.75,
+    "recurring_leads": [
+      "mlb",
+      "wnba"
+    ],
+    "tournament_n": 311,
+    "tournament_frac_of_record": 0.891,
+    "scenarios": {
+      "null_no_edge": {
+        "3_bets": {
+          "p_negative_day": 0.59,
+          "expected_day_pnl": -1.54,
+          "expected_neg_days_of_7": 4.13
+        },
+        "4_bets": {
+          "p_negative_day": 0.4385,
+          "expected_day_pnl": 0.55,
+          "expected_neg_days_of_7": 3.07
+        },
+        "5_bets": {
+          "p_negative_day": 0.427,
+          "expected_day_pnl": -1.19,
+          "expected_neg_days_of_7": 2.99
+        }
+      },
+      "edge_plus5pp": {
+        "3_bets": {
+          "p_negative_day": 0.48,
+          "expected_day_pnl": 16.88,
+          "expected_neg_days_of_7": 3.36
+        },
+        "4_bets": {
+          "p_negative_day": 0.3395,
+          "expected_day_pnl": 23.78,
+          "expected_neg_days_of_7": 2.38
+        },
+        "5_bets": {
+          "p_negative_day": 0.317,
+          "expected_day_pnl": 21.33,
+          "expected_neg_days_of_7": 2.22
+        }
+      }
+    }
+  },
+  "R5_streak": {
+    "n_picks": 349,
+    "obs_wins": 315,
+    "obs_win_rate": 0.9026,
+    "exp_wins_null": 287.39,
+    "pooled_p_value_naive": 1.3260833781415131e-05,
+    "pooled_z_naive": 4.023,
+    "n_game_clusters": 147,
+    "pooled_z_clustered": 4.159,
+    "pooled_p_value_clustered": 1.6005850697642216e-05,
+    "mlb_n": 18,
+    "mlb_wins": 18,
+    "mlb_all_win": true,
+    "mlb_p_value_null": 0.005176191643338057,
+    "mlb_avg_entry": 0.7519
+  }
+}
