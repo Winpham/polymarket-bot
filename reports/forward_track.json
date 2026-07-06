@@ -1,0 +1,320 @@
+{
+  "meta": {
+    "seal": "2026-07-06T06:25:17Z",
+    "prereg": "PREREG_FORWARD_TRACK_2026-07-06T062517Z.md",
+    "metric": "realizable Calmar at MEASURED band-aware tax",
+    "tax_by_band": {
+      "1": 0.0223,
+      "2": 0.0273,
+      "3": 0.0259,
+      "4": 0.0235,
+      "5": 0.0092
+    },
+    "forward_only": "fill ts >= 2026-07-06T06:25:17Z",
+    "best_single": {
+      "name": null,
+      "calmar": null
+    },
+    "posture": "PAPER-ONLY, promotes NOTHING, arms NOTHING, no Rust, DB read-only"
+  },
+  "escalate": false,
+  "plays": {
+    "play_A_tail": {
+      "role": "single-best reliable TAIL",
+      "members": [
+        "master-wuji"
+      ],
+      "status": "INDETERMINATE-BY-POWER",
+      "n_events": 0,
+      "n_days": 0,
+      "non_soccer_regimes": 0,
+      "regimes": [],
+      "realizable_calmar": null,
+      "first_binding": "power_events",
+      "needs": "accrue >= 30 forward resolved events",
+      "eta": "weeks",
+      "gate": [
+        {
+          "check": 1,
+          "name": "power_events",
+          "current": "0 forward events",
+          "threshold": ">= 30",
+          "passed": false,
+          "kind": "power",
+          "eta": "weeks"
+        },
+        {
+          "check": 2,
+          "name": "realizable_calmar_positive",
+          "current": "realizable Calmar n/a",
+          "threshold": "> 0",
+          "passed": null,
+          "kind": "data",
+          "eta": "weeks"
+        },
+        {
+          "check": 3,
+          "name": "beats_random_book_belief_blind",
+          "current": "belief-blind p PENDING (blocked upstream)",
+          "threshold": "p <= 0.01",
+          "passed": null,
+          "kind": "downstream",
+          "eta": "months"
+        },
+        {
+          "check": 4,
+          "name": "beats_best_single",
+          "current": "play Calmar n/a vs best-single n/a",
+          "threshold": "play Calmar >= best single reliable trader",
+          "passed": null,
+          "kind": "data",
+          "eta": "months"
+        },
+        {
+          "check": 5,
+          "name": "selection_null",
+          "current": "selection_null p PENDING (blocked upstream)",
+          "threshold": "p <= 0.01 AND calibrate PASS",
+          "passed": null,
+          "kind": "downstream",
+          "eta": "months"
+        },
+        {
+          "check": 6,
+          "name": "promotion_verdict",
+          "current": "day-deflated LB PENDING (blocked upstream)",
+          "threshold": ">= 30 events, Bonferroni, day-deflated SE, LB > 0.03",
+          "passed": null,
+          "kind": "downstream",
+          "eta": "months"
+        },
+        {
+          "check": 7,
+          "name": "pilot_verdict",
+          "current": "PENDING (blocked upstream)",
+          "threshold": "LB > 0.02, >= 50 ev, >= 5 +regimes, >= 70% +, liq >= $2000",
+          "passed": null,
+          "kind": "downstream",
+          "eta": "months"
+        },
+        {
+          "check": 8,
+          "name": "persistence_non_soccer",
+          "current": "0 non-soccer regimes (none)",
+          "threshold": ">= 2 disjoint non-soccer regimes (>= 8 ev each, non-expiring)",
+          "passed": false,
+          "kind": "accrual",
+          "eta": "months"
+        },
+        {
+          "check": 9,
+          "name": "edge_reality_lambda",
+          "current": "lambda CI-lo 0.065 at coverage 20%",
+          "threshold": "CI-lo >= 0.25 at >= 50% coverage",
+          "passed": false,
+          "kind": "data",
+          "eta": "months"
+        }
+      ]
+    },
+    "play_B_dabosshogg": {
+      "role": "high-volume LOW-longshot alternative",
+      "members": [
+        "DaBossHogg"
+      ],
+      "status": "INDETERMINATE-BY-POWER",
+      "n_events": 0,
+      "n_days": 0,
+      "non_soccer_regimes": 0,
+      "regimes": [],
+      "realizable_calmar": null,
+      "first_binding": "power_events",
+      "needs": "accrue >= 30 forward resolved events",
+      "eta": "weeks",
+      "gate": [
+        {
+          "check": 1,
+          "name": "power_events",
+          "current": "0 forward events",
+          "threshold": ">= 30",
+          "passed": false,
+          "kind": "power",
+          "eta": "weeks"
+        },
+        {
+          "check": 2,
+          "name": "realizable_calmar_positive",
+          "current": "realizable Calmar n/a",
+          "threshold": "> 0",
+          "passed": null,
+          "kind": "data",
+          "eta": "weeks"
+        },
+        {
+          "check": 3,
+          "name": "beats_random_book_belief_blind",
+          "current": "belief-blind p PENDING (blocked upstream)",
+          "threshold": "p <= 0.01",
+          "passed": null,
+          "kind": "downstream",
+          "eta": "months"
+        },
+        {
+          "check": 4,
+          "name": "beats_best_single",
+          "current": "play Calmar n/a vs best-single n/a",
+          "threshold": "play Calmar >= best single reliable trader",
+          "passed": null,
+          "kind": "data",
+          "eta": "months"
+        },
+        {
+          "check": 5,
+          "name": "selection_null",
+          "current": "selection_null p PENDING (blocked upstream)",
+          "threshold": "p <= 0.01 AND calibrate PASS",
+          "passed": null,
+          "kind": "downstream",
+          "eta": "months"
+        },
+        {
+          "check": 6,
+          "name": "promotion_verdict",
+          "current": "day-deflated LB PENDING (blocked upstream)",
+          "threshold": ">= 30 events, Bonferroni, day-deflated SE, LB > 0.03",
+          "passed": null,
+          "kind": "downstream",
+          "eta": "months"
+        },
+        {
+          "check": 7,
+          "name": "pilot_verdict",
+          "current": "PENDING (blocked upstream)",
+          "threshold": "LB > 0.02, >= 50 ev, >= 5 +regimes, >= 70% +, liq >= $2000",
+          "passed": null,
+          "kind": "downstream",
+          "eta": "months"
+        },
+        {
+          "check": 8,
+          "name": "persistence_non_soccer",
+          "current": "0 non-soccer regimes (none)",
+          "threshold": ">= 2 disjoint non-soccer regimes (>= 8 ev each, non-expiring)",
+          "passed": false,
+          "kind": "accrual",
+          "eta": "months"
+        },
+        {
+          "check": 9,
+          "name": "edge_reality_lambda",
+          "current": "lambda CI-lo 0.065 at coverage 20%",
+          "threshold": "CI-lo >= 0.25 at >= 50% coverage",
+          "passed": false,
+          "kind": "data",
+          "eta": "months"
+        }
+      ]
+    },
+    "play_C_book": {
+      "role": "equal-weight survivor BOOK (diversification benchmark)",
+      "members": [
+        "master-wuji",
+        "acorp",
+        "Sportbetting76",
+        "DaBossHogg"
+      ],
+      "status": "INDETERMINATE-BY-POWER",
+      "n_events": 0,
+      "n_days": 0,
+      "non_soccer_regimes": 0,
+      "regimes": [],
+      "realizable_calmar": null,
+      "first_binding": "power_events",
+      "needs": "accrue >= 30 forward resolved events",
+      "eta": "weeks",
+      "gate": [
+        {
+          "check": 1,
+          "name": "power_events",
+          "current": "0 forward events",
+          "threshold": ">= 30",
+          "passed": false,
+          "kind": "power",
+          "eta": "weeks"
+        },
+        {
+          "check": 2,
+          "name": "realizable_calmar_positive",
+          "current": "realizable Calmar n/a",
+          "threshold": "> 0",
+          "passed": null,
+          "kind": "data",
+          "eta": "weeks"
+        },
+        {
+          "check": 3,
+          "name": "beats_random_book_belief_blind",
+          "current": "belief-blind p PENDING (blocked upstream)",
+          "threshold": "p <= 0.01",
+          "passed": null,
+          "kind": "downstream",
+          "eta": "months"
+        },
+        {
+          "check": 4,
+          "name": "beats_best_single",
+          "current": "play Calmar n/a vs best-single n/a",
+          "threshold": "play Calmar >= best single reliable trader",
+          "passed": null,
+          "kind": "data",
+          "eta": "months"
+        },
+        {
+          "check": 5,
+          "name": "selection_null",
+          "current": "selection_null p PENDING (blocked upstream)",
+          "threshold": "p <= 0.01 AND calibrate PASS",
+          "passed": null,
+          "kind": "downstream",
+          "eta": "months"
+        },
+        {
+          "check": 6,
+          "name": "promotion_verdict",
+          "current": "day-deflated LB PENDING (blocked upstream)",
+          "threshold": ">= 30 events, Bonferroni, day-deflated SE, LB > 0.03",
+          "passed": null,
+          "kind": "downstream",
+          "eta": "months"
+        },
+        {
+          "check": 7,
+          "name": "pilot_verdict",
+          "current": "PENDING (blocked upstream)",
+          "threshold": "LB > 0.02, >= 50 ev, >= 5 +regimes, >= 70% +, liq >= $2000",
+          "passed": null,
+          "kind": "downstream",
+          "eta": "months"
+        },
+        {
+          "check": 8,
+          "name": "persistence_non_soccer",
+          "current": "0 non-soccer regimes (none)",
+          "threshold": ">= 2 disjoint non-soccer regimes (>= 8 ev each, non-expiring)",
+          "passed": false,
+          "kind": "accrual",
+          "eta": "months"
+        },
+        {
+          "check": 9,
+          "name": "edge_reality_lambda",
+          "current": "lambda CI-lo 0.065 at coverage 20%",
+          "threshold": "CI-lo >= 0.25 at >= 50% coverage",
+          "passed": false,
+          "kind": "data",
+          "eta": "months"
+        }
+      ]
+    }
+  }
+}
