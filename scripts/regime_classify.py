@@ -93,6 +93,59 @@ def explain(slug, title, sport=None):
     return UNKNOWN, "U", why
 
 
+# --------------------------------------------------------------------------------------------
+# TOURNAMENT-IDENTITY frame (2026-07-05) — regime axis = the specific competition, so we can ask
+# "does the favorite-softness edge transfer across DIFFERENT tournaments?" Frozen in
+# reports/PREREG_20260705T024128Z_tournament_transfer.md §1. Deterministic; no DB in the pure path.
+# --------------------------------------------------------------------------------------------
+# canonical tournament keyword → id (first match wins)
+_TOURNAMENT_KW = [
+    (("world cup", "worldcup", "fifwc", "-wc-"), "world-cup"),
+    (("wimbledon",), "wimbledon"),
+    (("us open", "usopen"), "us-open"),
+    (("roland", "french open"), "roland-garros"),
+    (("australian open", "ausopen"), "australian-open"),
+    (("champions league", "-ucl-"), "champions-league"),
+    (("-msi-", " msi "), "lol-msi"),
+    (("worlds",), "esports-worlds"),
+    (("olympic",), "olympics"),
+    (("super bowl", "superbowl"), "super-bowl"),
+    (("world series",), "world-series"),
+    (("euro ",), "euro"),
+]
+# generic bounded-event markers (no canonical name) → a sport-specific "other tournament" bucket
+_GENERIC_TOURNAMENT_KW = ("playoff", "postseason", "grand slam", "-final", "knockout",
+                          "elimination", "championship", "primary", "nominee")
+
+
+def classify_tournament(sport, market_type, slug, title):
+    """(tournament_id, is_tournament). is_tournament gates which regimes count for the
+    cross-tournament transfer test; tournament_id is the canonical competition. Sport-aware:
+    tennis reads the title prefix before ':' (the tournament city/name — Wimbledon/Milan/Cary/…);
+    soccer World-Cup / esports majors come from keywords; regular-season league play is
+    is_tournament=False. Frozen in PREREG §1."""
+    cat = sport if sport is not None else category(slug, title)
+    text = _norm(slug, title)
+    # 1. explicit canonical tournament keywords (unifies e.g. Wimbledon ATP + Wimbledon WTA → wimbledon)
+    for kws, tid in _TOURNAMENT_KW:
+        if any(k in text for k in kws):
+            return tid, True
+    # 2. tennis: the title prefix before ':' is the tournament/city (Milan / Cary / Quito / …)
+    if cat == "tennis" and title and ":" in title:
+        name = title.split(":")[0].replace(" ATP", "").replace(" WTA", "").strip().lower()
+        if name:
+            return name.replace(" ", "-"), True
+    # 3. other generic bounded markers → a sport-specific 'other tournament' bucket
+    for k in _GENERIC_TOURNAMENT_KW:
+        if k in text:
+            return f"{cat}-tournament-other", True
+    # 4. esports here is bracket/tournament play (no regular-split league markets in this book)
+    if cat == "esports":
+        return "esports-tournament", True
+    # 5. else: regular-season league play / ongoing markets — NOT a tournament instance
+    return f"{cat}-league", False
+
+
 def classify_regime(sport, market_type, slug, title):
     """(regime_id, regime_type). regime_id = the sport_category (the month is composed by callers).
     market_type is accepted for signature completeness (the type rule does not currently split on it,
@@ -207,6 +260,28 @@ def _selftest():
         classify_regime("soccer", "main", "fifwc-x-y-2026-07-01", "X vs Y")
     ok = ok and c_d
     print(f"  [{'ok' if c_d else 'FAIL'}] deterministic (idempotent)")
+
+    # classify_tournament (tournament-identity frame)
+    tcases = [
+        ("fifwc-arg-cv-2026-07-01", "Argentina vs. Cabo Verde: O/U 1.5", "soccer", ("world-cup", True)),
+        ("atp-a-b-2026-07-01", "Wimbledon ATP: Ruud vs Hurkacz", "tennis", ("wimbledon", True)),
+        ("wta-c-d-2026-07-01", "Wimbledon WTA: Swiatek vs Sabalenka", "tennis", ("wimbledon", True)),
+        ("atp-e-f-2026-07-01", "Milan: Comesana vs Dedura", "tennis", ("milan", True)),
+        ("mlb-laa-sea-2026-06-30", "Angels vs Mariners", "mlb", ("mlb-league", False)),
+        ("lol-t1-tl-2026-07-01", "T1 vs TL", "esports", ("esports-tournament", True)),
+    ]
+    tok = True
+    for slug, title, sport, want in tcases:
+        got = classify_tournament(sport, "main", slug, title)
+        good = got == want
+        tok = tok and good
+        print(f"  [{'ok' if good else 'FAIL'}] tournament: {title[:32]:<32} → {got} want {want}")
+    ok = ok and tok
+    # Wimbledon ATP + WTA unify to ONE tournament (the whole point)
+    c_uni = (classify_tournament("tennis", "main", "atp-x", "Wimbledon ATP: a vs b")[0]
+             == classify_tournament("tennis", "main", "wta-y", "Wimbledon WTA: c vs d")[0] == "wimbledon")
+    ok = ok and c_uni
+    print(f"  [{'ok' if c_uni else 'FAIL'}] Wimbledon ATP + WTA unify to one tournament id")
 
     print("selftest:", "PASS" if ok else "FAIL")
     sys.exit(0 if ok else 1)
