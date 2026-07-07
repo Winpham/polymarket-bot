@@ -275,6 +275,20 @@ pub struct ClobMarket {
     pub market_slug: String,
     #[serde(default)]
     pub question: String,
+    /// Tradeability (present in the CLOB response). The live tape subscribes only to
+    /// QUOTABLE markets (`active && !closed && accepting_orders`) — a closed/inactive
+    /// market streams nothing and only bloats the subscription.
+    #[serde(default)]
+    pub active: bool,
+    #[serde(default)]
+    pub accepting_orders: bool,
+}
+
+impl ClobMarket {
+    /// True iff the market is tradeable right now (worth subscribing/taping).
+    pub fn quotable(&self) -> bool {
+        self.active && !self.closed && self.accepting_orders
+    }
 }
 
 impl ClobMarket {
@@ -442,6 +456,8 @@ mod consensus_resolution_tests {
             tokens: vec![tok("Yes", 0.0, false), tok("No", 1.0, true)],
             market_slug: String::new(),
             question: String::new(),
+            active: true,
+            accepting_orders: true,
         };
         assert_eq!(m.outcome_won(0), Some(false));
         assert_eq!(m.outcome_won(1), Some(true));
@@ -456,6 +472,8 @@ mod consensus_resolution_tests {
             tokens: vec![tok("Yes", 0.62, false), tok("No", 0.38, false)],
             market_slug: String::new(),
             question: String::new(),
+            active: true,
+            accepting_orders: true,
         };
         assert_eq!(open.outcome_won(0), None, "open => no resolution");
 
@@ -467,6 +485,8 @@ mod consensus_resolution_tests {
             tokens: vec![tok("Yes", 0.5, false), tok("No", 0.5, false)],
             market_slug: String::new(),
             question: String::new(),
+            active: true,
+            accepting_orders: true,
         };
         assert_eq!(void.outcome_won(0), None, "void close is never a loss");
         assert_eq!(void.outcome_won(1), None);
