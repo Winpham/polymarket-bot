@@ -56,13 +56,18 @@ CREATE INDEX IF NOT EXISTS idx_tape_cond_recv  ON clob_price_tape (condition_id,
 
 -- (c) Live-vs-live dedup for F2 (Item 5). Constrains ONLY live rows among themselves,
 --     so it CANNOT conflict with the full-precision poller rows (source IS NULL excluded).
---     Collapses reconnect/getLogs-range replays of the same on-chain OrderFilled.
+--     Collapses reconnect/getLogs-range REPLAYS of the same on-chain OrderFilled (which
+--     reconstruct to an identical price → same key), while KEEPING genuinely distinct
+--     legs of a multi-level sweep (N OrderFilled logs, same tx/cond/outcome/side, DIFFERENT
+--     price → different key). `price` is included for exactly the reason migration 027's
+--     tx index includes it: a taker sweeping several maker orders in one tx is N partial
+--     fills, and collapsing them would undercount size_usd. (Adversarial review D1.)
 --     NOTE: cross-source dedup (live-vs-poll) is NOT done here — the poller stores a
---     full-precision VWAP price (51% of 24h rows carry >2 decimals) and the widened
---     unique index (migration 027) includes `price`, so an on-chain-reconstructed f64
---     would not collide; that is handled by the app pre-check + poll-over-live collapse.
+--     full-precision VWAP price and the widened index (027) includes `price`, so an
+--     on-chain-reconstructed f64 would not collide; that is handled by the app pre-check
+--     + poll-over-live collapse.
 CREATE UNIQUE INDEX IF NOT EXISTS trader_fills_live_txkey
-    ON trader_fills (tx_hash, condition_id, outcome_index, side)
+    ON trader_fills (tx_hash, condition_id, outcome_index, side, price)
     WHERE source = 'live_onchain' AND tx_hash IS NOT NULL;
 
 -- (d) Cheap source/ts index for reconciliation + the poll-over-live collapse sweep.

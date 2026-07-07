@@ -222,50 +222,57 @@ async fn process_logs(
             Some(o) => o,
             None => continue,
         };
-        // which side is a tracked wallet?
-        let tracked_wallet = if tracked.contains(&of.maker) {
-            of.maker.clone()
-        } else if tracked.contains(&of.taker) {
-            of.taker.clone()
-        } else {
+        // BOTH sides may be tracked (two followed wallets trading against each other) —
+        // emit a fill for EACH (maker BUY + taker SELL), not just the first (review D3).
+        let mut parties: Vec<&String> = Vec::new();
+        if tracked.contains(&of.maker) {
+            parties.push(&of.maker);
+        }
+        if tracked.contains(&of.taker) && of.taker != of.maker {
+            parties.push(&of.taker);
+        }
+        if parties.is_empty() {
             continue;
-        };
-        let (price, size_usd, asset_dec, side) = match reconstruct(&of, &tracked_wallet) {
-            Some(x) => x,
-            None => continue,
-        };
-        let meta = match resolver.get(&asset_dec) {
-            Some(m) => m,
-            None => {
-                // unmapped asset (new market) — the poller will catch it
-                metrics::record_live_fill_unresolved(1);
-                continue;
-            }
-        };
+        }
         let ts = log["blockNumber"]
             .as_str()
             .and_then(|b| block_ts.get(b))
             .copied()
             .unwrap_or_else(Utc::now);
-        let tr = TraderTrade {
-            slug: meta.slug.clone(),
-            condition_id: meta.condition_id.clone(),
-            side,
-            price,
-            size_usd,
-            tx_hash: log["transactionHash"].as_str().map(|s| s.to_lowercase()),
-            timestamp: ts,
-            outcome_index: Some(meta.outcome_index),
-            outcome: Some(meta.outcome.clone()),
-            title: Some(meta.title.clone()),
-            event_slug: meta.event_slug.clone(),
-        };
-        // Reuse trade_to_fill so is_sports/sport/bet_type freeze IDENTICALLY to the
-        // poller (no taxonomy drift), then stamp provenance.
-        if let Some(mut fill) = trade_to_fill(&tracked_wallet, &tr) {
-            fill.source = Some("live_onchain".to_string());
-            fill.live_seen_at = Some(Utc::now());
-            fills.push(fill);
+        let tx_hash = log["transactionHash"].as_str().map(|s| s.to_lowercase());
+        for tracked_wallet in parties {
+            let (price, size_usd, asset_dec, side) = match reconstruct(&of, tracked_wallet) {
+                Some(x) => x,
+                None => continue,
+            };
+            let meta = match resolver.get(&asset_dec) {
+                Some(m) => m,
+                None => {
+                    // unmapped asset (new market) — the poller will catch it
+                    metrics::record_live_fill_unresolved(1);
+                    continue;
+                }
+            };
+            let tr = TraderTrade {
+                slug: meta.slug.clone(),
+                condition_id: meta.condition_id.clone(),
+                side,
+                price,
+                size_usd,
+                tx_hash: tx_hash.clone(),
+                timestamp: ts,
+                outcome_index: Some(meta.outcome_index),
+                outcome: Some(meta.outcome.clone()),
+                title: Some(meta.title.clone()),
+                event_slug: meta.event_slug.clone(),
+            };
+            // Reuse trade_to_fill so is_sports/sport/bet_type freeze IDENTICALLY to the
+            // poller (no taxonomy drift), then stamp provenance.
+            if let Some(mut fill) = trade_to_fill(tracked_wallet, &tr) {
+                fill.source = Some("live_onchain".to_string());
+                fill.live_seen_at = Some(Utc::now());
+                fills.push(fill);
+            }
         }
     }
     if fills.is_empty() {
@@ -273,7 +280,9 @@ async fn process_logs(
     }
     // LAYER 2: live-vs-poll pre-check — skip live rows the poller already holds.
     if dedup_precheck {
-        let tx: Vec<String> = fills.iter().filter_map(|f| f.tx_hash.clone()).collect();
+        // All four arrays MUST use the SAME iteration so a None tx_hash cannot shift
+        // `tx` relative to the others (review D5). None → "" (never matches a poll row).
+        let tx: Vec<String> = fills.iter().map(|f| f.tx_hash.clone().unwrap_or_default()).collect();
         let cond: Vec<String> = fills.iter().map(|f| f.condition_id.clone()).collect();
         let oidx: Vec<i32> = fills.iter().map(|f| f.outcome_index).collect();
         let side: Vec<String> = fills.iter().map(|f| f.side.clone()).collect();

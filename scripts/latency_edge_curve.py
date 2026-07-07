@@ -39,7 +39,7 @@ try:
 except Exception:  # noqa: BLE001 — self-test provides a stub
     super_event = None
 
-GRID = [1, 5, 15, 30, 60, 120, 300, 900]
+GRID = [1, 5, 15, 30, 60, 90, 120, 300, 900]  # 90 = the status-quo poll latency (review D6)
 STATUS_QUO_S = 90            # current median poll latency (the tax we pay today)
 TOL_S = 30                   # nearest-ask must be within this of ts+t
 BOOT = 1000
@@ -148,7 +148,7 @@ def build_curve(fills, tape_by_asset):
             "n_events": len(clusters),
             "drift_by_t": per_t,
             "recoverable_60_vs_5_c": delta(60, 5),
-            "recoverable_statusquo_vs_5_c": delta(90 if 90 in GRID else 120, 5),
+            "recoverable_statusquo_vs_5_c": delta(STATUS_QUO_S, 5),  # 90s vs 5s
             "power": "OK" if len(clusters) >= 30 else "INDETERMINATE-BY-POWER",
         }
     return result

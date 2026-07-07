@@ -211,15 +211,32 @@ async fn stream_shard(
 
     // Volume control (measured necessary: at scale ~4100 raw ev/s, on-change alone
     // keeps ~91% because liquid books flicker every event). Two combined filters,
-    // both LOSSLESS for a curve whose finest grid point is 1s:
+    // both bounded to the curve's 1s grid resolution:
     //   (1) on-change   — skip if (best_bid,best_ask,last_price) unchanged (step fn);
-    //   (2) 1 Hz coalesce — at most one row per asset per exchange-clock SECOND.
+    //   (2) 1 Hz keep-LAST — emit the SETTLED (last) value of each exchange-clock second,
+    //       flushed on the second rollover. Keeping the last (not first) change avoids
+    //       carrying a within-second transient forward (review D4). exch_ts on the row is
+    //       always correct even though the write lags by ≤1 tick.
     // Net measured: ~322 rows/s (28M/day, 84M/72h) vs 287M/day raw — a 10× cut.
-    // per-asset (last_emit_second, last_key).
     type Key = (Option<u64>, Option<u64>, Option<u64>);
-    let mut last_emit: HashMap<String, (i64, Key)> = HashMap::new();
+    // per-asset: the latest tick of the CURRENT second (pending flush) + its (sec,key).
+    let mut pending: HashMap<String, (i64, Key, NewTapeTick)> = HashMap::new();
+    // per-asset: key of the last row actually emitted (for cross-second on-change dedup).
+    let mut last_emitted: HashMap<String, Key> = HashMap::new();
     // encode f64 as bits so it's Hash/Eq (NaN not expected here)
     let key = |x: Option<f64>| x.map(|v| v.to_bits());
+
+    macro_rules! emit {
+        ($asset:expr, $k:expr, $t:expr) => {
+            match tx.try_send($t) {
+                Ok(()) => {
+                    last_emitted.insert($asset, $k);
+                }
+                Err(mpsc::error::TrySendError::Full(_)) => metrics::record_live_tape_dropped(1),
+                Err(mpsc::error::TrySendError::Closed(_)) => return Ok(()),
+            }
+        };
+    }
 
     let mut last_ping = std::time::Instant::now();
     loop {
@@ -256,19 +273,26 @@ async fn stream_shard(
                 .exch_ts
                 .map(|t| t.timestamp())
                 .unwrap_or_else(|| tick.recv_at.timestamp());
-            if let Some((last_sec, last_k)) = last_emit.get(&tick.asset_id) {
-                if *last_k == k {
-                    continue; // unchanged top-of-book — step function, lossless drop
+            let asset = tick.asset_id.clone();
+            // copy the pending second out so the borrow drops before remove/insert.
+            let psec = pending.get(&asset).map(|(s, _, _)| *s);
+            match psec {
+                Some(s) if s == sec => {
+                    // same second: replace pending with the newer state (keep-last).
+                    pending.insert(asset, (sec, k, tick));
                 }
-                if *last_sec == sec {
-                    continue; // already emitted a change this second — 1 Hz coalesce
+                Some(_) => {
+                    // second rolled: flush the SETTLED value of the prior second (on-change
+                    // vs the last row we actually emitted), then stage the current tick.
+                    let (_, fk, ft) = pending.remove(&asset).unwrap();
+                    if last_emitted.get(&asset) != Some(&fk) {
+                        emit!(asset.clone(), fk, ft);
+                    }
+                    pending.insert(asset, (sec, k, tick));
                 }
-            }
-            last_emit.insert(tick.asset_id.clone(), (sec, k));
-            match tx.try_send(tick) {
-                Ok(()) => {}
-                Err(mpsc::error::TrySendError::Full(_)) => metrics::record_live_tape_dropped(1),
-                Err(mpsc::error::TrySendError::Closed(_)) => return Ok(()),
+                None => {
+                    pending.insert(asset, (sec, k, tick));
+                }
             }
         }
     }

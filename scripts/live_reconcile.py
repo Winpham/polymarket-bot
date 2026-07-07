@@ -96,15 +96,32 @@ def dedup_proof(container=PG_TEST):
     assert n_live == 1, f"source-scoped index should collapse live replay to 1, got {n_live}"
     print("[dedup] live-vs-live replay collapsed by source-scoped index → 1 row ✓", file=sys.stderr)
 
+    # 5) DISTINCT multi-level sweep legs (review D1): two live OrderFilled logs share
+    #    (tx,cond,outcome,side) but DIFFER in price — must be KEPT as 2 rows (the index
+    #    includes price, matching migration 027's tx index; collapsing would undercount size).
+    psql("TRUNCATE trader_fills;", container, want_rows=False)
+    for p in ("0.61", "0.62"):  # two maker levels swept in one tx
+        psql(
+            "INSERT INTO trader_fills "
+            "(wallet,tx_hash,condition_id,outcome_index,outcome,side,price,size_usd,"
+            " title,slug,is_sports,ts,source,live_seen_at) VALUES "
+            f"('0xw','{tx}','{cond}',1,'Yes','BUY',{p},50,'t','s',true,now(),"
+            "'live_onchain',now()) ON CONFLICT DO NOTHING;",
+            container, want_rows=False)
+    n_legs = int(psql("SELECT count(*) FROM trader_fills;", container).strip())
+    assert n_legs == 2, f"distinct-price sweep legs must be kept (got {n_legs}) — index must include price"
+    print("[dedup] distinct-price sweep legs kept → 2 rows (index includes price) ✓", file=sys.stderr)
+
     return {"insert_no_collapse": n_after_insert, "after_collapse": n_after_collapse,
-            "live_replay_collapsed": n_live == 1}
+            "live_replay_collapsed": n_live == 1, "distinct_legs_kept": n_legs == 2}
 
 
 def self_test():
     r = dedup_proof()
-    assert r == {"insert_no_collapse": 2, "after_collapse": 1, "live_replay_collapsed": True}
+    assert r == {"insert_no_collapse": 2, "after_collapse": 1,
+                 "live_replay_collapsed": True, "distinct_legs_kept": True}, r
     print("SELF-TEST PASS: three-layer dedup — VWAP-vs-reconstructed does NOT double-count; "
-          "poll-over-live collapse net 1; live replay collapsed.")
+          "poll-over-live collapse net 1; live replay collapsed; distinct sweep legs kept.")
 
 
 def main():
