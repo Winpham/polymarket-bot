@@ -116,12 +116,63 @@ def dedup_proof(container=PG_TEST):
             "live_replay_collapsed": n_live == 1, "distinct_legs_kept": n_legs == 2}
 
 
+def compaction_proof(container=PG_TEST):
+    """compact_tape drops consecutive-duplicate top-of-book (reconnect-boundary) rows
+    while keeping every inflection — LOSSLESS for the best_ask step function."""
+    psql("TRUNCATE clob_price_tape;", container, want_rows=False)
+    # asset 'a': dup after t1 (reconnect resend), then two real inflections, then a dup.
+    rows = [  # (secs_offset, best_bid, best_ask)
+        (1, 0.49, 0.50),   # keep (first)
+        (2, 0.49, 0.50),   # DROP (dup of t1 — reconnect snapshot)
+        (3, 0.49, 0.51),   # keep (ask inflection)
+        (4, 0.50, 0.51),   # keep (bid inflection)
+        (5, 0.50, 0.51),   # DROP (dup of t4)
+    ]
+    for off, bid, ask in rows:
+        psql(
+            "INSERT INTO clob_price_tape (asset_id,event_type,best_bid,best_ask,exch_ts,recv_at) "
+            f"VALUES ('a','price_change',{bid},{ask},"
+            f"now()-interval '3600 seconds'+interval '{off} seconds',"
+            f"now()-interval '3600 seconds'+interval '{off} seconds');",
+            container, want_rows=False)
+    before = int(psql("SELECT count(*) FROM clob_price_tape;", container).strip())
+    # best_ask step-function sequence BEFORE
+    seq_before = psql("SELECT best_ask FROM clob_price_tape ORDER BY exch_ts;", container).split()
+    removed = int(psql(
+        # keep_recent_secs=0 → compact everything (all rows are 1h old)
+        "WITH ranked AS (SELECT id,(best_bid IS NOT DISTINCT FROM lag(best_bid) OVER w "
+        "AND best_ask IS NOT DISTINCT FROM lag(best_ask) OVER w) AS redundant "
+        "FROM clob_price_tape WHERE recv_at < now() - interval '0 seconds' "
+        "WINDOW w AS (PARTITION BY asset_id ORDER BY exch_ts NULLS LAST, recv_at, id)) "
+        ", del AS (DELETE FROM clob_price_tape t USING ranked r "
+        "WHERE t.id=r.id AND r.redundant RETURNING t.id) SELECT count(*) FROM del;",
+        container).strip())
+    after = int(psql("SELECT count(*) FROM clob_price_tape;", container).strip())
+    # distinct best_ask step-function (dedup consecutive) must be identical before/after
+    def step(seq):
+        out = []
+        for v in seq:
+            if not out or out[-1] != v:
+                out.append(v)
+        return out
+    seq_after = psql("SELECT best_ask FROM clob_price_tape ORDER BY exch_ts;", container).split()
+    assert before == 5 and after == 3, f"expected 5→3, got {before}→{after}"
+    assert removed == 2, f"expected 2 removed, got {removed}"
+    assert step(seq_before) == step(seq_after), f"step fn changed: {step(seq_before)} vs {step(seq_after)}"
+    print(f"[compact] {before}→{after} rows ({removed} dup top-of-book removed); "
+          "best_ask step-function unchanged ✓", file=sys.stderr)
+    return {"before": before, "after": after, "removed": removed, "lossless": True}
+
+
 def self_test():
     r = dedup_proof()
     assert r == {"insert_no_collapse": 2, "after_collapse": 1,
                  "live_replay_collapsed": True, "distinct_legs_kept": True}, r
+    c = compaction_proof()
+    assert c == {"before": 5, "after": 3, "removed": 2, "lossless": True}, c
     print("SELF-TEST PASS: three-layer dedup — VWAP-vs-reconstructed does NOT double-count; "
-          "poll-over-live collapse net 1; live replay collapsed; distinct sweep legs kept.")
+          "poll-over-live collapse net 1; live replay collapsed; distinct sweep legs kept; "
+          "compaction drops reconnect dups losslessly.")
 
 
 def main():

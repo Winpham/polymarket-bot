@@ -329,6 +329,19 @@ pub fn record_live_tape_universe(tokens: u64, connections: u64) {
     gauge!("live_tape_connections").set(connections as f64);
 }
 
+static LIVE_TAPE_COMPACTED: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+
+/// Record `n` redundant tape rows removed by the compaction sweep.
+pub fn record_live_tape_compacted(n: u64) {
+    counter!("live_tape_compacted_total").increment(n);
+    LIVE_TAPE_COMPACTED.fetch_add(n, std::sync::atomic::Ordering::Relaxed);
+}
+
+/// Total tape rows compacted since process start (for the board).
+pub fn live_tape_compacted_count() -> u64 {
+    LIVE_TAPE_COMPACTED.load(std::sync::atomic::Ordering::Relaxed)
+}
+
 // --- F2 on-chain fast fills (migration 040) ----------------------------------
 static LIVE_FILL_EVENTS: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
 static LIVE_FILL_UNRESOLVED: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);

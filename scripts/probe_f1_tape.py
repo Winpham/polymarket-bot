@@ -277,6 +277,8 @@ def main():
     ap.add_argument("--probe-out", default="reports/live_ingestion_probe.json")
     ap.add_argument("--all-tokens", action="store_true",
                     help="subscribe to all tokens, not just quotable")
+    ap.add_argument("--raw", action="store_true",
+                    help="capture EVERY event (no on-change dedup) for the compression study")
     args = ap.parse_args()
 
     assets, _ = load_assets(args.token_map, quotable_only=not args.all_tokens)
@@ -294,8 +296,11 @@ def main():
         block["max_subs_per_conn_observed"] = best
         print(f"[f1] max_subs_per_conn_observed = {best}", file=sys.stderr)
     else:
+        # --raw captures every event (no on-change dedup) so keying/compaction
+        # strategies can be compared offline for the compression study.
         stats, n_conns = asyncio.run(
-            capture(assets, args.shard_size, args.minutes, args.tape_out))
+            capture(assets, args.shard_size, args.minutes, args.tape_out,
+                    dedup_onchange=not args.raw))
         s = stats.summary()
         block.update(s)
         block["shard_size"] = args.shard_size

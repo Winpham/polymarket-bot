@@ -156,6 +156,7 @@ async fn conn_worker(
     universe: Arc<RwLock<Universe>>,
     version: Arc<AtomicU64>,
     tx: mpsc::Sender<NewTapeTick>,
+    coalesce_ms: i64,
 ) {
     loop {
         let my_version = version.load(Ordering::Relaxed);
@@ -178,7 +179,7 @@ async fn conn_worker(
             tokio::time::sleep(Duration::from_secs(15)).await;
             continue;
         }
-        if let Err(e) = stream_shard(&shard, &meta, &version, my_version, &tx).await {
+        if let Err(e) = stream_shard(&shard, &meta, &version, my_version, &tx, coalesce_ms).await {
             tracing::warn!(worker = idx, err = %e, "live-tape shard stream ended, reconnecting");
         }
         tokio::time::sleep(RECONNECT_DELAY).await;
@@ -192,6 +193,7 @@ async fn stream_shard(
     version: &Arc<AtomicU64>,
     my_version: u64,
     tx: &mpsc::Sender<NewTapeTick>,
+    coalesce_ms: i64,
 ) -> Result<()> {
     let (ws_stream, _) = tokio_tungstenite::connect_async(WS_URL)
         .await
@@ -209,22 +211,23 @@ async fn stream_shard(
         .context("live-tape subscribe failed")?;
     tracing::info!(tokens = shard.len(), "live-tape subscribed");
 
-    // Volume control (measured necessary: at scale ~4100 raw ev/s, on-change alone
-    // keeps ~91% because liquid books flicker every event). Two combined filters,
-    // both bounded to the curve's 1s grid resolution:
-    //   (1) on-change   — skip if (best_bid,best_ask,last_price) unchanged (step fn);
-    //   (2) 1 Hz keep-LAST — emit the SETTLED (last) value of each exchange-clock second,
-    //       flushed on the second rollover. Keeping the last (not first) change avoids
-    //       carrying a within-second transient forward (review D4). exch_ts on the row is
-    //       always correct even though the write lags by ≤1 tick.
-    // Net measured: ~322 rows/s (28M/day, 84M/72h) vs 287M/day raw — a 10× cut.
-    type Key = (Option<u64>, Option<u64>, Option<u64>);
-    // per-asset: the latest tick of the CURRENT second (pending flush) + its (sec,key).
+    // Volume control — store only TOP-OF-BOOK INFLECTIONS (measured: at scale ~4000
+    // raw ev/s the vast majority of events don't move (best_bid,best_ask)). Two filters:
+    //   (1) on-change — emit only when (best_bid, best_ask) actually changes. `last_price`
+    //       in a price_change is order-BOOK-LEVEL churn (not a trade), so it is NOT in the
+    //       key — including it stored a row on every level flicker for no curve benefit.
+    //   (2) keep-LAST coalesce — at most one row per asset per `coalesce_ms` bucket,
+    //       emitting the SETTLED (last) value, flushed on bucket rollover OR when the asset
+    //       goes quiet (stale-pending flush below). exch_ts on the row is always correct.
+    // The curve reads best_ask; best_bid is kept (spread/mid/CLV) and also keyed on.
+    type Key = (Option<u64>, Option<u64>);
+    // per-asset: the latest tick of the CURRENT bucket (pending) + (bucket, key).
     let mut pending: HashMap<String, (i64, Key, NewTapeTick)> = HashMap::new();
-    // per-asset: key of the last row actually emitted (for cross-second on-change dedup).
+    // per-asset: key of the last row actually emitted (for cross-bucket on-change dedup).
     let mut last_emitted: HashMap<String, Key> = HashMap::new();
     // encode f64 as bits so it's Hash/Eq (NaN not expected here)
     let key = |x: Option<f64>| x.map(|v| v.to_bits());
+    let coalesce_ms = coalesce_ms.max(1);
 
     macro_rules! emit {
         ($asset:expr, $k:expr, $t:expr) => {
@@ -250,6 +253,22 @@ async fn stream_shard(
                 .await
                 .context("live-tape PING failed")?;
             last_ping = std::time::Instant::now();
+            // Stale-pending flush: emit the settled value of any asset that has gone
+            // quiet (no tick in the current bucket) so its final inflection isn't held
+            // in `pending` indefinitely (reliability — closes the keep-last tail).
+            let cur_bucket = Utc::now().timestamp_millis() / coalesce_ms;
+            let stale: Vec<String> = pending
+                .iter()
+                .filter(|(_, (b, _, _))| *b < cur_bucket)
+                .map(|(a, _)| a.clone())
+                .collect();
+            for asset in stale {
+                if let Some((_, fk, ft)) = pending.remove(&asset)
+                    && last_emitted.get(&asset) != Some(&fk)
+                {
+                    emit!(asset.clone(), fk, ft);
+                }
+            }
         }
         let msg = match tokio::time::timeout(PING_INTERVAL, read.next()).await {
             Ok(Some(Ok(m))) => m,
@@ -267,12 +286,13 @@ async fn stream_shard(
             continue;
         }
         for tick in parse_frame(text, meta) {
-            let k: Key = (key(tick.best_bid), key(tick.best_ask), key(tick.last_price));
+            let k: Key = (key(tick.best_bid), key(tick.best_ask));
             // bucket on the exchange clock (the curve's anchor); fall back to recv.
-            let sec = tick
+            let millis = tick
                 .exch_ts
-                .map(|t| t.timestamp())
-                .unwrap_or_else(|| tick.recv_at.timestamp());
+                .map(|t| t.timestamp_millis())
+                .unwrap_or_else(|| tick.recv_at.timestamp_millis());
+            let sec = millis / coalesce_ms; // coalesce bucket index
             let asset = tick.asset_id.clone();
             // copy the pending second out so the borrow drops before remove/insert.
             let psec = pending.get(&asset).map(|(s, _, _)| *s);
@@ -395,21 +415,37 @@ pub async fn run_live_tape(
             Arc::clone(&universe),
             Arc::clone(&version),
             tx.clone(),
+            cfg.tape_coalesce_ms,
         ));
     }
     drop(tx); // workers hold their own clones; writer closes when all drop
 
-    // prune loop
+    // prune + compaction loop
     {
         let p = Arc::clone(&portfolio);
         let retention = cfg.tape_retention_hours;
+        let compact_every = (cfg.tape_compact_hours.max(1) as u64) * 3600;
         tokio::spawn(async move {
+            let mut elapsed: u64 = 0;
             loop {
                 tokio::time::sleep(Duration::from_secs(3600)).await;
+                elapsed += 3600;
                 match p.prune_tape(retention).await {
                     Ok(n) if n > 0 => tracing::info!(pruned = n, "live-tape retention prune"),
                     Ok(_) => {}
                     Err(e) => tracing::warn!(err = %e, "live-tape prune failed"),
+                }
+                // compaction sweep: drop reconnect-boundary duplicate top-of-book rows
+                // (keep the last 60s so it never races the live writer's tail).
+                if elapsed.is_multiple_of(compact_every) {
+                    match p.compact_tape(60).await {
+                        Ok(n) if n > 0 => {
+                            metrics::record_live_tape_compacted(n);
+                            tracing::info!(compacted = n, "live-tape compaction");
+                        }
+                        Ok(_) => {}
+                        Err(e) => tracing::warn!(err = %e, "live-tape compaction failed"),
+                    }
                 }
             }
         });

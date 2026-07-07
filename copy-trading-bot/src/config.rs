@@ -209,6 +209,16 @@ pub struct CopyTradingConfig {
     #[config(env = "TAPE_RETENTION_HOURS", default = 72)]
     pub tape_retention_hours: i64,
 
+    /// Tape coalesce window (ms): at most one row per asset per this window, keeping
+    /// the SETTLED (last) top-of-book. 1000 = 1 Hz. Smaller = finer, more rows.
+    #[config(env = "TAPE_COALESCE_MS", default = 1000)]
+    pub tape_coalesce_ms: i64,
+
+    /// How often (hours) to run the tape compaction sweep (drops reconnect-boundary
+    /// duplicate top-of-book rows the ingest filter couldn't catch across streams).
+    #[config(env = "TAPE_COMPACT_HOURS", default = 6)]
+    pub tape_compact_hours: i64,
+
     // --- F2 optional on-chain fast fills (migration 040, gated on P0-B) -----
     /// Observe OrderFilled logs on-chain for ~1–5s fill→row latency. OFF by
     /// default AND only built if the P0-B ingestion gate passed.

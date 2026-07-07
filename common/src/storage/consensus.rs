@@ -1416,6 +1416,38 @@ impl PgPortfolio {
         Ok(res.rows_affected())
     }
 
+    /// Compact the tape (migration 040): drop rows whose top-of-book
+    /// (best_bid, best_ask) is IDENTICAL to the immediately-preceding row for the
+    /// same asset — pure redundancy the step-function curve already implies. The
+    /// on-change ingest filter already skips these in-stream; this sweep cleans the
+    /// residual left at reconnect/reshard boundaries (a fresh stream re-sends a
+    /// `book` snapshot of the unchanged top-of-book). LOSSLESS for the curve: every
+    /// inflection (a real (bid,ask) change) is kept; only implied repeats are removed.
+    /// Only touches rows older than `keep_recent_secs` so it never races the live
+    /// writer's just-inserted tail. Returns rows removed.
+    pub async fn compact_tape(&self, keep_recent_secs: i64) -> Result<u64> {
+        let res = sqlx::query(
+            "WITH ranked AS ( \
+               SELECT id, \
+                 (best_bid IS NOT DISTINCT FROM \
+                    lag(best_bid) OVER w \
+                  AND best_ask IS NOT DISTINCT FROM \
+                    lag(best_ask) OVER w) AS redundant \
+               FROM clob_price_tape \
+               WHERE recv_at < now() - ($1::text || ' seconds')::interval \
+               WINDOW w AS (PARTITION BY asset_id \
+                 ORDER BY exch_ts NULLS LAST, recv_at, id) \
+             ) \
+             DELETE FROM clob_price_tape t USING ranked r \
+             WHERE t.id = r.id AND r.redundant",
+        )
+        .bind(keep_recent_secs.to_string())
+        .execute(&self.pool)
+        .await
+        .context("compact_tape")?;
+        Ok(res.rows_affected())
+    }
+
     /// The tracked-only subscription universe: DISTINCT (condition_id, outcome_index)
     /// that a *followed* trader has filled a sports pick on within `lookback_hours`.
     /// The `live_tape` refresh loop resolves each to a CLOB token_id and subscribes.

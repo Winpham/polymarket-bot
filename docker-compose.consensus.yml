@@ -111,6 +111,8 @@ services:
       LIVE_TAPE_LOOKBACK_HOURS: ${LIVE_TAPE_LOOKBACK_HOURS:-6}
       LIVE_TAPE_REFRESH_SECS: ${LIVE_TAPE_REFRESH_SECS:-300}
       TAPE_RETENTION_HOURS: ${TAPE_RETENTION_HOURS:-72} # hourly prune bounds tape growth
+      TAPE_COALESCE_MS: ${TAPE_COALESCE_MS:-1000}       # ≤1 row/asset/window, keep-last settled top-of-book
+      TAPE_COMPACT_HOURS: ${TAPE_COMPACT_HOURS:-6}      # compaction sweep drops reconnect-boundary dup rows
       # --- F2 optional on-chain fast fills (migration 040, gated on P0-B; OFF) ---
       LIVE_FILLS: ${LIVE_FILLS:-false}                 # OrderFilled → ~1-5s fill→row (needs LIVE_FILLS_RPC_HTTP)
       LIVE_FILLS_RPC_HTTP: ${LIVE_FILLS_RPC_HTTP:-}    # free Polygon RPC (P0-B: polygon-bor-rpc.publicnode.com)

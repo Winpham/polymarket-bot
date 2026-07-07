@@ -120,9 +120,20 @@ last_price, last_size, side, exch_ts, recv_at`. Anchor OFFLINE by joining a fill
 - **exch_ts** = the frame's ms-epoch `timestamp` (measured ~100% present) = the exchange clock, same
   domain as fill `ts` → curve anchoring has ~zero skew. `recv_at` retained for skew audit.
 - **Volume control (measured at 1000-user scale):** raw stream is ~4,000 events/s (287M rows/day) —
-  untenable. Two lossless-for-the-curve filters cut it ~10×: on-change dedup (skip unchanged
-  top-of-book) + 1 Hz per-asset coalesce (≤1 row/asset/exchange-second). Net ~320 rows/s ≈ **28M
-  rows/day, ~84M/72h**, bounded by hourly `TAPE_RETENTION_HOURS` prune.
+  untenable. The tape stores only **top-of-book INFLECTIONS**, keyed on `(best_bid, best_ask)`:
+  1. **on-change** — emit only when `(best_bid, best_ask)` actually moves. `last_price` in a
+     `price_change` is order-book-LEVEL churn (not a trade), so it is NOT in the key — including it
+     stored a row on every level flicker for no curve benefit (measured: dropping it cut rows **7×**).
+  2. **keep-LAST coalesce** — ≤1 row/asset per `TAPE_COALESCE_MS` (default 1000 = 1 Hz), emitting the
+     SETTLED (last) value, flushed on bucket rollover OR when the asset goes quiet (stale-pending
+     flush — no inflection is ever held indefinitely).
+  3. **compaction sweep** (`TAPE_COMPACT_HOURS`, default 6) — `compact_tape()` drops consecutive-
+     duplicate top-of-book rows the stream filter couldn't catch across reconnect/reshard boundaries
+     (a fresh stream re-sends a `book` snapshot of the unchanged book).
+  **Measured** (1478 assets, real capture, `tape_compression_study.py`): the full `(bid,ask,last_price)`
+  key = 23.2M rows/day; the top-of-book key = **3.2M rows/day (13.7%)**, provably LOSSLESS for both
+  `best_ask` (curve) and `best_bid` (spread/mid/CLV) — the study reconstructs the step function and
+  asserts identity. Bounded further by the hourly `TAPE_RETENTION_HOURS` prune (72h ⇒ ~9.6M rows, ~1GB).
 - **Subscription universe:** tracked-only (conditions a followed trader filled in `LIVE_TAPE_LOOKBACK_HOURS`)
   — ~1.6k tokens at 6h even across all 1012 followed wallets; sharded at `LIVE_TAPE_MAX_SUBS=500`
   (P0-A: 500/conn safe, 0 disconnects) → 3–4 connections; pool sized `LIVE_TAPE_MAX_CONNS=8` (4000-token
