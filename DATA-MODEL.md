@@ -137,7 +137,11 @@ last_price, last_size, side, exch_ts, recv_at`. Anchor OFFLINE by joining a fill
   **Measured** (1478 assets, real capture, `tape_compression_study.py`): the full `(bid,ask,last_price)`
   key = 23.2M rows/day; the top-of-book key = **3.2M rows/day (13.7%)**, provably LOSSLESS for both
   `best_ask` (curve) and `best_bid` (spread/mid/CLV) — the study reconstructs the step function and
-  asserts identity. Bounded further by the hourly `TAPE_RETENTION_HOURS` prune (72h ⇒ ~9.6M rows, ~1GB).
+  asserts identity. Bounded further by the hourly `TAPE_RETENTION_HOURS` prune. **Measured live
+  (2026-07-07, LIVE_TAPE on):** 2.45M rows/day, ~740B/row on disk (long `asset_id`/`condition_id` TEXT
+  + 3 indexes), so **~5GB @72h** after compaction; `TAPE_RETENTION_HOURS=48` → ~3.4GB if leaner is wanted.
+  Live latency recv−exch_ts p50 **75ms**; coverage **93%** of tracked fills; the per-connection subscribe
+  ceiling is activity-dependent (`LIVE_TAPE_MAX_SUBS=200`, not 500 — see the 2026-07-07 production audit).
 - **Subscription universe:** tracked-only (conditions a followed trader filled in `LIVE_TAPE_LOOKBACK_HOURS`)
   — ~1.6k tokens at 6h even across all 1012 followed wallets; sharded at `LIVE_TAPE_MAX_SUBS=500`
   (P0-A: 500/conn safe, 0 disconnects) → 3–4 connections; pool sized `LIVE_TAPE_MAX_CONNS=8` (4000-token
