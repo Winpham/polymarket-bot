@@ -1,0 +1,225 @@
+{
+  "markets_scanned": 100,
+  "markets_requested": 100,
+  "pages_per_market": 3,
+  "fetch_errors": 0,
+  "tracked_wallets": 1023,
+  "distinct_wallets_seen": 11745,
+  "new_candidates_total": 11553,
+  "new_candidates_non_mm": 9751,
+  "new_candidates_non_mm_multi_market": 3326,
+  "mm_locked_out": 1802,
+  "note": "behavioral (co-trade) discovery \u2014 NOT past-PnL ranked; silent candidate pool, no live-poll change. Overlap>=2 = co-trades multiple of our markets.",
+  "top_candidates": [
+    {
+      "wallet": "0x83d9a38fbf2265d1a092499a964412dd44e810d9",
+      "overlap_markets": 53,
+      "fills_seen": 1059,
+      "churn": 0.0,
+      "is_mm": false
+    },
+    {
+      "wallet": "0x0fce7c54120bfc84407035579f942a83290263d5",
+      "overlap_markets": 38,
+      "fills_seen": 605,
+      "churn": 0.0,
+      "is_mm": false
+    },
+    {
+      "wallet": "0x22da1a1fc2b14f5c76b0e179048734c015ef2866",
+      "overlap_markets": 35,
+      "fills_seen": 349,
+      "churn": 0.0,
+      "is_mm": false
+    },
+    {
+      "wallet": "0x56cc7a163d7a56134a394b76abaa47c7bdcad589",
+      "overlap_markets": 34,
+      "fills_seen": 372,
+      "churn": 0.101,
+      "is_mm": false
+    },
+    {
+      "wallet": "0xa278b41b5afda5d18da683eb7f851a7b2dc13369",
+      "overlap_markets": 34,
+      "fills_seen": 79,
+      "churn": 0.0,
+      "is_mm": false
+    },
+    {
+      "wallet": "0x2f26606ccc45a934838a97d44a30c32012ae0d8f",
+      "overlap_markets": 34,
+      "fills_seen": 227,
+      "churn": 0.0,
+      "is_mm": false
+    },
+    {
+      "wallet": "0x5811c8ad5dc5990528357ecf1a6d03311d6c0976",
+      "overlap_markets": 32,
+      "fills_seen": 38,
+      "churn": 0.0,
+      "is_mm": false
+    },
+    {
+      "wallet": "0xe8e086f7ef06af27889edfb5026e1453c61d7eec",
+      "overlap_markets": 32,
+      "fills_seen": 286,
+      "churn": 0.659,
+      "is_mm": false
+    },
+    {
+      "wallet": "0xcd96b01fac6276ac3d8ad618dacca0d3592f11a3",
+      "overlap_markets": 32,
+      "fills_seen": 59,
+      "churn": 0.0,
+      "is_mm": false
+    },
+    {
+      "wallet": "0x67706ec33d1bc5ed0db5cf0681b74b57b64ec3bd",
+      "overlap_markets": 31,
+      "fills_seen": 480,
+      "churn": 0.379,
+      "is_mm": false
+    },
+    {
+      "wallet": "0x104451c4f49c23ae40c7e8a5c8cabd9587f1d67a",
+      "overlap_markets": 31,
+      "fills_seen": 146,
+      "churn": 0.111,
+      "is_mm": false
+    },
+    {
+      "wallet": "0x0d5f3020b3da232af2a29e0fe499e45e2a3a1171",
+      "overlap_markets": 31,
+      "fills_seen": 149,
+      "churn": 0.049,
+      "is_mm": false
+    },
+    {
+      "wallet": "0x5d634050ad89f172afb340437ed3170eaa2c9075",
+      "overlap_markets": 30,
+      "fills_seen": 296,
+      "churn": 0.248,
+      "is_mm": false
+    },
+    {
+      "wallet": "0x14e72e19ea2f6e2be41504dd3268184ebe5fa32c",
+      "overlap_markets": 28,
+      "fills_seen": 233,
+      "churn": 0.596,
+      "is_mm": false
+    },
+    {
+      "wallet": "0x629da223adfc9957329e02de95ae3d263f92756c",
+      "overlap_markets": 28,
+      "fills_seen": 229,
+      "churn": 0.48,
+      "is_mm": false
+    },
+    {
+      "wallet": "0x50e53a797b6b889c5bbe19fcc7bd7f9eb9ede39f",
+      "overlap_markets": 28,
+      "fills_seen": 154,
+      "churn": 0.0,
+      "is_mm": false
+    },
+    {
+      "wallet": "0xdc6d3e689396aba34aa21235e7a914a847b231ce",
+      "overlap_markets": 27,
+      "fills_seen": 65,
+      "churn": 0.0,
+      "is_mm": false
+    },
+    {
+      "wallet": "0xddb6e6246546230503f153506ac1e9914978b9b3",
+      "overlap_markets": 27,
+      "fills_seen": 281,
+      "churn": 0.386,
+      "is_mm": false
+    },
+    {
+      "wallet": "0xe7505c94c7d5980919ad83b8e614142891094850",
+      "overlap_markets": 26,
+      "fills_seen": 32,
+      "churn": 0.0,
+      "is_mm": false
+    },
+    {
+      "wallet": "0x775d9de0c72c76a459fadfbb4cd79d5715236beb",
+      "overlap_markets": 26,
+      "fills_seen": 235,
+      "churn": 0.272,
+      "is_mm": false
+    },
+    {
+      "wallet": "0xcdbd24cbc7a3582137db5996c0aef7f1949ed0df",
+      "overlap_markets": 25,
+      "fills_seen": 65,
+      "churn": 0.454,
+      "is_mm": false
+    },
+    {
+      "wallet": "0x6b23c73159b753c96d3c1ed94413f113300c04a3",
+      "overlap_markets": 25,
+      "fills_seen": 107,
+      "churn": 0.0,
+      "is_mm": false
+    },
+    {
+      "wallet": "0xcc72abbecac5551abec49c774641c66b32b52888",
+      "overlap_markets": 24,
+      "fills_seen": 35,
+      "churn": 0.0,
+      "is_mm": false
+    },
+    {
+      "wallet": "0x9dff5325daebf2806271b2d984c25a958a7c7fec",
+      "overlap_markets": 24,
+      "fills_seen": 56,
+      "churn": 0.169,
+      "is_mm": false
+    },
+    {
+      "wallet": "0x3c5295869f916f626bec1116a381886552a799e1",
+      "overlap_markets": 24,
+      "fills_seen": 77,
+      "churn": 0.0,
+      "is_mm": false
+    },
+    {
+      "wallet": "0x4993dcb1061d190b8f5f7ce34ce352c85873553f",
+      "overlap_markets": 24,
+      "fills_seen": 111,
+      "churn": 0.0,
+      "is_mm": false
+    },
+    {
+      "wallet": "0xac1a67920173fb7cc14673c5c499afc6b39c8689",
+      "overlap_markets": 23,
+      "fills_seen": 68,
+      "churn": 0.0,
+      "is_mm": false
+    },
+    {
+      "wallet": "0xeb2eb26918c91e8c2845ac49e08f952916d77821",
+      "overlap_markets": 23,
+      "fills_seen": 25,
+      "churn": 0.0,
+      "is_mm": false
+    },
+    {
+      "wallet": "0xbc0655bab005ee280aa8332f309b4c90f01fbc87",
+      "overlap_markets": 23,
+      "fills_seen": 23,
+      "churn": 0.051,
+      "is_mm": false
+    },
+    {
+      "wallet": "0x4f1d5ae26fc31472966e951af3183308736d8de2",
+      "overlap_markets": 23,
+      "fills_seen": 110,
+      "churn": 0.0,
+      "is_mm": false
+    }
+  ]
+}

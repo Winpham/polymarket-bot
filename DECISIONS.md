@@ -1045,3 +1045,33 @@ churn axis.
 **Bottom line:** the skilled traders are real; past PnL cannot find them (re-confirmed five more
 ways); the only forward-shaped lead is CLV, now measurable and accruing — decidable in months, not
 today. Honest null + one live instrument, exactly the mission's anticipated deliverable.
+
+## D31 — Expand universe (behavioral discovery, ~3.3k co-traders) YES; per-trader specialization is winner's-curse noise — ACCRUE (2026-07-06, entry specialize)
+
+Follow-up to D30, answering Tue's "get more than top-250 + make everyone play to their strengths."
+Read-only/paper; nothing deployed; MM-lock still held; candidate pool silent. Artifacts
+`reports/specialize/`, scripts `scripts/skilled/{discover,specialize}.py` (branch `feat/specialize`).
+
+**Expansion — SOLVED, supply is huge (`discover.py`).** The data-api `/trades` tape exposes
+`proxyWallet`. Scanning 100 recent resolved markets (3 pages each, throttled, 0 errors): 11,745
+distinct wallets, **9,751 new non-MM**, **3,326 recurring non-MM co-traders** (≥2 of our markets)
+vs 1,023 tracked — ≈3× the universe, discovered BEHAVIORALLY (by co-trading our markets, not by
+past-PnL rank → escapes the leaderboard survivor bias that causes the curse). Churn screen locked
+out 1,802 MMs cleanly. Supply is not the constraint.
+
+**Specialization — NO edge beyond chance (`specialize.py`, event-grain, 1000-perm null).** Per
+(trader × cell) copyable-surplus at OUR price, cells = sport / market-type / fav-vs-dog /
+early-vs-late, MM-locked, event-clustered. 1,029 eligible cells; **57** have positive surplus
+lower-bound (look "skilled", ≈5.5% = the one-sided-95% false-positive rate). Label-permutation
+null (shuffle surplus within band) manufactures **64.3 on average (95th pct 82)** — MORE than
+observed. p=0.79. **Verdict: per-trader specialization is a winner's-curse artifact at current
+power.** Ranking traders by "their best sport/band" would hand us 57 phantom specialists. Slicing
+finer amplifies the curse; the permutation null is the guardrail that prevents regressing the
+system by betting phantoms. Descriptive strength-map is fine to READ, not to bet.
+
+**Implication / next step (Tue's call).** Do expand — add the ~3.3k recurring non-MM co-traders to
+a SILENT candidate pool + capture their fills (a poll extension, not the live-alert path). It
+strengthens the aggregate edge AND multiplies CLV-event supply — the binding constraint on
+certifying any skill/specialization. Then let forward CLV-at-our-price per cell accrue and certify
+only cells beating the permutation null. Expansion is what turns "play to strengths" from a noise
+map into a certifiable engine; it is NOT itself a betting signal today.
