@@ -416,3 +416,59 @@ NEXT: pull the C6 dense-capture lever (DEFERRED human review) — the one improv
   events accrue.
 REPORTS: reports/CONSOLIDATE_IMPROVE_2026-07-06T215541Z.md, reports/consolidate_challengers.json,
   scripts/consolidate_challengers.py, reports/PREREG_CONSOLIDATE_2026-07-06T215541Z.md.
+
+================================================================================
+CYCLE 9 — TRADER-UNIVERSE CURATION (2026-07-07T02:47Z) — score the whole tracked universe, flag the
+  leaderboard-inflated bad traders, surface the durable quality cohort + any NEW names, prune/add rec
+================================================================================
+GOAL (Tue): "get rid of unprofitable users, find more profitable long-term/consistent/high-ROI
+  cohorts; ignore the really bad traders somehow in the top leaderboard." Belief-blind, PAPER-ONLY,
+  adopt/prune NOTHING (DB read-only; prune/add = DEFERRED human review). Honored the Cycle-8 TWO-ROLE
+  nuance: CONSENSUS BACKER (favorite edge RIDES ON high-vol/MM backers — do NOT prune) vs TAIL/COPY
+  candidate (curate aggressively). Every number LABELED their-price skill vs our-price realizable.
+NEW INSTRUMENTS: scripts/universe_curation.py (--selftest green; reuses reliability_score factor lib +
+  trader_scorecard reprice/is_mm/persistence verbatim — no logic dup) → reports/universe_scorecard.json
+  (per-wallet all factors + buckets + durable-quality gate). scripts/curation_guardcheck.py (--selftest
+  green) → reports/curation_guardcheck.json (U2 cross-tab, U4 sub-cohorts, U5 prune + backer-criticality
+  guard-check; invokes standard_guard.py read-only).
+SCOPE: 1023 tracked (grew from ~475); 850 have fills; 147 JUDGEABLE (>=30 band ev, 0.45-0.90, 365d).
+U1 bucket tally (147 judgeable): mm_arber 86, bad_predictor 28, skill_within_luck 22, genuinely_skilled
+  7, longshot_lucky 3, skilled_not_copyable 1. → 59% of the top-leaderboard universe are market-makers.
+U2 — THE COMPLAINT QUANTIFIED: 103/147 (70%) of judgeable top-leaderboard traders are BAD at OUR price.
+  Rank 1-10 = 4/4 mm_arber (100% market-makers — exactly Tue's "bad traders somehow in the top LB").
+  Top-PnL decile: 8/14 bad. Inflation buckets: (a) pure MM/arb (86, dominant), (b) longshot-lucky (3,
+  die on drop-best-3), (c) bad_predictor/big-bankroll-mediocre (28, high PnL neg calibration), (d)
+  genuinely skilled (7). IGNORE-for-tailing list = 117 wallets (bucket+reason in scorecard).
+U3 — DURABLE cohort at strict bar (>=100 ev + 20d + consistent + non-longshot + directional + copyable)
+  = ZERO. Root cause (real finding): every wallet durable enough (>=100 band ev) is MM-flagged; every
+  clean-directional wallet has <100 ev — the two populations don't intersect yet. At relaxed >=30-ev bar,
+  7 genuinely-skilled+copyable; only master-wuji (+15.7% realizable, 60d, 3 sports) and acorp (+5.9%,
+  80d, 4 sports) are DURABLE (multi-sport, long span, robust drop-3) — BOTH are 2 of the current 4 and
+  they SURVIVE. 5 NEW names (cnyek +21.3% but single-sport, RISK-IS-NEVER-OK 8-day burst, cigarettes
+  6-day burst, Oneger single-sport, lookaon drop3-negative) = WATCH-list, NOT certifiable. STATUS OF THE
+  4: Sportbetting76 DECAYED (skill_within_luck, null_p 0.40, realizable -5.8% → DROP candidate);
+  DaBossHogg now MM-flagged (264 ev, realizable +0.9%, keep-track-don't-tail). Durable+copyable
+  near-misses that fail ONLY the MM screen: 0x6db568e6 (167ev +3.3%), Latina (104ev +3.0%), DaBossHogg
+  — flagged for a targeted MM-screen audit (are we over-excluding?).
+U4 — 16 shared-best-cell sub-cohorts. Skill concentrates in favorite-leaning bands of soccer/mlb/nba
+  (b3-b4) — exactly where the STANDARD lives (cross-validating). Best populated: soccer|b4 (20 wallets,
+  6 copyable), soccer|b3 (17, 9 copyable); nba|b3 = master-wuji+djokowin. BUT copyable fraction only
+  ~30-50% and this is DESCRIPTIVE best-cell clustering, NOT out-of-sample certified. NO sub-cohort
+  certifiable (none clears >=2 disjoint NON-soccer copyable-LB). Too soccer-weighted + thin to bank.
+U5 — PRUNE 79 wallets (help neither role: bad tail AND not a fav-backer): mm_arber 36, bad_predictor 21,
+  skill_within_luck 18, longshot_lucky 3, skilled_not_copyable 1. GUARD-CHECK ✅: 32 "bad-looking"
+  wallets are consensus-critical BACKERS (21 mm_arber, 7 bad_predictor, 4 skill_within_luck; incl rank-4
+  wr0ngw4yb3tt0r realizable -12.8% as tail but a backer) → EXCLUDED from prune, flagged KEEP (the nuance
+  in action). Favorite signals are backer-DEFINED, so pruning the 79 non-backers cannot change recorded
+  signals by construction. standard_guard.py re-measure: champion REGRESSION STATUS = HEALTHY (belief-
+  blind LB +4.42% > 0, p_emp 0.0000, 167 ev) → CHAMPION STANDS UNCHANGED; safe prune. ADD rec (deferred):
+  do NOT ingest by rank/PnL (top is MM); deepen fill history on the near-miss cohort to reach >=100 ev;
+  audit the MM screen vs the 3 durable near-misses; ingest more mid-rank (20-170) recurring WEEK+MONTH.
+VERDICT (critical partner): complaint REAL (70% of top-LB bad at our price; top-10 = 100% MM). Durable
+  quality cohort still TINY + FRAGILE — empty at the strict bar, 7 at relaxed, only 2 durable (both
+  already tracked). NEW names are watch-list, not bankable. Distinguished skill (their price, detectable)
+  from copyable realizable edge (our price, tax-gated). Cohort ERODES without maintenance (Sportbetting76
+  decayed, DaBossHogg drifted MM) — the argument FOR this loop. Promoted/armed/adopted/pruned NOTHING;
+  DB read-only; no Rust; Max-only. Binding constraint unchanged (regime persistence over months + tax).
+REPORTS: reports/UNIVERSE_CURATION_2026-07-07T024744Z.md, reports/universe_scorecard.json,
+  reports/curation_guardcheck.json, scripts/universe_curation.py, scripts/curation_guardcheck.py.
