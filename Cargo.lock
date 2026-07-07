@@ -370,6 +370,7 @@ dependencies = [
  "sqlx",
  "tokio",
  "tokio-metrics",
+ "tokio-tungstenite",
  "tracing",
  "tracing-subscriber",
 ]

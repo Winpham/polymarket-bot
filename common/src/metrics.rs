@@ -297,6 +297,63 @@ pub fn record_consensus_strategy_score(strategy: &str, resolved: i64, hit_rate: 
     gauge!("consensus_strategy_edge", "strategy" => strategy.to_string()).set(edge);
 }
 
+// --- Live CLOB price tape (F1, migration 040) --------------------------------
+// Best-effort tape: the poller stays the completeness spine, so the board needs
+// to see how much of the tape is landing vs being dropped under mpsc backpressure.
+static LIVE_TAPE_STORED: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+static LIVE_TAPE_DROPPED: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+
+/// Record `n` tape ticks persisted to `clob_price_tape` this batch.
+pub fn record_live_tape_events(n: u64) {
+    counter!("live_tape_events_total").increment(n);
+    LIVE_TAPE_STORED.fetch_add(n, std::sync::atomic::Ordering::Relaxed);
+}
+
+/// Record `n` tape ticks DROPPED (bounded-channel overflow — tape is best-effort).
+pub fn record_live_tape_dropped(n: u64) {
+    counter!("live_tape_dropped_total").increment(n);
+    LIVE_TAPE_DROPPED.fetch_add(n, std::sync::atomic::Ordering::Relaxed);
+}
+
+/// `(stored, dropped)` tape ticks since process start (for the board).
+pub fn live_tape_counts() -> (u64, u64) {
+    (
+        LIVE_TAPE_STORED.load(std::sync::atomic::Ordering::Relaxed),
+        LIVE_TAPE_DROPPED.load(std::sync::atomic::Ordering::Relaxed),
+    )
+}
+
+/// Gauge: current live-tape subscription universe size and connection count.
+pub fn record_live_tape_universe(tokens: u64, connections: u64) {
+    gauge!("live_tape_tokens").set(tokens as f64);
+    gauge!("live_tape_connections").set(connections as f64);
+}
+
+// --- F2 on-chain fast fills (migration 040) ----------------------------------
+static LIVE_FILL_EVENTS: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+static LIVE_FILL_UNRESOLVED: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+
+/// Record `n` on-chain fills written with source='live_onchain'.
+pub fn record_live_fill_events(n: u64) {
+    counter!("live_fill_events_total").increment(n);
+    LIVE_FILL_EVENTS.fetch_add(n, std::sync::atomic::Ordering::Relaxed);
+}
+
+/// Record `n` tracked OrderFilled logs whose asset wasn't in the resolver (poller
+/// will catch them — the F2 coverage gap surface).
+pub fn record_live_fill_unresolved(n: u64) {
+    counter!("live_fill_unresolved_total").increment(n);
+    LIVE_FILL_UNRESOLVED.fetch_add(n, std::sync::atomic::Ordering::Relaxed);
+}
+
+/// `(written, unresolved)` on-chain fills since process start (for the board).
+pub fn live_fill_counts() -> (u64, u64) {
+    (
+        LIVE_FILL_EVENTS.load(std::sync::atomic::Ordering::Relaxed),
+        LIVE_FILL_UNRESOLVED.load(std::sync::atomic::Ordering::Relaxed),
+    )
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

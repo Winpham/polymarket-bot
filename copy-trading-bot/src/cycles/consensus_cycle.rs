@@ -332,6 +332,10 @@ pub(crate) fn trade_to_fill(wallet_lc: &str, tr: &TraderTrade) -> Option<NewTrad
         sport: Some(sport),
         bet_type: Some(bet_type),
         ts: tr.timestamp,
+        // Poll spine: provenance NULL (byte-identical to pre-040). The live-fills
+        // path (Item 5) is the only constructor that sets these.
+        source: None,
+        live_seen_at: None,
     })
 }
 
