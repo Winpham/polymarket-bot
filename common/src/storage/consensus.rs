@@ -1426,6 +1426,13 @@ impl PgPortfolio {
     /// Only touches rows older than `keep_recent_secs` so it never races the live
     /// writer's just-inserted tail. Returns rows removed.
     pub async fn compact_tape(&self, keep_recent_secs: i64) -> Result<u64> {
+        // Order by (recv_at, id) — the local WRITE order, which is always present
+        // (recv_at NOT NULL) and monotonic within a connection. NOT exch_ts: it is
+        // NULL on `book` snapshots and can be stale, which would mis-sort a real
+        // inflection to the partition tail and delete it as a false duplicate
+        // (adversarial review D1). recv_at is the order rows actually arrived, so a
+        // reconnect snapshot re-sending an unchanged top-of-book correctly compares
+        // against the last-arrived row and collapses.
         let res = sqlx::query(
             "WITH ranked AS ( \
                SELECT id, \
@@ -1435,8 +1442,7 @@ impl PgPortfolio {
                     lag(best_ask) OVER w) AS redundant \
                FROM clob_price_tape \
                WHERE recv_at < now() - ($1::text || ' seconds')::interval \
-               WINDOW w AS (PARTITION BY asset_id \
-                 ORDER BY exch_ts NULLS LAST, recv_at, id) \
+               WINDOW w AS (PARTITION BY asset_id ORDER BY recv_at, id) \
              ) \
              DELETE FROM clob_price_tape t USING ranked r \
              WHERE t.id = r.id AND r.redundant",

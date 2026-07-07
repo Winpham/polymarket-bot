@@ -106,7 +106,13 @@ fn parse_frame(text: &str, meta: &HashMap<String, (String, i16)>) -> Vec<NewTape
                     last_price: parse_f64(&it["last_trade_price"]),
                     last_size: None,
                     side: None,
-                    exch_ts: parse_exch_ts(&it["timestamp"]),
+                    // A `book` is a re-sent SNAPSHOT (on subscribe/reconnect); its
+                    // `timestamp` is the last-trade time, NOT "now" — it can be HOURS
+                    // stale and would create phantom inversions in the exch_ts-ordered
+                    // curve. Leave exch_ts NULL so the curve/ordering fall back to
+                    // recv_at (the true observation time). Only price_change carries a
+                    // trustworthy real-time exch_ts. (Adversarial review D2.)
+                    exch_ts: None,
                     recv_at,
                 });
             }
@@ -242,16 +248,18 @@ async fn stream_shard(
     }
 
     let mut last_ping = std::time::Instant::now();
-    loop {
+    // Run the read loop to a result, then ALWAYS flush remaining pending before
+    // returning — so a version bump (re-shard) or a read error never discards an
+    // asset's un-emitted current-bucket inflection (review D3).
+    let result: Result<()> = loop {
         // re-shard when the refresh loop bumped the universe version
         if version.load(Ordering::Relaxed) != my_version {
-            return Ok(());
+            break Ok(());
         }
         if last_ping.elapsed() >= PING_INTERVAL {
-            write
-                .send(Message::Text("PING".into()))
-                .await
-                .context("live-tape PING failed")?;
+            if let Err(e) = write.send(Message::Text("PING".into())).await {
+                break Err(anyhow::anyhow!("live-tape PING failed: {e}"));
+            }
             last_ping = std::time::Instant::now();
             // Stale-pending flush: emit the settled value of any asset that has gone
             // quiet (no tick in the current bucket) so its final inflection isn't held
@@ -272,13 +280,13 @@ async fn stream_shard(
         }
         let msg = match tokio::time::timeout(PING_INTERVAL, read.next()).await {
             Ok(Some(Ok(m))) => m,
-            Ok(Some(Err(e))) => anyhow::bail!("live-tape read error: {e}"),
-            Ok(None) => anyhow::bail!("live-tape stream ended"),
+            Ok(Some(Err(e))) => break Err(anyhow::anyhow!("live-tape read error: {e}")),
+            Ok(None) => break Err(anyhow::anyhow!("live-tape stream ended")),
             Err(_) => continue, // timeout → loop to send PING
         };
         let text = match msg {
             Message::Text(t) => t,
-            Message::Close(_) => anyhow::bail!("live-tape server closed"),
+            Message::Close(_) => break Err(anyhow::anyhow!("live-tape server closed")),
             _ => continue,
         };
         let text = text.as_ref();
@@ -287,12 +295,11 @@ async fn stream_shard(
         }
         for tick in parse_frame(text, meta) {
             let k: Key = (key(tick.best_bid), key(tick.best_ask));
-            // bucket on the exchange clock (the curve's anchor); fall back to recv.
-            let millis = tick
-                .exch_ts
-                .map(|t| t.timestamp_millis())
-                .unwrap_or_else(|| tick.recv_at.timestamp_millis());
-            let sec = millis / coalesce_ms; // coalesce bucket index
+            // Bucket on the LOCAL receive clock (monotonic within a connection — frames
+            // arrive in order), NOT exch_ts: a late/stale exch_ts would roll the bucket
+            // backward and emit a spurious past-timestamped row (review D4). The stored
+            // row still carries exch_ts (real time for price_change) for the curve anchor.
+            let sec = tick.recv_at.timestamp_millis() / coalesce_ms; // coalesce bucket index
             let asset = tick.asset_id.clone();
             // copy the pending second out so the borrow drops before remove/insert.
             let psec = pending.get(&asset).map(|(s, _, _)| *s);
@@ -315,7 +322,15 @@ async fn stream_shard(
                 }
             }
         }
+    };
+    // Exit flush: emit every asset's remaining settled inflection (best-effort) so a
+    // re-shard / disconnect never silently drops the current-bucket value (review D3).
+    for (asset, (_, fk, ft)) in pending.drain() {
+        if last_emitted.get(&asset) != Some(&fk) {
+            let _ = tx.try_send(ft); // best-effort; channel-full drops are metered elsewhere
+        }
     }
+    result
 }
 
 /// Drain the tick channel in batches and append to `clob_price_tape`.
@@ -368,12 +383,22 @@ async fn refresh_universe(
         }
     }
     let n = tokens.len();
-    {
+    // Only bump the version (which forces EVERY shard to drop + reconnect, re-sending
+    // book snapshots and dropping in-flight pending) when the token SET actually
+    // changed. The old unconditional bump reconnected all shards every refresh_secs
+    // (default 300s) for no reason — churning reconnect dups and lost tails (review D2/D3).
+    let changed = {
         let mut u = universe.write().await;
+        let same = u.tokens.len() == tokens.len()
+            && u.tokens.iter().collect::<std::collections::HashSet<_>>()
+                == tokens.iter().collect::<std::collections::HashSet<_>>();
         u.tokens = tokens;
         u.meta = meta;
+        !same
+    };
+    if changed {
+        version.fetch_add(1, Ordering::Relaxed);
     }
-    version.fetch_add(1, Ordering::Relaxed);
     let conns = n.div_ceil(cfg.live_tape_max_subs.max(1));
     metrics::record_live_tape_universe(n as u64, conns as u64);
     if conns > cfg.live_tape_max_conns {
@@ -481,7 +506,9 @@ mod tests {
         assert_eq!(t.last_price, Some(0.46));
         assert_eq!(t.condition_id.as_deref(), Some("0xcond"));
         assert_eq!(t.outcome_index, Some(0));
-        assert!(t.exch_ts.is_some());
+        // book is a re-sent SNAPSHOT → exch_ts is NULLed (its `timestamp` is stale);
+        // the curve/ordering fall back to recv_at. Only price_change carries exch_ts.
+        assert!(t.exch_ts.is_none());
     }
 
     #[test]

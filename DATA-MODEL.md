@@ -117,8 +117,12 @@ Every top-of-book move for tracked-market assets, from the CLOB market websocket
 Columns: `asset_id, condition_id, outcome_index, event_type('book'|'price_change'), best_bid, best_ask,
 last_price, last_size, side, exch_ts, recv_at`. Anchor OFFLINE by joining a fill's `ts` to
 `(condition_id, outcome_index, exch_ts)` — no token map needed (the tape carries provenance).
-- **exch_ts** = the frame's ms-epoch `timestamp` (measured ~100% present) = the exchange clock, same
-  domain as fill `ts` → curve anchoring has ~zero skew. `recv_at` retained for skew audit.
+- **exch_ts** = the frame's ms-epoch `timestamp`, the exchange clock — same domain as fill `ts` → curve
+  anchoring has ~zero skew. TRUSTWORTHY only on `price_change` (real-time deltas); a `book` is a re-sent
+  SNAPSHOT whose `timestamp` is the last-trade time (can be hours stale), so **`book` rows store
+  `exch_ts = NULL`** and the curve/ordering fall back to `recv_at` (the true observation time). Coalesce
+  bucketing and `compact_tape` order by the always-present, monotonic `recv_at` — never `exch_ts` — so a
+  NULL/stale snapshot timestamp can never mis-sort and delete a real inflection.
 - **Volume control (measured at 1000-user scale):** raw stream is ~4,000 events/s (287M rows/day) —
   untenable. The tape stores only **top-of-book INFLECTIONS**, keyed on `(best_bid, best_ask)`:
   1. **on-change** — emit only when `(best_bid, best_ask)` actually moves. `last_price` in a
