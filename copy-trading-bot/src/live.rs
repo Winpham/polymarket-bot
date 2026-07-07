@@ -248,6 +248,41 @@ pub async fn run_live(cfg: Arc<CopyTradingConfig>) -> Result<()> {
         });
     }
 
+    // F1 live CLOB price tape (migration 040). OFF by default — when off, the
+    // task is never spawned and the binary is byte-identical to pre-040.
+    if cfg.live_tape {
+        let lt_portfolio = Arc::clone(&portfolio);
+        let lt_cfg = Arc::clone(&cfg);
+        let lt_http = reqwest::Client::builder()
+            .timeout(Duration::from_secs(15))
+            .build()
+            .expect("failed to build live-tape HTTP client");
+        tokio::spawn(async move {
+            tracing::info!(
+                max_subs = lt_cfg.live_tape_max_subs,
+                max_conns = lt_cfg.live_tape_max_conns,
+                lookback_hours = lt_cfg.live_tape_lookback_hours,
+                retention_hours = lt_cfg.tape_retention_hours,
+                "F1 live CLOB price tape ON"
+            );
+            cycles::run_live_tape(lt_portfolio, lt_http, lt_cfg).await;
+        });
+    }
+
+    // F2 optional on-chain fast fills (migration 040). OFF by default AND only
+    // meaningful once LIVE_FILLS_RPC_HTTP is set (P0-B gate passed). Byte-identical off.
+    if cfg.live_fills {
+        let lf_portfolio = Arc::clone(&portfolio);
+        let lf_cfg = Arc::clone(&cfg);
+        let lf_http = reqwest::Client::builder()
+            .timeout(Duration::from_secs(15))
+            .build()
+            .expect("failed to build live-fills HTTP client");
+        tokio::spawn(async move {
+            cycles::run_live_fills(lf_portfolio, lf_http, lf_cfg).await;
+        });
+    }
+
     // Leaderboard auto-tracker: keep the followed universe synced to the top-N.
     let tr_portfolio = Arc::clone(&portfolio);
     let tr_notifier = Arc::clone(&notifier);

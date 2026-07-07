@@ -269,6 +269,12 @@ pub struct ClobMarket {
     pub condition_id: String,
     #[serde(default)]
     pub tokens: Vec<ClobToken>,
+    /// Market slug + question (present in the CLOB response). Used by F2 live-fills
+    /// to build a `TraderTrade` so trade_to_fill's taxonomy freezes identically.
+    #[serde(default)]
+    pub market_slug: String,
+    #[serde(default)]
+    pub question: String,
 }
 
 impl ClobMarket {
@@ -434,6 +440,8 @@ mod consensus_resolution_tests {
             closed: true,
             condition_id: "0xabc".into(),
             tokens: vec![tok("Yes", 0.0, false), tok("No", 1.0, true)],
+            market_slug: String::new(),
+            question: String::new(),
         };
         assert_eq!(m.outcome_won(0), Some(false));
         assert_eq!(m.outcome_won(1), Some(true));
@@ -446,6 +454,8 @@ mod consensus_resolution_tests {
             closed: false,
             condition_id: "0xdef".into(),
             tokens: vec![tok("Yes", 0.62, false), tok("No", 0.38, false)],
+            market_slug: String::new(),
+            question: String::new(),
         };
         assert_eq!(open.outcome_won(0), None, "open => no resolution");
 
@@ -455,6 +465,8 @@ mod consensus_resolution_tests {
             closed: true,
             condition_id: "0xvoid".into(),
             tokens: vec![tok("Yes", 0.5, false), tok("No", 0.5, false)],
+            market_slug: String::new(),
+            question: String::new(),
         };
         assert_eq!(void.outcome_won(0), None, "void close is never a loss");
         assert_eq!(void.outcome_won(1), None);

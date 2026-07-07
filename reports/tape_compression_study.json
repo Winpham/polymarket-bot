@@ -1,0 +1,31 @@
+{
+ "raw_events": 1785899,
+ "span_s": 481.9,
+ "assets": 1478,
+ "strategies": {
+  "full": {
+   "rows": 129395,
+   "rows_per_sec": 268.5,
+   "rows_per_day": 23198021,
+   "best_ask_lossless": true,
+   "best_bid_lossless": true,
+   "vs_full_pct": 100.0
+  },
+  "topofbook": {
+   "rows": 17768,
+   "rows_per_sec": 36.87,
+   "rows_per_day": 3185458,
+   "best_ask_lossless": true,
+   "best_bid_lossless": true,
+   "vs_full_pct": 13.7
+  },
+  "ask_only": {
+   "rows": 11174,
+   "rows_per_sec": 23.19,
+   "rows_per_day": 2003282,
+   "best_ask_lossless": true,
+   "best_bid_lossless": null,
+   "vs_full_pct": 8.6
+  }
+ }
+}

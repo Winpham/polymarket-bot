@@ -94,3 +94,59 @@ to ignore. They are NOT part of the consensus forward record.
 - **Executable bid/ask** (not just CLOB mid) per snapshot — needed for spread-net realizability/CLV
   on thin markets, and can't be backfilled. Deferred because it needs a per-token orderbook call
   (extra API load); the captured CLOB mid (`market_price`) is a serviceable proxy meanwhile.
+  → **RESOLVED by the live CLOB price tape (migration 040 below):** real-time executable
+  best_bid/best_ask over a websocket (zero REST/poller load), 1 Hz per asset.
+
+## Live ingestion (migration 040) — provenance + CLOB price tape
+
+Two feeds, both **flag-gated OFF by default** (byte-identical to pre-040 when off). Purpose: earn a
+second-by-second answer to "what is fill-observation *speed* worth?" (the `latency_edge_curve.py`
+deliverable), and, optionally, a ~1–5s on-chain fills path for tracking/copyability.
+
+### `trader_fills` provenance columns (additive, nullable)
+- `source` — `NULL` = poll spine (the ~3.0M-row default, back-compat); `'live_onchain'` = F2 fast
+  fill; `'backfill'` = historical replay.
+- `live_seen_at` — wall clock this process FIRST saw the fill on a live channel (`NULL` for poll).
+  Latency is derived at read as `live_seen_at − ts` against the CLEAN exchange clock `ts`
+  (`trade_to_fill` sets `ts = tr.timestamp`), so a mis-defended clock can be re-derived, not baked in.
+  `ingested_at` is untouched and simply no longer used as a clock (5.5% of 24h rows carry >1h ingest lag).
+
+### `clob_price_tape` (append-only, retention-pruned)
+Every top-of-book move for tracked-market assets, from the CLOB market websocket
+(`wss://ws-subscriptions-clob.polymarket.com/ws/market`, same protocol as `trading-bot/src/scanner/ws.rs`).
+Columns: `asset_id, condition_id, outcome_index, event_type('book'|'price_change'), best_bid, best_ask,
+last_price, last_size, side, exch_ts, recv_at`. Anchor OFFLINE by joining a fill's `ts` to
+`(condition_id, outcome_index, exch_ts)` — no token map needed (the tape carries provenance).
+- **exch_ts** = the frame's ms-epoch `timestamp`, the exchange clock — same domain as fill `ts` → curve
+  anchoring has ~zero skew. TRUSTWORTHY only on `price_change` (real-time deltas); a `book` is a re-sent
+  SNAPSHOT whose `timestamp` is the last-trade time (can be hours stale), so **`book` rows store
+  `exch_ts = NULL`** and the curve/ordering fall back to `recv_at` (the true observation time). Coalesce
+  bucketing and `compact_tape` order by the always-present, monotonic `recv_at` — never `exch_ts` — so a
+  NULL/stale snapshot timestamp can never mis-sort and delete a real inflection.
+- **Volume control (measured at 1000-user scale):** raw stream is ~4,000 events/s (287M rows/day) —
+  untenable. The tape stores only **top-of-book INFLECTIONS**, keyed on `(best_bid, best_ask)`:
+  1. **on-change** — emit only when `(best_bid, best_ask)` actually moves. `last_price` in a
+     `price_change` is order-book-LEVEL churn (not a trade), so it is NOT in the key — including it
+     stored a row on every level flicker for no curve benefit (measured: dropping it cut rows **7×**).
+  2. **keep-LAST coalesce** — ≤1 row/asset per `TAPE_COALESCE_MS` (default 1000 = 1 Hz), emitting the
+     SETTLED (last) value, flushed on bucket rollover OR when the asset goes quiet (stale-pending
+     flush — no inflection is ever held indefinitely).
+  3. **compaction sweep** (`TAPE_COMPACT_HOURS`, default 6) — `compact_tape()` drops consecutive-
+     duplicate top-of-book rows the stream filter couldn't catch across reconnect/reshard boundaries
+     (a fresh stream re-sends a `book` snapshot of the unchanged book).
+  **Measured** (1478 assets, real capture, `tape_compression_study.py`): the full `(bid,ask,last_price)`
+  key = 23.2M rows/day; the top-of-book key = **3.2M rows/day (13.7%)**, provably LOSSLESS for both
+  `best_ask` (curve) and `best_bid` (spread/mid/CLV) — the study reconstructs the step function and
+  asserts identity. Bounded further by the hourly `TAPE_RETENTION_HOURS` prune (72h ⇒ ~9.6M rows, ~1GB).
+- **Subscription universe:** tracked-only (conditions a followed trader filled in `LIVE_TAPE_LOOKBACK_HOURS`)
+  — ~1.6k tokens at 6h even across all 1012 followed wallets; sharded at `LIVE_TAPE_MAX_SUBS=500`
+  (P0-A: 500/conn safe, 0 disconnects) → 3–4 connections; pool sized `LIVE_TAPE_MAX_CONNS=8` (4000-token
+  headroom for future growth). Endpoint disjoint from the data-api poller → zero 429 contention.
+
+### `trader_fills_live_txkey` (source-scoped unique index)
+Collapses live-vs-live OrderFilled replays (reconnect / getLogs-range overlap). Constrains ONLY
+`source='live_onchain'` rows, so it can't touch the full-precision poller rows. Cross-source dedup is
+NOT index-based — the poller stores a full-precision VWAP price (51% of 24h rows carry >2 decimals; 15%
+of fills are multi-level VWAPs that don't even match at 10dp) and the widened tx index (migration 027)
+includes `price`, so a reconstructed on-chain f64 would not collide. Cross-source dedup is the app-level
+`filter_existing_txkey` pre-check + the idempotent `collapse_live_over_poll` sweep (poll row wins).

@@ -123,6 +123,33 @@ pub struct NewTraderFill {
     /// `None` ⇒ read as `'other'`. Appended after `sport` (never reordered).
     pub bet_type: Option<String>,
     pub ts: DateTime<Utc>,
+    /// Provenance (migration 040). `None` ⇒ poll spine (the ~3.0M-row default,
+    /// binds to SQL NULL, byte-identical to pre-040 behaviour); `Some("live_onchain")`
+    /// ⇒ F2 fast fill; `Some("backfill")` ⇒ historical replay. Appended, never reordered.
+    pub source: Option<String>,
+    /// Wall clock this process FIRST saw the fill on a live channel (migration 040);
+    /// `None` for poll/backfill. Latency = live_seen_at − ts (derived at read).
+    pub live_seen_at: Option<DateTime<Utc>>,
+}
+
+/// One raw CLOB price-tape tick (migration 040, `clob_price_tape`). Append-only
+/// measurement substrate for the latency→drift curve — written ONLY by the
+/// flag-gated `live_tape` task, never by the poller. `event_type` is `book`
+/// (snapshot) or `price_change` (delta); `exch_ts` is the frame's ms-epoch
+/// exchange clock (~100% present), `recv_at` the local WS receive instant.
+#[derive(Debug, Clone)]
+pub struct NewTapeTick {
+    pub asset_id: String,
+    pub condition_id: Option<String>,
+    pub outcome_index: Option<i16>,
+    pub event_type: String,
+    pub best_bid: Option<f64>,
+    pub best_ask: Option<f64>,
+    pub last_price: Option<f64>,
+    pub last_size: Option<f64>,
+    pub side: Option<String>,
+    pub exch_ts: Option<DateTime<Utc>>,
+    pub recv_at: DateTime<Utc>,
 }
 
 /// A signal awaiting market resolution (forward edge tracking + trajectory).
@@ -1286,15 +1313,23 @@ impl PgPortfolio {
         let sport: Vec<Option<&str>> = fills.iter().map(|f| f.sport.as_deref()).collect();
         let bet_type: Vec<Option<&str>> = fills.iter().map(|f| f.bet_type.as_deref()).collect();
         let ts: Vec<DateTime<Utc>> = fills.iter().map(|f| f.ts).collect();
+        // Provenance (migration 040), appended. Poller passes None → NULL, so the
+        // conflict arbitration (partial unique indexes, none of which reference
+        // `source`) and the inserted values are byte-identical to pre-040.
+        let source: Vec<Option<&str>> = fills.iter().map(|f| f.source.as_deref()).collect();
+        let live_seen_at: Vec<Option<DateTime<Utc>>> =
+            fills.iter().map(|f| f.live_seen_at).collect();
 
         let res = sqlx::query(
             "INSERT INTO trader_fills \
                (wallet, tx_hash, condition_id, outcome_index, outcome, side, price, \
-                size_usd, title, slug, event_slug, is_sports, sport, bet_type, ts) \
+                size_usd, title, slug, event_slug, is_sports, sport, bet_type, ts, \
+                source, live_seen_at) \
              SELECT * FROM UNNEST( \
                $1::text[], $2::text[], $3::text[], $4::int4[], $5::text[], $6::text[], \
                $7::float8[], $8::float8[], $9::text[], $10::text[], $11::text[], \
-               $12::bool[], $13::text[], $14::text[], $15::timestamptz[]) \
+               $12::bool[], $13::text[], $14::text[], $15::timestamptz[], \
+               $16::text[], $17::timestamptz[]) \
              ON CONFLICT DO NOTHING",
         )
         .bind(&wallet)
@@ -1312,9 +1347,194 @@ impl PgPortfolio {
         .bind(&sport)
         .bind(&bet_type)
         .bind(&ts)
+        .bind(&source)
+        .bind(&live_seen_at)
         .execute(&self.pool)
         .await
         .context("insert_trader_fills")?;
+        Ok(res.rows_affected())
+    }
+
+    /// Append a batch of raw CLOB price-tape ticks (migration 040). ONE UNNEST
+    /// insert into the append-only `clob_price_tape`; no `ON CONFLICT` (an
+    /// append-only log — offline dedup is by `id`). Written ONLY by the
+    /// flag-gated `live_tape` task. Returns rows inserted.
+    pub async fn insert_tape_ticks(&self, ticks: &[NewTapeTick]) -> Result<u64> {
+        if ticks.is_empty() {
+            return Ok(0);
+        }
+        let asset_id: Vec<&str> = ticks.iter().map(|t| t.asset_id.as_str()).collect();
+        let condition_id: Vec<Option<&str>> =
+            ticks.iter().map(|t| t.condition_id.as_deref()).collect();
+        let outcome_index: Vec<Option<i16>> = ticks.iter().map(|t| t.outcome_index).collect();
+        let event_type: Vec<&str> = ticks.iter().map(|t| t.event_type.as_str()).collect();
+        let best_bid: Vec<Option<f64>> = ticks.iter().map(|t| t.best_bid).collect();
+        let best_ask: Vec<Option<f64>> = ticks.iter().map(|t| t.best_ask).collect();
+        let last_price: Vec<Option<f64>> = ticks.iter().map(|t| t.last_price).collect();
+        let last_size: Vec<Option<f64>> = ticks.iter().map(|t| t.last_size).collect();
+        let side: Vec<Option<&str>> = ticks.iter().map(|t| t.side.as_deref()).collect();
+        let exch_ts: Vec<Option<DateTime<Utc>>> = ticks.iter().map(|t| t.exch_ts).collect();
+        let recv_at: Vec<DateTime<Utc>> = ticks.iter().map(|t| t.recv_at).collect();
+
+        let res = sqlx::query(
+            "INSERT INTO clob_price_tape \
+               (asset_id, condition_id, outcome_index, event_type, best_bid, best_ask, \
+                last_price, last_size, side, exch_ts, recv_at) \
+             SELECT * FROM UNNEST( \
+               $1::text[], $2::text[], $3::int2[], $4::text[], $5::float8[], $6::float8[], \
+               $7::float8[], $8::float8[], $9::text[], $10::timestamptz[], $11::timestamptz[])",
+        )
+        .bind(&asset_id)
+        .bind(&condition_id)
+        .bind(&outcome_index)
+        .bind(&event_type)
+        .bind(&best_bid)
+        .bind(&best_ask)
+        .bind(&last_price)
+        .bind(&last_size)
+        .bind(&side)
+        .bind(&exch_ts)
+        .bind(&recv_at)
+        .execute(&self.pool)
+        .await
+        .context("insert_tape_ticks")?;
+        Ok(res.rows_affected())
+    }
+
+    /// Prune tape rows older than `retention_hours` (migration 040). Bounds the
+    /// append-only `clob_price_tape` — called periodically by the `live_tape` task.
+    /// Returns rows deleted.
+    pub async fn prune_tape(&self, retention_hours: i64) -> Result<u64> {
+        let res = sqlx::query(
+            "DELETE FROM clob_price_tape \
+             WHERE recv_at < now() - ($1::text || ' hours')::interval",
+        )
+        .bind(retention_hours.to_string())
+        .execute(&self.pool)
+        .await
+        .context("prune_tape")?;
+        Ok(res.rows_affected())
+    }
+
+    /// Compact the tape (migration 040): drop rows whose top-of-book
+    /// (best_bid, best_ask) is IDENTICAL to the immediately-preceding row for the
+    /// same asset — pure redundancy the step-function curve already implies. The
+    /// on-change ingest filter already skips these in-stream; this sweep cleans the
+    /// residual left at reconnect/reshard boundaries (a fresh stream re-sends a
+    /// `book` snapshot of the unchanged top-of-book). LOSSLESS for the curve: every
+    /// inflection (a real (bid,ask) change) is kept; only implied repeats are removed.
+    /// Only touches rows older than `keep_recent_secs` so it never races the live
+    /// writer's just-inserted tail. Returns rows removed.
+    pub async fn compact_tape(&self, keep_recent_secs: i64) -> Result<u64> {
+        // Order by (recv_at, id) — the local WRITE order, which is always present
+        // (recv_at NOT NULL) and monotonic within a connection. NOT exch_ts: it is
+        // NULL on `book` snapshots and can be stale, which would mis-sort a real
+        // inflection to the partition tail and delete it as a false duplicate
+        // (adversarial review D1). recv_at is the order rows actually arrived, so a
+        // reconnect snapshot re-sending an unchanged top-of-book correctly compares
+        // against the last-arrived row and collapses.
+        let res = sqlx::query(
+            "WITH ranked AS ( \
+               SELECT id, \
+                 (best_bid IS NOT DISTINCT FROM \
+                    lag(best_bid) OVER w \
+                  AND best_ask IS NOT DISTINCT FROM \
+                    lag(best_ask) OVER w) AS redundant \
+               FROM clob_price_tape \
+               WHERE recv_at < now() - ($1::text || ' seconds')::interval \
+               WINDOW w AS (PARTITION BY asset_id ORDER BY recv_at, id) \
+             ) \
+             DELETE FROM clob_price_tape t USING ranked r \
+             WHERE t.id = r.id AND r.redundant",
+        )
+        .bind(keep_recent_secs.to_string())
+        .execute(&self.pool)
+        .await
+        .context("compact_tape")?;
+        Ok(res.rows_affected())
+    }
+
+    /// The tracked-only subscription universe: DISTINCT (condition_id, outcome_index)
+    /// that a *followed* trader has filled a sports pick on within `lookback_hours`.
+    /// The `live_tape` refresh loop resolves each to a CLOB token_id and subscribes.
+    /// Sized for the full follow-set (1000+ wallets → ~1.6k tokens at 6h).
+    pub async fn tracked_tape_assets(
+        &self,
+        lookback_hours: i64,
+    ) -> Result<Vec<(String, i32)>> {
+        let rows: Vec<(String, i32)> = sqlx::query_as(
+            "SELECT DISTINCT condition_id, outcome_index \
+               FROM trader_fills \
+              WHERE ts > now() - ($1::text || ' hours')::interval \
+                AND is_sports AND condition_id IS NOT NULL \
+                AND wallet IN (SELECT lower(proxy_wallet) FROM followed_traders)",
+        )
+        .bind(lookback_hours.to_string())
+        .fetch_all(&self.pool)
+        .await
+        .context("tracked_tape_assets")?;
+        Ok(rows)
+    }
+
+    /// F2 live-fills dedup (migration 040). The lowercased proxy wallets of all
+    /// followed traders — the in-process filter for OrderFilled maker/taker.
+    pub async fn tracked_wallets_for_live(&self) -> Result<Vec<String>> {
+        let rows: Vec<(String,)> =
+            sqlx::query_as("SELECT DISTINCT lower(proxy_wallet) FROM followed_traders")
+                .fetch_all(&self.pool)
+                .await
+                .context("tracked_wallets_for_live")?;
+        Ok(rows.into_iter().map(|(w,)| w).collect())
+    }
+
+    /// F2 dedup LAYER 2 (live-vs-poll pre-check). Given candidate live fills'
+    /// `(tx_hash, condition_id, outcome_index, side)` keys, return the subset the
+    /// poller ALREADY holds (source IS NULL). The caller skips those live rows so a
+    /// full-precision-VWAP poll row is never shadowed by a reconstructed live twin.
+    /// `keys`: parallel arrays. Returns the set of keys (as "tx|cond|oidx|side") present.
+    pub async fn filter_existing_txkey(
+        &self,
+        tx: &[String],
+        cond: &[String],
+        oidx: &[i32],
+        side: &[String],
+    ) -> Result<std::collections::HashSet<String>> {
+        if tx.is_empty() {
+            return Ok(std::collections::HashSet::new());
+        }
+        let rows: Vec<(String, String, i32, String)> = sqlx::query_as(
+            "SELECT tx_hash, condition_id, outcome_index, side FROM trader_fills \
+             WHERE source IS NULL AND tx_hash = ANY($1) \
+               AND (tx_hash, condition_id, outcome_index, side) IN ( \
+                   SELECT * FROM UNNEST($1::text[], $2::text[], $3::int4[], $4::text[]))",
+        )
+        .bind(tx)
+        .bind(cond)
+        .bind(oidx)
+        .bind(side)
+        .fetch_all(&self.pool)
+        .await
+        .context("filter_existing_txkey")?;
+        Ok(rows
+            .into_iter()
+            .map(|(t, c, o, s)| format!("{t}|{c}|{o}|{s}"))
+            .collect())
+    }
+
+    /// F2 dedup LAYER 3 (poll-over-live collapse, migration 040). Idempotent sweep:
+    /// drop any `live_onchain` row whose canonical poll twin (source NULL, same
+    /// tx/cond/outcome/side) has since arrived. Run periodically inside the
+    /// reconciliation window. Returns rows collapsed.
+    pub async fn collapse_live_over_poll(&self) -> Result<u64> {
+        let res = sqlx::query(
+            "DELETE FROM trader_fills live USING trader_fills poll \
+             WHERE live.source='live_onchain' AND poll.source IS NULL \
+               AND live.tx_hash=poll.tx_hash AND live.condition_id=poll.condition_id \
+               AND live.outcome_index=poll.outcome_index AND live.side=poll.side",
+        )
+        .execute(&self.pool)
+        .await
+        .context("collapse_live_over_poll")?;
         Ok(res.rows_affected())
     }
 
@@ -2270,6 +2490,8 @@ mod trader_fills_it {
             sport: Some("nba".into()),
             bet_type: Some("spread".into()),
             ts: Utc::now() - chrono::Duration::hours(1),
+            source: None,
+            live_seen_at: None,
         }
     }
 
@@ -2511,6 +2733,8 @@ mod trader_fills_it {
             sport: None,
             bet_type: None,
             ts,
+            source: None,
+            live_seen_at: None,
         };
         let fills: Vec<NewTraderFill> = elig.iter().chain(deep.iter()).map(|w| mkf(w)).collect();
         pf.insert_trader_fills(&fills).await.unwrap();
@@ -2894,6 +3118,8 @@ mod trader_fills_it {
             sport: Some("nba".into()),
             bet_type: Some("spread".into()),
             ts: Utc::now() - chrono::Duration::days(1),
+            source: None,
+            live_seen_at: None,
         };
 
         // Eligible pool = ≥100 band fills; give `dropped` and `active` 100, `thin` 3.

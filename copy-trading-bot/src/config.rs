@@ -179,6 +179,75 @@ pub struct CopyTradingConfig {
     #[config(env = "DENSE_STRATEGIES", default = "strict,favorite,elite_fresh_fav")]
     pub dense_strategies: String,
 
+    // --- F1 live CLOB price tape (migration 040) ---------------------------
+    /// Record the executable book for every tracked-market asset into
+    /// `clob_price_tape` (measurement substrate for the latency→edge curve).
+    /// OFF by default — the task is never spawned; live path byte-identical.
+    #[config(env = "LIVE_TAPE", default = false)]
+    pub live_tape: bool,
+
+    /// Max token subscriptions per WS connection. P0-A escalation measured 500
+    /// safe (99.6% coverage, 0 disconnects); 200 is the conservative ws.rs constant.
+    #[config(env = "LIVE_TAPE_MAX_SUBS", default = 500)]
+    pub live_tape_max_subs: usize,
+
+    /// Connection-pool size. 8 × 500 = 4000 tokens headroom (future 1000-user
+    /// universe is ~1.6k). If the universe exceeds pool×max_subs, tail tokens are
+    /// uncovered and a warning is logged (no silent cap).
+    #[config(env = "LIVE_TAPE_MAX_CONNS", default = 8)]
+    pub live_tape_max_conns: usize,
+
+    /// Subscribe to conditions a followed trader filled within this many hours.
+    #[config(env = "LIVE_TAPE_LOOKBACK_HOURS", default = 6)]
+    pub live_tape_lookback_hours: i64,
+
+    /// Seconds between subscription-universe refreshes (picks up new conditions).
+    #[config(env = "LIVE_TAPE_REFRESH_SECS", default = 300)]
+    pub live_tape_refresh_secs: u64,
+
+    /// Retention for `clob_price_tape` — pruned hourly to bound growth.
+    #[config(env = "TAPE_RETENTION_HOURS", default = 72)]
+    pub tape_retention_hours: i64,
+
+    /// Tape coalesce window (ms): at most one row per asset per this window, keeping
+    /// the SETTLED (last) top-of-book. 1000 = 1 Hz. Smaller = finer, more rows.
+    #[config(env = "TAPE_COALESCE_MS", default = 1000)]
+    pub tape_coalesce_ms: i64,
+
+    /// How often (hours) to run the tape compaction sweep (drops reconnect-boundary
+    /// duplicate top-of-book rows the ingest filter couldn't catch across streams).
+    #[config(env = "TAPE_COMPACT_HOURS", default = 6)]
+    pub tape_compact_hours: i64,
+
+    // --- F2 optional on-chain fast fills (migration 040, gated on P0-B) -----
+    /// Observe OrderFilled logs on-chain for ~1–5s fill→row latency. OFF by
+    /// default AND only built if the P0-B ingestion gate passed.
+    #[config(env = "LIVE_FILLS", default = false)]
+    pub live_fills: bool,
+
+    /// Free Polygon RPC HTTP endpoint for newHeads + eth_getLogs (P0-B selects one).
+    #[config(env = "LIVE_FILLS_RPC_HTTP", default = "")]
+    pub live_fills_rpc_http: String,
+
+    /// CTF-Exchange contract address(es), comma-separated (P0-verified constants).
+    #[config(env = "LIVE_CTF_ADDRS", default = "")]
+    pub live_ctf_addrs: String,
+
+    /// OrderFilled event topic0 (P0-verified constant).
+    #[config(env = "LIVE_ORDERFILLED_TOPIC0", default = "")]
+    pub live_orderfilled_topic0: String,
+
+    /// Run the live-vs-poll dedup pre-check before writing live rows (P0-B sets).
+    #[config(env = "LIVE_DEDUP_PRECHECK", default = false)]
+    pub live_dedup_precheck: bool,
+
+    /// Feed live BUY fills into consensus (doubly-gated: F2 built AND P3 positive).
+    /// The P4 wiring is intentionally NOT shipped until the latency curve returns a
+    /// positive verdict (needs multi-day tape accrual); until then this flag is inert.
+    #[allow(dead_code)]
+    #[config(env = "LIVE_FILLS_TO_CONSENSUS", default = false)]
+    pub live_fills_to_consensus: bool,
+
     /// L1: use incremental vote-window ingestion — poll only the delta since each
     /// trader's cursor and rebuild books from the stored trailing window, instead
     /// of re-polling the full window every cycle. Verified-equivalent to the legacy

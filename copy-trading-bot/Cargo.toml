@@ -26,5 +26,8 @@ metrics-exporter-prometheus = { version = "0.18", features = ["http-listener"] }
 metrics-process = "2.3"
 tokio-metrics = { version = "0.4", features = ["rt"] }
 futures-util = "0.3"
+# CLOB market websocket (F1 live tape). Same version/features as trading-bot so the
+# workspace resolves one copy (zero version churn).
+tokio-tungstenite = { version = "0.28", features = ["rustls-tls-native-roots"] }
 mimalloc = "0.1"
 rustls = { version = "0.23", features = ["ring"] }

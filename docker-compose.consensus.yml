@@ -104,6 +104,22 @@ services:
       CAPTURE_DROPPED: ${CAPTURE_DROPPED:-false}       # keep polling deactivated scorecard-eligible wallets' fills (de-bias forward reads)
       HOT_LANE: ${HOT_LANE:-false}                     # fast-poll the router follow-set → ≲30s fill→signal (needs PROVEN_ROUTER)
       HOT_POLL_SECS: ${HOT_POLL_SECS:-12}              # hot-lane poll interval (floored at 5s in code)
+      # --- F1 live CLOB price tape (migration 040, latency→edge curve substrate) ---
+      LIVE_TAPE: ${LIVE_TAPE:-false}                   # record executable book → clob_price_tape (1Hz on-change; ~28M rows/day at full scale)
+      LIVE_TAPE_MAX_SUBS: ${LIVE_TAPE_MAX_SUBS:-500}   # per-conn subs (P0-A: 500 safe, 0 disconnects)
+      LIVE_TAPE_MAX_CONNS: ${LIVE_TAPE_MAX_CONNS:-8}   # conn pool (8×500=4000 tokens; universe ~1.6k at 6h)
+      LIVE_TAPE_LOOKBACK_HOURS: ${LIVE_TAPE_LOOKBACK_HOURS:-6}
+      LIVE_TAPE_REFRESH_SECS: ${LIVE_TAPE_REFRESH_SECS:-300}
+      TAPE_RETENTION_HOURS: ${TAPE_RETENTION_HOURS:-72} # hourly prune bounds tape growth
+      TAPE_COALESCE_MS: ${TAPE_COALESCE_MS:-1000}       # ≤1 row/asset/window, keep-last settled top-of-book
+      TAPE_COMPACT_HOURS: ${TAPE_COMPACT_HOURS:-6}      # compaction sweep drops reconnect-boundary dup rows
+      # --- F2 optional on-chain fast fills (migration 040, gated on P0-B; OFF) ---
+      LIVE_FILLS: ${LIVE_FILLS:-false}                 # OrderFilled → ~1-5s fill→row (needs LIVE_FILLS_RPC_HTTP)
+      LIVE_FILLS_RPC_HTTP: ${LIVE_FILLS_RPC_HTTP:-}    # free Polygon RPC (P0-B: polygon-bor-rpc.publicnode.com)
+      LIVE_CTF_ADDRS: ${LIVE_CTF_ADDRS:-}              # optional exchange-address filter (empty = topic0-only)
+      LIVE_ORDERFILLED_TOPIC0: ${LIVE_ORDERFILLED_TOPIC0:-}
+      LIVE_DEDUP_PRECHECK: ${LIVE_DEDUP_PRECHECK:-false}
+      LIVE_FILLS_TO_CONSENSUS: ${LIVE_FILLS_TO_CONSENSUS:-false}  # P4 live votes (inert until P3 positive)
       # --- optional consensus tuning (sensible defaults baked in) ---
       # TRACK_TOP_N: "40"
       # TRACK_PERIODS: "WEEK,MONTH"

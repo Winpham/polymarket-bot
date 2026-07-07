@@ -1,0 +1,112 @@
+{
+ "f1_clob_ws": {
+  "endpoint": "wss://ws-subscriptions-clob.polymarket.com/ws/market",
+  "assets_target_tracked": 1386,
+  "escalation": [
+   {
+    "n_subscribed": 200,
+    "distinct_assets_seen": 200,
+    "coverage_pct": 100.0,
+    "disconnects": 0,
+    "events_per_sec": 320.45
+   },
+   {
+    "n_subscribed": 500,
+    "distinct_assets_seen": 498,
+    "coverage_pct": 99.6,
+    "disconnects": 0,
+    "events_per_sec": 1198.88
+   },
+   {
+    "n_subscribed": 1000,
+    "distinct_assets_seen": 892,
+    "coverage_pct": 89.2,
+    "disconnects": 0,
+    "events_per_sec": 2602.72
+   },
+   {
+    "n_subscribed": 1386,
+    "distinct_assets_seen": 1148,
+    "coverage_pct": 82.8,
+    "disconnects": 1,
+    "events_per_sec": 2469.42
+   }
+  ],
+  "max_subs_per_conn_observed": 500,
+  "events": 10667491,
+  "by_type": {
+   "book": 85563,
+   "price_change": 10581928
+  },
+  "events_per_sec": 3943.53,
+  "distinct_assets_seen": 1378,
+  "best_ask_present_pct": 99.98,
+  "exch_ts_present_pct": 100.0,
+  "disconnects": 22,
+  "reconnect_recovery_s_p50": null,
+  "elapsed_s": 2705.1,
+  "shard_size": 500,
+  "connections_needed": 3,
+  "tape_path": "reports/tape_capture.jsonl",
+  "raw_events": 10667491,
+  "stored_rows_after_onchange_dedup": 9244231,
+  "dedup_keep_pct": 86.66,
+  "stored_rows_per_sec": 3417.33,
+  "est_stored_rows_per_day": 295257683,
+  "est_stored_rows_72h": 885773049,
+  "tape_coverage_observable_pct": 99.91
+ },
+ "f2_onchain": {
+  "rpc_used": "https://polygon-bor-rpc.publicnode.com",
+  "n_fills": 40,
+  "n_decoded": 40,
+  "address_match_pct": 100.0,
+  "price_size_roundtrip": {
+   "exact": 34,
+   "eq_after_round10dp": 34,
+   "eq_after_round2dp": 34,
+   "n": 40
+  },
+  "observed_exchange_addresses": {
+   "0xe2222d279d744050d28e00520010520000310f59": 17,
+   "0xe111180000d2663c0091e4f400237545b87b996b": 23
+  },
+  "observed_orderfilled_topic0": {
+   "0x4a39dc06d4c0dbc64b70af90fd698a233a518aa5d07e595d983b8c0526c8f7fb": 84,
+   "0x2e6bb91f8cbcda0c93623c54d0403a43514fabc40084ec96b6d5379a74786298": 34,
+   "0xd543adfd945773f1a62f74f0ee55a5e3b9b1a28262980ba90b1a89f2ea84d8ee": 68,
+   "0x6f13ca62553fcc2bcd2372180a43949c1e4cebba603901ede2f4e14f36b282ca": 1
+  },
+  "orderfilled_topic0": "0xd543adfd945773f1a62f74f0ee55a5e3b9b1a28262980ba90b1a89f2ea84d8ee",
+  "rate_limited_after_s": null,
+  "f2_dedup_layer": "source_scoped+collapse",
+  "verdict": "PASS"
+ },
+ "coverage_detail": {
+  "window_start": "2026-07-07T00:01:45.112639+00:00",
+  "window_end": "2026-07-07T00:46:50.176204+00:00",
+  "window_minutes": 45.1,
+  "total_tracked_fills": 19940,
+  "observable_fills": 19730,
+  "unquotable_fills": 0,
+  "unknown_market_fills": 210,
+  "not_subscribed_fills": 0,
+  "coverage_observable_pct_by_tol": {
+   "5": 92.76,
+   "30": 99.91,
+   "120": 100.0
+  },
+  "tape_coverage_observable_pct": 99.91,
+  "median_gap_s": 0.11
+ },
+ "generated_at": "2026-07-06",
+ "decision": {
+  "curve_feed": "f1_tape",
+  "gate1_measurement": "PASS (tape_coverage_observable_pct=99.91% @30s >= 95%, 45min, best_ask 99.98%/exch_ts 100%)",
+  "gate2_ingestion": "PASS (address_match 100%, RPC stable, no rate-limit)",
+  "build_p1_live_fills": true,
+  "f2_dedup_layer": "source_scoped+collapse",
+  "stop_curve": false,
+  "rationale": "Both gates pass. F1 tape ships the curve (deliverable). F2 built (flag OFF, ready). Curve pipeline validated on real data; INDETERMINATE-BY-POWER on 45min single window (3-5 events/cell) -> production accrual over days powers cells. Live-vote wiring (P4) NOT shipped (P3 not positive)."
+ }
+}

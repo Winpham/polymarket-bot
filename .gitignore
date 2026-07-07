@@ -29,3 +29,10 @@ backups/
 
 # local coordination worktrees (never committed)
 wt/
+
+# live-ingestion (migration 040) probe intermediates — large/regenerable
+reports/tape_*.jsonl
+reports/*.jsonl.assets.json
+reports/token_map*.json
+reports/capture.log
+reports/escalate.log
