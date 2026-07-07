@@ -286,6 +286,17 @@ async fn stream_shard(
         };
         let text = match msg {
             Message::Text(t) => t,
+            // Respond to the server's WS keepalive PINGs. tokio-tungstenite does NOT
+            // auto-pong on a manually-driven split stream, and the CLOB server resets
+            // any connection that fails to pong within ~6s — which caused a reconnect
+            // storm (every worker dropping every ~6s, flooding book snapshots). The
+            // Python `websockets` probe held 45min because that library auto-pongs.
+            Message::Ping(payload) => {
+                if let Err(e) = write.send(Message::Pong(payload)).await {
+                    break Err(anyhow::anyhow!("live-tape pong failed: {e}"));
+                }
+                continue;
+            }
             Message::Close(_) => break Err(anyhow::anyhow!("live-tape server closed")),
             _ => continue,
         };
@@ -374,6 +385,7 @@ async fn refresh_universe(
             }
         }
         if let Some(m) = seen_conditions.get(cond)
+            && m.quotable() // skip closed/inactive markets — they stream nothing
             && let Some(tid) = m.outcome_token_id(*oidx)
         {
             let tid = tid.to_string();
