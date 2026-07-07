@@ -186,9 +186,13 @@ pub struct CopyTradingConfig {
     #[config(env = "LIVE_TAPE", default = false)]
     pub live_tape: bool,
 
-    /// Max token subscriptions per WS connection. P0-A escalation measured 500
-    /// safe (99.6% coverage, 0 disconnects); 200 is the conservative ws.rs constant.
-    #[config(env = "LIVE_TAPE_MAX_SUBS", default = 500)]
+    /// Max token subscriptions per WS connection. The safe ceiling is
+    /// ACTIVITY-DEPENDENT (the CLOB server resets connections whose aggregate
+    /// message rate is too high): an offline escalation measured 500 clean, but live
+    /// production accrual found 500 storms (resets every ~6s) while 200-250 hold with
+    /// 0 resets. 200 is a conservative default with margin; graceful reconnect handles
+    /// transient peaks. Tune down further if resets recur at peak activity.
+    #[config(env = "LIVE_TAPE_MAX_SUBS", default = 200)]
     pub live_tape_max_subs: usize,
 
     /// Connection-pool size. 8 × 500 = 4000 tokens headroom (future 1000-user
