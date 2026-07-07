@@ -1,0 +1,1323 @@
+{
+  "meta": {
+    "cycle": 9,
+    "n_fav_backers": 107,
+    "source": "reports/universe_scorecard.json",
+    "note": "prune/add are DEFERRED human-review recommendations; DB never written"
+  },
+  "U2_crosstab": {
+    "by_rank_tier": {
+      "rank_1_10": {
+        "n_judgeable": 4,
+        "bad_at_our_price": 3,
+        "bad_frac": 0.75,
+        "buckets": {
+          "mm_arber": 4
+        }
+      },
+      "rank_11_50": {
+        "n_judgeable": 24,
+        "bad_at_our_price": 14,
+        "bad_frac": 0.583,
+        "buckets": {
+          "genuinely_skilled": 5,
+          "mm_arber": 12,
+          "skill_within_luck": 1,
+          "bad_predictor": 6
+        }
+      },
+      "rank_51_100": {
+        "n_judgeable": 28,
+        "bad_at_our_price": 20,
+        "bad_frac": 0.714,
+        "buckets": {
+          "mm_arber": 18,
+          "skill_within_luck": 6,
+          "skilled_not_copyable": 1,
+          "bad_predictor": 3
+        }
+      },
+      "rank_101_200": {
+        "n_judgeable": 91,
+        "bad_at_our_price": 66,
+        "bad_frac": 0.725,
+        "buckets": {
+          "genuinely_skilled": 2,
+          "mm_arber": 52,
+          "longshot_lucky": 3,
+          "skill_within_luck": 15,
+          "bad_predictor": 19
+        }
+      }
+    },
+    "top_pnl_decile": {
+      "n": 14,
+      "bad_at_our_price": 8,
+      "buckets": {
+        "mm_arber": 9,
+        "bad_predictor": 3,
+        "genuinely_skilled": 2
+      }
+    },
+    "overall_judgeable": {
+      "n": 147,
+      "bad_at_our_price": 103,
+      "genuinely_skilled": 7
+    }
+  },
+  "U4_subcohorts": {
+    "n_judgeable_positive": 103,
+    "shared_best_cell_groups": [
+      {
+        "cell": "soccer|b4",
+        "n_wallets": 20,
+        "n_copyable_our_price": 6,
+        "mean_best_cell_gap_their_price": 0.1167,
+        "members": [
+          "cnyek",
+          "Mind.The.Gap",
+          "LarryDaddy",
+          "acorp",
+          "Oneger",
+          "sport-intelligence",
+          "takeormake",
+          "Jsram",
+          "0x56F0321917247d2aDA07a8150dd9a8c89AFADA35-1781323073288",
+          "0x228B8d11EBa89BF1c554f8879a9293B7106DaF4c-1765442354872",
+          "bobbityy101",
+          "Palauanbull",
+          "Bonereaper",
+          "sbsigner",
+          "BillBenter2026",
+          "phantomsc",
+          "Melody626",
+          "Netrol",
+          "Sportbetting76",
+          "purplegatto"
+        ]
+      },
+      {
+        "cell": "soccer|b3",
+        "n_wallets": 17,
+        "n_copyable_our_price": 9,
+        "mean_best_cell_gap_their_price": 0.1538,
+        "members": [
+          "RISK-IS-NEVER-OK",
+          "johndegen",
+          "jtwyslljy",
+          "pfk.bgd",
+          "one8tyfive",
+          "tony912",
+          "Latina",
+          "fgdfhr666",
+          "phonesculptor",
+          "DaBossHogg",
+          "beet420",
+          "Bibi555",
+          "Zzzz87",
+          "acount3",
+          "ramadamaramadam",
+          "htrth100",
+          "GoalLineGhost"
+        ]
+      },
+      {
+        "cell": "tennis|b5",
+        "n_wallets": 9,
+        "n_copyable_our_price": 3,
+        "mean_best_cell_gap_their_price": 0.1299,
+        "members": [
+          "0xD9E0AACa471f48F91A26E8669A805f2",
+          "RN1",
+          "tradecraft",
+          "Eulhunter",
+          "swisstony",
+          "HomeRunHazard",
+          "ferrariChampions2026",
+          "0x32b484581fc5606dE9C1e43AF4636b6Be9BC8B21-1774274303653",
+          "Forecastication2"
+        ]
+      },
+      {
+        "cell": "mlb|b3",
+        "n_wallets": 6,
+        "n_copyable_our_price": 4,
+        "mean_best_cell_gap_their_price": 0.1329,
+        "members": [
+          "0x3DFb153c197D4C19D3B31c1ecD2c7B6860eeabAf-1722957908185",
+          "0xdbdd45150249e229eB4cA8aa48A30Dca21Faa5de-1757094771846",
+          "AnonymousUsername",
+          "hi774c",
+          "pleaseplease123",
+          "suntori"
+        ]
+      },
+      {
+        "cell": "other|b4",
+        "n_wallets": 6,
+        "n_copyable_our_price": 2,
+        "mean_best_cell_gap_their_price": 0.182,
+        "members": [
+          "cigarettes",
+          "zb8",
+          "JT716",
+          "yesmamaok",
+          "ThePhoeniy",
+          "0x122Cb94C437EA5e6f088c6c0C143c592ab8EFBed-1782168978900"
+        ]
+      },
+      {
+        "cell": "mlb|b4",
+        "n_wallets": 6,
+        "n_copyable_our_price": 3,
+        "mean_best_cell_gap_their_price": 0.1393,
+        "members": [
+          "0x2c335066FE58fe9237c3d3Dc7b275C2a034a0563-1759935795465",
+          "fueusus11",
+          "curie",
+          "0x4f2",
+          "sentrio",
+          "xifutloong3"
+        ]
+      },
+      {
+        "cell": "nba|b3",
+        "n_wallets": 5,
+        "n_copyable_our_price": 2,
+        "mean_best_cell_gap_their_price": 0.1873,
+        "members": [
+          "master-wuji",
+          "djokowin",
+          "sdgdhf",
+          "ValarDohaeris",
+          "crossfire154"
+        ]
+      },
+      {
+        "cell": "other|b3",
+        "n_wallets": 5,
+        "n_copyable_our_price": 2,
+        "mean_best_cell_gap_their_price": 0.1348,
+        "members": [
+          "zhuz632",
+          "justdance",
+          "SnakeBall",
+          "must.wear.prada",
+          "FM2118"
+        ]
+      },
+      {
+        "cell": "other|b5",
+        "n_wallets": 5,
+        "n_copyable_our_price": 1,
+        "mean_best_cell_gap_their_price": 0.1252,
+        "members": [
+          "0xc07",
+          "mildwindow27",
+          "donthackme",
+          "38791873984189",
+          "0x076daa87c4"
+        ]
+      },
+      {
+        "cell": "tennis|b3",
+        "n_wallets": 4,
+        "n_copyable_our_price": 1,
+        "mean_best_cell_gap_their_price": 0.2216,
+        "members": [
+          "0xE91171f655bE1568e4c63f29663c0028649e3d4e-1765651946286",
+          "alpheclabs",
+          "riverskew",
+          "hurrican"
+        ]
+      },
+      {
+        "cell": "tennis|b4",
+        "n_wallets": 3,
+        "n_copyable_our_price": 2,
+        "mean_best_cell_gap_their_price": 0.1452,
+        "members": [
+          "TRCM",
+          "Iconicsoundsdk",
+          "alaskabaked"
+        ]
+      },
+      {
+        "cell": "soccer|b5",
+        "n_wallets": 3,
+        "n_copyable_our_price": 1,
+        "mean_best_cell_gap_their_price": 0.0944,
+        "members": [
+          "lookaon",
+          "balthazar",
+          "Corlys"
+        ]
+      },
+      {
+        "cell": "mlb|b5",
+        "n_wallets": 2,
+        "n_copyable_our_price": 2,
+        "mean_best_cell_gap_their_price": 0.1558,
+        "members": [
+          "uptime0724",
+          "0x6db568e61e"
+        ]
+      },
+      {
+        "cell": "cs2|b3",
+        "n_wallets": 2,
+        "n_copyable_our_price": 1,
+        "mean_best_cell_gap_their_price": 0.1504,
+        "members": [
+          "bbabbbabbbab",
+          "911lover"
+        ]
+      },
+      {
+        "cell": "crypto|b4",
+        "n_wallets": 2,
+        "n_copyable_our_price": 2,
+        "mean_best_cell_gap_their_price": 0.107,
+        "members": [
+          "getbipped",
+          "0xb55fa1296E6ec55D0cE53d93B9237389f11764d4-1777575277609"
+        ]
+      },
+      {
+        "cell": "nba|b4",
+        "n_wallets": 2,
+        "n_copyable_our_price": 0,
+        "mean_best_cell_gap_their_price": 0.1244,
+        "members": [
+          "DLEK",
+          "Kluivert9"
+        ]
+      }
+    ]
+  },
+  "U5_prune_guard": {
+    "n_judgeable": 147,
+    "prune_count": 79,
+    "prune_list": [
+      {
+        "wallet": "0x2c8e9123de0538b45c23f275323c07a35dafa316",
+        "username": "Importante",
+        "bucket": "bad_predictor",
+        "realizable_roi": -0.331,
+        "rank": 180,
+        "pnl": 64633.47856,
+        "is_fav_backer": false
+      },
+      {
+        "wallet": "0xa8e089ade142c95538e06196e09c85681112ad50",
+        "username": "Wannac",
+        "bucket": "mm_arber",
+        "realizable_roi": -0.22893,
+        "rank": 90,
+        "pnl": 99520.29637,
+        "is_fav_backer": false
+      },
+      {
+        "wallet": "0xa9c4b118095a4f67ba9ba461aadf6a9cfe5e7433",
+        "username": "0xA9C4b118095A4F67BA9ba461aAdF6a9cfE5e7433-1721318888203",
+        "bucket": "bad_predictor",
+        "realizable_roi": -0.21474,
+        "rank": 171,
+        "pnl": 65064.96512,
+        "is_fav_backer": false
+      },
+      {
+        "wallet": "0x8b887c9ad761b851d9e14510ea9aae04a01e8f33",
+        "username": "lluucckkyy",
+        "bucket": "bad_predictor",
+        "realizable_roi": -0.19509,
+        "rank": 127,
+        "pnl": 80860.37469,
+        "is_fav_backer": false
+      },
+      {
+        "wallet": "0x160bf4f27cdaaaed1408ccd1558ab30c210d4296",
+        "username": "mortewfenloin",
+        "bucket": "mm_arber",
+        "realizable_roi": -0.19124,
+        "rank": 92,
+        "pnl": 49027.77474,
+        "is_fav_backer": false
+      },
+      {
+        "wallet": "0x16bb9951a36fce71e2ef57890b786145e0ba8492",
+        "username": "SDTrading",
+        "bucket": "bad_predictor",
+        "realizable_roi": -0.17125,
+        "rank": 119,
+        "pnl": 34997.93314,
+        "is_fav_backer": false
+      },
+      {
+        "wallet": "0xe0ac9addc56c19e771a0524f5d172af4d7a476ff",
+        "username": "quanterty",
+        "bucket": "bad_predictor",
+        "realizable_roi": -0.16868,
+        "rank": 85,
+        "pnl": 113959.99582,
+        "is_fav_backer": false
+      },
+      {
+        "wallet": "0xf070207d315d47fd07870e464d3ded9151f5ac55",
+        "username": "esportGG",
+        "bucket": "bad_predictor",
+        "realizable_roi": -0.16547,
+        "rank": 166,
+        "pnl": 53621.06457,
+        "is_fav_backer": false
+      },
+      {
+        "wallet": "0xc3c3b3ef304ddbea39fa2246e683a71da5d0eec8",
+        "username": "comon119",
+        "bucket": "mm_arber",
+        "realizable_roi": -0.1652,
+        "rank": 161,
+        "pnl": 18664.34086,
+        "is_fav_backer": false
+      },
+      {
+        "wallet": "0x7f147364c1d4c099dfa47a8b91ec525030a629d1",
+        "username": "pauligines420",
+        "bucket": "mm_arber",
+        "realizable_roi": -0.16133,
+        "rank": 198,
+        "pnl": 58907.94824,
+        "is_fav_backer": false
+      },
+      {
+        "wallet": "0xecb14ac6e9ca447ce2f2912e6217b43d7b655da3",
+        "username": "SaylorMoon",
+        "bucket": "bad_predictor",
+        "realizable_roi": -0.14334,
+        "rank": 174,
+        "pnl": 66191.17763,
+        "is_fav_backer": false
+      },
+      {
+        "wallet": "0x9c1c6b754bbe38ead37160ba42bf2f16b77f7980",
+        "username": "exploitmaxxer",
+        "bucket": "mm_arber",
+        "realizable_roi": -0.14154,
+        "rank": 152,
+        "pnl": 47752.29771,
+        "is_fav_backer": false
+      },
+      {
+        "wallet": "0x4bff30af91642dc7d2b19a8664378fe55c45fc26",
+        "username": "Sassy-Bucket",
+        "bucket": "bad_predictor",
+        "realizable_roi": -0.13673,
+        "rank": 28,
+        "pnl": 187601.45529,
+        "is_fav_backer": false
+      },
+      {
+        "wallet": "0x208cae216d0e7cdb337a2db0db12f03816066b98",
+        "username": "owejosamdfi",
+        "bucket": "bad_predictor",
+        "realizable_roi": -0.13668,
+        "rank": 180,
+        "pnl": 58137.63907,
+        "is_fav_backer": false
+      },
+      {
+        "wallet": "0x6a5121acdc5e4fc2980d177a0aa729315ce6006e",
+        "username": "Bizzzhh",
+        "bucket": "mm_arber",
+        "realizable_roi": -0.13321,
+        "rank": 200,
+        "pnl": 27775.72852,
+        "is_fav_backer": false
+      },
+      {
+        "wallet": "0x2a69660046d7acc4ab204d7cc5ba78b0776cd2f7",
+        "username": "UpTheBlues",
+        "bucket": "mm_arber",
+        "realizable_roi": -0.13187,
+        "rank": 92,
+        "pnl": 106307.55048,
+        "is_fav_backer": false
+      },
+      {
+        "wallet": "0x325f0e5b5afc66ff54102d850f67f0c621304511",
+        "username": "foooool",
+        "bucket": "mm_arber",
+        "realizable_roi": -0.12672,
+        "rank": 117,
+        "pnl": 21474.54625,
+        "is_fav_backer": false
+      },
+      {
+        "wallet": "0x0dcf5b49627c5194805bd1af846fd0bd3388c556",
+        "username": "ThreeLions",
+        "bucket": "bad_predictor",
+        "realizable_roi": -0.12657,
+        "rank": 130,
+        "pnl": 30465.73684,
+        "is_fav_backer": false
+      },
+      {
+        "wallet": "0x0565789b44d92f124965dadb2fb1a0f641e356ae",
+        "username": "gambit09",
+        "bucket": "bad_predictor",
+        "realizable_roi": -0.12565,
+        "rank": 41,
+        "pnl": 3.42324,
+        "is_fav_backer": false
+      },
+      {
+        "wallet": "0x1d1ade627d0bb0205758580b20d808573e720df6",
+        "username": "Pwaddler",
+        "bucket": "bad_predictor",
+        "realizable_roi": -0.11766,
+        "rank": 125,
+        "pnl": 82480.49269,
+        "is_fav_backer": false
+      },
+      {
+        "wallet": "0xcf609d3256f0f37f0595e5dc64012fa3a8fea6f5",
+        "username": "0xcF609D3256f0f37f0595E5Dc64012Fa3a8fEa6f5-1771809916847",
+        "bucket": "bad_predictor",
+        "realizable_roi": -0.11071,
+        "rank": 181,
+        "pnl": 21958.40386,
+        "is_fav_backer": false
+      },
+      {
+        "wallet": "0xd48a81db62f742c4e42d86dfc23a7ee345366e90",
+        "username": "NiFengFanPan",
+        "bucket": "bad_predictor",
+        "realizable_roi": -0.0987,
+        "rank": 191,
+        "pnl": 11196.30407,
+        "is_fav_backer": false
+      },
+      {
+        "wallet": "0x34f62ce5beaf9b3b325726ec4b6c733df8534535",
+        "username": "PatienceCapital",
+        "bucket": "mm_arber",
+        "realizable_roi": -0.09857,
+        "rank": 83,
+        "pnl": 139999.95101,
+        "is_fav_backer": false
+      },
+      {
+        "wallet": "0xcec2680455348fa6ba5a610ac02b7a014470dded",
+        "username": null,
+        "bucket": "bad_predictor",
+        "realizable_roi": -0.09834,
+        "rank": 43,
+        "pnl": 3.39183,
+        "is_fav_backer": false
+      },
+      {
+        "wallet": "0xba389f76b0119aed07c53c9029852664bd97e406",
+        "username": "joblessfinalboss",
+        "bucket": "bad_predictor",
+        "realizable_roi": -0.09653,
+        "rank": 111,
+        "pnl": 90917.58178,
+        "is_fav_backer": false
+      },
+      {
+        "wallet": "0x3d85d47d2f366dc0f2a21e95404428233bba197f",
+        "username": "FM2118",
+        "bucket": "skill_within_luck",
+        "realizable_roi": -0.09057,
+        "rank": 106,
+        "pnl": 97036.91429,
+        "is_fav_backer": false
+      },
+      {
+        "wallet": "0x55f544a537f6b9f50a8d27e662c250e93418e2a0",
+        "username": "KevinEasyMoney27",
+        "bucket": "bad_predictor",
+        "realizable_roi": -0.08662,
+        "rank": 127,
+        "pnl": 31349.8634,
+        "is_fav_backer": false
+      },
+      {
+        "wallet": "0x5b6331e7ff0831a3fe2ed12004747db1a9c911a4",
+        "username": "neutralwave23",
+        "bucket": "mm_arber",
+        "realizable_roi": -0.08522,
+        "rank": 116,
+        "pnl": 87740.07418,
+        "is_fav_backer": false
+      },
+      {
+        "wallet": "0x6eb744d27b04a6c611961124b52ffbdbf7c13cd4",
+        "username": "freee67thewhale",
+        "bucket": "bad_predictor",
+        "realizable_roi": -0.08389,
+        "rank": 45,
+        "pnl": 3265.00968,
+        "is_fav_backer": false
+      },
+      {
+        "wallet": "0xae2b0aaea325a32870f56ff19df3b87acaa190ea",
+        "username": "TB14",
+        "bucket": "mm_arber",
+        "realizable_roi": -0.08029,
+        "rank": 6,
+        "pnl": 16937.00066,
+        "is_fav_backer": false
+      },
+      {
+        "wallet": "0xde496f99cfcc61405dbe593f47d74bc5e85afe85",
+        "username": "biguser67",
+        "bucket": "bad_predictor",
+        "realizable_roi": -0.07892,
+        "rank": 191,
+        "pnl": 41612.05365,
+        "is_fav_backer": false
+      },
+      {
+        "wallet": "0x23c8a4c266d10ba5846837eac391fea89ed6f293",
+        "username": "Netrol",
+        "bucket": "mm_arber",
+        "realizable_roi": -0.07501,
+        "rank": 59,
+        "pnl": 27644.08638,
+        "is_fav_backer": false
+      },
+      {
+        "wallet": "0xc65ca4755436f82d8eb461e65781584b8cadea39",
+        "username": "yesmamaok",
+        "bucket": "skill_within_luck",
+        "realizable_roi": -0.07209,
+        "rank": 102,
+        "pnl": 100235.72519,
+        "is_fav_backer": false
+      },
+      {
+        "wallet": "0x5b4ec9c06b284ee52c41a761974d836992880232",
+        "username": "ramadamaramadam",
+        "bucket": "skill_within_luck",
+        "realizable_roi": -0.06953,
+        "rank": 150,
+        "pnl": 74604.97836,
+        "is_fav_backer": false
+      },
+      {
+        "wallet": "0xac4773707daddd3792efed5a91f5ec7651a7d234",
+        "username": "HBAFlover98",
+        "bucket": "bad_predictor",
+        "realizable_roi": -0.06444,
+        "rank": 176,
+        "pnl": 62848.28898,
+        "is_fav_backer": false
+      },
+      {
+        "wallet": "0x122cb94c437ea5e6f088c6c0c143c592ab8efbed",
+        "username": "0x122Cb94C437EA5e6f088c6c0C143c592ab8EFBed-1782168978900",
+        "bucket": "mm_arber",
+        "realizable_roi": -0.06283,
+        "rank": 192,
+        "pnl": 42914.23689,
+        "is_fav_backer": false
+      },
+      {
+        "wallet": "0xe5241830e8876c115d7dc8311ad9f43d85fdd34f",
+        "username": "Sportbetting76",
+        "bucket": "skill_within_luck",
+        "realizable_roi": -0.05794,
+        "rank": 110,
+        "pnl": 94269.67035,
+        "is_fav_backer": false
+      },
+      {
+        "wallet": "0x0d2d845a6ff64e31e04a70afce8a573940767ff5",
+        "username": "38791873984189",
+        "bucket": "mm_arber",
+        "realizable_roi": -0.0575,
+        "rank": 172,
+        "pnl": 23660.02494,
+        "is_fav_backer": false
+      },
+      {
+        "wallet": "0xaa7789219c17e180dcb5933099c90d885f1d15a5",
+        "username": "alaskabaked",
+        "bucket": "mm_arber",
+        "realizable_roi": -0.0559,
+        "rank": 198,
+        "pnl": 41199.30964,
+        "is_fav_backer": false
+      },
+      {
+        "wallet": "0xd27cc742d023d06ef633a4c880cf1ff1836ec081",
+        "username": "madkkee",
+        "bucket": "mm_arber",
+        "realizable_roi": -0.05526,
+        "rank": 200,
+        "pnl": 40358.4843,
+        "is_fav_backer": false
+      },
+      {
+        "wallet": "0xd23f8c8aab13cfb2a35da40b67f8471faf9894a1",
+        "username": "Corlys",
+        "bucket": "mm_arber",
+        "realizable_roi": -0.05232,
+        "rank": 128,
+        "pnl": 81375.29135,
+        "is_fav_backer": false
+      },
+      {
+        "wallet": "0x52d93dcf81444f793dda7fedc370f7a35101fb1a",
+        "username": "LuckyLoo",
+        "bucket": "mm_arber",
+        "realizable_roi": -0.05197,
+        "rank": 160,
+        "pnl": 47924.68644,
+        "is_fav_backer": false
+      },
+      {
+        "wallet": "0xb0c85813a7a4428f1139ff91d3118a92c391fe7f",
+        "username": "must.wear.prada",
+        "bucket": "mm_arber",
+        "realizable_roi": -0.04985,
+        "rank": 84,
+        "pnl": 115199.15851,
+        "is_fav_backer": false
+      },
+      {
+        "wallet": "0x896a5f68835ae191ef17c8d278fc178bbe5d688d",
+        "username": "ThePhoeniy",
+        "bucket": "mm_arber",
+        "realizable_roi": -0.04912,
+        "rank": 199,
+        "pnl": 58229.24437,
+        "is_fav_backer": false
+      },
+      {
+        "wallet": "0x85bbb00a84f100a74ec6a479ce6f8f45b04c9ada",
+        "username": "Prelode",
+        "bucket": "bad_predictor",
+        "realizable_roi": -0.04112,
+        "rank": 56,
+        "pnl": 190515.97813,
+        "is_fav_backer": false
+      },
+      {
+        "wallet": "0x65b57f3444e1dba0487c65d2618d3b0c0e0baa71",
+        "username": "acount3",
+        "bucket": "mm_arber",
+        "realizable_roi": -0.04102,
+        "rank": 189,
+        "pnl": 55624.73517,
+        "is_fav_backer": false
+      },
+      {
+        "wallet": "0xf0726b6a29afdfd3c193aa5540df16b0175d467a",
+        "username": "Palauanbull",
+        "bucket": "mm_arber",
+        "realizable_roi": -0.04086,
+        "rank": 100,
+        "pnl": 100370.49731,
+        "is_fav_backer": false
+      },
+      {
+        "wallet": "0x8718865882e085b764825b637788043c16185040",
+        "username": "hurrican",
+        "bucket": "mm_arber",
+        "realizable_roi": -0.04034,
+        "rank": 146,
+        "pnl": 76586.64372,
+        "is_fav_backer": false
+      },
+      {
+        "wallet": "0x2dc13c6bda81b202281e796953a7323de675b33c",
+        "username": "xifutloong3",
+        "bucket": "skill_within_luck",
+        "realizable_roi": -0.03998,
+        "rank": 76,
+        "pnl": 129034.9258,
+        "is_fav_backer": false
+      },
+      {
+        "wallet": "0xe73ee729fc8ac69c3ee6ca70dedb3875070574fe",
+        "username": "crossfire154",
+        "bucket": "skill_within_luck",
+        "realizable_roi": -0.03931,
+        "rank": 200,
+        "pnl": 40506.88317,
+        "is_fav_backer": false
+      },
+      {
+        "wallet": "0x29ccb2084a5a42861291107ce745dd344d3f3c29",
+        "username": "ValarDohaeris",
+        "bucket": "skill_within_luck",
+        "realizable_roi": -0.03834,
+        "rank": 133,
+        "pnl": 85421.64721,
+        "is_fav_backer": false
+      },
+      {
+        "wallet": "0xc29198ad764bd6adaf7bb971a3757a689ece5d74",
+        "username": "SnakeBall",
+        "bucket": "mm_arber",
+        "realizable_roi": -0.0371,
+        "rank": 119,
+        "pnl": 85779.62256,
+        "is_fav_backer": false
+      },
+      {
+        "wallet": "0x6e82b93eb57b01a63027bd0c6d2f3f04934a752c",
+        "username": "DLEK",
+        "bucket": "skill_within_luck",
+        "realizable_roi": -0.03379,
+        "rank": 76,
+        "pnl": 60950.84279,
+        "is_fav_backer": false
+      },
+      {
+        "wallet": "0x69d57cfa1abed351049d0d8de541b33635ce7767",
+        "username": "phantomsc",
+        "bucket": "longshot_lucky",
+        "realizable_roi": -0.03104,
+        "rank": 158,
+        "pnl": 70333.95838,
+        "is_fav_backer": false
+      },
+      {
+        "wallet": "0x84ad9c5c547a82ec9a08547b94bd922446e5bfb7",
+        "username": "BillBenter2026",
+        "bucket": "mm_arber",
+        "realizable_roi": -0.02903,
+        "rank": 196,
+        "pnl": 48176.80385,
+        "is_fav_backer": false
+      },
+      {
+        "wallet": "0xe6535d86446728d567f4929557c2c4eb3cdbc4a7",
+        "username": "Kluivert9",
+        "bucket": "skill_within_luck",
+        "realizable_roi": -0.02865,
+        "rank": 130,
+        "pnl": 24777.21989,
+        "is_fav_backer": false
+      },
+      {
+        "wallet": "0x4f29e103339919c4baaea2a60195cf1c8bb27a7e",
+        "username": "0x4f2",
+        "bucket": "mm_arber",
+        "realizable_roi": -0.02425,
+        "rank": 49,
+        "pnl": 107512.01167,
+        "is_fav_backer": false
+      },
+      {
+        "wallet": "0x5e9458202b5817a72cf81105ec8a30e6f3705ba1",
+        "username": "pleaseplease123",
+        "bucket": "mm_arber",
+        "realizable_roi": -0.02242,
+        "rank": 67,
+        "pnl": 74661.39033,
+        "is_fav_backer": false
+      },
+      {
+        "wallet": "0x56f4f054e92ced8fa7accfebcad73251afe49ec5",
+        "username": "htrth100",
+        "bucket": "mm_arber",
+        "realizable_roi": -0.02227,
+        "rank": 175,
+        "pnl": 62863.05207,
+        "is_fav_backer": false
+      },
+      {
+        "wallet": "0xeebde7a0e019a63e6b476eb425505b7b3e6eba30",
+        "username": "Bonereaper",
+        "bucket": "mm_arber",
+        "realizable_roi": -0.02149,
+        "rank": 197,
+        "pnl": 60128.089,
+        "is_fav_backer": false
+      },
+      {
+        "wallet": "0x18b84caa510f257bc961daa88a738994ae66c368",
+        "username": "Bibi555",
+        "bucket": "mm_arber",
+        "realizable_roi": -0.01833,
+        "rank": 176,
+        "pnl": 51338.72851,
+        "is_fav_backer": false
+      },
+      {
+        "wallet": "0x90ef08532ed5f04cc4609fce9ba74296158591ce",
+        "username": "ddfgFG",
+        "bucket": "mm_arber",
+        "realizable_roi": -0.01583,
+        "rank": 144,
+        "pnl": 3.04042,
+        "is_fav_backer": false
+      },
+      {
+        "wallet": "0xb27bc932bf8110d8f78e55da7d5f0497a18b5b82",
+        "username": null,
+        "bucket": "mm_arber",
+        "realizable_roi": -0.01542,
+        "rank": 188,
+        "pnl": 45581.27091,
+        "is_fav_backer": false
+      },
+      {
+        "wallet": "0xd86ec82a0da8c70d6c12ae06f2990b89bdca45ce",
+        "username": "fgdfhr666",
+        "bucket": "skill_within_luck",
+        "realizable_roi": -0.01327,
+        "rank": 200,
+        "pnl": 52537.00336,
+        "is_fav_backer": false
+      },
+      {
+        "wallet": "0x7650e94d9c2decc455d7e2b9f8af0c0aa319fac1",
+        "username": "JT716",
+        "bucket": "skill_within_luck",
+        "realizable_roi": -0.00702,
+        "rank": 138,
+        "pnl": 78987.51261,
+        "is_fav_backer": false
+      },
+      {
+        "wallet": "0x9f208e85f326f865077fffa68b32d8b0e2bc12c3",
+        "username": "mildwindow27",
+        "bucket": "skilled_not_copyable",
+        "realizable_roi": -0.00471,
+        "rank": 83,
+        "pnl": 38954.74731,
+        "is_fav_backer": false
+      },
+      {
+        "wallet": "0xc82f0a25aad828f59347670e63ead5ea144466a7",
+        "username": "bobbityy101",
+        "bucket": "mm_arber",
+        "realizable_roi": -0.00433,
+        "rank": 199,
+        "pnl": 52238.91413,
+        "is_fav_backer": false
+      },
+      {
+        "wallet": "0x228b8d11eba89bf1c554f8879a9293b7106daf4c",
+        "username": "0x228B8d11EBa89BF1c554f8879a9293B7106DaF4c-1765442354872",
+        "bucket": "mm_arber",
+        "realizable_roi": -0.00302,
+        "rank": 78,
+        "pnl": 47535.70867,
+        "is_fav_backer": false
+      },
+      {
+        "wallet": "0x56f0321917247d2ada07a8150dd9a8c89afada35",
+        "username": "0x56F0321917247d2aDA07a8150dd9a8c89AFADA35-1781323073288",
+        "bucket": "skill_within_luck",
+        "realizable_roi": -0.00161,
+        "rank": 104,
+        "pnl": 59261.30566,
+        "is_fav_backer": false
+      },
+      {
+        "wallet": "0x83720820a8aa6c3f20ad71850e7a1a17d16c5223",
+        "username": "Jsram",
+        "bucket": "skill_within_luck",
+        "realizable_roi": -0.00117,
+        "rank": 18,
+        "pnl": 109004.4398,
+        "is_fav_backer": false
+      },
+      {
+        "wallet": "0x98db8cca55c32b24cfb414b5b43d273f4e1fdd17",
+        "username": "Eulhunter",
+        "bucket": "mm_arber",
+        "realizable_roi": -0.0009,
+        "rank": 173,
+        "pnl": 66293.29209,
+        "is_fav_backer": false
+      },
+      {
+        "wallet": "0x5a218c7ad04135830a45c41aaed7294df7809318",
+        "username": "balthazar",
+        "bucket": "mm_arber",
+        "realizable_roi": -0.00044,
+        "rank": 91,
+        "pnl": 106440.44308,
+        "is_fav_backer": false
+      },
+      {
+        "wallet": "0xc289082ddba5a95e95efa216adbed7cc8ab4ab37",
+        "username": "sport-intelligence",
+        "bucket": "skill_within_luck",
+        "realizable_roi": 0.00283,
+        "rank": 188,
+        "pnl": 56277.60907,
+        "is_fav_backer": false
+      },
+      {
+        "wallet": "0xcc500cbcc8b7cf5bd21975ebbea34f21b5644c82",
+        "username": "justdance",
+        "bucket": "skill_within_luck",
+        "realizable_roi": 0.01453,
+        "rank": 185,
+        "pnl": 57298.44162,
+        "is_fav_backer": false
+      },
+      {
+        "wallet": "0xa6d188fb70c2e2e9ad411c42c02379ed3020286a",
+        "username": "zhuz632",
+        "bucket": "skill_within_luck",
+        "realizable_roi": 0.02104,
+        "rank": 52,
+        "pnl": 20819.5951,
+        "is_fav_backer": false
+      },
+      {
+        "wallet": "0x0224bb9eb0a5c9fd261ac9123a72cbdd5748292a",
+        "username": "zb8",
+        "bucket": "skill_within_luck",
+        "realizable_roi": 0.03023,
+        "rank": 86,
+        "pnl": 113300.61928,
+        "is_fav_backer": false
+      },
+      {
+        "wallet": "0x21f333307ac6d2e65ac82f014b3dd2b64cbc35e3",
+        "username": "hi774c",
+        "bucket": "longshot_lucky",
+        "realizable_roi": 0.03396,
+        "rank": 194,
+        "pnl": 51489.88313,
+        "is_fav_backer": false
+      },
+      {
+        "wallet": "0x1420b746dea30e05b387ab880f9d3ec5bc579daa",
+        "username": "djokowin",
+        "bucket": "longshot_lucky",
+        "realizable_roi": 0.03832,
+        "rank": 188,
+        "pnl": 15608.56938,
+        "is_fav_backer": false
+      },
+      {
+        "wallet": "0xdc40c985063d50aa00cc5f637f7e83203b3b89cf",
+        "username": "Villson",
+        "bucket": "skill_within_luck",
+        "realizable_roi": 0.04018,
+        "rank": 184,
+        "pnl": 61335.11227,
+        "is_fav_backer": false
+      }
+    ],
+    "keep_consensus_critical_count": 32,
+    "keep_consensus_critical": [
+      {
+        "wallet": "0xdd882a70680633a75516f6ed5fce443e2d96dadb",
+        "username": "MeiGuNiuBi",
+        "bucket": "bad_predictor",
+        "realizable_roi": -0.19612,
+        "rank": 144,
+        "pnl": 45630.58186,
+        "is_fav_backer": true
+      },
+      {
+        "wallet": "0x7d787c72c8317046fda90814a93c87fc192529a5",
+        "username": "MD14",
+        "bucket": "mm_arber",
+        "realizable_roi": -0.19457,
+        "rank": 172,
+        "pnl": 55265.00192,
+        "is_fav_backer": true
+      },
+      {
+        "wallet": "0xc29e1cef4256f423e5a3e713d886bd25f98da2ca",
+        "username": "shutitfatty",
+        "bucket": "bad_predictor",
+        "realizable_roi": -0.16072,
+        "rank": 27,
+        "pnl": 188685.79613,
+        "is_fav_backer": true
+      },
+      {
+        "wallet": "0x56acab44cfca2e88bb9b3406890aea7bfa0cd77e",
+        "username": "dv-pm",
+        "bucket": "bad_predictor",
+        "realizable_roi": -0.15485,
+        "rank": 15,
+        "pnl": 282942.21325,
+        "is_fav_backer": true
+      },
+      {
+        "wallet": "0x224a89dbe0db0d6124b335edabd15b3f877da3d5",
+        "username": "wr0ngw4yb3tt0r",
+        "bucket": "mm_arber",
+        "realizable_roi": -0.12766,
+        "rank": 4,
+        "pnl": 1222647.37544,
+        "is_fav_backer": true
+      },
+      {
+        "wallet": "0x5c3a1a602848565bb16165fcd460b00c3d43020b",
+        "username": "Crystiano",
+        "bucket": "mm_arber",
+        "realizable_roi": -0.11822,
+        "rank": 88,
+        "pnl": 107277.87932,
+        "is_fav_backer": true
+      },
+      {
+        "wallet": "0x10a6fadcbacd66330862206f6199b197e3ad4d8b",
+        "username": "rabbitfoot1",
+        "bucket": "bad_predictor",
+        "realizable_roi": -0.10576,
+        "rank": 59,
+        "pnl": 144837.30792,
+        "is_fav_backer": true
+      },
+      {
+        "wallet": "0xd6966eb1ae7b52320ba7ab1016680198c9e08a49",
+        "username": "EIf",
+        "bucket": "bad_predictor",
+        "realizable_roi": -0.09874,
+        "rank": 185,
+        "pnl": 62234.63502,
+        "is_fav_backer": true
+      },
+      {
+        "wallet": "0x84cfffc3f16dcc353094de30d4a45226eccd2f63",
+        "username": "mooseborzoi",
+        "bucket": "mm_arber",
+        "realizable_roi": -0.09722,
+        "rank": 15,
+        "pnl": 704090.62815,
+        "is_fav_backer": true
+      },
+      {
+        "wallet": "0x3da89a55cdd4b5c69f80e5cd3ef1782a3e0480c3",
+        "username": "0x3DA89a55CdD4b5c69F80E5Cd3ef1782a3E0480c3-1777119032461",
+        "bucket": "bad_predictor",
+        "realizable_roi": -0.096,
+        "rank": 190,
+        "pnl": 47046.12334,
+        "is_fav_backer": true
+      },
+      {
+        "wallet": "0x162ca4c5249987872fea1e15c846d7fe80316c47",
+        "username": "VD721lsj4938Dk388",
+        "bucket": "bad_predictor",
+        "realizable_roi": -0.08853,
+        "rank": 168,
+        "pnl": 67797.67847,
+        "is_fav_backer": true
+      },
+      {
+        "wallet": "0x032eb1bc893940263ad0b01889f262fc232f2a9e",
+        "username": "purplegatto",
+        "bucket": "mm_arber",
+        "realizable_roi": -0.08121,
+        "rank": 138,
+        "pnl": 74038.13087,
+        "is_fav_backer": true
+      },
+      {
+        "wallet": "0x076daa87c4fe1a85402a9b6b8e0a866224388d4c",
+        "username": null,
+        "bucket": "mm_arber",
+        "realizable_roi": -0.06944,
+        "rank": 159,
+        "pnl": 58907.42486,
+        "is_fav_backer": true
+      },
+      {
+        "wallet": "0xdd5ef115f801999575b03d78d0115ad8b2d59040",
+        "username": "Forecastication2",
+        "bucket": "mm_arber",
+        "realizable_roi": -0.06749,
+        "rank": 74,
+        "pnl": 51851.83609,
+        "is_fav_backer": true
+      },
+      {
+        "wallet": "0xe9076a87c5ed90ef16e6fe6529c943baeca0cff6",
+        "username": "suntori",
+        "bucket": "mm_arber",
+        "realizable_roi": -0.06666,
+        "rank": 32,
+        "pnl": 149832.59337,
+        "is_fav_backer": true
+      },
+      {
+        "wallet": "0xecaa8806a9a05049d7d5260a33dc924220e377a9",
+        "username": "Melody626",
+        "bucket": "skill_within_luck",
+        "realizable_roi": -0.06297,
+        "rank": 159,
+        "pnl": 26172.54994,
+        "is_fav_backer": true
+      },
+      {
+        "wallet": "0x32b484581fc5606de9c1e43af4636b6be9bc8b21",
+        "username": "0x32b484581fc5606dE9C1e43AF4636b6Be9BC8B21-1774274303653",
+        "bucket": "mm_arber",
+        "realizable_roi": -0.05257,
+        "rank": 69,
+        "pnl": 33577.54408,
+        "is_fav_backer": true
+      },
+      {
+        "wallet": "0x0346afae2603313d2bbee96b628536c8cbe352a5",
+        "username": "GoalLineGhost",
+        "bucket": "mm_arber",
+        "realizable_roi": -0.05041,
+        "rank": 187,
+        "pnl": 50681.56053,
+        "is_fav_backer": true
+      },
+      {
+        "wallet": "0xfe787d2da716d60e8acff57fb87eb13cd4d10319",
+        "username": "ferrariChampions2026",
+        "bucket": "mm_arber",
+        "realizable_roi": -0.04901,
+        "rank": 44,
+        "pnl": 3475.45488,
+        "is_fav_backer": true
+      },
+      {
+        "wallet": "0xb4d250f58c26840e09723a83ce9c8149aa32ce99",
+        "username": "alpheclabs",
+        "bucket": "mm_arber",
+        "realizable_roi": -0.04144,
+        "rank": 187,
+        "pnl": 56251.96972,
+        "is_fav_backer": true
+      },
+      {
+        "wallet": "0x5268527977f700f9bf9b6d5cd843859e4e70135d",
+        "username": "HomeRunHazard",
+        "bucket": "mm_arber",
+        "realizable_roi": -0.04028,
+        "rank": 181,
+        "pnl": 57915.72315,
+        "is_fav_backer": true
+      },
+      {
+        "wallet": "0x2117ae94a97d69b78cbc81b6680a62deb1955c26",
+        "username": "Zzzz87",
+        "bucket": "mm_arber",
+        "realizable_roi": -0.03129,
+        "rank": 46,
+        "pnl": 105793.67963,
+        "is_fav_backer": true
+      },
+      {
+        "wallet": "0x204f72f35326db932158cba6adff0b9a1da95e14",
+        "username": "swisstony",
+        "bucket": "mm_arber",
+        "realizable_roi": -0.03104,
+        "rank": 2,
+        "pnl": 3778443.26758,
+        "is_fav_backer": true
+      },
+      {
+        "wallet": "0xdb83e85ffd22faa4009273034770f96ffc5b1e50",
+        "username": "sentrio",
+        "bucket": "mm_arber",
+        "realizable_roi": -0.02521,
+        "rank": 137,
+        "pnl": 79187.39261,
+        "is_fav_backer": true
+      },
+      {
+        "wallet": "0x1b47e9b128e6b671edebfb2cac23dd3efc40d814",
+        "username": "sbsigner",
+        "bucket": "mm_arber",
+        "realizable_roi": -0.02454,
+        "rank": 21,
+        "pnl": 372999.00844,
+        "is_fav_backer": true
+      },
+      {
+        "wallet": "0xa804390f80019699ab34a282c0df7528fba82a75",
+        "username": "riverskew",
+        "bucket": "skill_within_luck",
+        "realizable_roi": -0.0217,
+        "rank": 91,
+        "pnl": 121835.89908,
+        "is_fav_backer": true
+      },
+      {
+        "wallet": "0xf1528f12e645462c344799b62b1b421a6a4c64aa",
+        "username": "phonesculptor",
+        "bucket": "mm_arber",
+        "realizable_roi": -0.01581,
+        "rank": 34,
+        "pnl": 255450.6114,
+        "is_fav_backer": true
+      },
+      {
+        "wallet": "0xa38a455bbdd4b68486548b7e19da99903f4f821d",
+        "username": "takeormake",
+        "bucket": "mm_arber",
+        "realizable_roi": -0.01018,
+        "rank": 148,
+        "pnl": 63779.36472,
+        "is_fav_backer": true
+      },
+      {
+        "wallet": "0x03805a13a0b3e058f55f6c6af95389d4f431073d",
+        "username": "donthackme",
+        "bucket": "mm_arber",
+        "realizable_roi": -0.00855,
+        "rank": 110,
+        "pnl": 67213.67906,
+        "is_fav_backer": true
+      },
+      {
+        "wallet": "0x9e86ad1cb29ab0ff1e00c89bf68b8db98d926dfb",
+        "username": "911lover",
+        "bucket": "mm_arber",
+        "realizable_roi": -0.00487,
+        "rank": 164,
+        "pnl": 69253.37544,
+        "is_fav_backer": true
+      },
+      {
+        "wallet": "0x3dd16e79f92aad000eda4b96bcd264c6263d9a1f",
+        "username": "sdgdhf",
+        "bucket": "skill_within_luck",
+        "realizable_roi": -0.00479,
+        "rank": 197,
+        "pnl": 51849.12457,
+        "is_fav_backer": true
+      },
+      {
+        "wallet": "0xd81e5bc01e4a98d0af93d82dc2c542a4c0f9e3d0",
+        "username": "beet420",
+        "bucket": "skill_within_luck",
+        "realizable_roi": 0.0152,
+        "rank": 60,
+        "pnl": 175997.54379,
+        "is_fav_backer": true
+      }
+    ]
+  },
+  "standard_guard": {
+    "ran": true,
+    "tail": [
+      "REGRESSION STATUS: HEALTHY \u2014 belief-blind LB +4.45% > +0.00%, p_emp 0.0000, 167 ev",
+      "",
+      "NOTE: adopts NOTHING. A challenger is only ADOPTED by a human, behind the standing 4 GO gates,",
+      "after it beats the champion OOS on the honest metric AND clears the belief-blind gate.",
+      "",
+      "wrote /Users/tuepham/polymarket-bot/wt/beat-best-trader/reports/standard_guard.json"
+    ],
+    "guard": {
+      "status": "HEALTHY",
+      "reason": "belief-blind LB +4.45% > +0.00%, p_emp 0.0000, 167 ev",
+      "belief_blind_lb": 0.044504,
+      "floor": 0.0
+    }
+  }
+}

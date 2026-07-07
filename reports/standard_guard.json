@@ -17,42 +17,42 @@
     "key_arm": "favorite",
     "key_arm_metrics": {
       "strategy": "favorite",
-      "events": 163,
-      "observed": 0.0774,
+      "events": 167,
+      "observed": 0.0755,
       "null_sigma": 0.0189,
-      "z": 4.14,
+      "z": 4.02,
       "p_emp": 0.0,
       "verdict": "SELECTION-REAL",
-      "belief_blind_lb": 0.046404,
+      "belief_blind_lb": 0.044504,
       "non_soccer_regimes_positive": 3,
-      "realizable_roi": 0.056383366938343026,
-      "realizable_events": 139
+      "realizable_roi": 0.05313389883981705,
+      "realizable_events": 142
     },
     "second_arm_metrics": {
       "strategy": "elite_fresh_fav",
-      "events": 70,
-      "observed": 0.0321,
-      "null_sigma": 0.0218,
-      "z": 1.5,
-      "p_emp": 0.0585,
+      "events": 72,
+      "observed": 0.028300000000000002,
+      "null_sigma": 0.0212,
+      "z": 1.34,
+      "p_emp": 0.082,
       "verdict": "indeterminate",
-      "belief_blind_lb": -0.0036520000000000025,
+      "belief_blind_lb": -0.006467999999999998,
       "non_soccer_regimes_positive": 2,
-      "realizable_roi": 0.03641910359444191,
-      "realizable_events": 70
+      "realizable_roi": 0.030031236780342682,
+      "realizable_events": 72
     },
-    "realizable_roi_family": 0.04896641767409583,
-    "realizable_events_family": 139,
+    "realizable_roi_family": 0.04648228959893516,
+    "realizable_events_family": 142,
     "resolved_ledger": {
-      "bets": 241,
-      "pnl_usd": 584.84,
-      "roi_on_turnover": 0.024267183518797194
+      "bets": 262,
+      "pnl_usd": 304.4,
+      "roi_on_turnover": 0.01161833505731888
     }
   },
   "regression": {
     "status": "HEALTHY",
-    "reason": "belief-blind LB +4.64% > +0.00%, p_emp 0.0000, 163 ev",
-    "belief_blind_lb": 0.046404,
+    "reason": "belief-blind LB +4.45% > +0.00%, p_emp 0.0000, 167 ev",
+    "belief_blind_lb": 0.044504,
     "floor": 0.0
   },
   "challenger": null
