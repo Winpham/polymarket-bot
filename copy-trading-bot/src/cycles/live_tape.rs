@@ -18,15 +18,15 @@
 //! is byte-identical to pre-040.
 
 use std::collections::HashMap;
-use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::Duration;
 
 use anyhow::{Context, Result};
 use chrono::{DateTime, TimeZone, Utc};
 use futures_util::{SinkExt, StreamExt};
 use serde_json::Value;
-use tokio::sync::{mpsc, RwLock};
+use tokio::sync::{RwLock, mpsc};
 use tokio_tungstenite::tungstenite::Message;
 
 use crate::config::CopyTradingConfig;
@@ -82,16 +82,16 @@ fn parse_frame(text: &str, meta: &HashMap<String, (String, i16)>) -> Vec<NewTape
                     None => continue,
                 };
                 // bids/asks: [{price,size}]. best_bid = max bid, best_ask = min ask.
-                let best_bid = it["bids"]
-                    .as_array()
-                    .and_then(|a| a.iter().filter_map(|b| parse_f64(&b["price"])).fold(None, |m, p| {
-                        Some(m.map_or(p, |mx: f64| mx.max(p)))
-                    }));
-                let best_ask = it["asks"]
-                    .as_array()
-                    .and_then(|a| a.iter().filter_map(|b| parse_f64(&b["price"])).fold(None, |m, p| {
-                        Some(m.map_or(p, |mn: f64| mn.min(p)))
-                    }));
+                let best_bid = it["bids"].as_array().and_then(|a| {
+                    a.iter()
+                        .filter_map(|b| parse_f64(&b["price"]))
+                        .fold(None, |m, p| Some(m.map_or(p, |mx: f64| mx.max(p))))
+                });
+                let best_ask = it["asks"].as_array().and_then(|a| {
+                    a.iter()
+                        .filter_map(|b| parse_f64(&b["price"]))
+                        .fold(None, |m, p| Some(m.map_or(p, |mn: f64| mn.min(p))))
+                });
                 let (condition_id, outcome_index) = meta
                     .get(&asset_id)
                     .map(|(c, o)| (Some(c.clone()), Some(*o)))
@@ -369,7 +369,9 @@ async fn refresh_universe(
     universe: &Arc<RwLock<Universe>>,
     version: &Arc<AtomicU64>,
 ) -> Result<usize> {
-    let pairs = portfolio.tracked_tape_assets(cfg.live_tape_lookback_hours).await?;
+    let pairs = portfolio
+        .tracked_tape_assets(cfg.live_tape_lookback_hours)
+        .await?;
     let mut tokens = Vec::new();
     let mut meta = HashMap::new();
     // resolve condition_id (unique) once; map each wanted outcome to its token
@@ -389,7 +391,10 @@ async fn refresh_universe(
             && let Some(tid) = m.outcome_token_id(*oidx)
         {
             let tid = tid.to_string();
-            if meta.insert(tid.clone(), (cond.clone(), *oidx as i16)).is_none() {
+            if meta
+                .insert(tid.clone(), (cond.clone(), *oidx as i16))
+                .is_none()
+            {
                 tokens.push(tid);
             }
         }
@@ -543,7 +548,10 @@ mod tests {
 
     #[test]
     fn ignores_unknown_events() {
-        let ticks = parse_frame(r#"{"event_type":"last_trade_price","asset_id":"x","price":"0.5"}"#, &HashMap::new());
+        let ticks = parse_frame(
+            r#"{"event_type":"last_trade_price","asset_id":"x","price":"0.5"}"#,
+            &HashMap::new(),
+        );
         assert!(ticks.is_empty());
     }
 }

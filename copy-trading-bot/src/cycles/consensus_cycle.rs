@@ -990,7 +990,9 @@ pub(crate) fn active_portfolio(
     // when PROVEN_ROUTER is on AND a follow-set batch has been published by the
     // re-scorer (None until then ⇒ not registered ⇒ fail-closed; Some(∅) is
     // registered but counts no votes — also fail-closed).
-    if cfg.proven_router && let Some(set) = router_set {
+    if cfg.proven_router
+        && let Some(set) = router_set
+    {
         all.push(crate::scanner::consensus::proven_router_arm(&base, set));
     }
     // Earned-trust arms are registered ONLY when CONSENSUS_TRUST_ARMS is on;
@@ -1054,7 +1056,9 @@ fn alert_sets(
 
 /// Serialize the raw vote atoms for every observed `(condition_id, outcome_index)`.
 /// Strategy-agnostic, computed once per cycle, reused across all strategies.
-pub(crate) fn atom_log(books: &[MarketBook]) -> std::collections::HashMap<(String, i32), serde_json::Value> {
+pub(crate) fn atom_log(
+    books: &[MarketBook],
+) -> std::collections::HashMap<(String, i32), serde_json::Value> {
     let mut map = std::collections::HashMap::new();
     for book in books {
         for (&oidx, votes) in &book.votes {

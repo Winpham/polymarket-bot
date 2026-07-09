@@ -71,7 +71,10 @@ pub async fn hot_lane_tick(
 
     // Attach real rank/pnl to the follow-set wallets' votes (a routed wallet may
     // have dropped off the leaderboard, so we look up regardless of active status).
-    let meta = portfolio.traders_by_wallets(&wallets).await.unwrap_or_default();
+    let meta = portfolio
+        .traders_by_wallets(&wallets)
+        .await
+        .unwrap_or_default();
     let by_wallet: HashMap<String, FollowedTrader> = meta
         .into_iter()
         .map(|t| (t.proxy_wallet.to_lowercase(), t))

@@ -411,9 +411,8 @@ pub async fn run_live(cfg: Arc<CopyTradingConfig>) -> Result<()> {
     // then (fail-closed); an honest empty re-score publishes Some(∅), which
     // registers the arm but counts no votes. Off ⇒ the task exits and the slot
     // stays None ⇒ the live portfolio is byte-identical.
-    let router_set: Arc<
-        tokio::sync::RwLock<Option<Arc<std::collections::HashSet<String>>>>,
-    > = Arc::new(tokio::sync::RwLock::new(None));
+    let router_set: Arc<tokio::sync::RwLock<Option<Arc<std::collections::HashSet<String>>>>> =
+        Arc::new(tokio::sync::RwLock::new(None));
     {
         let rs = Arc::clone(&router_set);
         let rp = Arc::clone(&portfolio);
@@ -427,9 +426,8 @@ pub async fn run_live(cfg: Arc<CopyTradingConfig>) -> Result<()> {
                 match rp.refresh_router_followset().await {
                     Ok(ws) => {
                         let n = ws.len();
-                        *rs.write().await = Some(Arc::new(
-                            ws.into_iter().map(|w| w.to_lowercase()).collect(),
-                        ));
+                        *rs.write().await =
+                            Some(Arc::new(ws.into_iter().map(|w| w.to_lowercase()).collect()));
                         tracing::info!(wallets = n, "Router follow-set re-scored");
                     }
                     // Keep the previously-published set on a transient DB error —
@@ -479,10 +477,8 @@ pub async fn run_live(cfg: Arc<CopyTradingConfig>) -> Result<()> {
         let hl_router = Arc::clone(&router_set);
         tokio::spawn(async move {
             let interval = hl_cfg.hot_poll_secs.max(5);
-            let mut cursors: std::collections::HashMap<
-                String,
-                chrono::DateTime<chrono::Utc>,
-            > = std::collections::HashMap::new();
+            let mut cursors: std::collections::HashMap<String, chrono::DateTime<chrono::Utc>> =
+                std::collections::HashMap::new();
             tracing::info!(
                 interval_secs = interval,
                 "Hot lane ON — fast-polling the router follow-set"
@@ -498,9 +494,9 @@ pub async fn run_live(cfg: Arc<CopyTradingConfig>) -> Result<()> {
                         &mut cursors,
                     )
                     .await
-                    {
-                        tracing::warn!(err = %e, "hot-lane tick failed");
-                    }
+                {
+                    tracing::warn!(err = %e, "hot-lane tick failed");
+                }
                 tokio::time::sleep(Duration::from_secs(interval)).await;
             }
         });

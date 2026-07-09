@@ -1458,10 +1458,7 @@ impl PgPortfolio {
     /// that a *followed* trader has filled a sports pick on within `lookback_hours`.
     /// The `live_tape` refresh loop resolves each to a CLOB token_id and subscribes.
     /// Sized for the full follow-set (1000+ wallets → ~1.6k tokens at 6h).
-    pub async fn tracked_tape_assets(
-        &self,
-        lookback_hours: i64,
-    ) -> Result<Vec<(String, i32)>> {
+    pub async fn tracked_tape_assets(&self, lookback_hours: i64) -> Result<Vec<(String, i32)>> {
         let rows: Vec<(String, i32)> = sqlx::query_as(
             "SELECT DISTINCT condition_id, outcome_index \
                FROM trader_fills \
@@ -1896,9 +1893,7 @@ impl PgPortfolio {
     /// (`consensus_polled_at`, else `last_seen_on_lb`, else 2 days back) — used only
     /// to advance the poll cursor and for logging (the data-api returns the newest
     /// page regardless of `startTs`; dedup is the DB's job).
-    pub async fn scorecard_eligible_dropped_wallets(
-        &self,
-    ) -> Result<Vec<(String, DateTime<Utc>)>> {
+    pub async fn scorecard_eligible_dropped_wallets(&self) -> Result<Vec<(String, DateTime<Utc>)>> {
         let rows: Vec<(String, DateTime<Utc>)> = sqlx::query_as(
             "WITH band_fills AS ( \
                  SELECT wallet FROM trader_fills \
@@ -3149,8 +3144,7 @@ mod trader_fills_it {
         }
 
         let got = pf.scorecard_eligible_dropped_wallets().await.unwrap();
-        let names: std::collections::HashSet<String> =
-            got.iter().map(|(w, _)| w.clone()).collect();
+        let names: std::collections::HashSet<String> = got.iter().map(|(w, _)| w.clone()).collect();
         assert!(
             names.contains(dropped),
             "deactivated + scorecard-eligible wallet is selected"
@@ -3166,24 +3160,26 @@ mod trader_fills_it {
 
         // The archive path itself: a NEW fill for the dropped wallet lands (dedup
         // never drops a genuinely new tx). This is the acceptance condition.
-        let before: i64 =
-            sqlx::query_scalar("SELECT COUNT(*) FROM trader_fills WHERE wallet = $1")
-                .bind(dropped)
-                .fetch_one(&pf.pool)
-                .await
-                .unwrap();
+        let before: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM trader_fills WHERE wallet = $1")
+            .bind(dropped)
+            .fetch_one(&pf.pool)
+            .await
+            .unwrap();
         let n = pf
             .insert_trader_fills(&[bandfill(dropped, 9_999)])
             .await
             .unwrap();
         assert_eq!(n, 1, "a new deactivated-wallet fill is inserted");
-        let after: i64 =
-            sqlx::query_scalar("SELECT COUNT(*) FROM trader_fills WHERE wallet = $1")
-                .bind(dropped)
-                .fetch_one(&pf.pool)
-                .await
-                .unwrap();
-        assert_eq!(after, before + 1, "deactivated-wallet fills land in the archive");
+        let after: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM trader_fills WHERE wallet = $1")
+            .bind(dropped)
+            .fetch_one(&pf.pool)
+            .await
+            .unwrap();
+        assert_eq!(
+            after,
+            before + 1,
+            "deactivated-wallet fills land in the archive"
+        );
 
         for w in [dropped, active, thin] {
             sqlx::query("DELETE FROM trader_fills WHERE wallet = $1")

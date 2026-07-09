@@ -29,7 +29,7 @@ use std::time::Duration;
 
 use anyhow::Result;
 use chrono::{DateTime, TimeZone, Utc};
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 
 use crate::config::CopyTradingConfig;
 use crate::cycles::consensus_cycle::trade_to_fill;
@@ -93,7 +93,10 @@ fn hex_to_dec_str(hex: &str) -> String {
 
 /// Parse a 32-byte hex word as u128 (amounts fit; token_ids do not — use hex_to_dec_str).
 fn hex_to_u128(hex: &str) -> Option<u128> {
-    let h = hex.strip_prefix("0x").unwrap_or(hex).trim_start_matches('0');
+    let h = hex
+        .strip_prefix("0x")
+        .unwrap_or(hex)
+        .trim_start_matches('0');
     if h.is_empty() {
         return Some(0);
     }
@@ -134,9 +137,19 @@ fn decode_order_filled(log: &Value) -> Option<OrderFilled> {
 /// is BUYing shares. Returns None on a degenerate (zero) amount.
 fn reconstruct(of: &OrderFilled, tracked: &str) -> Option<(f64, f64, String, String)> {
     let (usdc_amt, shares_amt, share_asset, usdc_payer) = if of.maker_asset == "0" {
-        (of.maker_amt, of.taker_amt, of.taker_asset.clone(), of.maker.as_str())
+        (
+            of.maker_amt,
+            of.taker_amt,
+            of.taker_asset.clone(),
+            of.maker.as_str(),
+        )
     } else if of.taker_asset == "0" {
-        (of.taker_amt, of.maker_amt, of.maker_asset.clone(), of.taker.as_str())
+        (
+            of.taker_amt,
+            of.maker_amt,
+            of.maker_asset.clone(),
+            of.taker.as_str(),
+        )
     } else {
         return None; // token-for-token (merge/split) — not a USDC-priced fill
     };
@@ -149,20 +162,9 @@ fn reconstruct(of: &OrderFilled, tracked: &str) -> Option<(f64, f64, String, Str
     Some((price, size_usd, share_asset, side.to_string()))
 }
 
-async fn rpc(
-    client: &reqwest::Client,
-    url: &str,
-    method: &str,
-    params: Value,
-) -> Result<Value> {
+async fn rpc(client: &reqwest::Client, url: &str, method: &str, params: Value) -> Result<Value> {
     let body = json!({"jsonrpc":"2.0","id":1,"method":method,"params":params});
-    let resp: Value = client
-        .post(url)
-        .json(&body)
-        .send()
-        .await?
-        .json()
-        .await?;
+    let resp: Value = client.post(url).json(&body).send().await?.json().await?;
     if let Some(err) = resp.get("error") {
         anyhow::bail!("rpc {method} error: {err}");
     }
@@ -282,7 +284,10 @@ async fn process_logs(
     if dedup_precheck {
         // All four arrays MUST use the SAME iteration so a None tx_hash cannot shift
         // `tx` relative to the others (review D5). None → "" (never matches a poll row).
-        let tx: Vec<String> = fills.iter().map(|f| f.tx_hash.clone().unwrap_or_default()).collect();
+        let tx: Vec<String> = fills
+            .iter()
+            .map(|f| f.tx_hash.clone().unwrap_or_default())
+            .collect();
         let cond: Vec<String> = fills.iter().map(|f| f.condition_id.clone()).collect();
         let oidx: Vec<i32> = fills.iter().map(|f| f.outcome_index).collect();
         let side: Vec<String> = fills.iter().map(|f| f.side.clone()).collect();
@@ -351,7 +356,9 @@ pub async fn run_live_fills(
 
     // start from the current head
     let mut last_block: u64 = match rpc(&http, &url, "eth_blockNumber", json!([])).await {
-        Ok(v) => v.as_str().and_then(|s| u64::from_str_radix(s.trim_start_matches("0x"), 16).ok())
+        Ok(v) => v
+            .as_str()
+            .and_then(|s| u64::from_str_radix(s.trim_start_matches("0x"), 16).ok())
             .unwrap_or(0),
         Err(e) => {
             tracing::warn!(err = %e, "live-fills: initial blockNumber failed");
@@ -363,7 +370,9 @@ pub async fn run_live_fills(
         tokio::time::sleep(Duration::from_secs(POLL_SECS)).await;
         tick += 1;
         let head = match rpc(&http, &url, "eth_blockNumber", json!([])).await {
-            Ok(v) => v.as_str().and_then(|s| u64::from_str_radix(s.trim_start_matches("0x"), 16).ok()),
+            Ok(v) => v
+                .as_str()
+                .and_then(|s| u64::from_str_radix(s.trim_start_matches("0x"), 16).ok()),
             Err(e) => {
                 tracing::warn!(err = %e, "live-fills: blockNumber failed");
                 continue;
@@ -410,8 +419,16 @@ pub async fn run_live_fills(
                 block_ts.insert(b, dt);
             }
         }
-        match process_logs(&logs, &tracked, &resolver, &block_ts, &portfolio,
-                           cfg.live_dedup_precheck).await {
+        match process_logs(
+            &logs,
+            &tracked,
+            &resolver,
+            &block_ts,
+            &portfolio,
+            cfg.live_dedup_precheck,
+        )
+        .await
+        {
             Ok(n) if n > 0 => tracing::debug!(fills = n, from, to, "live-fills wrote rows"),
             Ok(_) => {}
             Err(e) => {
@@ -444,19 +461,40 @@ mod tests {
 
     #[test]
     fn hex_to_dec_matches_known_token_id() {
-        assert_eq!(hex_to_dec_str("0000000000000000000000000000000000000000000000000000000000000002"), "2");
-        assert_eq!(hex_to_dec_str("00000000000000000000000000000000000000000000000000000000000000ff"), "255");
-        assert_eq!(hex_to_dec_str("0000000000000000000000000000000000000000000000000000000000000100"), "256");
+        assert_eq!(
+            hex_to_dec_str("0000000000000000000000000000000000000000000000000000000000000002"),
+            "2"
+        );
+        assert_eq!(
+            hex_to_dec_str("00000000000000000000000000000000000000000000000000000000000000ff"),
+            "255"
+        );
+        assert_eq!(
+            hex_to_dec_str("0000000000000000000000000000000000000000000000000000000000000100"),
+            "256"
+        );
         // multi-byte: 0x1a2b3c = 1715004
-        assert_eq!(hex_to_dec_str("00000000000000000000000000000000000000000000000000000000001a2b3c"), "1715004");
+        assert_eq!(
+            hex_to_dec_str("00000000000000000000000000000000000000000000000000000000001a2b3c"),
+            "1715004"
+        );
     }
 
     #[test]
     fn hex_to_u128_amounts() {
         // 0x23e2ff50 = 602_079_056 (USDC 6dp-scale amount)
-        assert_eq!(hex_to_u128("0000000000000000000000000000000000000000000000000000000023e2ff50"), Some(602_079_056));
-        assert_eq!(hex_to_u128("0000000000000000000000000000000000000000000000000000000000000000"), Some(0));
-        assert_eq!(hex_to_u128("000000000000000000000000000000000000000000000000000000000000000a"), Some(10));
+        assert_eq!(
+            hex_to_u128("0000000000000000000000000000000000000000000000000000000023e2ff50"),
+            Some(602_079_056)
+        );
+        assert_eq!(
+            hex_to_u128("0000000000000000000000000000000000000000000000000000000000000000"),
+            Some(0)
+        );
+        assert_eq!(
+            hex_to_u128("000000000000000000000000000000000000000000000000000000000000000a"),
+            Some(10)
+        );
     }
 
     #[test]

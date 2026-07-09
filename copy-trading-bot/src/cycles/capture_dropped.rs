@@ -84,10 +84,13 @@ pub async fn capture_dropped_tick(
 
     // Durable archive only — dedup is the DB's job (`insert_trader_fills` ON
     // CONFLICT). NO window votes: a deactivated wallet must not vote in consensus.
-    let inserted = portfolio.insert_trader_fills(&fills).await.unwrap_or_else(|e| {
-        tracing::warn!(err = %e, "capture-dropped insert_trader_fills failed");
-        0
-    });
+    let inserted = portfolio
+        .insert_trader_fills(&fills)
+        .await
+        .unwrap_or_else(|e| {
+            tracing::warn!(err = %e, "capture-dropped insert_trader_fills failed");
+            0
+        });
 
     // Advance the poll cursor for wallets that polled OK, so the next pass fetches
     // only the new tail (self-healing: a failed poll left its cursor untouched).
