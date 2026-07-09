@@ -61,6 +61,11 @@ WINDOW_H = 48                      # consensus rolling window (CONSENSUS_WINDOW_
 REPLAY_DAYS = 10                   # fill-record depth to replay
 TAPE_STALE_S = 600                 # max staleness of the first causal tape ask
 MAX_PRICE_STD = 0.10               # champion coherence gate (fixed across configs)
+# Resolution guard (adversarial audit #2): losers resolve ~2x slower than
+# winners, so under a floating snapshot the most recent detections are
+# winner-enriched among the resolved. Only signals detected at least this many
+# hours before the snapshot are scored at all.
+RESOLUTION_GUARD_H = 72
 REPORT = os.path.join(reg.REPORT_DIR, "supply_frontier_replay.json")
 
 # ---------------------------------------------------------------------------
@@ -170,7 +175,8 @@ def fetch_tape(conds):
       SELECT condition_id AS cond, outcome_index AS oidx,
              extract(epoch FROM recv_at)::float8 AS ts, best_ask
       FROM clob_price_tape
-      WHERE best_ask IS NOT NULL AND condition_id IN ({lst})
+      WHERE best_ask IS NOT NULL AND outcome_index IS NOT NULL
+        AND condition_id IN ({lst})
       ORDER BY condition_id, outcome_index, recv_at
     """)
 
@@ -180,6 +186,27 @@ def fetch_live_favorite():
     return {(r["cond"], int(r["oidx"])) for r in q(
         "SELECT condition_id AS cond, outcome_index AS oidx "
         "FROM consensus_signals WHERE strategy = 'favorite'")}
+
+
+def fetch_champion_actuals():
+    """THE honest baseline (audit #1): the live champion's own record over the
+    same window at its captured decision-time entries — never the replica."""
+    rows = q(f"""
+      SELECT count(*) AS n, avg(outcome_won::int) AS wr,
+             avg(((outcome_won::int - e)/e) - {FEE}) AS roi,
+             count(*) FILTER (WHERE real_ask) AS n_real_ask
+      FROM (SELECT s.outcome_won,
+                   COALESCE(s.entry_ask, s.initial_mean_price + {HAIRCUT}) AS e,
+                   s.entry_ask IS NOT NULL AS real_ask
+            FROM consensus_signals s
+            WHERE s.strategy='favorite' AND s.resolved AND s.outcome_won IS NOT NULL
+              AND s.is_sports AND s.initial_mean_price IS NOT NULL
+              AND s.first_detected_at > now() - interval '{REPLAY_DAYS} days'
+              AND s.first_detected_at < now() - interval '{RESOLUTION_GUARD_H} hours') x
+    """)
+    r = rows[0]
+    return dict(n=int(r["n"]), wr=round(float(r["wr"]), 4),
+                roi=round(float(r["roi"]), 4), n_real_ask=int(r["n_real_ask"]))
 
 
 # ---------------------------------------------------------------------------
@@ -319,11 +346,18 @@ def cluster_lb(rows, key):
     return reg.lb_small_cluster(res["theta"], res.get("se_CR"), res.get("G"))
 
 
-def score(signals, tape_by_leg, live_fav, blind_cells, tape_start=None):
+def score(signals, tape_by_leg, live_fav, blind_cells, tape_start=None, snapshot=None):
     """signals -> the honest per-config block. Every signal is scored at the
     proxy entry; the tape subset additionally at OUR causal ask. Tape coverage
     is reported over TAPE-ERA signals only (det >= tape_start), not the full
-    replay range — conflating the two understates coverage 3x."""
+    replay range — conflating the two understates coverage 3x.
+    Signals detected within RESOLUTION_GUARD_H of the snapshot are excluded
+    entirely (audit #2: recency censoring is winner-enriched)."""
+    guarded = 0
+    if snapshot is not None:
+        cut = snapshot - RESOLUTION_GUARD_H * 3600.0
+        guarded = sum(1 for s in signals if s["det"] > cut)
+        signals = [s for s in signals if s["det"] <= cut]
     resolved = [s for s in signals if s["resolved"] and s["won"] is not None]
     dropped_unresolved = len(signals) - len(resolved)
     rows, tape_rows = [], []
@@ -374,7 +408,10 @@ def score(signals, tape_by_leg, live_fav, blind_cells, tape_start=None):
     echo = [s["spread_1_3"] for s in resolved]
     return dict(
         dropped_unresolved=dropped_unresolved,
+        excluded_by_resolution_guard=guarded,
         proxy=block(rows),
+        # TAPE CAVEAT (audit #3): the tape is ~2 days deep → 2-3 day-clusters,
+        # an active-market subset. Pilot evidence, never decisive alone.
         tape=dict(block(tape_rows),
                   n_tape_era=n_tape_era,
                   coverage=round(len(tape_rows) / n_tape_era, 3) if n_tape_era else 0),
@@ -535,17 +572,34 @@ def run(configs, dump=None):
 
     tape_start_row = q("SELECT extract(epoch FROM min(recv_at))::float8 AS t FROM clob_price_tape")
     tape_start = float(tape_start_row[0]["t"]) if tape_start_row and tape_start_row[0]["t"] else None
+    import time
+    snapshot = time.time()
 
-    out = {}
+    champ_actuals = fetch_champion_actuals()
+    print(f"\nBASELINE — live favorite actuals (same window, guard {RESOLUTION_GUARD_H}h, "
+          f"COALESCE(entry_ask, mean+1c)): n={champ_actuals['n']} wr={champ_actuals['wr']} "
+          f"roi={champ_actuals['roi']} (real-ask on {champ_actuals['n_real_ask']})")
+
+    out = {"_meta": dict(replay_days=REPLAY_DAYS, resolution_guard_h=RESOLUTION_GUARD_H,
+                         snapshot_epoch=round(snapshot, 1), tape_start_epoch=tape_start,
+                         champion_actuals=champ_actuals,
+                         caveats=["proxy entry = mean backer fill +1c (real drift tax measured "
+                                  "+2.4c median on tape pairs — proxy flatters)",
+                                  "tape blocks are a ~2-day active-market pilot subset",
+                                  "surplus_over_blind baseline is an adverse >=1-buyer pool "
+                                  "(loses 8-16% in-band) — context only, never a headline",
+                                  "config grid was searched in-sample (multiplicity): retro "
+                                  "numbers are motivation, the forward gate is the judge"])}
     for name, cfg in configs:
         out[name] = dict(cfg=str(cfg),
-                         **score(detected[name], tape_by_leg, live_fav, blind_cells, tape_start))
+                         **score(detected[name], tape_by_leg, live_fav, blind_cells,
+                                 tape_start, snapshot))
         p, t = out[name]["proxy"], out[name]["tape"]
         print(f"\n== {name} :: {cfg}")
         print(f"  proxy: n={p.get('n')} ev={p.get('events')} d={p.get('days')} "
               f"wr={p.get('win_rate')} roi={p.get('roi')} lb_ev={p.get('roi_lb_event')} "
-              f"lb_day={p.get('roi_lb_day')} surplus={p.get('surplus_over_blind')}")
-        print(f"  TAPE : n={t.get('n')} cov={t.get('coverage')} wr={t.get('win_rate')} "
+              f"lb_day={p.get('roi_lb_day')} guard_excl={out[name]['excluded_by_resolution_guard']}")
+        print(f"  TAPE(pilot): n={t.get('n')} cov={t.get('coverage')} wr={t.get('win_rate')} "
               f"roi={t.get('roi')} lb_ev={t.get('roi_lb_event')} lb_day={t.get('roi_lb_day')}")
         print(f"  sports(proxy): {p.get('per_sport')}")
         print(f"  incremental(non-champion): n={p.get('incremental_n')} roi={p.get('incremental_roi')} "

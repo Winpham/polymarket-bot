@@ -1007,8 +1007,8 @@ pub fn retuned_arm(base: &ConsensusParams, t: (usize, i64, i64)) -> StrategyDef 
 /// carries no skill information (D30, refuted 5 ways), so the top-40 cutoff throttles
 /// SUPPLY without protecting EDGE; the retrospective wide-only cohort (209 resolved /
 /// 131 events / 9 days) matched the champion's edge profile at ~6-10x the fire rate.
-/// `anchor` (the live voting-rank cutoff) gates the `_anchored` variant: ≥1 top-cohort
-/// backer must co-sign, separating "deep confirms" from "deep alone".
+/// `anchor` (the live voting-rank cutoff) gates `frontier_k2a`: ≥1 top-cohort backer
+/// must co-sign, separating "deep confirms" from "deep alone".
 /// `_blind_wide` is the capture-all baseline on the SAME wide book so the
 /// selection-null / surplus-over-blind machinery has a pool-matched population
 /// (judging wide arms against the eligible `_blind` would mismatch market coverage).
@@ -1025,24 +1025,35 @@ pub fn wide_arms(base: &ConsensusParams, anchor: i32) -> Vec<StrategyDef> {
             },
             alerting: false,
         },
+        // PRIMARY supply-frontier arm (FABLE run 2 "v2", prereg
+        // PREREG_20260709_supply_frontier): favorite_wide + the 60s
+        // echo-independence guard. Under the resolution-guarded replay (the
+        // honest basis after two adversarial audits) this was the ONLY config
+        // with positive persistence LBs at both clusterings: n=121/8d,
+        // +5.3% proxy ROI, LB_event +1.1%, LB_day +1.2%, incremental-over-
+        // champion 79 legs @ +6.2% (in-sample, proxy-priced, pre-multiplicity
+        // — motivation only; the forward record at captured entry_ask judges).
         StrategyDef {
-            name: "favorite_wide_anchored",
+            name: "frontier_k3e",
             params: ConsensusParams {
                 price_band: favorite_band,
-                max_best_backer_rank: Some(anchor),
+                echo_collapse_secs: Some(60),
                 ..base.clone()
             },
             alerting: false,
         },
-        // SUPPLY-FRONTIER arm (FABLE run 2, replay-selected v3, prereg
-        // PREREG_20260709_supply_frontier): the plateau point of the measured
-        // supply×quality frontier. min_backers=2 counted ECHO-INDEPENDENTLY
-        // (60s collapse — one sharp mirrored into N instant echoes counts once)
-        // + ≥1 top-cohort anchor co-sign. Replay (10d, 2.1M fills): n=476
-        // (~52/day post-cliff, RISING through the tournament cliff) at +7.7%
-        // ROI at the causal tape best_ask (incremental-only +8.7%); the grid
-        // around it (k3, opposers=0, anchor 10/100, band 0.60, unanchored k2)
-        // is flat-or-worse on the tape basis. Judgment: standing gate, forward.
+        // EXPLORER supply-ladder arm (same prereg): 2 echo-independent backers
+        // + ≥1 top-cohort anchor co-sign. ~2.3x the supply of k3, but its
+        // incremental edge under the guarded replay is ~0 (+0.7%, negative
+        // LBs) — the earlier "+7.7% at tape ask" read was recency-censored
+        // (winner-enriched) and is RETRACTED. Ships as a shadow explorer
+        // because forward accrual at real asks is the only way to settle it;
+        // its prereg carries the delayed-mirror kill criterion.
+        // NOTE: supersedes `favorite_wide_anchored` (2026-07-08 prereg) —
+        // that arm never emitted a forward signal (flag was never flipped),
+        // and its diagnostic purpose (deep-confirms vs deep-alone) is carried
+        // by this arm's anchor mechanism. Supersession documented in both
+        // preregs' run docs — not silent.
         StrategyDef {
             name: "frontier_k2a",
             params: ConsensusParams {
@@ -1913,7 +1924,7 @@ mod tests {
             names,
             vec![
                 "favorite_wide",
-                "favorite_wide_anchored",
+                "frontier_k3e",
                 "frontier_k2a",
                 "_blind_wide"
             ]
@@ -1931,10 +1942,13 @@ mod tests {
         assert_eq!(fav.max_price_std, base.max_price_std);
         assert_eq!(fav.max_age_mins, base.max_age_mins);
         assert_eq!(fav.max_best_backer_rank, None);
-        // anchored adds only the anchor.
-        assert_eq!(arms[1].params.max_best_backer_rank, Some(40));
-        assert_eq!(arms[1].params.price_band, Some((0.65, 0.98)));
-        // frontier_k2a: replay-selected v3 — k2, anchored, echo-independent.
+        // frontier_k3e (primary): favorite_wide + echo guard, nothing else.
+        let k3e = &arms[1].params;
+        assert_eq!(k3e.min_backers, base.min_backers);
+        assert_eq!(k3e.echo_collapse_secs, Some(60));
+        assert_eq!(k3e.max_best_backer_rank, None);
+        assert_eq!(k3e.price_band, Some((0.65, 0.98)));
+        // frontier_k2a (explorer): k2, anchored, echo-independent.
         let frontier = &arms[2].params;
         assert_eq!(frontier.min_backers, 2);
         assert_eq!(frontier.max_opposers, base.max_opposers);
