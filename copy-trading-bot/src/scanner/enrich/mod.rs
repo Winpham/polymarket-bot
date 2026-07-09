@@ -350,6 +350,8 @@ pub fn family(strategy: &str) -> &'static str {
         "sharp_tail_fresh",
         "sharp_tail",
         "slice_sport_tail",
+        "favorite_wide",
+        "favorite_wide_anchored",
     ];
     if EXPERIMENTAL.contains(&strategy) {
         "experimental"

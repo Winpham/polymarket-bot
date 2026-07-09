@@ -312,6 +312,26 @@ pub struct CopyTradingConfig {
     #[config(env = "CONSENSUS_TRUST_ARMS", default = false)]
     pub consensus_trust_arms: bool,
 
+    /// Wide-consensus arms (FABLE wide-pool run, paper-only). When on, each Nth
+    /// consensus cycle (`CONSENSUS_WIDE_EVERY`) additionally loads the WIDE vote
+    /// window (eligible ∪ tracked deep non-bot wallets — the sensor-array widening;
+    /// `load_wide_window_votes`), rebuilds books from it, and scores the silent
+    /// EXPERIMENTAL `favorite_wide` / `favorite_wide_anchored` / `_blind_wide` arms
+    /// on those books only. The eligible-book portfolio, its books, and its atoms
+    /// are untouched — champion path byte-identical. Default OFF ⇒ no extra query,
+    /// no arms, nothing emitted.
+    #[config(env = "CONSENSUS_WIDE_ARMS", default = false)]
+    pub consensus_wide_arms: bool,
+
+    /// Cycle stride for the wide-consensus scoring pass: score wide arms on every
+    /// Nth consensus cycle (1 = every cycle; 0 is clamped to 1). The wide window
+    /// is a full trailing-window read (~2-3x the eligible book's rows), so at
+    /// minute cadence a stride of 5 keeps the extra DB load negligible while
+    /// costing ~nothing in freshness (max_age is hours; entries are decision-
+    /// time-captured on first detection).
+    #[config(env = "CONSENSUS_WIDE_EVERY", default = 5)]
+    pub consensus_wide_every: u64,
+
     /// Pooled per-cell specialist weighting (FORGE_PLAN Item 3). When on, registers
     /// the silent EXPERIMENTAL `slice_sport_tail` arm (WeightMode::CellPooled) and
     /// populates per-sport cell verdicts so each vote is weighted by the trader's

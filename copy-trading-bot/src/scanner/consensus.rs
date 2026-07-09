@@ -193,6 +193,12 @@ pub struct ConsensusParams {
     /// set counts nothing (the arm fires nothing until a re-score qualifies
     /// wallets). Default `None` = no-op for every other strategy.
     pub router_set: Option<Arc<HashSet<String>>>,
+    /// Anchor gate (wide-consensus arms): with `Some(r)`, a signal fires only
+    /// when at least one backer has leaderboard rank ≤ `r` (i.e.
+    /// `best_backer_rank ≤ r`). Distinguishes "deep wallets CONFIRM a
+    /// top-cohort pick" from "deep wallets alone fire a new pick". Default
+    /// `None` = no-op (incumbent behavior).
+    pub max_best_backer_rank: Option<i32>,
 }
 
 impl Default for ConsensusParams {
@@ -214,6 +220,7 @@ impl Default for ConsensusParams {
             cross_cohort_cutoff: None,
             certified_only: false,
             router_set: None,
+            max_best_backer_rank: None,
         }
     }
 }
@@ -476,6 +483,14 @@ pub fn score_market(
             .filter_map(|v| v.rank)
             .any(|r| r <= params.elite_rank);
         if params.require_elite && !has_elite {
+            continue;
+        }
+
+        // Anchor gate (wide-consensus variants): require ≥1 backer at or under
+        // the anchor rank. An all-unranked backer set fails the gate (fail-closed).
+        if let Some(anchor) = params.max_best_backer_rank
+            && best_backer_rank.is_none_or(|r| r > anchor)
+        {
             continue;
         }
 
@@ -935,6 +950,66 @@ pub fn retuned_arm(base: &ConsensusParams, t: (usize, i64, i64)) -> StrategyDef 
         },
         alerting: false,
     }
+}
+
+/// Wide-consensus arms (CONSENSUS_WIDE_ARMS, paper-only, silent) — the sensor-array
+/// widening. These are NOT part of the eligible-book portfolio: the cycle scores
+/// them exclusively on the WIDE book (`load_wide_window_votes`: eligible ∪ tracked
+/// deep non-bot wallets), so the champion path never sees them and stays
+/// byte-identical. Mechanism identical to `favorite` (the champion): ≥`min_backers`
+/// distinct one-sided backers, ≤`max_opposers`, price coherence, favorite band —
+/// only the voter pool widens (~60 → ~300 active wallets). Rationale: past-PnL rank
+/// carries no skill information (D30, refuted 5 ways), so the top-40 cutoff throttles
+/// SUPPLY without protecting EDGE; the retrospective wide-only cohort (209 resolved /
+/// 131 events / 9 days) matched the champion's edge profile at ~6-10x the fire rate.
+/// `anchor` (the live voting-rank cutoff) gates the `_anchored` variant: ≥1 top-cohort
+/// backer must co-sign, separating "deep confirms" from "deep alone".
+/// `_blind_wide` is the capture-all baseline on the SAME wide book so the
+/// selection-null / surplus-over-blind machinery has a pool-matched population
+/// (judging wide arms against the eligible `_blind` would mismatch market coverage).
+/// All silent; ledger inclusion is `LEDGER_STRATEGIES` ops; judged by the standing
+/// gate in the EXPERIMENTAL family.
+pub fn wide_arms(base: &ConsensusParams, anchor: i32) -> Vec<StrategyDef> {
+    let favorite_band = Some((0.65, 0.98));
+    vec![
+        StrategyDef {
+            name: "favorite_wide",
+            params: ConsensusParams {
+                price_band: favorite_band,
+                ..base.clone()
+            },
+            alerting: false,
+        },
+        StrategyDef {
+            name: "favorite_wide_anchored",
+            params: ConsensusParams {
+                price_band: favorite_band,
+                max_best_backer_rank: Some(anchor),
+                ..base.clone()
+            },
+            alerting: false,
+        },
+        // Capture-all blind baseline on the wide book (mirrors `_blind`). Never
+        // alerted, never ledgered (`_blind` prefix), exists only so band-matched
+        // surplus/null baselines come from the same voter pool.
+        StrategyDef {
+            name: "_blind_wide",
+            params: ConsensusParams {
+                min_backers: 1,
+                max_opposers: usize::MAX,
+                max_price_std: 1.0,
+                max_age_mins: i64::MAX,
+                strong_net: i64::MAX,
+                elite_net: i64::MAX,
+                require_elite: false,
+                price_band: None,
+                sports_mode: SportsMode::Include,
+                weight_mode: WeightMode::Count,
+                ..base.clone()
+            },
+            alerting: false,
+        },
+    ]
 }
 
 #[cfg(test)]
@@ -1707,6 +1782,94 @@ mod tests {
         }
         assert_eq!(score_market(&b, now, &base).len(), 1);
         assert!(score_market(&b, now, &arm.params).is_empty());
+    }
+
+    #[test]
+    fn anchor_gate_requires_top_cohort_backer() {
+        let now = Utc::now();
+        let fav_band = Some((0.65, 0.98));
+        // 3 deep-only backers (ranks 80–150) in the favorite band, tight prices.
+        let deep = book_with(
+            now,
+            vec![
+                (0, "wa", Some(80), 0.80, 10),
+                (0, "wb", Some(120), 0.81, 20),
+                (0, "wc", Some(150), 0.79, 30),
+            ],
+        );
+        let anchored = ConsensusParams {
+            price_band: fav_band,
+            max_best_backer_rank: Some(40),
+            ..Default::default()
+        };
+        let plain = ConsensusParams {
+            price_band: fav_band,
+            ..Default::default()
+        };
+        assert!(
+            score_market(&deep, now, &anchored).is_empty(),
+            "no top-40 backer → anchored arm must not fire"
+        );
+        assert_eq!(
+            score_market(&deep, now, &plain).len(),
+            1,
+            "un-anchored arm fires on deep-only consensus"
+        );
+        // One top-cohort backer satisfies the anchor.
+        let mixed = book_with(
+            now,
+            vec![
+                (0, "wa", Some(80), 0.80, 10),
+                (0, "wb", Some(120), 0.81, 20),
+                (0, "wc", Some(150), 0.79, 30),
+                (0, "wd", Some(12), 0.80, 5),
+            ],
+        );
+        assert_eq!(score_market(&mixed, now, &anchored).len(), 1);
+        // All-unranked backers fail the anchor closed.
+        let unranked = book_with(
+            now,
+            vec![
+                (0, "wa", None, 0.80, 10),
+                (0, "wb", None, 0.81, 20),
+                (0, "wc", None, 0.79, 30),
+            ],
+        );
+        assert!(score_market(&unranked, now, &anchored).is_empty());
+        assert_eq!(score_market(&unranked, now, &plain).len(), 1);
+    }
+
+    #[test]
+    fn wide_arms_mechanism_identical_to_favorite_except_pool_knobs() {
+        let base = ConsensusParams::default();
+        let arms = wide_arms(&base, 40);
+        let names: Vec<&str> = arms.iter().map(|d| d.name).collect();
+        assert_eq!(
+            names,
+            vec!["favorite_wide", "favorite_wide_anchored", "_blind_wide"]
+        );
+        assert!(
+            arms.iter().all(|d| !d.alerting),
+            "wide arms are silent by construction"
+        );
+        // favorite_wide = the champion's favorite params exactly (the pool widening
+        // happens at the BOOK, not the params) — same gates, same band.
+        let fav = &arms[0].params;
+        assert_eq!(fav.price_band, Some((0.65, 0.98)));
+        assert_eq!(fav.min_backers, base.min_backers);
+        assert_eq!(fav.max_opposers, base.max_opposers);
+        assert_eq!(fav.max_price_std, base.max_price_std);
+        assert_eq!(fav.max_age_mins, base.max_age_mins);
+        assert_eq!(fav.max_best_backer_rank, None);
+        // anchored adds only the anchor.
+        assert_eq!(arms[1].params.max_best_backer_rank, Some(40));
+        assert_eq!(arms[1].params.price_band, Some((0.65, 0.98)));
+        // _blind_wide mirrors `_blind`: permissive capture-all, no band.
+        let blind = &arms[2].params;
+        assert_eq!(blind.min_backers, 1);
+        assert_eq!(blind.max_opposers, usize::MAX);
+        assert_eq!(blind.price_band, None);
+        assert_eq!(blind.max_best_backer_rank, None);
     }
 
     #[test]

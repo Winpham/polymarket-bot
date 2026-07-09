@@ -134,8 +134,7 @@ pub async fn housekeeping_cycle(
         .map(|s| s.trim())
         .filter(|s| !s.is_empty())
         .collect();
-    let should_ledger =
-        |strat: &str| strat != "_blind" && (ledger_set.is_empty() || ledger_set.contains(strat));
+    let should_ledger = |strat: &str| ledger_scope_allows(&ledger_set, strat);
     let mut ledger_appends = 0usize;
     for cond in &all_conds {
         tokio::time::sleep(Duration::from_millis(120)).await;
@@ -376,5 +375,38 @@ fn bet_roi(pnl: f64, cost: f64, entry_fee: f64) -> f64 {
         pnl / total_invested * 100.0
     } else {
         0.0
+    }
+}
+
+/// Paper-ledger scope predicate: `_blind`-prefixed capture-all baselines
+/// (`_blind`, `_blind_wide`, …) never ledger — they are population benchmarks,
+/// not strategies; otherwise an empty scope means every strategy, else exact
+/// membership in the `LEDGER_STRATEGIES` set.
+pub(crate) fn ledger_scope_allows(
+    ledger_set: &std::collections::HashSet<&str>,
+    strat: &str,
+) -> bool {
+    !strat.starts_with("_blind") && (ledger_set.is_empty() || ledger_set.contains(strat))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn ledger_scope_excludes_blind_prefix_and_honors_set() {
+        let empty = std::collections::HashSet::new();
+        assert!(ledger_scope_allows(&empty, "favorite"));
+        assert!(ledger_scope_allows(&empty, "favorite_wide"));
+        assert!(!ledger_scope_allows(&empty, "_blind"));
+        assert!(!ledger_scope_allows(&empty, "_blind_wide"));
+
+        let scoped: std::collections::HashSet<&str> =
+            ["favorite", "favorite_wide"].into_iter().collect();
+        assert!(ledger_scope_allows(&scoped, "favorite_wide"));
+        assert!(!ledger_scope_allows(&scoped, "loose"));
+        // A `_blind*` name is excluded even if someone lists it explicitly.
+        let blind_listed: std::collections::HashSet<&str> = ["_blind_wide"].into_iter().collect();
+        assert!(!ledger_scope_allows(&blind_listed, "_blind_wide"));
     }
 }
