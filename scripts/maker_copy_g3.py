@@ -19,7 +19,8 @@ are order-BOOK-LEVEL churn, not executed trades (live_tape.rs:141-142, :222-223)
 fill model is NOT measurable here (it would count quote flicker as volume — the very trap). We bracket
 the unknowable queue position with three best_ask-only models:
   OPTIMISTIC (touch)  filled if best_ask ≤ P ever in the rest window          (100% queue capture; ceiling)
-  DWELL      (realistic) best_ask ≤ P across ≥2 inflections spanning ≥DWELL_S  (offer sat long enough)
+  DWELL      (realistic) ≥2 inflections with best_ask ≤ P spanning ≥DWELL_S    (repeated availability — NOT
+                         verified-continuous dwell; the ask may rise between the two touches)
   PESSIMISTIC (through) best_ask < P strictly (price traded THROUGH our level) (last-in-queue)
 The realized volume / partial-fill / queue-capture fraction remains OPEN (needs a real trade tape).
 
@@ -173,6 +174,18 @@ def _median(xs):
     return s[n // 2] if n % 2 else (s[n // 2 - 1] + s[n // 2]) / 2.0
 
 
+def _dt_ask(tape_rows, t0):
+    """Decision-time executable ask: the FIRST best_ask observed at/after T on the same tape. This is
+    the CAUSAL price a taker-copier would hit the moment we detect — no look-ahead. (Audit fix: the
+    stored consensus_signals.entry_ask is captured ~20 min post-detection (entry_ask_at=NOW(),
+    per-cycle-budgeted), a FUTURE price that flatters the taker; the tape ask at T is apples-to-apples
+    with the maker resting-bid, both priced from the same forward tape at the same instant.)"""
+    for r in tape_rows:      # tape_by_id is appended in eff_ts order
+        if r["eff_ts"] >= t0 and r["best_ask"] is not None:
+            return r["best_ask"]
+    return None
+
+
 def _cluster_lb(surplus_by_id, cluster_by_id):
     """Event/day-clustered mean + small-cluster t(G−1) LB via the shared libs (byte-identical to gate)."""
     if len(surplus_by_id) < 2:
@@ -191,21 +204,37 @@ def evaluate(sigs, P_by_id, tape_by_id, fee):
     won = {s["id"]: int(s["won"]) for s in sigs}
     ev = {s["id"]: s["ev"] for s in sigs}
     day = {s["id"]: s["day"] for s in sigs}
-    entry_taker = {s["id"]: (s["entry_ask"] if s["entry_ask"] is not None else s["anchor"] + 0.01)
-                   for s in sigs}
+    t0 = {s["id"]: s["t0"] for s in sigs}
+    anchor = {s["id"]: s["anchor"] for s in sigs}
     P = P_by_id
     n_total = len(ids)
     won_ids = [i for i in ids if won[i] == 1]
 
-    # taker book on ALL fillable signals (the incumbent we compare against), event-clustered.
-    taker_roi = {i: (won[i] - entry_taker[i]) / entry_taker[i] - fee for i in ids}
-    t_theta, t_lb, t_G = _cluster_lb(taker_roi, ev)
-    taker_block = {
-        "roi_mean": round(sum(taker_roi.values()) / n_total, 5) if n_total else None,
-        "roi_cluster_lb": None if t_lb is None else round(t_lb, 5),
-        "win_rate": round(sum(won.values()) / n_total, 4) if n_total else None,
-        "n": n_total, "event_clusters": t_G, "mean_entry": round(sum(entry_taker.values()) / n_total, 4),
-    }
+    # THREE taker references on the SAME signals (a taker crosses the spread immediately at detection):
+    #   decision_time_tape_ask  — first best_ask at/after T on the same tape (CAUSAL; the head-to-head ref)
+    #   entry_ask_capture_lagged — consensus_signals.entry_ask (honest-ledger-comparable but ~20min-late; audit)
+    #   anchor_plus_1c          — initial_mean_price + 1¢ (uniform decision-time proxy / consensus.rs:752 fallback)
+    e_tape = {i: (_dt_ask(tape_by_id.get(i, []), t0[i]) or anchor[i] + 0.01) for i in ids}
+    e_ask = {i: (s["entry_ask"] if s["entry_ask"] is not None else s["anchor"] + 0.01) for s in sigs for i in [s["id"]]}
+    e_anchor = {i: anchor[i] + 0.01 for i in ids}
+
+    def _taker_block(entry, primary):
+        roi = {i: (won[i] - entry[i]) / entry[i] - fee for i in ids}
+        th, lb, G = _cluster_lb(roi, ev)
+        return roi, {"roi_mean": round(sum(roi.values()) / n_total, 5) if n_total else None,
+                     "roi_cluster_lb": None if lb is None else round(lb, 5),
+                     "win_rate": round(sum(won.values()) / n_total, 4) if n_total else None,
+                     "mean_entry": round(sum(entry.values()) / n_total, 4), "n": n_total,
+                     "event_clusters": G, "is_head_to_head_ref": primary}
+    taker_roi, tk_tape = _taker_block(e_tape, True)     # PRIMARY: head-to-head uses this
+    _, tk_ask = _taker_block(e_ask, False)
+    _, tk_anchor = _taker_block(e_anchor, False)
+    tk_ask["WARNING"] = ("entry_ask_at is ~20min post-detection (entry_ask_at=NOW(), per-cycle-budgeted) "
+                         "→ a FUTURE price that flatters the taker on winners; NOT decision-time. Kept for "
+                         "honest-ledger continuity only; the head-to-head uses decision_time_tape_ask.")
+    taker_block = {"primary_ref": "decision_time_tape_ask",
+                   "decision_time_tape_ask": tk_tape, "entry_ask_capture_lagged": tk_ask,
+                   "anchor_plus_1c": tk_anchor}
 
     out = {"fee": fee, "n_total": n_total, "n_won": len(won_ids), "taker": taker_block, "models": {}}
     for model in FILL_MODELS:
@@ -327,7 +356,7 @@ def run(all_strategies):
             "prereg": "reports/PREREG_20260709T011424Z_maker_copy_g3.md (+ _ADDENDUM data-semantics deviation)",
             "fill_models": {
                 "optimistic": "best_ask ≤ P touched (100% queue capture; fantasy ceiling)",
-                "dwell": f"best_ask ≤ P across ≥2 inflections spanning ≥{DWELL_S}s (realistic middle)",
+                "dwell": f"≥2 inflections with best_ask ≤ P spanning ≥{DWELL_S}s (repeated availability; NOT verified-continuous)",
                 "pessimistic": "best_ask < P strict — price traded THROUGH our level (last-in-queue)"},
             "NOT_MEASURABLE": "realized volume / partial-fill / queue-capture fraction — the tape is "
                               "top-of-book only (last_size = book-level churn, NOT trades; live_tape.rs:222). "
@@ -338,7 +367,12 @@ def run(all_strategies):
                 "tape ~2 days deep → FORWARD-ACCRUING; re-run as it deepens (idempotent, read-only)",
                 "'cancel=until-resolution' is bounded by TAPE COVERAGE (~hours, universe=hot 6h), not settlement",
                 "adverse-selection gap uses hypothetical maker-P booking on the MISSED set to isolate selection",
-                "event clusters ≈ signal count (≈1 signal/event); the BINDING wall is the ~2 day-clusters"],
+                "event clusters ≈ signal count (≈1 signal/event); the BINDING wall is the ~2 day-clusters",
+                "maker_edge_per_signal (abstain=0 on missed) is NOT a fair maker-vs-taker read — it is "
+                "abstention-confounded (maker skips the legs it can't fill). The fair head-to-head is "
+                "maker_minus_taker_on_filled on the identical filled subset.",
+                "taker head-to-head uses decision_time_tape_ask (causal); entry_ask kept only as a flagged "
+                "capture-lagged reference (audit: entry_ask_at ~20min post-detection)"],
         },
         "fee_buffer_2pct": res_fee, "fee_zero": res_zero, "verdict": verdict,
     }
@@ -361,9 +395,11 @@ def _print(o):
           f"{m['n_day_clusters']} day-clusters · tape from {m['tape_start']}")
     print("⚠ top-of-book tape only — no trade tape; realized volume/queue-capture NOT measurable (still OPEN).")
     print(f"  P = {m['P_definition']}")
-    tk = o['fee_buffer_2pct']['taker']
-    print(f"  TAKER reference (same signals, fee 2%): ROI {_f(tk['roi_mean'])} "
+    tk = o['fee_buffer_2pct']['taker']['decision_time_tape_ask']
+    tka = o['fee_buffer_2pct']['taker']['entry_ask_capture_lagged']
+    print(f"  TAKER ref (decision-time tape ask @T, fee 2%): ROI {_f(tk['roi_mean'])} "
           f"(cluster-LB {_f(tk['roi_cluster_lb'])}) · win {_f(tk['win_rate'],'.0%')} · entry {tk['mean_entry']:.3f}")
+    print(f"    [entry_ask (capture-lagged ~20min, honest-ledger ref): ROI {_f(tka['roi_mean'])}, entry {tka['mean_entry']:.3f}]")
     print(f"  VERDICT: {o['verdict']}")
     for model in FILL_MODELS:
         print("\n" + "-" * 100)
