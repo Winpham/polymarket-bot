@@ -62,6 +62,7 @@ pub(crate) fn params_from_cfg(cfg: &CopyTradingConfig) -> ConsensusParams {
         certified_only: false,
         router_set: None,
         max_best_backer_rank: None,
+        echo_collapse_secs: None,
     }
 }
 

@@ -199,6 +199,15 @@ pub struct ConsensusParams {
     /// top-cohort pick" from "deep wallets alone fire a new pick". Default
     /// `None` = no-op (incumbent behavior).
     pub max_best_backer_rank: Option<i32>,
+    /// Echo-independence gate (supply-frontier arms): with `Some(secs)`, the
+    /// `min_backers` gate counts INDEPENDENT backers — walking backers by their
+    /// FIRST fill in the window, one whose first fill lands within `secs` of the
+    /// previously counted backer's first fill is an echo (copy-bot / instant
+    /// herd) and does not increment the count. Guards against one sharp's
+    /// decision being mirrored into N fake "independent" backers. Tiering,
+    /// `n_backers`, and quality sums stay RAW (reporting unchanged); only the
+    /// min_backers gate uses the collapsed count. Default `None` = no-op.
+    pub echo_collapse_secs: Option<i64>,
 }
 
 impl Default for ConsensusParams {
@@ -221,6 +230,7 @@ impl Default for ConsensusParams {
             certified_only: false,
             router_set: None,
             max_best_backer_rank: None,
+            echo_collapse_secs: None,
         }
     }
 }
@@ -461,8 +471,43 @@ pub fn score_market(
         let recency_mins = (now - latest_ts).num_minutes().max(0);
         let best_backer_rank = backers.values().filter_map(|v| v.rank).min();
 
+        // Echo-independent backer count (supply-frontier arms): first fill per
+        // wallet, arrival-ordered; a backer landing within `echo_s` of the
+        // previously COUNTED backer's first fill is an echo and doesn't count.
+        // Only the min_backers gate below uses this; everything else stays raw.
+        let effective_backers = match params.echo_collapse_secs {
+            None => n_backers,
+            Some(echo_s) => {
+                let mut firsts: HashMap<&str, DateTime<Utc>> = HashMap::new();
+                for v in &all_backer_fills {
+                    firsts
+                        .entry(v.wallet.as_str())
+                        .and_modify(|t| {
+                            if v.ts < *t {
+                                *t = v.ts;
+                            }
+                        })
+                        .or_insert(v.ts);
+                }
+                let mut times: Vec<DateTime<Utc>> = firsts.into_values().collect();
+                times.sort();
+                let mut count = 0usize;
+                let mut last_counted: Option<DateTime<Utc>> = None;
+                for t in times {
+                    if let Some(prev) = last_counted
+                        && (t - prev).num_seconds() < echo_s
+                    {
+                        continue;
+                    }
+                    count += 1;
+                    last_counted = Some(t);
+                }
+                count
+            }
+        };
+
         // --- Hard gates ---
-        if n_backers < params.min_backers
+        if effective_backers < params.min_backers
             || n_opposers > params.max_opposers
             || price_std > params.max_price_std
             || recency_mins > params.max_age_mins

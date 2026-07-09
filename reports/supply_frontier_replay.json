@@ -1,0 +1,810 @@
+{
+  "champ": {
+    "cfg": "{'pool': 'eligible', 'min_backers': 3, 'max_opposers': 1, 'band': (0.65, 0.98), 'anchor': None, 'echo_s': 0}",
+    "dropped_unresolved": 7,
+    "proxy": {
+      "n": 80,
+      "events": 54,
+      "days": 8,
+      "win_rate": 0.825,
+      "roi": -0.038,
+      "roi_lb_event": -0.1554,
+      "roi_lb_day": -0.1606,
+      "surplus_over_blind": [
+        0.1418,
+        80
+      ],
+      "per_sport": {
+        "soccer": [
+          54,
+          -0.03
+        ],
+        "tennis": [
+          17,
+          -0.0899
+        ],
+        "other": [
+          5,
+          0.0024
+        ],
+        "lol": [
+          2,
+          -0.3692
+        ],
+        "cs2": [
+          1,
+          0.3857
+        ],
+        "mlb": [
+          1,
+          0.4506
+        ]
+      },
+      "incremental_n": 33,
+      "incremental_roi": -0.0691
+    },
+    "tape": {
+      "n": 5,
+      "events": 5,
+      "days": 1,
+      "win_rate": 0.6,
+      "roi": -0.3247,
+      "roi_lb_event": -0.9331,
+      "roi_lb_day": null,
+      "surplus_over_blind": [
+        0.034,
+        5
+      ],
+      "per_sport": {
+        "tennis": [
+          2,
+          -0.395
+        ],
+        "soccer": [
+          2,
+          -0.4386
+        ],
+        "other": [
+          1,
+          0.0438
+        ]
+      },
+      "incremental_n": 2,
+      "incremental_roi": -1.02,
+      "n_tape_era": 6,
+      "coverage": 0.833
+    },
+    "echo_median_1to3_s": 47710.0
+  },
+  "v1": {
+    "cfg": "{'pool': 'wide', 'min_backers': 3, 'max_opposers': 1, 'band': (0.65, 0.98), 'anchor': None, 'echo_s': 0}",
+    "dropped_unresolved": 74,
+    "proxy": {
+      "n": 208,
+      "events": 152,
+      "days": 10,
+      "win_rate": 0.8606,
+      "roi": 0.0341,
+      "roi_lb_event": 0.0127,
+      "roi_lb_day": 0.0102,
+      "surplus_over_blind": [
+        0.2433,
+        208
+      ],
+      "per_sport": {
+        "soccer": [
+          117,
+          0.0041
+        ],
+        "tennis": [
+          46,
+          0.0291
+        ],
+        "other": [
+          17,
+          0.0757
+        ],
+        "lol": [
+          13,
+          -0.1432
+        ],
+        "mlb": [
+          6,
+          0.4502
+        ],
+        "cs2": [
+          5,
+          0.3572
+        ],
+        "dota": [
+          3,
+          0.3532
+        ],
+        "nba": [
+          1,
+          0.3128
+        ]
+      },
+      "incremental_n": 152,
+      "incremental_roi": 0.0404
+    },
+    "tape": {
+      "n": 32,
+      "events": 29,
+      "days": 2,
+      "win_rate": 0.8438,
+      "roi": 0.0505,
+      "roi_lb_event": -0.003,
+      "roi_lb_day": -0.0375,
+      "surplus_over_blind": [
+        0.3855,
+        32
+      ],
+      "per_sport": {
+        "soccer": [
+          13,
+          0.0784
+        ],
+        "tennis": [
+          9,
+          0.2045
+        ],
+        "other": [
+          4,
+          -0.1061
+        ],
+        "dota": [
+          2,
+          0.2967
+        ],
+        "lol": [
+          2,
+          -1.02
+        ],
+        "nba": [
+          1,
+          0.2958
+        ],
+        "mlb": [
+          1,
+          0.3314
+        ]
+      },
+      "incremental_n": 27,
+      "incremental_roi": 0.0358,
+      "n_tape_era": 46,
+      "coverage": 0.696
+    },
+    "echo_median_1to3_s": 33374.0
+  },
+  "v2": {
+    "cfg": "{'pool': 'wide', 'min_backers': 3, 'max_opposers': 1, 'band': (0.65, 0.98), 'anchor': None, 'echo_s': 60}",
+    "dropped_unresolved": 70,
+    "proxy": {
+      "n": 202,
+      "events": 147,
+      "days": 10,
+      "win_rate": 0.8614,
+      "roi": 0.0329,
+      "roi_lb_event": 0.0121,
+      "roi_lb_day": 0.0164,
+      "surplus_over_blind": [
+        0.2408,
+        202
+      ],
+      "per_sport": {
+        "soccer": [
+          115,
+          0.0001
+        ],
+        "tennis": [
+          45,
+          0.0524
+        ],
+        "other": [
+          15,
+          0.0316
+        ],
+        "lol": [
+          13,
+          -0.1432
+        ],
+        "mlb": [
+          6,
+          0.4502
+        ],
+        "cs2": [
+          5,
+          0.3572
+        ],
+        "dota": [
+          2,
+          0.4323
+        ],
+        "nba": [
+          1,
+          0.3128
+        ]
+      },
+      "incremental_n": 146,
+      "incremental_roi": 0.039
+    },
+    "tape": {
+      "n": 30,
+      "events": 28,
+      "days": 2,
+      "win_rate": 0.8333,
+      "roi": 0.051,
+      "roi_lb_event": -0.0234,
+      "roi_lb_day": -0.0263,
+      "surplus_over_blind": [
+        0.3848,
+        30
+      ],
+      "per_sport": {
+        "soccer": [
+          11,
+          0.0725
+        ],
+        "tennis": [
+          9,
+          0.2045
+        ],
+        "other": [
+          4,
+          -0.1061
+        ],
+        "dota": [
+          2,
+          0.3646
+        ],
+        "lol": [
+          2,
+          -1.02
+        ],
+        "nba": [
+          1,
+          0.2958
+        ],
+        "mlb": [
+          1,
+          0.3314
+        ]
+      },
+      "incremental_n": 25,
+      "incremental_roi": 0.0352,
+      "n_tape_era": 43,
+      "coverage": 0.698
+    },
+    "echo_median_1to3_s": 34133.0
+  },
+  "wide_k2_anch": {
+    "cfg": "{'pool': 'wide', 'min_backers': 2, 'max_opposers': 1, 'band': (0.65, 0.98), 'anchor': 40, 'echo_s': 60}",
+    "dropped_unresolved": 103,
+    "proxy": {
+      "n": 472,
+      "events": 310,
+      "days": 10,
+      "win_rate": 0.8644,
+      "roi": 0.037,
+      "roi_lb_event": -0.0042,
+      "roi_lb_day": 0.0015,
+      "surplus_over_blind": [
+        0.2433,
+        472
+      ],
+      "per_sport": {
+        "soccer": [
+          262,
+          0.0186
+        ],
+        "tennis": [
+          95,
+          -0.0116
+        ],
+        "other": [
+          66,
+          0.1001
+        ],
+        "mlb": [
+          19,
+          0.2677
+        ],
+        "cs2": [
+          10,
+          0.1615
+        ],
+        "lol": [
+          9,
+          -0.1513
+        ],
+        "dota": [
+          6,
+          0.2873
+        ],
+        "nba": [
+          3,
+          -0.0726
+        ],
+        "ufc": [
+          2,
+          0.1199
+        ]
+      },
+      "incremental_n": 355,
+      "incremental_roi": 0.0333
+    },
+    "tape": {
+      "n": 75,
+      "events": 63,
+      "days": 2,
+      "win_rate": 0.9067,
+      "roi": 0.0724,
+      "roi_lb_event": 0.0004,
+      "roi_lb_day": -0.1368,
+      "surplus_over_blind": [
+        0.4045,
+        75
+      ],
+      "per_sport": {
+        "soccer": [
+          27,
+          -0.0128
+        ],
+        "other": [
+          24,
+          0.1434
+        ],
+        "tennis": [
+          16,
+          0.0245
+        ],
+        "dota": [
+          4,
+          0.3002
+        ],
+        "ufc": [
+          1,
+          0.0553
+        ],
+        "nba": [
+          1,
+          0.2958
+        ],
+        "mlb": [
+          1,
+          0.3314
+        ],
+        "cs2": [
+          1,
+          0.0553
+        ]
+      },
+      "incremental_n": 70,
+      "incremental_roi": 0.0823,
+      "n_tape_era": 103,
+      "coverage": 0.728
+    },
+    "echo_median_1to3_s": 13587.0
+  },
+  "wide_k2_plain": {
+    "cfg": "{'pool': 'wide', 'min_backers': 2, 'max_opposers': 1, 'band': (0.65, 0.98), 'anchor': None, 'echo_s': 60}",
+    "dropped_unresolved": 197,
+    "proxy": {
+      "n": 578,
+      "events": 358,
+      "days": 11,
+      "win_rate": 0.8443,
+      "roi": 0.0205,
+      "roi_lb_event": -0.012,
+      "roi_lb_day": -0.0128,
+      "surplus_over_blind": [
+        0.2256,
+        578
+      ],
+      "per_sport": {
+        "soccer": [
+          331,
+          0.0001
+        ],
+        "tennis": [
+          100,
+          -0.0211
+        ],
+        "other": [
+          70,
+          0.0917
+        ],
+        "mlb": [
+          27,
+          0.1573
+        ],
+        "lol": [
+          20,
+          -0.0935
+        ],
+        "cs2": [
+          12,
+          0.1985
+        ],
+        "dota": [
+          11,
+          0.3121
+        ],
+        "nba": [
+          5,
+          -0.1884
+        ],
+        "ufc": [
+          2,
+          0.1199
+        ]
+      },
+      "incremental_n": 448,
+      "incremental_roi": 0.0231
+    },
+    "tape": {
+      "n": 89,
+      "events": 74,
+      "days": 3,
+      "win_rate": 0.8764,
+      "roi": 0.0462,
+      "roi_lb_event": -0.023,
+      "roi_lb_day": 0.0404,
+      "surplus_over_blind": [
+        0.3755,
+        89
+      ],
+      "per_sport": {
+        "soccer": [
+          33,
+          0.0387
+        ],
+        "other": [
+          24,
+          0.1434
+        ],
+        "tennis": [
+          16,
+          0.0245
+        ],
+        "dota": [
+          7,
+          0.3249
+        ],
+        "mlb": [
+          4,
+          -0.419
+        ],
+        "lol": [
+          2,
+          -1.02
+        ],
+        "ufc": [
+          1,
+          0.0553
+        ],
+        "nba": [
+          1,
+          0.3314
+        ],
+        "cs2": [
+          1,
+          0.0553
+        ]
+      },
+      "incremental_n": 83,
+      "incremental_roi": 0.0654,
+      "n_tape_era": 124,
+      "coverage": 0.718
+    },
+    "echo_median_1to3_s": 11930.0
+  },
+  "v3": {
+    "cfg": "{'pool': 'wide', 'min_backers': 2, 'max_opposers': 1, 'band': (0.6, 0.98), 'anchor': 40, 'echo_s': 60}",
+    "dropped_unresolved": 129,
+    "proxy": {
+      "n": 567,
+      "events": 370,
+      "days": 11,
+      "win_rate": 0.8078,
+      "roi": 0.0023,
+      "roi_lb_event": -0.0449,
+      "roi_lb_day": -0.0485,
+      "surplus_over_blind": [
+        0.1954,
+        567
+      ],
+      "per_sport": {
+        "soccer": [
+          300,
+          -0.0273
+        ],
+        "tennis": [
+          110,
+          -0.0168
+        ],
+        "other": [
+          76,
+          0.0616
+        ],
+        "mlb": [
+          43,
+          0.1084
+        ],
+        "cs2": [
+          12,
+          0.0924
+        ],
+        "lol": [
+          11,
+          -0.015
+        ],
+        "dota": [
+          8,
+          0.3673
+        ],
+        "nba": [
+          5,
+          -0.4273
+        ],
+        "ufc": [
+          2,
+          0.1199
+        ]
+      },
+      "incremental_n": 446,
+      "incremental_roi": -0.0115
+    },
+    "tape": {
+      "n": 88,
+      "events": 74,
+      "days": 3,
+      "win_rate": 0.875,
+      "roi": 0.0793,
+      "roi_lb_event": 0.0093,
+      "roi_lb_day": -0.1843,
+      "surplus_over_blind": [
+        0.3865,
+        88
+      ],
+      "per_sport": {
+        "soccer": [
+          29,
+          -0.0715
+        ],
+        "other": [
+          26,
+          0.1801
+        ],
+        "tennis": [
+          18,
+          0.0853
+        ],
+        "dota": [
+          6,
+          0.3777
+        ],
+        "mlb": [
+          5,
+          0.2374
+        ],
+        "cs2": [
+          2,
+          -0.4824
+        ],
+        "ufc": [
+          1,
+          0.0553
+        ],
+        "nba": [
+          1,
+          0.2958
+        ]
+      },
+      "incremental_n": 83,
+      "incremental_roi": 0.0881,
+      "n_tape_era": 125,
+      "coverage": 0.704
+    },
+    "echo_median_1to3_s": 13947.0
+  },
+  "band60_only": {
+    "cfg": "{'pool': 'wide', 'min_backers': 3, 'max_opposers': 1, 'band': (0.6, 0.65), 'anchor': None, 'echo_s': 60}",
+    "dropped_unresolved": 22,
+    "proxy": {
+      "n": 71,
+      "events": 66,
+      "days": 11,
+      "win_rate": 0.6338,
+      "roi": -0.0193,
+      "roi_lb_event": -0.1348,
+      "roi_lb_day": -0.097,
+      "surplus_over_blind": [
+        0.1204,
+        71
+      ],
+      "per_sport": {
+        "soccer": [
+          25,
+          -0.1346
+        ],
+        "mlb": [
+          17,
+          0.087
+        ],
+        "tennis": [
+          10,
+          -0.0658
+        ],
+        "other": [
+          7,
+          0.1129
+        ],
+        "cs2": [
+          5,
+          -0.0972
+        ],
+        "nba": [
+          3,
+          -0.4862
+        ],
+        "dota": [
+          2,
+          0.5599
+        ],
+        "lol": [
+          2,
+          0.6055
+        ]
+      },
+      "incremental_n": 63,
+      "incremental_roi": -0.0156
+    },
+    "tape": {
+      "n": 12,
+      "events": 12,
+      "days": 3,
+      "win_rate": 0.6667,
+      "roi": 0.0093,
+      "roi_lb_event": -0.3968,
+      "roi_lb_day": -0.572,
+      "surplus_over_blind": [
+        0.229,
+        12
+      ],
+      "per_sport": {
+        "mlb": [
+          4,
+          0.128
+        ],
+        "soccer": [
+          3,
+          -0.5756
+        ],
+        "dota": [
+          2,
+          0.8069
+        ],
+        "other": [
+          1,
+          -1.02
+        ],
+        "lol": [
+          1,
+          0.5185
+        ],
+        "tennis": [
+          1,
+          0.2146
+        ]
+      },
+      "incremental_n": 12,
+      "incremental_roi": 0.0093,
+      "n_tape_era": 17,
+      "coverage": 0.706
+    },
+    "echo_median_1to3_s": 31376.0
+  },
+  "wide_k4": {
+    "cfg": "{'pool': 'wide', 'min_backers': 4, 'max_opposers': 1, 'band': (0.65, 0.98), 'anchor': None, 'echo_s': 60}",
+    "dropped_unresolved": 24,
+    "proxy": {
+      "n": 89,
+      "events": 73,
+      "days": 9,
+      "win_rate": 0.8539,
+      "roi": 0.0377,
+      "roi_lb_event": -0.0473,
+      "roi_lb_day": -0.0157,
+      "surplus_over_blind": [
+        0.2299,
+        89
+      ],
+      "per_sport": {
+        "soccer": [
+          53,
+          0.035
+        ],
+        "tennis": [
+          18,
+          -0.1111
+        ],
+        "lol": [
+          5,
+          -0.026
+        ],
+        "cs2": [
+          5,
+          0.0851
+        ],
+        "mlb": [
+          3,
+          0.4557
+        ],
+        "nba": [
+          2,
+          0.385
+        ],
+        "other": [
+          2,
+          0.3102
+        ],
+        "dota": [
+          1,
+          0.4474
+        ]
+      },
+      "incremental_n": 45,
+      "incremental_roi": 0.0438
+    },
+    "tape": {
+      "n": 13,
+      "events": 13,
+      "days": 2,
+      "win_rate": 0.9231,
+      "roi": 0.0954,
+      "roi_lb_event": -0.0877,
+      "roi_lb_day": -0.2114,
+      "surplus_over_blind": [
+        0.4248,
+        13
+      ],
+      "per_sport": {
+        "soccer": [
+          7,
+          0.1841
+        ],
+        "nba": [
+          1,
+          0.067
+        ],
+        "mlb": [
+          1,
+          0.3314
+        ],
+        "tennis": [
+          1,
+          0.0789
+        ],
+        "other": [
+          1,
+          0.0438
+        ],
+        "dota": [
+          1,
+          0.4506
+        ],
+        "lol": [
+          1,
+          -1.02
+        ]
+      },
+      "incremental_n": 9,
+      "incremental_roi": 0.0978,
+      "n_tape_era": 16,
+      "coverage": 0.812
+    },
+    "echo_median_1to3_s": 31111.0
+  }
+}
