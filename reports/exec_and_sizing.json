@@ -1,0 +1,40 @@
+{
+ "p4_roi": {
+  "mid|correct 0.03(1-p)": 0.08015,
+  "mid|flat 2% buffer": 0.06554,
+  "mid|flat 3%*stake": 0.05554,
+  "mid|maker fee 0": 0.08554,
+  "mid+tax|correct 0.03(1-p)": 0.06712,
+  "mid+tax|flat 2% buffer": 0.05221,
+  "mid+tax|flat 3%*stake": 0.04221,
+  "mid+tax|maker fee 0": 0.07221,
+  "ask|correct 0.03(1-p)": 0.01407,
+  "ask|flat 2% buffer": -0.00018,
+  "ask|flat 3%*stake": -0.01018,
+  "ask|maker fee 0": 0.01982
+ },
+ "p5_sizing": {
+  "flat-$": {
+   "pnl": 3350.4,
+   "turnover": 41800.0,
+   "roi": 0.08015
+  },
+  "flat-shares": {
+   "pnl": 2636.5,
+   "turnover": 34292.3,
+   "roi": 0.07688
+  },
+  "capped-fav": {
+   "pnl": 3194.7,
+   "turnover": 36900.0,
+   "roi": 0.08658
+  },
+  "1/8-Kelly": {
+   "pnl": 2639.7,
+   "turnover": 41800.0,
+   "roi": 0.06315
+  }
+ },
+ "n_bets": 418,
+ "entry_ask_n": 172
+}

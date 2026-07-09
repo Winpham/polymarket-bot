@@ -157,13 +157,52 @@ The honest, disciplined action (not taken here — it's a live-config change for
 months, exactly as the persistence gate requires. This is a first-class success: a tempting positive,
 surfaced, adversarially refuted, correctly declined.
 
-## 4. Execution realism
+## 4. Execution realism — fee model reconciled, measured entry is dear
 
-_(pending)_
+**The "staged fee-model" the brief expected does not exist:** branch `fee-model-accuracy` (wt/fee-model)
+is at main HEAD with a clean tree — the accurate taker fee was never committed. In the tree today the
+fee is **inconsistent**: `backtest.py` uses flat `0.03·stake` (over-charges favorites 6×), copyability
+/ selection_null use a 2% buffer. The correct Polymarket sports taker fee is **0.03·(1−p)** per $ of
+stake (entry-only; makers pay 0) — ~0.5% at favorite prices, far below the flat fees.
 
-## 5. Sizing / risk
+**Realizable-edge ROI (at-fire entry basis; = the §3b honest_roi view, matches the prior +8.36%; the
+CANONICAL resolved-P&L on actual fills stays +1.27%). All labeled:**
 
-_(pending)_
+| entry basis | correct 0.03(1−p) | flat 2% buffer | flat 3%·stake | maker (fee 0) |
+|---|---|---|---|---|
+| at-fire mid | **+8.02%** | +6.55% | +5.55% | +8.55% |
+| mid + 1¢ measured tax | +6.71% | +5.22% | +4.22% | +7.22% |
+| measured ask* | +1.41% | −0.02% | −1.02% | +1.98% |
+
+`*measured ask = entry_ask` (172/418 rows), captured ~20min post-detection (G3 audit): a **future
+price**, flatters ~1.8pp — shown, never the headline.
+
+**Reads:** (1) using the correct fee vs the flat 2%/3% fees adds **+1.5 to +2.5pp** to the honest edge —
+it's the right number and it's favorable to favorites. (2) But **measured realized entry is dear**:
+even the (optimistically-contaminated) captured ask drops the realizable edge to **+1.4%**; a true
+causal decision-time ask (per G3, the sharp lifts the ask ~3min pre-detection) would likely land it
+near or below break-even on a taker basis. The gap between the +8% at-fire-mid basis and the ~+1.4%
+measured-ask basis **is the execution tax, and it is the difference between "looks great" and
+"marginal."** This is why the canonical resolved-P&L (+1.27%) — not the realizable +8% — is the number
+to trust for real-money reasoning.
+
+## 5. Sizing / risk — cannot be safely levered (confirmed)
+
+Sizing bake-off (correct fee, at-fire mid, realizable basis), favorite arm:
+
+| scheme | P&L | turnover | ROI |
+|---|---|---|---|
+| flat-$ | +$3,350 | $41,800 | +8.02% |
+| flat-shares | +$2,636 | $34,292 | +7.69% |
+| capped-favoritedness | +$3,195 | $36,900 | +8.66% |
+| ⅛-Kelly-on-surplus | +$2,640 | $41,800 | +6.32% |
+
+ROI spread across schemes is only **2.34pp**, all positive — the edge does **not** depend on exotic
+sizing, and **⅛-Kelly ≈ flat** (slightly lower). Combined with the P2 capacity ceiling (~$500–1k per
+signal), this **confirms the frozen finding: a thin, capacity-capped edge cannot be safely levered** —
+prudent compounding buys no material uplift, and full-stake compounding is not achievable. Sizing is a
+second-order lever; the first-order levers remain persistence (unavailable for months) and execution
+cost (dear).
 
 ## 6. Bottom line for Tue
 
