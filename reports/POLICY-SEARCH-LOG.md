@@ -41,3 +41,75 @@ Positive slices to PROTECT (do not cut): exact-score, price 0.75–0.80 (+16.8%)
 **Next (ITER 1):** subsumption test — does a liquidity floor absorb obscure-league + "other"-regime?
 Then sweep the liquidity threshold on a plateau; test whether pay-up and rank are independent
 negatives or confounded with liquidity. OOS = time-split + non-FIFWC. Multiple-testing corrected.
+
+---
+
+## ITER 1 — Liquidity floor (ADOPT). Mechanism: illiquidity.
+
+Sweep `initial_total_usd` (covered subset n=157; nulls kept, unevaluable in-sample, apply forward):
+
+| floor | n_keep | roi_keep | n_cut | roi_cut | drag_removed |
+|---|---|---|---|---|---|
+| 250 | 152 | +0.82 | 5 | **+7.21** (cuts WINNERS) | +36 |
+| 500 | 145 | +1.82 | 12 | −8.61 | −103 |
+| 750 | 141 | +2.37 | 16 | −10.88 | −174 |
+| **1000** | **138** | **+2.71** | **19** | **−11.20** | **−213** |
+| 1500 | 130 | +2.77 | 27 | −7.41 | −200 |
+| 2000 | 123 | +3.37 | 34 | −7.47 | −254 |
+
+**Plateau 750–1500** (roi_keep +2.4…+2.8, stable). Below $500 cuts winners; above $1500 eats
+marginal-negative (−2.7%) bets to chase the ratio → overfit. **Adopt floor = $1000** — the round
+"< $1k sharp backing = thin" value, at the most-negative removed set (−11.2%, surplus −12.2%).
+On the full 215-book this lifts +2.81% → **+4.17%**; OOS: late +2.61, non-FIFWC −1.02 (from −2.08),
+removed set negative in **every** fold. **ADOPTED.**
+
+## ITER 2 — Require top-5 backer (ADOPT). Mechanism: backer skill. Confounds cleared.
+
+Rank sweep (cut = best_backer_rank ≥ thr): plateau at thr∈{3,4,5} (roi_keep +6.8…+7.4), knee at 5→7.
+Confound table (at-fire, rank present):
+
+| rank bin | n | avg_price | avg_iusd | %soccer | ROIt |
+|---|---|---|---|---|---|
+| rank<5 | 85 | 0.818 | 62.7k | 71 | **+7.20** |
+| rank 5–9 | 38 | 0.816 | 68.2k | 82 | **−8.32** |
+| rank≥10 | 34 | 0.800 | 69.2k | 53 | −3.97 |
+
+Rank is **not** a price proxy (prices identical), **not** a liquidity proxy (backing identical),
+**not** a sport proxy (rank 5–9 is *more* soccer yet loses worst). Within every price band, weak
+rank underperforms elite. Two INDEPENDENT mechanisms (liq∩rank overlap = 8 bets). Boundary is at 5
+(rank≥5 net-negative). **Adopt require `best_backer_rank < 5`.** Removes ~39% volume — aggressive,
+but every fold's removed set is negative and every fold's keep set is positive.
+
+## ITER 3 — Reject the remaining candidates (subsumed / positive / below-support).
+
+- **exact-score**: +1.49%, surplus +0.87% → POSITIVE. REJECT (cutting it is curve-fitting).
+- **pay-up ask−p∈[.01,.03]**: −5.9% all → **−0.2% inside the liquid subset** → SUBSUMED by liquidity.
+- **"other"/non-core regime**: −3.9% all → **+14.9% inside liquid subset** → SUBSUMED by liquidity.
+- **obscure league (col/ucl/swe/chi)**: `chi` is +29% (a winning soccer league, mislabeled by the
+  seed); only ucl/col/swe lose (n=5, **below support**) → REJECT as its own cut.
+- **freshness**: non-axis (signals fire fresh) + live field is leaky. REJECT.
+
+## CONVERGENCE — `favorite_v2` = liquidity ≥ $1000 AND best_backer_rank < 5
+
+| metric | champion `favorite` | `favorite_v2` (converged) |
+|---|---|---|
+| bets (ledger, at-fire) | 215 | 132 (−39% vol) |
+| resolved ROI (taker, corrected fee) | +2.81% | **+9.66%** |
+| OOS time-late | +0.97% | **+8.10%** |
+| **OOS non-FIFWC** | **−2.08%** | **+7.63%** (FLIPS positive) |
+| belief-blind surplus (ledger pop) | +2.85% | **+10.84%** |
+| belief-blind z / p_emp / LB | 1.13 / 0.13 / −1.07% | **3.60 / 0.0000 / +5.86%** |
+
+Belief-blind gate (in-sample): p_emp=0.0000 clears Bonferroni (~40 slice-hypotheses tested →
+40×(1/2000) ≈ 0.02 < 0.05); LB +5.86% > 3% margin. Removed set negative in all 4 folds.
+
+**Power limitation (honest):** the "≥2 disjoint non-soccer regimes positive" clause is NOT met
+in-sample — only tennis (n=14, +16.1%) is positive at support; mlb (n=3) and other (n=7) are below
+support. So the belief-blind gate's regime clause is **power-limited**, exactly the champion's own
+binding constraint. → `favorite_v2` earns a SHADOW slot + forward gate, promotes nothing.
+
+## RESIDUAL SCAN (converged keep-set, n=132) — §6 stop condition MET
+
+`policy_search.py --residual`: **0 structural negative slices at power (n≥20)**. Only below-support
+negatives remain (price 0.95–1.00 FLB tax n=14; extreme pay-up n=9) — power-limited / irreducible.
+The loop stops: no defensible cut beyond {liquidity, rank} survives OOS + support + mechanism.
