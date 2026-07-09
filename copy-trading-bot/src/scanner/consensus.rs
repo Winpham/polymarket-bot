@@ -207,18 +207,6 @@ pub struct ConsensusParams {
     /// tighter top-of-book requirement and FAILS a book with no ranked backer.
     /// Default `None` = no-op (the field is never read).
     pub require_backer_rank_lt: Option<i32>,
-    /// Per-sport cell gate (`favorite_bysport`, RUN-PER-SPORT-CONDITIONING §3.3):
-    /// with `Some(set)`, a signal fires ONLY when its sport cell (from
-    /// [`bysport_sport`] on the market slug/event_slug) ∈ `set`. This isolates
-    /// forward accrual to the NON-TOURNAMENT (efficient-market) candidate sports —
-    /// where softness ≈ 0 so any edge must be SKILL — while discounting the
-    /// soft-tournament cells (soccer=World Cup, tennis=Wimbledon) whose in-sample
-    /// edge is softness that will not transfer. IN-SAMPLE certification found 0/7
-    /// cells eligible (belief-blind p, realizable ROI, non-tournament, power); this
-    /// gate exists so the FORWARD gate can rule (MLB on the clock, see
-    /// reports/PREREG_*_bysport.md). Default `None` = no-op → fires everywhere →
-    /// byte-identical to `favorite`.
-    pub cell_gate: Option<Arc<HashSet<String>>>,
 }
 
 impl Default for ConsensusParams {
@@ -242,59 +230,8 @@ impl Default for ConsensusParams {
             router_set: None,
             min_total_usd: 0.0,
             require_backer_rank_lt: None,
-            cell_gate: None,
         }
     }
-}
-
-/// FROZEN slug/event_slug → coarse sport bucket for the `favorite_bysport` cell gate.
-/// A faithful Rust mirror of `scripts/sport_edge_tracker.sport` (the garbage-policy-fixed map
-/// the Python certification uses) so the gate's cell labels match the certified/candidate set
-/// EXACTLY. Classifies on the slug (falling back to event_slug), lower-cased, prefix-matched in
-/// the SAME order as the Python REGIMES list. Anything unmatched is `other`. Pure, unit-tested
-/// against the Python labels below.
-pub fn bysport_sport(slug: &str, event_slug: &str) -> &'static str {
-    let s = if !slug.is_empty() { slug } else { event_slug }.to_lowercase();
-    let sw = |prefixes: &[&str]| prefixes.iter().any(|p| s.starts_with(p));
-    // Order mirrors sport_edge_tracker.REGIMES exactly (soccer hyphen-codes BEFORE esports so
-    // `col-`/`co-` disambiguate the Colorado-vs-Call-of-Duty trap the Python map documents).
-    if sw(&["atp", "wta", "itf"]) {
-        "tennis"
-    } else if sw(&["fifwc", "epl", "uefa", "mls", "laliga", "seriea", "bund"])
-        || sw(&[
-            "col-", "chi-", "ucl-", "swe-", "world-", "bra-", "arg-", "por-", "ned-", "bel-",
-            "crint-", "ligue-", "erediv-", "mar1-", "bra2-",
-        ])
-    {
-        "soccer"
-    } else if sw(&["mlb", "kbo", "npb"]) {
-        "mlb"
-    } else if sw(&["nfl", "ncaaf"]) {
-        "nfl/cfb"
-    } else if sw(&["nba", "ncaab", "wnba"]) {
-        "nba/cbb"
-    } else if sw(&["nhl"]) {
-        "nhl"
-    } else if sw(&[
-        "lol", "val", "cs2", "csgo", "cs-", "dota2", "dota", "r6", "co-", "ow-", "rl-",
-    ]) {
-        "esports"
-    } else if sw(&["btc", "eth", "sol", "xrp", "bnb", "doge", "bitcoin", "ethereum"]) {
-        "crypto"
-    } else {
-        "other"
-    }
-}
-
-/// The NON-TOURNAMENT (efficient-market) candidate sports the `favorite_bysport` shadow arm
-/// fires on: softness ≈ 0 here, so any forward edge must be SKILL (the durability test). Soccer
-/// (World Cup) and tennis (Wimbledon) are DELIBERATELY excluded — their in-sample edge is
-/// expiring-tournament softness. MLB is the first live member (on the clock).
-pub fn bysport_nontournament_cells() -> HashSet<String> {
-    ["mlb", "nba/cbb", "nfl/cfb", "nhl", "esports"]
-        .iter()
-        .map(|s| s.to_string())
-        .collect()
 }
 
 /// A named strategy: a parameter-set scored against the shared per-cycle books.
@@ -549,16 +486,6 @@ pub fn score_market(
             continue;
         }
 
-        // Per-sport cell gate (`favorite_bysport`): fire ONLY in the configured sport cells.
-        // Default None → no-op → this arm is byte-identical to `favorite`. `book.event_slug`
-        // falls back to `""` so the classifier sees the same (slug, event_slug) the Python map
-        // does. See [`bysport_sport`] / [`bysport_nontournament_cells`].
-        if let Some(cells) = params.cell_gate.as_deref()
-            && !cells.contains(bysport_sport(&book.slug, book.event_slug.as_deref().unwrap_or("")))
-        {
-            continue;
-        }
-
         // Elite-required gate (elite_gated variant).
         let has_elite = backers
             .values()
@@ -775,27 +702,6 @@ pub fn default_portfolio(base: &ConsensusParams) -> Vec<StrategyDef> {
                 price_band: Some((0.65, 0.98)),
                 min_total_usd: 1000.0,
                 require_backer_rank_lt: Some(5),
-                ..base.clone()
-            },
-            alerting: false,
-        },
-        // favorite_bysport — the per-sport CONDITIONED arm (RUN-PER-SPORT-CONDITIONING).
-        // Champion `favorite` band + an additive cell GATE that fires ONLY in the
-        // NON-TOURNAMENT (efficient-market) candidate sports {mlb, nba/cbb, nfl/cfb,
-        // nhl, esports} — where softness ≈ 0, so any forward edge must be SKILL —
-        // and DISCARDS the soft-tournament cells (soccer=World Cup, tennis=Wimbledon)
-        // whose in-sample edge is expiring softness that will not transfer. In-sample
-        // certification (belief-blind selection-null, realizable entry_ask, OOS,
-        // non-tournament, power) certified 0/7 cells: MLB is the strongest candidate
-        // but is INDETERMINATE-BY-POWER (null p=0.06, 20 events) with a NEGATIVE
-        // realizable ROI on thin ask coverage — NOT a validated edge. This arm exists
-        // so the FORWARD gate can rule (MLB on the clock; see the frozen
-        // reports/PREREG_*_bysport.md). SHADOW-ONLY, alerting=false, promotes nothing.
-        StrategyDef {
-            name: "favorite_bysport",
-            params: ConsensusParams {
-                price_band: Some((0.65, 0.98)),
-                cell_gate: Some(Arc::new(bysport_nontournament_cells())),
                 ..base.clone()
             },
             alerting: false,
@@ -1933,103 +1839,5 @@ mod tests {
         // Default (trusted_only = false) counts every backer — no-op proof.
         let all = score_market(&b, now, &ConsensusParams::default());
         assert_eq!(all[0].n_backers, 4, "default counts all backers");
-    }
-
-    // --- favorite_bysport cell gate (RUN-PER-SPORT-CONDITIONING) ---------------------------
-    /// A `favorite`-shaped book on a given slug: 3 tight fresh favorite backers (mean ~0.80).
-    fn fav_book(now: DateTime<Utc>, slug: &str, event_slug: &str) -> MarketBook {
-        let mut b = MarketBook::new("0xc", "Team A vs Team B", slug, Some(event_slug.into()), true);
-        b.add_vote(0, "A", vote("wa", Some(5), 0.80, 10, now));
-        b.add_vote(0, "A", vote("wb", Some(20), 0.81, 20, now));
-        b.add_vote(0, "A", vote("wc", Some(30), 0.79, 30, now));
-        b
-    }
-
-    fn favorite_params() -> ConsensusParams {
-        ConsensusParams { price_band: Some((0.65, 0.98)), ..ConsensusParams::default() }
-    }
-
-    #[test]
-    fn bysport_sport_mirrors_python_labels() {
-        // Same labels sport_edge_tracker.sport emits (incl. the col-/co- disambiguation trap).
-        assert_eq!(bysport_sport("mlb-laa-sea-2026-06-30", ""), "mlb");
-        assert_eq!(bysport_sport("atp-jong-hijikata-2026-06-29", ""), "tennis");
-        assert_eq!(bysport_sport("fifwc-bel-sen-2026-07-01", ""), "soccer");
-        assert_eq!(bysport_sport("col-fc-far-2026-07-01", ""), "soccer"); // col- = league, NOT esports
-        assert_eq!(bysport_sport("co-faze-lat-2026-06-29", ""), "esports"); // co- = Call of Duty
-        assert_eq!(bysport_sport("cs2-1win-inox-2026-07-01", ""), "esports");
-        assert_eq!(bysport_sport("nba-lal-bos-2026-10-22", ""), "nba/cbb");
-        assert_eq!(bysport_sport("nfl-kc-buf-2026-09-10", ""), "nfl/cfb");
-        assert_eq!(bysport_sport("nhl-bos-tor-2026-10-08", ""), "nhl");
-        assert_eq!(bysport_sport("btc-updown-5m", ""), "crypto");
-        assert_eq!(bysport_sport("who-visited-island", ""), "other");
-        // slug empty → falls back to event_slug (mirrors the Python `slug or event_slug`)
-        assert_eq!(bysport_sport("", "mlb-nyy-bos-2026-07-01"), "mlb");
-    }
-
-    #[test]
-    fn cell_gate_none_is_byte_identical_noop() {
-        let now = Utc::now();
-        // With no gate, the arm fires on EVERY sport exactly like `favorite`.
-        for slug in ["mlb-a-b-2026-07-01", "fifwc-a-b-2026-07-01", "who-cares"] {
-            let b = fav_book(now, slug, "");
-            let base = score_market(&b, now, &favorite_params());
-            let gated_none = score_market(
-                &b,
-                now,
-                &ConsensusParams { cell_gate: None, ..favorite_params() },
-            );
-            assert_eq!(
-                base.len(),
-                gated_none.len(),
-                "cell_gate=None must be a no-op (byte-identical to favorite) on {slug}"
-            );
-            assert_eq!(base.len(), 1, "favorite fires on {slug}");
-        }
-    }
-
-    #[test]
-    fn cell_gate_fires_nontournament_excludes_tournament() {
-        let now = Utc::now();
-        let gate = ConsensusParams {
-            cell_gate: Some(Arc::new(bysport_nontournament_cells())),
-            ..favorite_params()
-        };
-        // MLB (non-tournament) → fires.
-        assert_eq!(
-            score_market(&fav_book(now, "mlb-laa-sea-2026-06-30", ""), now, &gate).len(),
-            1,
-            "mlb is in the non-tournament set → fires"
-        );
-        // Soccer (World Cup) and tennis (Wimbledon) → excluded.
-        assert!(
-            score_market(&fav_book(now, "fifwc-bel-sen-2026-07-01", ""), now, &gate).is_empty(),
-            "soccer=World Cup is a discarded tournament cell → no fire"
-        );
-        assert!(
-            score_market(&fav_book(now, "atp-jong-hijikata-2026-06-29", ""), now, &gate).is_empty(),
-            "tennis=Wimbledon is a discarded tournament cell → no fire"
-        );
-        // But plain `favorite` (no gate) STILL fires on soccer — proves the gate is the only diff.
-        assert_eq!(
-            score_market(&fav_book(now, "fifwc-bel-sen-2026-07-01", ""), now, &favorite_params()).len(),
-            1,
-            "favorite (no gate) fires on soccer — gate is the sole difference"
-        );
-    }
-
-    #[test]
-    fn default_portfolio_registers_bysport_and_leaves_incumbents_inert() {
-        let port = default_portfolio(&ConsensusParams::default());
-        let bysport = port.iter().find(|s| s.name == "favorite_bysport").expect("arm registered");
-        assert!(bysport.params.cell_gate.is_some(), "favorite_bysport carries a cell gate");
-        assert!(!bysport.alerting, "favorite_bysport is shadow-only (never alerts)");
-        // Every incumbent arm keeps cell_gate = None (byte-identical to before this run).
-        for name in ["favorite", "favorite_liq", "favorite_v2", "strict", "_blind", "elite_fresh_fav"] {
-            let s = port.iter().find(|s| s.name == name).unwrap_or_else(|| panic!("{name} present"));
-            assert!(s.params.cell_gate.is_none(), "{name} must keep cell_gate=None (untouched)");
-        }
-        // `favorite` remains the sole alerter.
-        assert!(port.iter().find(|s| s.name == "favorite").unwrap().alerting);
     }
 }

@@ -70,23 +70,34 @@ the clause, it is struck as a durable non-tournament edge (an honest negative). 
 real MLB edge: books deepen / spreads tighten as the season scales, making the paper skill
 harvestable — the forward gate will detect that if it happens.
 
-## The shadow arm (what shipped)
+## Decision (2026-07-09) — no arm shipped; the conditioning is dropped
 
-`favorite_bysport` (Rust): champion `favorite` band + additive `cell_gate` firing only in
-{mlb, nba/cbb, nfl/cfb, nhl, esports}. `alerting=false`, promotes nothing, arms nothing.
-`cell_gate=None` default ⇒ every incumbent arm (`favorite`, `favorite_liq`, `favorite_v2`,
-`strict`, `_blind`, `elite_fresh_fav`) is **byte-identical**. Trader-quality is **NOT** raw rank
-(REFUTED 5 ways; trader-tier power-shattered in DIM 3) — the sanctioned earned-trust cell path
-(`slice_pooled_quality` / `CellPooled`, already wired, byte-identical when the trust map is empty)
-is the only blessed quality feature, and the arm carries no rank gate. Accrues in `consensus_signals`
-(resolved surplus + `entry_ask`) the moment it deploys — same shadow vehicle as favorite_liq/v2; no
-`.env` edit, no real-money change. 4 unit tests + `cargo build`/`clippy`/132 tests green; Python
-instruments self-test green.
+Because **0/7 cells certified AND the conditioning is affirmatively regressive at realizable entry**,
+the `favorite_bysport` shadow arm was **built, verified, then REMOVED** rather than merged. There is
+no point carrying a shadow arm we have already shown subtracts realizable value. The Rust
+(`consensus.rs`, `consensus_cycle.rs`) is **byte-identical to the pre-run base** — the `cell_gate`
+mechanism, the `favorite_bysport` registration, the classifier, and their 4 unit tests were all
+reverted (`cargo build`/`clippy`/128 tests green). **The champion flat `favorite` remains the live
+arm, untouched.**
+
+**The MLB forward test loses nothing by this removal.** MLB favorite picks already accrue under the
+plain `favorite` arm in `consensus_signals`; the arm only *isolated* accrual that already exists. The
+MLB-durability verdict is obtained forward by simply **re-running `cell_certify.py` on the accruing
+`favorite` book in ~2–3 weeks** (the frozen `PREREG_20260709T204127Z_bysport.md` clause still applies
+as the rule) — no separate arm required. If MLB's belief-blind skill LB, realizable ROI(ask), and
+selection-null p all clear forward, revisit; otherwise MLB is struck as a durable edge.
+
+## What is kept
+
+The **analysis instruments and reports** — the study that proved conditioning doesn't work — are the
+deliverable and are retained: `cell_skill_map.py`, `cell_certify.py` (+`--residual`),
+`CELL-SKILL-MAP.json`, `CELL-CERT-LOG.md`, `REJECTED-CELLS.md`, `BYSPORT-RESIDUAL-SCAN.md`, the frozen
+prereg, and this verdict. They re-run read-only against the live book to deliver the forward MLB read.
 
 ## Honest status
 
-**Incomplete-but-resumable → in-sample COMPLETE, forward-PENDING.** The certifiable per-sport
-conditioning was DERIVED (pooled + OOS + non-tournament + belief-blind + realizable, not
-sliced-to-taste) and the answer in-sample is: **none certifies, and conditioning is regressive at
-realizable entry.** The arm is shadow-registered and will accrue forward; MLB is on the clock with a
-frozen gate; the forward verdict is ~weeks out. No per-sport edge is claimed real.
+**COMPLETE.** The certifiable per-sport conditioning was DERIVED (pooled + OOS + non-tournament +
+belief-blind + realizable, not sliced-to-taste) and the answer is: **none certifies, conditioning is
+regressive at realizable entry, so nothing ships — the flat champion wins.** MLB is not refuted (only
+underpowered); its forward verdict comes from re-running the analysis on the plain `favorite` book in
+~weeks. No per-sport edge is claimed real; no live behavior changed.
