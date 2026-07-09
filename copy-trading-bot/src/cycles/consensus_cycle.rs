@@ -1202,9 +1202,10 @@ mod tests {
         let base = crate::scanner::consensus::ConsensusParams::default();
         let defs = crate::scanner::consensus::default_portfolio(&base);
         let (alerting, watch) = alert_sets("", "", &defs);
-        // Byte-identical incumbent behavior: strict only, WATCH never pushes.
+        // 2026-07-09: alerting moved from retired-as-a-bet `strict` to `favorite`; still exactly
+        // one built-in alerting strategy, WATCH never pushes.
         assert_eq!(alerting.len(), 1, "only one built-in alerting strategy");
-        assert!(alerting.contains("strict"));
+        assert!(alerting.contains("favorite"));
         assert!(watch.is_empty());
     }
 
