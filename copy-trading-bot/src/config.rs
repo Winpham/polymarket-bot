@@ -532,6 +532,27 @@ pub struct CopyTradingConfig {
     #[config(env = "HONEST_MAX_DRAWDOWN_USD", default = 500.0)]
     pub honest_max_drawdown_usd: f64,
 
+    // --- Execution-policy shadow (PAPER-ONLY, prereg 2026-07-09T02:05Z) ---
+    /// Measure the three frozen execution policies (taker@fire, taker@+15m,
+    /// maker-rest-at-mid/30m) per flagged-strategy signal from the live CLOB
+    /// tape (`clob_price_tape`) and book them side by side into the paper
+    /// ledger as `exec_fire:/exec_p15:/exec_mrest:<strategy>`. Needs
+    /// `LIVE_TAPE=true` upstream; without it the evaluator finds no quotes and
+    /// records the coverage gap honestly. Default OFF: no tape reads, no new
+    /// writes — live behavior byte-identical. Never touches selection,
+    /// alerting, `entry_ask`, or existing ledger labels. PAPER only.
+    #[config(env = "EXEC_POLICY_SHADOW", default = false)]
+    pub exec_policy_shadow: bool,
+
+    /// Comma-separated strategies the execution-policy shadow evaluates.
+    #[config(env = "EXEC_POLICY_STRATEGIES", default = "favorite,elite_fresh_fav")]
+    pub exec_policy_strategies: String,
+
+    /// Max signals evaluated (and max resolved entries booked) per housekeeping
+    /// cycle — bounds the extra DB work; the backlog settles on later cycles.
+    #[config(env = "EXEC_POLICY_MAX_PER_CYCLE", default = 40)]
+    pub exec_policy_max_per_cycle: usize,
+
     /// Port for the Prometheus metrics HTTP endpoint.
     #[config(env = "METRICS_PORT", default = 9001)]
     pub metrics_port: u16,

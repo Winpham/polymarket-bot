@@ -349,6 +349,14 @@ pub async fn housekeeping_cycle(
         );
     }
 
+    // Execution-policy shadow (PAPER-ONLY, prereg 2026-07-09T02:05Z): freeze
+    // fire-time book + frozen policy entries from the live tape for flagged
+    // strategies, and book resolved entries into the paper ledger. Default
+    // OFF; pure DB measurement — no HTTP, never touches the live path.
+    if cfg.exec_policy_shadow {
+        exec_policy_shadow_pass(portfolio, cfg).await;
+    }
+
     // Phase 4: opt-in minimal-noise honest-tracker digest (material change only;
     // silent by default). Read-only — never touches the live path.
     crate::cycles::honest_digest::maybe_push(portfolio, ntfy, cfg).await;
@@ -359,6 +367,72 @@ pub async fn housekeeping_cycle(
         "Copy housekeeping cycle complete"
     );
     Ok(())
+}
+
+/// One budgeted execution-policy shadow pass: (1) evaluate pending
+/// flagged-strategy signals whose policy windows are complete — one shot per
+/// signal, frozen forever in `exec_policy_entries` (the tape prunes at 72 h;
+/// this is the durable record); (2) book already-resolved evaluated entries
+/// into the paper ledger under `exec_fire:/exec_p15:/exec_mrest:<strategy>`.
+/// Best-effort per signal: one failure never aborts the pass or the cycle.
+async fn exec_policy_shadow_pass(portfolio: &PgPortfolio, cfg: &CopyTradingConfig) {
+    let strategies: Vec<String> = cfg
+        .exec_policy_strategies
+        .split(',')
+        .map(|s| s.trim().to_string())
+        .filter(|s| !s.is_empty() && s != "_blind")
+        .collect();
+    if strategies.is_empty() {
+        return;
+    }
+    let budget = cfg.exec_policy_max_per_cycle as i64;
+
+    let mut evaluated = 0usize;
+    match portfolio.exec_policy_pending(&strategies, budget).await {
+        Ok(pending) => {
+            for p in &pending {
+                match portfolio.evaluate_exec_policy(p).await {
+                    Ok(true) => evaluated += 1,
+                    Ok(false) => {}
+                    Err(e) => {
+                        tracing::warn!(err = %e, signal_id = p.signal_id, "exec_policy evaluate failed")
+                    }
+                }
+            }
+        }
+        Err(e) => tracing::warn!(err = %e, "exec_policy pending scan failed"),
+    }
+
+    let mut booked_signals = 0usize;
+    let mut booked_bets = 0usize;
+    match portfolio.exec_policy_unbooked_resolved(budget).await {
+        Ok(bookings) => {
+            for b in &bookings {
+                match portfolio
+                    .book_exec_policy_entry(b, cfg.flat_stake, cfg.fee_pct)
+                    .await
+                {
+                    Ok(n) => {
+                        booked_signals += 1;
+                        booked_bets += n;
+                    }
+                    Err(e) => {
+                        tracing::warn!(err = %e, signal_id = b.signal_id, "exec_policy booking failed")
+                    }
+                }
+            }
+        }
+        Err(e) => tracing::warn!(err = %e, "exec_policy booking scan failed"),
+    }
+
+    if evaluated > 0 || booked_signals > 0 {
+        tracing::info!(
+            evaluated,
+            booked_signals,
+            booked_bets,
+            "Execution-policy shadow pass (paper)"
+        );
+    }
 }
 
 async fn check_market_resolution(http: &reqwest::Client, market_id: &str) -> Result<Option<bool>> {
