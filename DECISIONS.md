@@ -1086,6 +1086,13 @@ leak fixed:** the taker's stored `entry_ask` is captured ~20min post-detection (
 selected." DWELL relabeled (2 touches spanning 30s, not continuous); `maker_edge_per_signal` flagged
 abstention-confounded.
 
+**Capped-chase refinement (Tue, added same day).** Instrument now sweeps a "willing-to-pay-up" δ
+(rest at P, fill at any ask ≤ P+δ, else cancel) × cancel-time — δ=0 is passive-at-P, δ=(ask−P) is the
+taker. Directional (power-limited) read: a small chase (0.5–1¢) with a SHORT cancel (5m) catches 1–3
+winners the passive maker misses and lifts filled ROI from ≈−7% toward ≈−1.5% while still beating the
+taker ≈+3%; long cancels just fill more reverting losers. Assumes ≥stake at the shown ask (unverified
+— the open volume question). Encouraging but N=20/2d — does NOT change the verdict; the δ-sweep accrues.
+
 **Decision (binding): INDETERMINATE-BY-POWER — ACCRUE, promote nothing.** N=20 (filled ≤17 < 30) and
 **2 day-clusters < 5** (the binding wall; day-LB t(1) uninformative, −0.78 to −1.64). No cell reaches
 GO (needs power AND filled-LB>0 after fees AND adverse-gap≥0 AND maker≥taker AND audit-survival). The

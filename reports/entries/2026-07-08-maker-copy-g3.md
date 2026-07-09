@@ -68,6 +68,20 @@ grains). Head-to-head taker reference = **decision-time tape ask** at T (causal)
 - Two labeling fixes applied: DWELL relabeled (2 touches spanning 30s, not continuous dwell);
   `maker_edge_per_signal` flagged as abstention-confounded (never a fair maker-vs-taker read).
 
+## Capped-chase refinement (Tue, 2026-07-08)
+Tue's design instinct: don't rest passively and miss the winners — be willing to *chase up to a cap*
+(pay up to P+δ) to catch a fill, and cancel if it runs past the cap or a time limit. This is a single
+knob: δ=0 is the passive maker at P; δ=(ask−P) is the taker; the middle is the adaptive maker. Added
+as a sweep (`evaluate_chase`, δ ∈ {0, 0.5, 1, 2}¢ × cancel {5,15,60m,RES}), booking each fill at the
+**actual** ask ≤ cap. Directional read (still N=20 / 2 days, NOT certifiable): the instinct is borne
+out on this sample — at a **short cancel (5m)**, a 0.5–1¢ chase catches **1–3 extra winners** the
+passive maker misses and lifts filled ROI from ≈−7% toward ≈−1.5%, while still beating the taker
+≈+3%. The value lives at **short cancel windows** — long windows (60m/RES) just sit around and fill
+more reverting losers (adverse gap stays −30%+). Caveat: the chase assumes ≥$100 is available at the
+shown top-of-book ask (unverified — the same open volume question), so its fill-rates are an upper
+bound. Encouraging, power-limited, promotes nothing — the δ-sweep now accrues so the sweet spot can be
+confirmed or refuted as the tape deepens.
+
 ## Verdict — INDETERMINATE-BY-POWER (accruing)
 N=20 filled ≤17 < 30 floor; **2 day-clusters < 5** is the binding wall (day-LB t(1) is uninformative:
 −0.78 to −1.64). No cell reaches GO (needs power AND filled-LB>0 AND adverse-gap≥0 AND maker≥taker AND
