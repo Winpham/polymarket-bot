@@ -1,0 +1,364 @@
+{
+  "meta": {
+    "generated_at": "2026-07-09T19:50:16.896125+00:00",
+    "strategies": [
+      "favorite",
+      "favorite_liq",
+      "favorite_v2",
+      "favorite_tail"
+    ],
+    "window_days": 7,
+    "power_floor_events": 30,
+    "champion_anchor_verification": {
+      "ok": true,
+      "detail": {
+        "population_n": 219,
+        "ledger_native_roi_on_turnover": 0.022144847148628858,
+        "audit_pnl_books_formula_roi_on_turnover_same_population": 0.016228024264660225,
+        "tolerance_abs": 0.05,
+        "note": "Both computed over the IDENTICAL 'favorite' resolved-bet population from honest_paper_ledger. They use different haircut/entry conventions (ledger: entry_ask or mkt+1c, audit: mean+0.5c) so an exact match isn't expected -- both positive and within a few points of each other is the honest bar. A separate, much LARGER population figure from running audit_pnl_books.py standalone (reports/audit_pnl_books.json) is NOT expected to match either: it includes pre-Phase-3 history (before the ledger existed) that never got appended to honest_paper_ledger -- a real, understood, documented population gap, not a bug."
+      }
+    },
+    "posture": "READ-ONLY. Paper-only. Writes no rows. Deploys/arms/merges NOTHING."
+  },
+  "arms": [
+    {
+      "strategy": "favorite",
+      "status": "live",
+      "resolved_pnl_canonical": {
+        "cash_basis": {
+          "n": 219,
+          "turnover_usd": 21900.0,
+          "net_pnl_usd": 484.97,
+          "roi_on_turnover": 0.022144847148628848,
+          "win_rate": 0.8493150684931506,
+          "n_days": 9,
+          "basis": "cash"
+        },
+        "detection_basis": {
+          "n": 219,
+          "turnover_usd": 21900.0,
+          "net_pnl_usd": 484.97,
+          "roi_on_turnover": 0.022144847148628848,
+          "win_rate": 0.8493150684931506,
+          "n_days": 11,
+          "basis": "detection"
+        },
+        "basis_note": "both read the SAME honest_paper_ledger.pnl column (corrected fee, event-dedup by the ledger's own UNIQUE constraint) -- only the date KEY differs. See day_table_basis_divergence for which days flip sign between the two bases."
+      },
+      "rolling_window": {
+        "last_7d": {
+          "n": 183,
+          "turnover_usd": 18300.0,
+          "net_pnl_usd": -95.93,
+          "roi_on_turnover": -0.005242086847025653,
+          "win_rate": 0.825136612021858,
+          "n_days": 8,
+          "basis": "cash"
+        },
+        "since_first_row": {
+          "n": 219,
+          "turnover_usd": 21900.0,
+          "net_pnl_usd": 484.97,
+          "roi_on_turnover": 0.022144847148628848,
+          "win_rate": 0.8493150684931506,
+          "n_days": 9,
+          "basis": "cash"
+        }
+      },
+      "day_table_basis_divergence": {
+        "cash": {
+          "2026-07-01": {
+            "n": 18,
+            "net": 100.7
+          },
+          "2026-07-02": {
+            "n": 28,
+            "net": 735.81
+          },
+          "2026-07-03": {
+            "n": 24,
+            "net": -14.49
+          },
+          "2026-07-04": {
+            "n": 35,
+            "net": 10.32
+          },
+          "2026-07-05": {
+            "n": 34,
+            "net": -257.25
+          },
+          "2026-07-06": {
+            "n": 28,
+            "net": 71.76
+          },
+          "2026-07-07": {
+            "n": 23,
+            "net": -2.75
+          },
+          "2026-07-08": {
+            "n": 17,
+            "net": -322.39
+          },
+          "2026-07-09": {
+            "n": 12,
+            "net": 163.25
+          }
+        },
+        "detection": {
+          "2026-06-29": {
+            "n": 4,
+            "net": -31.8
+          },
+          "2026-06-30": {
+            "n": 3,
+            "net": -77.54
+          },
+          "2026-07-01": {
+            "n": 30,
+            "net": 336.92
+          },
+          "2026-07-02": {
+            "n": 26,
+            "net": 318.6
+          },
+          "2026-07-03": {
+            "n": 27,
+            "net": -134.5
+          },
+          "2026-07-04": {
+            "n": 34,
+            "net": 98.85
+          },
+          "2026-07-05": {
+            "n": 30,
+            "net": 354.17
+          },
+          "2026-07-06": {
+            "n": 22,
+            "net": -382.02
+          },
+          "2026-07-07": {
+            "n": 18,
+            "net": 103.28
+          },
+          "2026-07-08": {
+            "n": 18,
+            "net": -299.46
+          },
+          "2026-07-09": {
+            "n": 7,
+            "net": 198.47
+          }
+        },
+        "days_flip_sign_between_bases": [
+          "2026-06-29",
+          "2026-06-30",
+          "2026-07-05",
+          "2026-07-06",
+          "2026-07-07"
+        ]
+      },
+      "throughput": {
+        "bets_per_day": 24.333333333333332,
+        "peak_concurrent_capital": 3200.0,
+        "peak_concurrent_positions": 32,
+        "turnover_per_day_usd": 2433.33,
+        "turnover_multiple": 0.76
+      },
+      "open_positions_mtm": {
+        "n_open": 16,
+        "n_with_mark": 15,
+        "mtm_total_open_pnl": -80.96,
+        "mtm_open_losers": 10,
+        "n_fresh_24h": 11,
+        "censoring_note": "Winners resolve roughly 2x faster than losers (see audit_pnl_books.py's B3 hold-time asymmetry, reproduced live in this report's cross-check) -- so a FRESH day's still-open book is winner-enriched almost by construction. Never read a fresh day's open-MTM as a floor on eventual resolved P&L; it is a snapshot mid-flight, not a settled record."
+      },
+      "power_flag": "readable (N=219 >= 30 power floor)",
+      "regime_split": {
+        "soccer": {
+          "events": 24,
+          "ev_per_day": 2.1818181818181817,
+          "win_pct": 90.63545150501672,
+          "softness": 0.06410142615811695,
+          "skill": 0.055924256460817556,
+          "total": 0.07098102267380231,
+          "status": "OK"
+        },
+        "tennis": {
+          "events": 83,
+          "ev_per_day": 8.3,
+          "win_pct": 85.5421686746988,
+          "softness": 0.0335084539859583,
+          "skill": 0.05473720404284587,
+          "total": 0.08089415882590821,
+          "status": "OK"
+        },
+        "other": {
+          "events": 16,
+          "ev_per_day": 2.0,
+          "win_pct": 82.6086956521739,
+          "softness": 0.007006341769003051,
+          "skill": -0.07056161291489757,
+          "total": -0.05767178298282942,
+          "status": "INDETERMINATE (N<20)"
+        },
+        "mlb": {
+          "events": 20,
+          "ev_per_day": 2.2222222222222223,
+          "win_pct": 91.30434782608695,
+          "softness": 0.028377679416902273,
+          "skill": 0.1401086117268847,
+          "total": 0.15712497012283708,
+          "status": "OK"
+        },
+        "nba/cbb": {
+          "events": 6,
+          "ev_per_day": 1.2,
+          "win_pct": 66.66666666666667,
+          "softness": 0.04361401598643792,
+          "skill": -0.08035268153082165,
+          "total": -0.03822062255286862,
+          "status": "INDETERMINATE (N<20)"
+        }
+      },
+      "realizable_clv": {
+        "distinct_events": 180,
+        "hit_rate": 0.8455178771845437,
+        "clv_roi": 0.0638803194875771,
+        "honest_roi": 0.04551990871837968,
+        "honest_roi_sd": 0.47240609961865443
+      },
+      "belief_blind": {
+        "role": "champion (reference)",
+        "key_arm_metrics": {
+          "strategy": "favorite",
+          "events": 211,
+          "observed": 0.06480000000000001,
+          "null_sigma": 0.0172,
+          "z": 3.79,
+          "p_emp": 0.0,
+          "verdict": "SELECTION-REAL",
+          "belief_blind_lb": 0.03659200000000001,
+          "non_soccer_regimes_positive": 2,
+          "realizable_roi": 0.040015959879637734,
+          "realizable_events": 180
+        },
+        "regression_status": {
+          "status": "HEALTHY",
+          "reason": "belief-blind LB +3.66% > +0.00%, p_emp 0.0000, 211 ev",
+          "belief_blind_lb": 0.03659200000000001,
+          "floor": 0.0
+        },
+        "resolved_ledger_family": {
+          "bets": 320,
+          "pnl_usd": 581.97,
+          "roi_on_turnover": 0.01818643860844627
+        }
+      }
+    },
+    {
+      "strategy": "favorite_liq",
+      "status": "awaiting-forward-data (deploy pending)",
+      "n": 0,
+      "note": "favorite_liq / favorite_v2 have ZERO honest_paper_ledger rows: they are built on the unmerged feat/garbage-policy branch and have not been deployed, so no signals for them exist yet. This tracker deliberately does NOT backfill-evaluate them on favorite's pre-snapshot history -- doing so is the exact coverage artifact that already inflated an in-sample '+9.66%' for this family. Their honest scope is forward-from-first-row-only, once Tue deploys feat/garbage-policy.",
+      "open_positions_mtm": {
+        "n_open": 0,
+        "n_with_mark": 0,
+        "note": "signals may exist pre-deploy; strategy has 0 resolved/ledgered bets"
+      },
+      "throughput": null,
+      "power_flag": "not yet readable (N=0)",
+      "regime_split": {},
+      "realizable_clv": null,
+      "belief_blind": {
+        "role": "challenger",
+        "verdict": {
+          "strategy": "favorite_liq",
+          "verdict": "CHAMPION-STANDS",
+          "reasons": [
+            "challenger not measurable (below readout floor / no rows)"
+          ]
+        }
+      }
+    },
+    {
+      "strategy": "favorite_v2",
+      "status": "awaiting-forward-data (deploy pending)",
+      "n": 0,
+      "note": "favorite_liq / favorite_v2 have ZERO honest_paper_ledger rows: they are built on the unmerged feat/garbage-policy branch and have not been deployed, so no signals for them exist yet. This tracker deliberately does NOT backfill-evaluate them on favorite's pre-snapshot history -- doing so is the exact coverage artifact that already inflated an in-sample '+9.66%' for this family. Their honest scope is forward-from-first-row-only, once Tue deploys feat/garbage-policy.",
+      "open_positions_mtm": {
+        "n_open": 0,
+        "n_with_mark": 0,
+        "note": "signals may exist pre-deploy; strategy has 0 resolved/ledgered bets"
+      },
+      "throughput": null,
+      "power_flag": "not yet readable (N=0)",
+      "regime_split": {},
+      "realizable_clv": null,
+      "belief_blind": {
+        "role": "challenger",
+        "verdict": {
+          "strategy": "favorite_v2",
+          "verdict": "CHAMPION-STANDS",
+          "reasons": [
+            "challenger not measurable (below readout floor / no rows)"
+          ]
+        }
+      }
+    },
+    {
+      "strategy": "favorite_tail",
+      "status": "awaiting-forward-data (deploy pending)",
+      "n": 0,
+      "note": "'favorite_tail' has ZERO honest_paper_ledger rows (0 resolved bets have ever been appended for it). No ROI is computed -- a fake/backfilled number would repeat the known coverage-artifact mistake. If this strategy is expected to be live, check should_ledger()/LEDGER_STRATEGIES and whether it has ever resolved a signal.",
+      "open_positions_mtm": {
+        "n_open": 0,
+        "n_with_mark": 0,
+        "note": "signals may exist pre-deploy; strategy has 0 resolved/ledgered bets"
+      },
+      "throughput": null,
+      "power_flag": "not yet readable (N=0)",
+      "regime_split": {
+        "other": {
+          "events": 1,
+          "ev_per_day": 1.0,
+          "win_pct": 100.0,
+          "softness": 0.007006341769003051,
+          "skill": 0.03413790566604039,
+          "total": 0.043340132105434304,
+          "status": "INDETERMINATE (N<20)"
+        }
+      },
+      "realizable_clv": null,
+      "belief_blind": {
+        "role": "challenger",
+        "verdict": {
+          "strategy": "favorite_tail",
+          "verdict": "CHAMPION-STANDS",
+          "reasons": [
+            "challenger not measurable (below readout floor / no rows)"
+          ]
+        }
+      }
+    }
+  ],
+  "capacity_flag": {
+    "diagnostic": "rarity of the favorite_liq/favorite_v2 gates, measured on the CHAMPION's own forward-snapshot-covered signal pool -- NOT a P&L estimate for the new arms",
+    "clean_snapshot_window_days": [
+      "2026-07-03",
+      "2026-07-04",
+      "2026-07-05",
+      "2026-07-06",
+      "2026-07-07",
+      "2026-07-08",
+      "2026-07-09"
+    ],
+    "snapshotted_signals_n": 227,
+    "clears_favorite_liq_pct": 0.8502202643171806,
+    "clears_favorite_v2_pct": 0.4008810572687225,
+    "clears_favorite_liq_n": 193,
+    "clears_favorite_v2_n": 91,
+    "verdict": "not a bench-sitter -- roughly 40% of the champion's forward-snapshotted signals would also clear favorite_v2's top-5-backer+$1k gate"
+  }
+}

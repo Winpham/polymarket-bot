@@ -76,13 +76,27 @@ CENSORING_NOTE = (
     "is winner-enriched almost by construction. Never read a fresh day's open-MTM as a floor on "
     "eventual resolved P&L; it is a snapshot mid-flight, not a settled record."
 )
-COVERAGE_ARTIFACT_NOTE = (
+NEW_ARM_NOTE = (
     "favorite_liq / favorite_v2 have ZERO honest_paper_ledger rows: they are built on the unmerged "
     "feat/garbage-policy branch and have not been deployed, so no signals for them exist yet. This "
     "tracker deliberately does NOT backfill-evaluate them on favorite's pre-snapshot history -- doing "
     "so is the exact coverage artifact that already inflated an in-sample '+9.66%' for this family. "
     "Their honest scope is forward-from-first-row-only, once Tue deploys feat/garbage-policy."
 )
+
+
+def zero_row_note(strategy):
+    """Per-arm zero-ledger-row explanation. The two named new arms get the specific deploy-pending
+    story; any OTHER auto-discovered favorite_* strategy (e.g. a stray one-off signal) gets a
+    generic honest note instead of a copy-pasted, strategy-mismatched sentence."""
+    if strategy in ("favorite_liq", "favorite_v2"):
+        return NEW_ARM_NOTE
+    return (
+        "'%s' has ZERO honest_paper_ledger rows (0 resolved bets have ever been appended for it). "
+        "No ROI is computed -- a fake/backfilled number would repeat the known coverage-artifact "
+        "mistake. If this strategy is expected to be live, check should_ledger()/LEDGER_STRATEGIES "
+        "and whether it has ever resolved a signal." % strategy
+    )
 
 
 # ============================================================================ db plumbing
@@ -522,7 +536,7 @@ def build_arm_report(strategy, ledger_rows_all, open_rows_all, regime_all, belie
             "strategy": strategy,
             "status": "awaiting-forward-data (deploy pending)",
             "n": 0,
-            "note": COVERAGE_ARTIFACT_NOTE,
+            "note": zero_row_note(strategy),
             "open_positions_mtm": {"n_open": len(open_rows), "n_with_mark": 0,
                                     "note": "signals may exist pre-deploy; strategy has 0 resolved/ledgered bets"},
             "throughput": None,
@@ -602,7 +616,7 @@ def render_markdown(report):
                   "signal first fired). They can disagree on which days are red -- see "
                   "`day_table_basis_divergence.days_flip_sign_between_bases` per arm.")
     lines.append("- **Zero-row arms show `awaiting-forward-data (deploy pending)`, N=0, no ROI computed.** "
-                  "%s" % COVERAGE_ARTIFACT_NOTE)
+                  "%s" % NEW_ARM_NOTE)
     lines.append("- **Open positions are MTM-labeled and censoring-flagged.** %s" % CENSORING_NOTE)
     lines.append("- **Every arm is judged against the same belief-blind gate the champion is** "
                   "(`standard_guard.py` measure/challenger), not a vanity P&L.")
