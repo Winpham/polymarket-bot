@@ -1,0 +1,67 @@
+{
+ "meta": {
+  "universe": "favorite arm, resolved, price 0.65-0.98",
+  "n_signals": 208,
+  "native_size": "initial_total_usd (aggregate tracked-backer holdings at fire)",
+  "small_threshold": 0.1,
+  "large_threshold": 0.5,
+  "OPTIMISTIC_CEILING": "uses full ACCUMULATED sharp position, not marginal ask liquidity; full-tape flow ceiling is far thinner ($4-45/signal reachable, coverage-biased low). TRUE taker capacity is BELOW this curve.",
+  "native_pctiles": {
+   "p25": 3835,
+   "median": 16968,
+   "p75": 86333,
+   "p90": 198467
+  }
+ },
+ "curve": [
+  {
+   "stake_usd": 100,
+   "median_our_share": 0.0061,
+   "p90_our_share": 0.1047,
+   "frac_signals_small_copy_le10pct": 0.899,
+   "frac_signals_we_are_the_flow_ge50pct": 0.024
+  },
+  {
+   "stake_usd": 250,
+   "median_our_share": 0.0151,
+   "p90_our_share": 0.2619,
+   "frac_signals_small_copy_le10pct": 0.798,
+   "frac_signals_we_are_the_flow_ge50pct": 0.058
+  },
+  {
+   "stake_usd": 500,
+   "median_our_share": 0.0303,
+   "p90_our_share": 0.5237,
+   "frac_signals_small_copy_le10pct": 0.697,
+   "frac_signals_we_are_the_flow_ge50pct": 0.101
+  },
+  {
+   "stake_usd": 1000,
+   "median_our_share": 0.0606,
+   "p90_our_share": 1.0474,
+   "frac_signals_small_copy_le10pct": 0.596,
+   "frac_signals_we_are_the_flow_ge50pct": 0.188
+  },
+  {
+   "stake_usd": 2500,
+   "median_our_share": 0.1514,
+   "p90_our_share": 2.6185,
+   "frac_signals_small_copy_le10pct": 0.462,
+   "frac_signals_we_are_the_flow_ge50pct": 0.303
+  },
+  {
+   "stake_usd": 5000,
+   "median_our_share": 0.3028,
+   "p90_our_share": 5.2371,
+   "frac_signals_small_copy_le10pct": 0.346,
+   "frac_signals_we_are_the_flow_ge50pct": 0.404
+  },
+  {
+   "stake_usd": 10000,
+   "median_our_share": 0.6056,
+   "p90_our_share": 10.4742,
+   "frac_signals_small_copy_le10pct": 0.212,
+   "frac_signals_we_are_the_flow_ge50pct": 0.514
+  }
+ ]
+}

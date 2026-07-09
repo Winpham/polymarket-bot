@@ -75,9 +75,52 @@ is a **second non-soccer sport in-season**: World Cup ends ~07-19, Wimbledon ~07
 ~early Oct 2026 (≈3 months)**; robust ≥5-regime non-expiring panel = **~Nov 2026–Feb 2027 (4–6
 months)**. Even then, PERSISTS is conditional — current OOS edge ≈ 0. **No run can manufacture this.**
 
-## 2. Capacity & fills
+## 2. Capacity & fills — the compounding mirage, killed
 
-_(pending)_
+**Coordination:** consumed the maker-copy G3 run's committed outputs (`reports/maker_copy_g3.json`,
+its entry, `maker_capacity_fulltape.json`, `copyability.json`) — did NOT re-run its fill models or
+touch its files/tables. Added the one thing no prior artifact isolated: the **native per-signal size**
+(`scripts/capacity_curve_harden.py`, read-only).
+
+**Load-bearing data reality (from G3, respected):** `clob_price_tape` is a top-of-book
+best_bid/best_ask inflection series with **NO trade tape** — `last_size` is quote-book churn, not
+executed volume. So a *depth-based* capacity curve from `clob_price_tape` is **not honestly
+measurable** (the G2 quote-flicker trap). The measurable anchors are the sharks' native size and the
+full-market flow ceiling.
+
+**Native size:** favorite signals are backed by material aggregate position — median consensus
+notional **$16,968**, p25 $3,835, p90 $198,467 (~3 backers, per-backer median $5,580). But individual
+sharp *fills* are tiny (trader_fills median **$11**, p90 $277) — they accumulate via many small fills.
+
+**Capacity curve (our stake as a share of native size; OPTIMISTIC — see caveat):**
+
+| stake | median our-share | p90 our-share | % signals still small-copy (≤10%) | % we ARE the flow (≥50%) |
+|---|---|---|---|---|
+| **$100** (current) | 0.6% | 10.5% | **89.9%** | 2.4% |
+| $500 | 3.0% | 52.4% | 69.7% | 10.1% |
+| $1,000 | 6.1% | 104.7% | 59.6% | 18.8% |
+| $2,500 | 15.1% | 261.9% | 46.2% | 30.3% |
+| $10,000 | 60.6% | 1047% | 21.2% | 51.4% |
+
+**Caveat (the true ceiling is BELOW this):** the curve uses the sharks' full *accumulated* position
+(much entered earlier/cheaper), not the *marginal ask liquidity at our entry in the 5-min window* —
+which the full-tape flow ceiling shows is far thinner ($4–45/signal on reachable markets, and
+coverage-biased low because data-api /trades caps offset so the busiest markets are unreachable
+historically). Precise taker impact-at-size needs order-book depth we don't have historically (the
+same wall G3 hit); the honest read is qualitative.
+
+**Realistic compounding ceiling: ~$500–1,000 per signal**, and well below that on the thin tail. At
+~45 favorite signals/week × +2.8% resolved edge, even the optimistic $1k cap implies **only ~$1k/week
+gross edge** — and that assumes the edge (measured at flat $100) survives at 10× size, which is
+unproven and probably optimistic. **The compounding mirage is dead:** you cannot turn a small +2.8%
+edge on $100 into meaningful absolute profit by scaling stake, because per-signal capacity caps at
+low-thousands and marginal liquidity is thinner still. This is consistent with the frozen finding that
+a thin, capacity-capped edge cannot be safely levered.
+
+**Maker path (from G3, not re-derived):** real +2–4% entry edge (rest at the sharp's price, cheaper
+than taking at detection) but adverse selection dominates at realistic rest windows (adverse-WR gap
+−35% to −38%; miss 21–29% of winners); INDETERMINATE-BY-POWER (N=20, 2 day-clusters < 5). Volume /
+queue-capture still OPEN (needs a real trade tape).
 
 ## 3. Edge refinement (challengers under the guard)
 
