@@ -11,7 +11,7 @@
     {
       "gate": "persistence",
       "status": "NOT_MET",
-      "current": "regime=SOCCER-ARTIFACT; 0/4 recurring regimes clear floor; esports/politics/elections/soccer/tennis expiring",
+      "current": "regime=SOCCER-ARTIFACT; 0/4 recurring regimes clear floor; esports/other/politics/elections/soccer/tennis expiring",
       "threshold": "\u22655 independent NON-EXPIRING regimes (months)",
       "needs": "accrue across sports past the World Cup/Wimbledon",
       "eta": "months"
@@ -19,7 +19,7 @@
     {
       "gate": "power",
       "status": "MET (caveat)",
-      "current": "158 events",
+      "current": "199 events",
       "threshold": "\u226530",
       "needs": "count OK; day-deflated SE on ~5 correlated days is the real limit (\u2282 persistence)",
       "eta": "none"
@@ -51,7 +51,7 @@
     {
       "gate": "operational",
       "status": "MET",
-      "current": "4463 trajectory rows",
+      "current": "6698 trajectory rows",
       "threshold": "dense capture writing + monitors live",
       "needs": "\u2014",
       "eta": "none"
@@ -67,7 +67,7 @@
     {
       "gate": "router_gate",
       "status": "PENDING",
-      "current": "4 sigs / 4 events / 1 regimes since prereg",
+      "current": "7 sigs / 7 events / 1 regimes since prereg",
       "threshold": "\u226530 events / LB>3% / selection_null p\u22640.01 / \u22652 regimes",
       "needs": "accrue proven_router fires past the prereg stamp",
       "eta": "weeks"
@@ -155,7 +155,7 @@
     {
       "gate": "reliability_shortlist",
       "status": "BUILT",
-      "current": "4 gate-clearing wallets of 121 scored (66% positive at their price); ranked by Sortino",
+      "current": "3 gate-clearing wallets of 142 scored (66% positive at their price); ranked by Sortino",
       "threshold": "gated on every axis (skill-null, cross-sport, both-halves, consistency)",
       "needs": "sanity: 1/5 named specialists surface (rest MM-screened or miss skill-null) \u2014 gate is belief-blind, not reputation-driven",
       "eta": "weeks"
@@ -203,7 +203,7 @@
     {
       "gate": "forward_play_A_tail",
       "status": "INDETERMINATE-BY-POWER",
-      "current": "0 fwd events / 0 days / 0 non-soccer regimes; realizable Calmar n/a; first-binding=power_events",
+      "current": "4 fwd events / 2 days / 0 non-soccer regimes; realizable Calmar inf; first-binding=power_events",
       "threshold": "clears every forward gate (power/Calmar/beats-best/selection_null/promotion/pilot/\u22652 non-soccer regimes/\u03bb\u0302\u22650.25) \u2192 GO-CANDIDATE (ESCALATE)",
       "needs": "accrue >= 30 forward resolved events",
       "eta": "weeks"
@@ -211,7 +211,7 @@
     {
       "gate": "forward_play_B_dabosshogg",
       "status": "INDETERMINATE-BY-POWER",
-      "current": "0 fwd events / 0 days / 0 non-soccer regimes; realizable Calmar n/a; first-binding=power_events",
+      "current": "14 fwd events / 3 days / 0 non-soccer regimes; realizable Calmar -28.9%; first-binding=power_events",
       "threshold": "clears every forward gate (power/Calmar/beats-best/selection_null/promotion/pilot/\u22652 non-soccer regimes/\u03bb\u0302\u22650.25) \u2192 GO-CANDIDATE (ESCALATE)",
       "needs": "accrue >= 30 forward resolved events",
       "eta": "weeks"
@@ -219,15 +219,15 @@
     {
       "gate": "forward_play_C_book",
       "status": "INDETERMINATE-BY-POWER",
-      "current": "0 fwd events / 0 days / 0 non-soccer regimes; realizable Calmar n/a; first-binding=power_events",
+      "current": "34 fwd events / 3 days / 0 non-soccer regimes; realizable Calmar +7.9%; first-binding=beats_random_book_belief_blind",
       "threshold": "clears every forward gate (power/Calmar/beats-best/selection_null/promotion/pilot/\u22652 non-soccer regimes/\u03bb\u0302\u22650.25) \u2192 GO-CANDIDATE (ESCALATE)",
-      "needs": "accrue >= 30 forward resolved events",
-      "eta": "weeks"
+      "needs": "run the belief-blind random-book null once power clears",
+      "eta": "months"
     },
     {
       "gate": "standard_champion",
       "status": "STANDARD",
-      "current": "favorite surplus +8.0% (z 4.28, p 0.0, LB +4.9%); realizable +5.3%; resolved-P&L +2.2% over 229 bets",
+      "current": "favorite surplus +6.3% (z 3.58, p 0.0, LB +3.4%); realizable +2.9%; resolved-P&L +1.3% over 306 bets",
       "threshold": "the frozen standard (favorite-tilted consensus); challengers must beat it OOS + clear belief-blind",
       "needs": "iterate only via standard_guard.py --challenger; adopt NOTHING that does not beat the champion",
       "eta": "none"
@@ -235,7 +235,7 @@
     {
       "gate": "standard_regression",
       "status": "HEALTHY",
-      "current": "belief-blind LB +4.9% vs floor +0.0% \u2014 belief-blind LB +4.92% > +0.00%, p_emp 0.0000, 158 ev",
+      "current": "belief-blind LB +3.4% vs floor +0.0% \u2014 belief-blind LB +3.44% > +0.00%, p_emp 0.0000, 197 ev",
       "threshold": "champion belief-blind LB must stay > +0.0% (pre-registered)",
       "needs": "none \u2014 standard holding; keep watching forward",
       "eta": "none"
@@ -254,13 +254,13 @@
   },
   "regime_panel": {
     "verdict": "SOCCER-ARTIFACT",
-    "why": "edge is expiring-carried (57% of edge mass) and recurring regimes are below the floor \u2014 not yet certifiable",
+    "why": "edge is expiring-carried (67% of edge mass) and recurring regimes are below the floor \u2014 not yet certifiable",
     "recurring_regimes": [
       {
         "regime": "nba/cbb|2026-07",
-        "n_clusters": 3,
-        "edge_lb": 0.20232636862349596,
-        "net_taker_fee2": 0.34499170416714064,
+        "n_clusters": 4,
+        "edge_lb": 0.30258157556057746,
+        "net_taker_fee2": 0.3274940271936694,
         "net_positive": true,
         "clears_cluster_floor": false
       },
@@ -268,32 +268,32 @@
         "regime": "mlb|2026-06",
         "n_clusters": 1,
         "edge_lb": null,
-        "net_taker_fee2": 0.3177972744810461,
+        "net_taker_fee2": 0.29676659310236886,
         "net_positive": false,
         "clears_cluster_floor": false
       },
       {
         "regime": "mlb|2026-07",
-        "n_clusters": 4,
-        "edge_lb": 0.08086751099804187,
-        "net_taker_fee2": 0.17337510140213516,
-        "net_positive": true,
+        "n_clusters": 7,
+        "edge_lb": -0.04859274946859646,
+        "net_taker_fee2": 0.07420884640876238,
+        "net_positive": false,
         "clears_cluster_floor": false
       },
       {
         "regime": "nba/cbb|2026-06",
         "n_clusters": 1,
         "edge_lb": null,
-        "net_taker_fee2": -0.6025376067862984,
+        "net_taker_fee2": -0.6132629552708485,
         "net_positive": false,
         "clears_cluster_floor": false
       }
     ],
-    "n_recurring_net_positive": 2,
+    "n_recurring_net_positive": 1,
     "concentration": {
-      "top_regime": "tennis|2026-06",
-      "top_share": 0.22202977174287217,
-      "expiring_edge_mass_share": 0.5719427528760835
+      "top_regime": "other|2026-07",
+      "top_share": 0.1837564420180912,
+      "expiring_edge_mass_share": 0.6730920119912587
     },
     "breadth": {
       "recurring_cleared": 0,

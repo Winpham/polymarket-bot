@@ -620,6 +620,10 @@ def run():
 
 
 def _pf(x, spec="+.1%"):
+    # forward_track serializes an infinite Calmar (zero-drawdown play) as the string 'inf';
+    # a display helper must not crash on a non-numeric value — pass strings through verbatim.
+    if isinstance(x, str):
+        return x
     return "n/a" if x is None or (isinstance(x, float) and x != x) else format(x, spec)
 
 

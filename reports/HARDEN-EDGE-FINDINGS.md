@@ -206,4 +206,43 @@ cost (dear).
 
 ## 6. Bottom line for Tue
 
-_(pending)_
+**Not yet — and this run makes exactly-why sharper, not softer.** The favorite edge is still the one
+real thing (belief-blind SELECTION-REAL, p≈0.0000), and the single most hopeful fact I can show you is
+that its **recurring, non-expiring regimes are net-positive after the copy tax** (mlb +7.4%, nba/cbb
++32.8%). But every lever I could reach now hit the same wall: the edge is **decaying as data accrues**
+(belief-blind LB +4.93%→+3.44%, non-soccer regimes 3→2 since the 07-06 freeze), it is **power-limited
+not point-estimate-limited** (0/4 recurring regimes clear the 10-cluster floor; the transfer null is
+structurally inert below ~5–6 regimes; OOS pooled surplus is ~0), it **cannot be scaled** (capacity
+caps at ~$500–1k/signal before we become the flow — the compounding mirage is dead), and its **measured
+execution entry is dear** (the realizable +8% at at-fire-mid drops to ~+1.4% at the captured ask; the
+canonical resolved-P&L is +1.27%). I searched hard for a better sub-region and the one tempting
+candidate — tightening to the strong-favorite band 0.75–0.98 — was **adversarially REFUTED** as an
+expiring-tournament / multiple-comparisons artifact. **The single thing standing in the way is
+unchanged and unmanufacturable: months of independent NON-SOCCER regime persistence.** The concrete
+timeline: a second non-soccer sport in-season (NFL ~Oct, NBA/CBB ~Nov 2026) is the earliest the gate
+*could* reach power — and even then PERSISTS is conditional on the edge actually holding, which today's
+flat OOS says it might not. **Nothing promoted, nothing armed, no real money, `real_money_eligible`
+stays False (2/4 GO gates), champion frozen. The instruments did their job: they kept us from betting
+real money on a decaying, capacity-capped, expiring-carried mirage.** That protection is the asset.
+
+**One concrete, low-risk thing you could choose to do** (I did NOT do it — it's a live-config/registry
+decision for you): **pre-register the 0.75 price floor as a single forward hypothesis** and let
+`forward_track` / `standard_guard` score it on forward non-soccer months alongside the champion. If
+strong-favorite concentration is real it will separate from the champion out-of-sample over months; if
+it was fishing it won't. Either way it costs nothing and adds a real test — the disciplined way to
+chase the one lead this run surfaced.
+
+---
+
+### Run log / provenance
+- Branch `harden-edge` off `main` (4940509). Commits: baseline → P1 → P2 → P3(search) → P3(skeptic) →
+  P4+P5 → deliverables. Not merged (no green gate; per brief, left for Tue on the branch).
+- New read-only research instruments (all ran clean): `capacity_curve_harden.py`,
+  `edge_refine_search.py`, `edge_refine_oos.py`, `exec_and_sizing.py`.
+- **Incidental bug fixed:** `readiness_ledger._pf` crashed (`ValueError`) on a forward play with
+  infinite Calmar (serialized as the string `'inf'`) — a real latent crash; hardened to pass strings
+  through (display-only, no gate logic touched). Ledger now re-runs clean.
+- Diff scope: pure Python + reports. **No Rust, no migration, no `.env`, no `consensus.rs`, no live
+  `strict`/alert path touched. DB read-only. Cost-zero (no API key, no child claude).**
+- Verdict re-run: `real_money_eligible=False`, **2/4 GO gates**, binding=persistence — **unchanged; no
+  gate flipped; no ESCALATE banner** (correct — nothing was adopted).
