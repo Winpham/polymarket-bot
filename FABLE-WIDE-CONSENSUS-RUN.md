@@ -1,5 +1,13 @@
 # FABLE Wild-Generator Run — Wide-Pool Consensus (2026-07-08)
 
+> **SUPERSEDED IN PART (2026-07-09, run 2 — see FABLE-SUPPLY-FRONTIER-RUN.md).** The
+> supply finding and the shipped machinery stand. The following claims are WITHDRAWN
+> after adversarial audit + a resolution-guarded re-measurement: the "+7.1% wide-only
+> ROI / wide beats champion" retrospective (recency-censored; replica-invalid baseline
+> — the live champion at its real entries dominates every wide config per-bet), and the
+> `favorite_wide_anchored` arm (superseded pre-outcome by `frontier_k2a`). Current
+> contract: `reports/PREREG_20260709_supply_frontier.md`.
+
 **One-line:** the champion's turnover is bounded by SIGNAL ARRIVAL, not capital or edge —
 and the single largest measured pool of trapped signals is the voter-pool cutoff. The top-40
 leaderboard rank gate throttles supply ~5× while carrying zero protective information
