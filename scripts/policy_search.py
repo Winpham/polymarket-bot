@@ -204,6 +204,72 @@ def _wroi(rows, wfn):
                 turn_ratio=den / (gs.SHARES * len(rows)) if rows else 0.0)
 
 
+def daily_backtest():
+    """Day-by-day backtest of the full-volume TILT vs flat, plus the two exclusion arms.
+    For each UTC day (first_detected_at), report ROI + $P&L. The tilt is normalized WITHIN each
+    day so daily turnover == flat (n·$100) — same capital, just reallocated by edge → an honest
+    'would this day still be red?' Weights are the liq×top5 combined scheme from --weight."""
+    rows = gs.load_book()
+
+    def w_liq(r):
+        u = r["init_total_usd"]
+        return 1.0 if u is None else 0.5 + 1.5 * min(u / 2000.0, 2.0)
+    def w_top5(r):
+        rk = r["init_rank"]
+        return 2.5 if (rk is not None and rk < 5) else 1.0
+    wfn = lambda r: w_liq(r) * w_top5(r)
+
+    by_day = defaultdict(list)
+    for r in rows:
+        by_day[r["day"]].append(r)
+
+    print("DAILY BACKTEST · flat vs full-volume TILT (same daily capital) vs exclusion arms\n"
+          "  $P&L at $100/bit flat; tilt $ = same daily turnover reallocated by liq×top5 weight\n" + "-" * 104)
+    print(f"{'day':<12}{'n':>4} | {'flat_ROI':>9}{'flat_$':>9} | {'tilt_ROI':>9}{'tilt_$':>9} | "
+          f"{'liq_ROI':>8}{'liq_$':>8} | {'v2_ROI':>8}{'v2_$':>8}")
+    agg = defaultdict(float)
+    flips = []
+    for day in sorted(by_day):
+        rs = by_day[day]
+        n = len(rs)
+        flat_pnl = sum(r["pnl_t"] for r in rs)
+        flat_roi = 100 * flat_pnl / (gs.SHARES * n)
+        # tilt: normalize weights so Σw = n (turnover = n·$100, identical capital)
+        ws = [max(wfn(r), 1e-9) for r in rs]
+        sw = sum(ws)
+        wn = [w * n / sw for w in ws]
+        tilt_pnl = sum(w * r["pnl_t"] for w, r in zip(wn, rs))
+        tilt_roi = 100 * tilt_pnl / (gs.SHARES * n)
+        # exclusion arms: flat $100 on the KEPT bets only (volume varies)
+        liq = [r for r in rs if not thin_liquidity(1000)(r)]
+        v2 = [r for r in rs if not (thin_liquidity(1000)(r) or weak_rank(5)(r))]
+        liq_pnl = sum(r["pnl_t"] for r in liq)
+        v2_pnl = sum(r["pnl_t"] for r in v2)
+        liq_roi = 100 * liq_pnl / (gs.SHARES * len(liq)) if liq else 0.0
+        v2_roi = 100 * v2_pnl / (gs.SHARES * len(v2)) if v2 else 0.0
+        for k, v in [("flat", flat_pnl), ("tilt", tilt_pnl), ("liq", liq_pnl), ("v2", v2_pnl),
+                     ("n", n), ("nliq", len(liq)), ("nv2", len(v2))]:
+            agg[k] += v
+        tag = ""
+        if flat_pnl < 0:
+            tag = "  ← flat NEGATIVE" + ("; TILT flips +" if tilt_pnl > 0 else "; tilt still −") \
+                  + ("; v2 +" if v2_pnl > 0 else "; v2 −")
+            flips.append((day, flat_pnl, tilt_pnl, v2_pnl))
+        print(f"{day:<12}{n:>4} | {flat_roi:>+8.1f}%{flat_pnl:>+9.0f} | {tilt_roi:>+8.1f}%{tilt_pnl:>+9.0f} | "
+              f"{liq_roi:>+7.1f}%{liq_pnl:>+8.0f} | {v2_roi:>+7.1f}%{v2_pnl:>+8.0f}{tag}")
+    print("-" * 104)
+    N, Nl, Nv = agg["n"], agg["nliq"], agg["nv2"]
+    print(f"{'TOTAL':<12}{int(N):>4} | {100*agg['flat']/(100*N):>+8.1f}%{agg['flat']:>+9.0f} | "
+          f"{100*agg['tilt']/(100*N):>+8.1f}%{agg['tilt']:>+9.0f} | "
+          f"{100*agg['liq']/(100*Nl):>+7.1f}%{agg['liq']:>+8.0f} | "
+          f"{100*agg['v2']/(100*Nv):>+7.1f}%{agg['v2']:>+8.0f}")
+    print(f"\nnegative flat days: {len(flips)}")
+    for day, f, t, v in flips:
+        print(f"  {day}: flat {f:+.0f}  →  tilt {t:+.0f} ({'FLIPPED +' if t>0 else 'still −'})  "
+              f"| v2 {v:+.0f} ({'+' if v>0 else '−'})")
+    return 0
+
+
 def weight_eval():
     """Tue's steer: recognize higher-profit areas by WEIGHTING, not excluding — keep 100% volume.
     Test tilt schemes vs the flat baseline AND vs exclusion, in-sample + OOS (time-late, non-FIFWC).
@@ -309,4 +375,6 @@ if __name__ == "__main__":
     if "--weight" in sys.argv:
         weight_eval()
         sys.exit(0)
+    if "--daily" in sys.argv:
+        sys.exit(daily_backtest())
     sys.exit(run())
