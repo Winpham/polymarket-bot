@@ -59,6 +59,8 @@ pub(crate) fn params_from_cfg(cfg: &CopyTradingConfig) -> ConsensusParams {
         // favorite_v2 knobs — no-ops for the incumbent `strict` config.
         min_total_usd: 0.0,
         require_backer_rank_lt: None,
+        // favorite_bysport cell gate — no-op for the incumbent `strict` config.
+        cell_gate: None,
     }
 }
 
