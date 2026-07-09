@@ -193,6 +193,16 @@ pub struct ConsensusParams {
     /// set counts nothing (the arm fires nothing until a re-score qualifies
     /// wallets). Default `None` = no-op for every other strategy.
     pub router_set: Option<Arc<HashSet<String>>>,
+    /// Minimum at-fire backer volume (USD) required, else drop the signal
+    /// (`favorite_v2` liquidity floor — thin books are unfillable/mispriced).
+    /// Default `0.0` = no-op (every real book clears a zero floor).
+    pub min_total_usd: f64,
+    /// With `Some(k)`, require ≥1 backer with leaderboard rank strictly `< k`
+    /// (`favorite_v2` "require a top-k backer" skill gate). Unlike `require_elite`
+    /// (which keys on `elite_rank` and accepts any ranked-≤10 backer), this is a
+    /// tighter top-of-book requirement and FAILS a book with no ranked backer.
+    /// Default `None` = no-op (the field is never read).
+    pub require_backer_rank_lt: Option<i32>,
 }
 
 impl Default for ConsensusParams {
@@ -214,6 +224,8 @@ impl Default for ConsensusParams {
             cross_cohort_cutoff: None,
             certified_only: false,
             router_set: None,
+            min_total_usd: 0.0,
+            require_backer_rank_lt: None,
         }
     }
 }
@@ -479,6 +491,24 @@ pub fn score_market(
             continue;
         }
 
+        // Backer-volume floor (favorite_v2): thin books (< min_total_usd of
+        // one-sided backing at fire) are unfillable / price-fiction — the
+        // derived garbage class (removed set −11% ROI, belief-blind surplus −12%).
+        // Default 0.0 → no-op for every incumbent arm.
+        if total_usd < params.min_total_usd {
+            continue;
+        }
+
+        // Top-backer-rank gate (favorite_v2): require an actual top-`k`
+        // leaderboard backer (skill mechanism — rank ≥ k is net-negative even
+        // controlling for price/liquidity/sport). A book with no ranked backer
+        // fails. Default None → no-op.
+        if let Some(k) = params.require_backer_rank_lt
+            && best_backer_rank.is_none_or(|r| r >= k)
+        {
+            continue;
+        }
+
         // Cross-cohort conviction gate (cross_cohort variant): a whale AND a
         // certified deep sharp must both back. `trusted` rides on the vote (from
         // the trust map); a deep backer can only be in a live book if earned in.
@@ -650,6 +680,23 @@ pub fn default_portfolio(base: &ConsensusParams) -> Vec<StrategyDef> {
             name: "favorite",
             params: ConsensusParams {
                 price_band: Some((0.65, 0.98)),
+                ..base.clone()
+            },
+            alerting: false,
+        },
+        // favorite_v2 — the DERIVED exclusion/refinement policy (RUN-GARBAGE-
+        // EXCLUSION-FILTERS): champion `favorite` band + a $1k at-fire backer-
+        // volume floor (illiquidity mechanism) + require a top-5 leaderboard
+        // backer (skill mechanism). Both cuts were swept to a plateau, OOS-
+        // validated (time-split + non-FIFWC), confound-checked, and clear the
+        // belief-blind selection-null (p_emp=0.0000, LB +5.86%). SHADOW-ONLY,
+        // alerting=false; promotes nothing until the forward gate clears.
+        StrategyDef {
+            name: "favorite_v2",
+            params: ConsensusParams {
+                price_band: Some((0.65, 0.98)),
+                min_total_usd: 1000.0,
+                require_backer_rank_lt: Some(5),
                 ..base.clone()
             },
             alerting: false,
@@ -1207,6 +1254,81 @@ mod tests {
             ],
         );
         assert_eq!(score_market(&b2, now, &elite).len(), 1);
+    }
+
+    #[test]
+    fn favorite_v2_liquidity_and_rank_gates() {
+        let now = Utc::now();
+        // 3 backers @ $1000 each = $3000 total; best rank = 3, price 0.80 (in band).
+        let b = book_with(
+            now,
+            vec![
+                (0, "wa", Some(3), 0.80, 5),
+                (0, "wb", Some(8), 0.80, 5),
+                (0, "wc", None, 0.80, 5),
+            ],
+        );
+        // Champion `favorite` (default knobs) fires.
+        let fav = ConsensusParams {
+            price_band: Some((0.65, 0.98)),
+            ..ConsensusParams::default()
+        };
+        assert_eq!(score_market(&b, now, &fav).len(), 1, "champion favorite fires");
+
+        // favorite_v2 config: $1k floor (3000 ≥ 1000 → pass) + top-5 backer
+        // (rank 3 < 5 → pass) → fires.
+        let v2 = ConsensusParams {
+            price_band: Some((0.65, 0.98)),
+            min_total_usd: 1000.0,
+            require_backer_rank_lt: Some(5),
+            ..ConsensusParams::default()
+        };
+        assert_eq!(score_market(&b, now, &v2).len(), 1, "v2 fires on liquid, top-5-backed");
+
+        // Liquidity floor bites: 3000 < 5000 → dropped (champion still fires).
+        let thin = ConsensusParams {
+            min_total_usd: 5000.0,
+            ..v2.clone()
+        };
+        assert!(score_market(&b, now, &thin).is_empty(), "v2 drops thin book");
+        assert_eq!(score_market(&b, now, &fav).len(), 1, "champion unaffected by v2 floor");
+
+        // Rank gate bites: no backer ranked < 3 → dropped.
+        let no_top5 = book_with(
+            now,
+            vec![
+                (0, "wa", Some(6), 0.80, 5),
+                (0, "wb", Some(9), 0.80, 5),
+                (0, "wc", None, 0.80, 5),
+            ],
+        );
+        assert!(
+            score_market(&no_top5, now, &v2).is_empty(),
+            "v2 drops book with no top-5 backer"
+        );
+        assert_eq!(
+            score_market(&no_top5, now, &fav).len(),
+            1,
+            "champion favorite fires regardless of rank"
+        );
+
+        // Knobs are inert by default: Default() and every incumbent arm behave
+        // identically to before (0.0 floor clears, None rank-gate never reads).
+        let base = ConsensusParams::default();
+        for def in default_portfolio(&base) {
+            assert_eq!(
+                def.params.min_total_usd,
+                if def.name == "favorite_v2" { 1000.0 } else { 0.0 },
+                "only favorite_v2 sets a liquidity floor: {}",
+                def.name
+            );
+            assert_eq!(
+                def.params.require_backer_rank_lt,
+                if def.name == "favorite_v2" { Some(5) } else { None },
+                "only favorite_v2 sets a rank gate: {}",
+                def.name
+            );
+        }
     }
 
     #[test]

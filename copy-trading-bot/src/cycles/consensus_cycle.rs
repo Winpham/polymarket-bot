@@ -56,6 +56,9 @@ pub(crate) fn params_from_cfg(cfg: &CopyTradingConfig) -> ConsensusParams {
         cross_cohort_cutoff: None,
         certified_only: false,
         router_set: None,
+        // favorite_v2 knobs — no-ops for the incumbent `strict` config.
+        min_total_usd: 0.0,
+        require_backer_rank_lt: None,
     }
 }
 

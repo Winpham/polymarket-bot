@@ -43,13 +43,22 @@ N_FLOOR = 20            # events below this read INDETERMINATE (pre-registered)
 DEFAULT_STRATS = ("favorite", "elite_fresh_fav")
 
 # slug-prefix → sport. Fall sports pre-wired so they classify the moment they appear.
+# Soccer league codes: `fifwc`/`world` (World Cup + props) and the machine-generated league
+# stems. AMBIGUOUS stems (`col`~Colorado politics, `chi`~Chicago, `swe`, `ucl`) are matched
+# WITH a trailing hyphen so they only catch the structured `col-fc-...` slug form, never a
+# `colorado-...` question slug. Audited against the live book 2026-07-09 (see check_coverage).
+_SOCCER_HYPHEN = ("col-", "chi-", "ucl-", "swe-", "world-", "bra-", "arg-", "por-", "ned-",
+                  "bel-", "crint-", "ligue-", "erediv-", "mar1-", "bra2-")
 REGIMES = [
     (("atp", "wta", "itf"), "tennis"),
     (("fifwc", "epl", "uefa", "mls", "laliga", "seriea", "bund"), "soccer"),
-    (("mlb",), "mlb"),
+    (_SOCCER_HYPHEN, "soccer"),
+    (("mlb", "kbo", "npb"), "mlb"),
     (("nfl", "ncaaf"), "nfl/cfb"),
     (("nba", "ncaab", "wnba"), "nba/cbb"),
     (("nhl",), "nhl"),
+    # esports — `co-` is Call of Duty (trap: NOT Colorado); kept AFTER soccer so `col-` wins.
+    (("lol", "val", "cs2", "csgo", "cs-", "dota2", "dota", "r6", "co-", "ow-", "rl-"), "esports"),
     (("btc", "eth", "sol", "xrp", "bnb", "doge", "bitcoin", "ethereum"), "crypto"),
 ]
 
@@ -60,6 +69,38 @@ def sport(slug):
         if s.startswith(pre):
             return name
     return "other"
+
+
+def check_coverage(strat="favorite", max_other_sports_pct=5.0):
+    """Measurement-integrity assertion: of the is_sports rows this strategy fired, at most
+    `max_other_sports_pct`% may fall through to 'other'. A regression here means a new league
+    prefix is unmapped and is silently corrupting the soccer/ex-soccer split. Read-only."""
+    import csv as _csv
+    import io as _io
+    import subprocess as _sp
+    sql = (f"SELECT slug, event_slug, is_sports FROM consensus_signals "
+           f"WHERE strategy='{strat}' AND resolved")
+    out = _sp.run(PG + ["-c", sql], capture_output=True, text=True)
+    if out.returncode != 0:
+        raise SystemExit("psql failed:\n" + out.stderr)
+    n_sports = n_other = 0
+    misses = {}
+    for r in _csv.DictReader(_io.StringIO(out.stdout)):
+        if r["is_sports"] not in ("t", "true", "1"):
+            continue
+        n_sports += 1
+        slug = r["event_slug"] or r["slug"] or ""
+        if sport(slug) == "other":
+            n_other += 1
+            pre = slug.split("-", 1)[0]
+            misses[pre] = misses.get(pre, 0) + 1
+    pct = 100.0 * n_other / n_sports if n_sports else 0.0
+    ok = pct <= max_other_sports_pct
+    print(f"sport-map coverage · {strat}: {n_sports} sports rows, {n_other} → 'other' "
+          f"({pct:.1f}%, cap {max_other_sports_pct}%) → {'OK' if ok else 'FAIL'}")
+    if misses:
+        print("  unmapped sports prefixes:", dict(sorted(misses.items(), key=lambda kv: -kv[1])))
+    return ok
 
 
 def band(p):
@@ -216,6 +257,8 @@ def _self_test():
 if __name__ == "__main__":
     if "--self-test" in sys.argv:
         sys.exit(0 if _self_test() else 1)
+    if "--coverage" in sys.argv:
+        sys.exit(0 if check_coverage() else 1)
     strat = DEFAULT_STRATS[0]
     if "--strategy" in sys.argv:
         strat = sys.argv[sys.argv.index("--strategy") + 1]
