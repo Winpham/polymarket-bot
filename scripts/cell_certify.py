@@ -249,6 +249,60 @@ def run():
     return 0
 
 
+def residual_scan():
+    """§1.6 re-scan: does conditioning INTO the arm's non-tournament cells (or OUT of the discarded
+    tournament cells) unmask a realizable negative? Compares the flat champion book, the arm's
+    fired subset, and the discarded subset on belief-blind skill + within-subset null + realizable
+    ROI(ask). Writes reports/RESIDUAL-SCAN.md."""
+    global GLOBAL_FAV_SKILL
+    fav = csm.load_fav_full()
+    blind = csm.load_blind_rich()
+    gband_edge, sband_edge, _ = csm.blind_baselines(blind)
+    GLOBAL_FAV_SKILL, _ = csm.sport_band_surplus(fav, sband_edge)
+    rng = random.Random(SEED)
+    NONT = {"mlb", "nba/cbb", "nfl/cfb", "nhl", "esports"}
+    TOUR = TOURNAMENT_SPORTS
+    pops = [
+        ("FULL favorite book (flat, sport-agnostic)", fav, None),
+        ("ARM non-tournament subset (mlb,nba/cbb,esports,…)", [r for r in fav if csm.sport_of(r) in NONT], NONT),
+        ("DISCARDED tournament subset (soccer,tennis)", [r for r in fav if csm.sport_of(r) in TOUR], TOUR),
+    ]
+    lines = ["# RESIDUAL SCAN — is per-sport conditioning progressive or regressive at realizable entry?\n",
+             "Compares the flat champion `favorite` book vs the arm's fired (non-tournament) subset vs the",
+             "discarded (soft-tournament) subset on belief-blind skill, within-subset selection-null, and",
+             "**realizable ROI (entry_ask, corrected fee)**. Reuses the committed instruments.\n",
+             "| population | nEv | raw skill | LB(pool) | null p | realizable ROI(ask) (cov) |",
+             "|---|---:|---:|---:|---:|---:|"]
+    console = []
+    for name, rows, restrict in pops:
+        sk, nev = csm.sport_band_surplus(rows, sband_edge)
+        lb, _ = boot_skill_lb(rows, sband_edge)
+        if restrict is None:
+            bl = blind
+        else:
+            bl = [b for b in blind if b["sport"] in restrict]
+        p, _nd = (None, 0)
+        if nev >= 10 and bl:
+            p, _nd = csm.cell_null_p(rows, bl, gband_edge, rng)
+        ra, cov, nask = csm.roi_ask(rows)
+        ps = f"{p:.3f}" if p is not None else "—"
+        ras = f"{ra:+.1f}% ({cov:.0%}, n={nask})" if ra is not None else "—"
+        lines.append(f"| {name} | {nev} | {100*sk:+.1f}% | {100*lb:+.1f}% | {ps} | {ras} |")
+        console.append(f"{name:<48} nEv={nev:>3} skill={100*sk:+5.1f}% LB={100*lb:+5.1f}% "
+                       f"null_p={ps} realizable={ras}")
+    lines += ["\n**Reading:** if the FULL flat book is belief-blind-significant and realizable-positive while",
+              "the non-tournament subset is not, per-sport conditioning SUBTRACTS realizable value — the",
+              "efficient-market skill is un-harvestable through thin-book spreads, and the realizable money",
+              "lives in the soft-but-liquid tournament cells the arm discards. See BYSPORT-VERDICT.md.\n"]
+    with open(os.path.join(RDIR, "RESIDUAL-SCAN.md"), "w") as f:
+        f.write("\n".join(lines) + "\n")
+    print("RESIDUAL SCAN " + "=" * 90)
+    for c in console:
+        print(c)
+    print(f"\nglobal fav skill {100*GLOBAL_FAV_SKILL:+.2f}% · wrote {os.path.join(RDIR, 'RESIDUAL-SCAN.md')}")
+    return 0
+
+
 def _self_test():
     global GLOBAL_FAV_SKILL
     ok = True
@@ -282,4 +336,6 @@ def _self_test():
 if __name__ == "__main__":
     if "--self-test" in sys.argv:
         sys.exit(0 if _self_test() else 1)
+    if "--residual" in sys.argv:
+        sys.exit(residual_scan())
     sys.exit(run())
