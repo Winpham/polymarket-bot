@@ -190,6 +190,66 @@ def bbgate():
 
 CONVERGED = [thin_liquidity(1000), weak_rank(5)]
 
+
+def _wroi(rows, wfn):
+    """Weighted ROI at FULL volume (no exclusion): stake_i = $100 * w_i, w_i >= w_min > 0 for
+    every bet. = Σ(w·pnl) / Σ(w·100). Also returns effective-N (Σw)²/Σw² and turnover ratio
+    vs flat. A TILT that keeps turnover ≈ flat has not cut volume."""
+    ws = [max(wfn(r), 1e-9) for r in rows]
+    num = sum(w * r["pnl_t"] for w, r in zip(ws, rows))
+    den = sum(w * gs.SHARES for w in ws)
+    sw, sw2 = sum(ws), sum(w * w for w in ws)
+    return dict(roi=100 * num / den if den else float("nan"),
+                n_eff=(sw * sw / sw2) if sw2 else 0.0,
+                turn_ratio=den / (gs.SHARES * len(rows)) if rows else 0.0)
+
+
+def weight_eval():
+    """Tue's steer: recognize higher-profit areas by WEIGHTING, not excluding — keep 100% volume.
+    Test tilt schemes vs the flat baseline AND vs exclusion, in-sample + OOS (time-late, non-FIFWC).
+    A tilt is only real if it also helps OOS; otherwise it just re-concentrates stake on the same
+    fraught rank noise at the sizing layer."""
+    rows = gs.load_book()
+    days = sorted(set(r["day"] for r in rows))
+    mid = days[len(days) // 2]
+    late = [r for r in rows if r["day"] >= mid]
+    nonf = [r for r in rows if not (r["event_slug"] or "").lower().startswith(("fifwc", "world"))]
+
+    def w_flat(r):
+        return 1.0
+    def w_liq(r):  # trustworthy: monotone in at-fire backing, capped, never 0
+        u = r["init_total_usd"]
+        if u is None:
+            return 1.0
+        return 0.5 + 1.5 * min(u / 2000.0, 2.0)      # ~0.5x (thin) … 3.5x (thick)
+    def w_top5(r):  # fraught: binary top-5-backer bonus (binary, not a monotone gradient —
+        rk = r["init_rank"]                          # rank is non-monotonic, so a gradient is unjustified)
+        return 2.5 if (rk is not None and rk < 5) else 1.0
+    def w_both(r):
+        return w_liq(r) * w_top5(r)
+
+    schemes = [("flat (baseline)", w_flat), ("liquidity-tilt (trustworthy)", w_liq),
+               ("top5-bonus (fraught)", w_top5), ("liq×top5 (combined)", w_both)]
+    print("WEIGHT-NOT-CUT · full-volume tilt vs flat vs exclusion · ROI(taker) in/OOS\n" + "-" * 90)
+    print(f"{'scheme':<30}{'ROI_full':>9}{'n_eff':>7}{'turn×':>7}{'ROI_late':>9}{'ROI_nonF':>9}")
+    out = {}
+    for name, fn in schemes:
+        f = _wroi(rows, fn); l = _wroi(late, fn); nf = _wroi(nonf, fn)
+        out[name] = dict(full=f, late=l, non_fifwc=nf)
+        print(f"{name:<30}{f['roi']:>+8.2f}%{f['n_eff']:>7.0f}{f['turn_ratio']:>6.2f}x"
+              f"{l['roi']:>+8.2f}%{nf['roi']:>+8.2f}%")
+    # exclusion arms for contrast (turnover ratio = volume RETAINED)
+    print("  — exclusion arms for contrast (turn× = fraction of volume kept) —")
+    for name, preds in [("favorite_liq (liq only)", [thin_liquidity(1000)]),
+                        ("favorite_v2 (liq+rank<5)", CONVERGED)]:
+        keep, _ = apply_policy(rows, preds)
+        kl = [r for r in late if not any(p(r) for p in preds)]
+        kn = [r for r in nonf if not any(p(r) for p in preds)]
+        f, l, nf = gs.score(keep, {}), gs.score(kl, {}), gs.score(kn, {})
+        print(f"{name:<30}{f.get('roi_taker',0):>+8.2f}%{'':>7}{len(keep)/len(rows):>6.2f}x"
+              f"{l.get('roi_taker',0):>+8.2f}%{nf.get('roi_taker',0):>+8.2f}%")
+    return out
+
 def residual():
     """Apply the CONVERGED policy, then scan the KEEP set across every axis for a remaining
     structural negative slice AT POWER (n>=20 w/ mechanism, else n>=30). Prints candidates."""
@@ -246,4 +306,7 @@ if __name__ == "__main__":
         sys.exit(0)
     if "--residual" in sys.argv:
         sys.exit(residual())
+    if "--weight" in sys.argv:
+        weight_eval()
+        sys.exit(0)
     sys.exit(run())

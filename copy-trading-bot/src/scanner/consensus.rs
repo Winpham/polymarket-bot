@@ -684,13 +684,29 @@ pub fn default_portfolio(base: &ConsensusParams) -> Vec<StrategyDef> {
             },
             alerting: false,
         },
-        // favorite_v2 — the DERIVED exclusion/refinement policy (RUN-GARBAGE-
-        // EXCLUSION-FILTERS): champion `favorite` band + a $1k at-fire backer-
-        // volume floor (illiquidity mechanism) + require a top-5 leaderboard
-        // backer (skill mechanism). Both cuts were swept to a plateau, OOS-
-        // validated (time-split + non-FIFWC), confound-checked, and clear the
-        // belief-blind selection-null (p_emp=0.0000, LB +5.86%). SHADOW-ONLY,
-        // alerting=false; promotes nothing until the forward gate clears.
+        // favorite_liq — the TRUSTWORTHY half, DECOUPLED (Tue 2026-07-09): champion
+        // `favorite` band + ONLY the $1k at-fire backer-volume floor (illiquidity
+        // mechanism). Cuts just ~9% of volume, removes the −11% thin-book garbage,
+        // improves OOS non-FIFWC (−2.08% → −1.02%). Registered ALONGSIDE favorite_v2
+        // so the forward gate scores the liquidity floor INDEPENDENTLY of the fraught
+        // rank gate — instead of the two riding together and rank's story hiding
+        // behind liquidity's. SHADOW-ONLY, alerting=false.
+        StrategyDef {
+            name: "favorite_liq",
+            params: ConsensusParams {
+                price_band: Some((0.65, 0.98)),
+                min_total_usd: 1000.0,
+                ..base.clone()
+            },
+            alerting: false,
+        },
+        // favorite_v2 — liquidity floor PLUS the require-top-5-backer skill gate.
+        // The rank gate is the FRAUGHT half: it re-opens the leaderboard-rank axis
+        // that identify-skilled refuted 5 ways, its rank profile is non-monotonic (a
+        // small-N noise tell), its non-FIFWC "flip" is tennis/Wimbledon-carried (an
+        // expiring regime), and it cuts ~39% of volume. Kept as a shadow arm ONLY so
+        // the forward gate can rule on rank vs favorite_liq — NOT billed as a
+        // validated +9.66%. SHADOW-ONLY, alerting=false.
         StrategyDef {
             name: "favorite_v2",
             params: ConsensusParams {
@@ -1313,19 +1329,21 @@ mod tests {
         );
 
         // Knobs are inert by default: Default() and every incumbent arm behave
-        // identically to before (0.0 floor clears, None rank-gate never reads).
+        // identically to before. Only the two decoupled shadow arms set knobs:
+        // favorite_liq = liquidity floor only; favorite_v2 = liquidity + rank.
         let base = ConsensusParams::default();
         for def in default_portfolio(&base) {
+            let sets_floor = matches!(def.name, "favorite_liq" | "favorite_v2");
             assert_eq!(
                 def.params.min_total_usd,
-                if def.name == "favorite_v2" { 1000.0 } else { 0.0 },
-                "only favorite_v2 sets a liquidity floor: {}",
+                if sets_floor { 1000.0 } else { 0.0 },
+                "only favorite_liq/favorite_v2 set a liquidity floor: {}",
                 def.name
             );
             assert_eq!(
                 def.params.require_backer_rank_lt,
                 if def.name == "favorite_v2" { Some(5) } else { None },
-                "only favorite_v2 sets a rank gate: {}",
+                "only favorite_v2 sets the rank gate (favorite_liq must NOT): {}",
                 def.name
             );
         }

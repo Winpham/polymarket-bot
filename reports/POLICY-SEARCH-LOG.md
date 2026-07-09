@@ -113,3 +113,42 @@ binding constraint. → `favorite_v2` earns a SHADOW slot + forward gate, promot
 `policy_search.py --residual`: **0 structural negative slices at power (n≥20)**. Only below-support
 negatives remain (price 0.95–1.00 FLB tax n=14; extreme pay-up n=9) — power-limited / irreducible.
 The loop stops: no defensible cut beyond {liquidity, rank} survives OOS + support + mechanism.
+
+---
+
+## ITER 4 — Decouple + weight-not-cut (Tue's critical review, 2026-07-09)
+
+Tue's steer: **don't cut volume / don't regress; recognize higher-profit areas by WEIGHTING**, and
+decouple the trustworthy liquidity claim from the fraught rank claim. Decomposition:
+- liquidity floor ALONE: +2.81% → **+4.17%** (~+1.4pp, keeps 91% volume) — the trustworthy part.
+- adding `rank<5`: +4.17% → +9.66% (~+5.5pp) but cuts **39% volume** — an "only follow top-5" strategy.
+
+### `policy_search.py --weight` — full-volume tilt vs flat vs exclusion
+
+| scheme (100% volume) | ROI_full | ROI_late | ROI_nonFIFWC |
+|---|---|---|---|
+| flat (baseline) | +2.81% | +0.97% | −2.08% |
+| liquidity-tilt | +2.82% | +2.22% | −3.07% |
+| top5-bonus tilt | +4.44% | +2.65% | −2.69% |
+| liq×top5 tilt | +5.68% | +4.36% | −2.24% |
+| **favorite_liq (exclude, 91% vol)** | **+4.17%** | +2.61% | **−1.02%** |
+| favorite_v2 (exclude, 61% vol) | +9.66% | +8.10% | +7.63% |
+
+**Findings:**
+1. **Weighting keeps volume but recovers only ~half the lift** (+5.68% combined) AND **no tilt
+   reproduces the non-FIFWC flip** (all stay −2…−3%). The +7.63% appears only when you *exclude* the
+   few tennis-carried rank≥5 non-soccer bets → it is SELECTION, not a sizeable edge you can size into.
+   This is the quantified version of the Wimbledon worry.
+2. **For liquidity, exclusion beats tilting** (thin books are junk — remove, don't downweight):
+   favorite_liq +4.17%, non-FIFWC −1.02% (improves), 91% volume kept. Trustworthy + minimal cost.
+
+### Decision (revised)
+- **Register `favorite_liq` (liquidity-only) as the primary decoupled shadow arm** — the "cut the
+  garbage" arm Tue actually asked for: small cut, mechanism-clean, helps OOS.
+- **Keep `favorite_v2` (liq+rank) as a shadow ONLY to let the forward gate rule on rank** — billed
+  UNPROVEN + historically fraught (refuted rank axis, non-monotonic, tennis-carried), NOT a validated
+  +9.66%. See PREREG for the two claim-breakers (durability-past-tournaments, fire-rate/capacity).
+- **Rank-weighting is NOT baked into a live arm.** A rank tilt only matters at the sizing layer
+  (paper ledger is flat $100, so a WeightMode change is inert in P&L), and the tilt failed the OOS
+  durability test. Deferred as a forward-gated sizing-overlay PROPOSAL, not built — avoids
+  re-concentrating stake on the same fraught rank noise before the forward gate rules.
