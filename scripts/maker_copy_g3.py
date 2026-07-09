@@ -68,6 +68,7 @@ FILL_WINDOW_MIN = 5              # sharp-fill match window [T−5m, T+5m]
 LAGS_S = [0, 12, 60]            # decision lag: hot-lane (12s) vs poll (60s) vs instant
 CANCELS_MIN = [5, 15, 60, None]  # cancel-after; None = rest until tape coverage ends (~hours, not settlement)
 DWELL_S = 30                     # DWELL model: best_ask ≤ P must persist ≥ this, across ≥2 inflections
+DELTAS_C = [0.0, 0.005, 0.01, 0.02]  # CAPPED-CHASE: willing to pay up to P+δ (0, 0.5¢, 1¢, 2¢) to catch a fill
 MAX_TAPE_H = 24                  # bound the tape pull per leg
 MIN_FILLED = 30                  # power floor (prereg §7)
 MIN_DAYS = 5                     # persistence floor (prereg §7)
@@ -164,6 +165,25 @@ def leg_fills(tape_rows, P, t0, lag_s, cancel_s):
         "dwell": (dwell, min(at_or_below) if dwell else None),
         "pessimistic": (pess, min(below) if below else None),
     }
+
+
+def leg_chase_fill(tape_rows, P, delta, t0, lag_s, cancel_s):
+    """CAPPED-CHASE maker (Tue's refinement): willing to fill at any price up to cap=P+δ, otherwise
+    wait, otherwise cancel at cancel_s. Fills at the FIRST observed best_ask ≤ cap, at THAT ask (price
+    improvement — we take the offer, which is ≤ cap). δ=0 is the pure passive maker at P; δ=(ask−P) is
+    the taker. Returns (filled, fill_price, secs_after_T). Marketable at the cap, so touch=fill is
+    realistic here (we cross to take), unlike the passive queue bracket. Reads only best_ask."""
+    lo = t0 + lag_s
+    hi = None if cancel_s is None else t0 + cancel_s
+    cap = P + delta
+    for r in tape_rows:      # eff_ts order
+        ts = r["eff_ts"]
+        if ts < lo or (hi is not None and ts > hi):
+            continue
+        ba = r["best_ask"]
+        if ba is not None and ba <= cap:
+            return True, ba, ts - t0
+    return False, None, None
 
 
 def _median(xs):
@@ -301,6 +321,65 @@ def evaluate(sigs, P_by_id, tape_by_id, fee):
     return out
 
 
+def evaluate_chase(sigs, P_by_id, tape_by_id, fee, lag=12):
+    """Tue's capped-chase refinement: sweep δ (willing-to-pay-up = P+δ) × cancel-time. Books each fill at
+    the ACTUAL executable ask (≤ P+δ), so ROI reflects the real price paid. Reports, per δ vs the δ=0
+    passive maker: extra winners caught, the entry-price cost, net ROI, and the head-to-head vs a taker
+    who crosses at detection. lag fixed at 12s (fills are lag-invariant — they happen minutes in)."""
+    ids = [s["id"] for s in sigs]
+    won = {s["id"]: int(s["won"]) for s in sigs}
+    ev = {s["id"]: s["ev"] for s in sigs}
+    t0 = {s["id"]: s["t0"] for s in sigs}
+    anchor = {s["id"]: s["anchor"] for s in sigs}
+    P = P_by_id
+    n_total = len(ids)
+    won_ids = set(i for i in ids if won[i] == 1)
+    e_tape = {i: (_dt_ask(tape_by_id.get(i, []), t0[i]) or anchor[i] + 0.01) for i in ids}
+    taker_roi = {i: (won[i] - e_tape[i]) / e_tape[i] - fee for i in ids}
+
+    out = {"lag_s": lag, "n_total": n_total, "deltas_cents": [d * 100 for d in DELTAS_C], "grid": {}}
+    base_filled = {}   # δ=0 filled set per cancel, for the extra-winners-caught delta
+    for delta in DELTAS_C:
+        for cancel in CANCELS_MIN:
+            cancel_s = None if cancel is None else cancel * 60
+            filled, price = [], {}
+            for s in sigs:
+                i = s["id"]
+                ok, fp, _ = leg_chase_fill(tape_by_id.get(i, []), P[i], delta, s["t0"], lag, cancel_s)
+                if ok:
+                    filled.append(i); price[i] = fp
+            fset = set(filled)
+            if delta == 0.0:
+                base_filled[cancel] = fset
+            nf = len(filled)
+            roi = {i: (won[i] - price[i]) / price[i] - fee for i in filled}
+            m_theta, m_lb, m_G = _cluster_lb(roi, ev)
+            _, m_lb_day, m_Gday = _cluster_lb(roi, {i: s["day"] for s in sigs for i in [s["id"]]})
+            missed = [i for i in ids if i not in fset]
+            wr_f = (sum(won[i] for i in filled) / nf) if nf else None
+            wr_m = (sum(won[i] for i in missed) / len(missed)) if missed else None
+            taker_on_filled = (sum(taker_roi[i] for i in filled) / nf) if nf else None
+            extra_w = len((fset & won_ids) - (base_filled.get(cancel, set()) & won_ids))
+            out["grid"][f"d{int(delta*1000)}_{('RES' if cancel is None else str(cancel)+'m')}"] = {
+                "delta_cents": round(delta * 100, 2), "cancel_min": cancel,
+                "n_filled": nf, "fill_rate": round(nf / n_total, 4) if n_total else None,
+                "mean_entry_paid": round(sum(price.values()) / nf, 4) if nf else None,
+                "roi_filled_mean": round(m_theta, 5) if m_theta is not None else None,
+                "roi_filled_cluster_lb": None if m_lb is None else round(m_lb, 5),
+                "roi_filled_day_cluster_lb": None if m_lb_day is None else round(m_lb_day, 5),
+                "roi_filled_event_clusters": m_G, "roi_filled_day_clusters": m_Gday,
+                "wr_filled": round(wr_f, 4) if wr_f is not None else None,
+                "wr_missed": round(wr_m, 4) if wr_m is not None else None,
+                "adverse_gap_wr": (round(wr_f - wr_m, 4) if (wr_f is not None and wr_m is not None) else None),
+                "extra_winners_vs_d0": extra_w,
+                "n_winners_filled": len(fset & won_ids), "n_winners_total": len(won_ids),
+                "taker_roi_on_filled": round(taker_on_filled, 5) if taker_on_filled is not None else None,
+                "maker_minus_taker_on_filled": (round(m_theta - taker_on_filled, 5)
+                                                if (m_theta is not None and taker_on_filled is not None) else None),
+            }
+    return out
+
+
 def _cell_name(lag, cancel):
     return f"lag{lag}s_cancel{'RES' if cancel is None else str(cancel) + 'm'}"
 
@@ -335,6 +414,7 @@ def run(all_strategies):
     n_days = len({s["day"] for s in sigs})
     res_fee = evaluate(sigs, P_by_id, tape_by_id, FEE)
     res_zero = evaluate(sigs, P_by_id, tape_by_id, 0.0)
+    chase_fee = evaluate_chase(sigs, P_by_id, tape_by_id, FEE)
 
     # verdict on the DWELL (realistic) model, headline cell lag12s_cancel15m — pick best n_filled anyway
     powered = False
@@ -358,6 +438,11 @@ def run(all_strategies):
                 "optimistic": "best_ask ≤ P touched (100% queue capture; fantasy ceiling)",
                 "dwell": f"≥2 inflections with best_ask ≤ P spanning ≥{DWELL_S}s (repeated availability; NOT verified-continuous)",
                 "pessimistic": "best_ask < P strict — price traded THROUGH our level (last-in-queue)"},
+            "chase_model": f"CAPPED-CHASE (Tue's refinement): willing to pay up to P+δ (δ∈{[d*100 for d in DELTAS_C]}¢), "
+                           "fill at the actual ask ≤ cap, else cancel at cancel-time. δ=0 is passive-at-P; "
+                           "δ=(ask−P) is the taker. Books the REAL price paid. CAVEAT: assumes ≥stake ($100) is "
+                           "available at the shown top-of-book ask — UNVERIFIED (no depth/trade tape; the same "
+                           "open volume question). So chase fill-rates are an UPPER bound at the marketable end.",
             "NOT_MEASURABLE": "realized volume / partial-fill / queue-capture fraction — the tape is "
                               "top-of-book only (last_size = book-level churn, NOT trades; live_tape.rs:222). "
                               "Still OPEN; needs a real trade tape. NEVER inferred from last_size here.",
@@ -374,7 +459,8 @@ def run(all_strategies):
                 "taker head-to-head uses decision_time_tape_ask (causal); entry_ask kept only as a flagged "
                 "capture-lagged reference (audit: entry_ask_at ~20min post-detection)"],
         },
-        "fee_buffer_2pct": res_fee, "fee_zero": res_zero, "verdict": verdict,
+        "fee_buffer_2pct": res_fee, "fee_zero": res_zero,
+        "chase_fee_2pct": chase_fee, "verdict": verdict,
     }
     os.makedirs(reg.REPORT_DIR, exist_ok=True)
     with open(REPORT, "w") as f:
@@ -412,6 +498,25 @@ def _print(o):
                   f"{_f(c['roi_filled_day_cluster_lb']):>9}{_f(c['wr_filled'],'.0%'):>8}"
                   f"{_f(c['wr_missed'],'.0%'):>8}{_f(c['adverse_gap_wr'],'+.0%'):>8}"
                   f"{_f(c['miss_the_winners_frac'],'.0%'):>8}{_f(c['maker_minus_taker_on_filled']):>9}")
+    _print_chase(o)
+
+
+def _print_chase(o):
+    """Tue's capped-chase refinement: does paying up to δ¢ catch enough extra winners to help?"""
+    ch = o["chase_fee_2pct"]
+    print("\n" + "=" * 100)
+    print(f"CAPPED-CHASE (Tue's refinement) · rest at P, willing to pay up to P+δ, else cancel · lag {ch['lag_s']}s · fee 2%")
+    print("  δ=0 is the passive maker at P; larger δ chases toward the taker. 'xWin' = extra winners caught vs δ=0.")
+    print(f"  {'δ¢ · cancel':<16}{'nfill':>6}{'fill%':>7}{'entryPaid':>10}{'roi/fill':>10}{'dayLB':>9}"
+          f"{'wr_fil':>8}{'advWR':>8}{'winFill':>9}{'xWin':>6}{'mkr−tkr':>9}")
+    for name, c in ch["grid"].items():
+        cancel = 'RES' if c['cancel_min'] is None else f"{c['cancel_min']}m"
+        tag = f"{c['delta_cents']:g}¢ · {cancel}"
+        wf = f"{c['n_winners_filled']}/{c['n_winners_total']}"
+        print(f"  {tag:<16}{c['n_filled']:>6}{_f(c['fill_rate'],'.0%'):>7}{_f(c['mean_entry_paid'],'.3f'):>10}"
+              f"{_f(c['roi_filled_mean']):>10}{_f(c['roi_filled_day_cluster_lb']):>9}"
+              f"{_f(c['wr_filled'],'.0%'):>8}{_f(c['adverse_gap_wr'],'+.0%'):>8}{wf:>9}"
+              f"{c['extra_winners_vs_d0']:>6}{_f(c['maker_minus_taker_on_filled']):>9}")
 
 
 # ============================================================================================
@@ -490,6 +595,20 @@ def _selftest():
     f_ok = f_theta is not None and f_lb is not None and f_G == 2
     ok = ok and f_ok
     print(f"  [{'ok' if f_ok else 'FAIL'}] cluster-robust LB plumbing: theta {f_theta:+.3f}, t(1) LB {f_lb:+.3f}, G={f_G}")
+
+    # (G) CAPPED-CHASE: a runaway winner (ask 0.83→0.815→0.90, never ≤0.80) is MISSED at δ=0 but CAUGHT
+    #     at δ=0.02 (cap 0.82; the 0.815 tick is ≤0.82) — filled at the ACTUAL ask 0.815, not the cap.
+    win_run = [{"best_ask": 0.83, "eff_ts": 1030.0}, {"best_ask": 0.815, "eff_ts": 1080.0},
+               {"best_ask": 0.90, "eff_ts": 1200.0}]
+    miss0 = leg_chase_fill(win_run, P=0.80, delta=0.0, t0=1000.0, lag_s=0, cancel_s=3600)
+    catch2 = leg_chase_fill(win_run, P=0.80, delta=0.02, t0=1000.0, lag_s=0, cancel_s=3600)
+    g_ok = (miss0[0] is False) and (catch2[0] is True) and abs(catch2[1] - 0.815) < 1e-9
+    # and δ=0 still fills a reverter that dips to ≤P (fills at the dipped ask 0.78, price improvement)
+    rev = leg_chase_fill([{"best_ask": 0.78, "eff_ts": 1050.0}], P=0.80, delta=0.0, t0=1000.0, lag_s=0, cancel_s=3600)
+    g_ok = g_ok and rev[0] is True and abs(rev[1] - 0.78) < 1e-9
+    ok = ok and g_ok
+    print(f"  [{'ok' if g_ok else 'FAIL'}] capped-chase: runaway winner MISSED @δ=0 but CAUGHT @δ=2¢ (fills at ask 0.815, not cap); "
+          f"δ=0 fills a reverter at the dipped ask 0.78 (price improvement)")
 
     print("selftest:", "PASS" if ok else "FAIL")
     sys.exit(0 if ok else 1)
