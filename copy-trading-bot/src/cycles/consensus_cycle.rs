@@ -32,6 +32,11 @@ use crate::telegram::notifier::TelegramNotifier;
 use polymarket_common::model::features::MarketFeatures;
 use polymarket_common::ntfy::Ntfy;
 
+/// Cycle counter for the wide-consensus stride (CONSENSUS_WIDE_EVERY): the wide
+/// pass runs on ticks 0, N, 2N, … Process-local by design — a restart just
+/// re-runs the pass one cycle early, which is harmless (signals upsert).
+static WIDE_CYCLE_TICK: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+
 /// Build [`ConsensusParams`] from runtime config.
 pub(crate) fn params_from_cfg(cfg: &CopyTradingConfig) -> ConsensusParams {
     ConsensusParams {
@@ -56,6 +61,7 @@ pub(crate) fn params_from_cfg(cfg: &CopyTradingConfig) -> ConsensusParams {
         cross_cohort_cutoff: None,
         certified_only: false,
         router_set: None,
+        max_best_backer_rank: None,
     }
 }
 
@@ -418,7 +424,7 @@ pub async fn consensus_cycle(
     } else {
         HashMap::new()
     };
-    let signals = enrich_all(
+    let mut signals = enrich_all(
         signals,
         &EnrichCtx {
             now,
@@ -431,6 +437,46 @@ pub async fn consensus_cycle(
             markets: &markets,
         },
     );
+
+    // Wide-consensus arms (CONSENSUS_WIDE_ARMS, paper-only, silent): every Nth
+    // cycle, load the WIDE vote window (eligible ∪ tracked deep non-bot), build
+    // books from it, and score ONLY the wide arms on those books. Runs strictly
+    // after the eligible-book portfolio is scored+enriched, so the champion path
+    // above is byte-identical; wide signals join the same downstream (upsert,
+    // resolution, ledger, gate) purely additively. Errors degrade to a skipped
+    // pass, never a failed cycle.
+    let mut atoms = atoms;
+    if cfg.consensus_wide_arms {
+        let stride = cfg.consensus_wide_every.max(1);
+        let tick = WIDE_CYCLE_TICK.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+        if tick.is_multiple_of(stride) {
+            match portfolio.load_wide_window_votes(window_start).await {
+                Ok(wide_votes) => {
+                    let wide_books = books_from_window_votes(&wide_votes, trust);
+                    let wide_defs = crate::scanner::consensus::wide_arms(
+                        &params_from_cfg(cfg),
+                        cfg.track_consensus_rank_cutoff,
+                    );
+                    let wide_signals = score_all_strategies(&wide_books, now, &wide_defs);
+                    // Wide atoms fill only pairs the eligible book never saw:
+                    // champion rows keep their exact atoms; a wide signal on an
+                    // overlapping pair stores the eligible-book (subset) atoms —
+                    // a replay on stored atoms under-fires, never over-fires.
+                    for (k, v) in atom_log(&wide_books) {
+                        atoms.entry(k).or_insert(v);
+                    }
+                    tracing::debug!(
+                        wide_votes = wide_votes.len(),
+                        wide_books = wide_books.len(),
+                        wide_signals = wide_signals.len(),
+                        "wide-consensus pass scored"
+                    );
+                    signals.extend(wide_signals);
+                }
+                Err(e) => tracing::warn!(err = %e, "load_wide_window_votes failed; wide pass skipped"),
+            }
+        }
+    }
 
     // Silent `market_resid` arm emissions this cycle (0 unless the arm is loaded).
     let resid_emits = signals

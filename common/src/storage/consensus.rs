@@ -1254,6 +1254,34 @@ impl PgPortfolio {
         Ok(rows)
     }
 
+    /// Load the WIDE vote window at or after `since`: the live eligible book
+    /// (rank-derived `consensus_eligible` OR `earned_eligible`, untracked counting
+    /// as eligible exactly like `load_window_votes`) PLUS every tracked deep
+    /// wallet that is not labeled a bot (`trader_type <> 'bot'` — the router's
+    /// echo/copy-bot screen). This is the sensor-array widening the wide-consensus
+    /// arms score on: same mechanism, ~5x the voters. It is a superset of
+    /// `load_window_votes` by construction, so any signal the live book fires is
+    /// also visible to the wide book (comparability), while labeled bots stay out
+    /// of the *deep* extension only — a top-40 bot that votes today keeps voting,
+    /// preserving the eligible book inside the wide one byte-for-byte.
+    pub async fn load_wide_window_votes(&self, since: DateTime<Utc>) -> Result<Vec<WindowVote>> {
+        let rows: Vec<WindowVote> = sqlx::query_as(
+            "SELECT cw.trader_wallet, cw.name, cw.rank, cw.pnl, cw.quality, cw.condition_id, \
+                    cw.outcome_index, cw.outcome, cw.title, cw.slug, cw.event_slug, \
+                    cw.is_sports, cw.price, cw.size_usd, cw.ts \
+             FROM consensus_vote_window cw \
+             LEFT JOIN followed_traders ft ON LOWER(ft.proxy_wallet) = cw.trader_wallet \
+             WHERE cw.ts >= $1 \
+               AND COALESCE(ft.consensus_eligible OR ft.earned_eligible \
+                            OR ft.trader_type IS DISTINCT FROM 'bot', TRUE)",
+        )
+        .bind(since)
+        .fetch_all(&self.pool)
+        .await
+        .context("load_wide_window_votes")?;
+        Ok(rows)
+    }
+
     /// Record an EARNED promotion: flip `earned_eligible` on for the given tracked
     /// wallets (exact `proxy_wallet` match). Idempotent — already-earned rows are
     /// untouched; returns how many rows newly flipped. Called only by the
@@ -2451,6 +2479,108 @@ mod window_store_it {
             .await
             .unwrap();
         println!("window_store_it: insert/dedup/load/prune/cursors all OK");
+    }
+
+    /// Pool membership across the three window loaders: eligible / excluded /
+    /// WIDE. Four wallets — eligible (rank 5), deep human (rank 100), deep BOT
+    /// (rank 120, `trader_type='bot'`), and untracked — each vote once.
+    /// eligible book = {eligible, untracked}; excluded = {deep human, deep bot};
+    /// wide = {eligible, untracked, deep human} (labeled bots stay out of the
+    /// deep extension only).
+    #[tokio::test]
+    #[ignore = "requires a live Postgres at $DATABASE_URL with migrations applied"]
+    async fn wide_window_pool_membership() {
+        let url = std::env::var("DATABASE_URL").expect("DATABASE_URL must be set");
+        let pool = sqlx::PgPool::connect(&url).await.expect("connect");
+        let pf = PgPortfolio::new(pool).await.expect("portfolio");
+
+        // Loaders join on LOWER(ft.proxy_wallet) = cw.trader_wallet — votes are
+        // stored lower-cased, so keep the fixtures lower-case.
+        let w_elig = "0xwidetest_elig";
+        let w_deep = "0xwidetest_deep";
+        let w_bot = "0xwidetest_bot";
+        let w_untracked = "0xwidetest_untracked";
+        let all = [w_elig, w_deep, w_bot, w_untracked];
+        for w in all {
+            sqlx::query("DELETE FROM consensus_vote_window WHERE trader_wallet = $1")
+                .bind(w)
+                .execute(&pf.pool)
+                .await
+                .unwrap();
+            sqlx::query("DELETE FROM followed_traders WHERE proxy_wallet = $1")
+                .bind(w)
+                .execute(&pf.pool)
+                .await
+                .unwrap();
+        }
+        for (w, rank, eligible) in [(w_elig, 5, true), (w_deep, 100, false), (w_bot, 120, false)] {
+            pf.upsert_tracked_trader(&LeaderboardTraderUpsert {
+                wallet: w.into(),
+                username: Some(w.into()),
+                rank: Some(rank),
+                pnl: None,
+                volume: None,
+                periods: "WEEK".into(),
+                consensus_eligible: eligible,
+            })
+            .await
+            .unwrap();
+        }
+        sqlx::query("UPDATE followed_traders SET trader_type = 'bot' WHERE proxy_wallet = $1")
+            .bind(w_bot)
+            .execute(&pf.pool)
+            .await
+            .unwrap();
+
+        let t = Utc::now() - chrono::Duration::hours(1);
+        let votes: Vec<WindowVote> = all
+            .iter()
+            .map(|w| vote(w, "0xwidecond", 0, 0.80, t))
+            .collect();
+        assert_eq!(pf.insert_window_votes(&votes).await.unwrap(), 4);
+
+        let since = Utc::now() - chrono::Duration::hours(48);
+        let wallets = |rows: Vec<WindowVote>| -> std::collections::HashSet<String> {
+            rows.into_iter()
+                .map(|v| v.trader_wallet)
+                .filter(|w| w.starts_with("0xwidetest_"))
+                .collect()
+        };
+
+        let live = wallets(pf.load_window_votes(since).await.unwrap());
+        assert_eq!(
+            live,
+            [w_elig, w_untracked].map(String::from).into(),
+            "eligible book = rank-eligible + untracked"
+        );
+
+        let excluded = wallets(pf.load_excluded_window_votes(since).await.unwrap());
+        assert_eq!(
+            excluded,
+            [w_deep, w_bot].map(String::from).into(),
+            "excluded feed = every tracked deep wallet (bots included: shadow parity)"
+        );
+
+        let wide = wallets(pf.load_wide_window_votes(since).await.unwrap());
+        assert_eq!(
+            wide,
+            [w_elig, w_untracked, w_deep].map(String::from).into(),
+            "wide book = eligible ∪ deep non-bot"
+        );
+
+        for w in all {
+            sqlx::query("DELETE FROM consensus_vote_window WHERE trader_wallet = $1")
+                .bind(w)
+                .execute(&pf.pool)
+                .await
+                .unwrap();
+            sqlx::query("DELETE FROM followed_traders WHERE proxy_wallet = $1")
+                .bind(w)
+                .execute(&pf.pool)
+                .await
+                .unwrap();
+        }
+        println!("wide_window_pool_membership: eligible/excluded/wide splits all OK");
     }
 }
 
