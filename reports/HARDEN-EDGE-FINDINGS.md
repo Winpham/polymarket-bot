@@ -122,9 +122,40 @@ than taking at detection) but adverse selection dominates at realistic rest wind
 −35% to −38%; miss 21–29% of winners); INDETERMINATE-BY-POWER (N=20, 2 day-clusters < 5). Volume /
 queue-capture still OPEN (needs a real trade tape).
 
-## 3. Edge refinement (challengers under the guard)
+## 3. Edge refinement (challengers under the guard) — CHAMPION STANDS
 
-_(pending)_
+Built a refinement-search harness (`scripts/edge_refine_search.py`) that reuses `selection_null.py`'s
+exact belief-blind machinery on **subsets** of the favorite arm across 5 axes (price sub-band,
+freshness, book-depth, backer-quality, price-std) + 2-way combos — 14 challengers. Each scored on the
+full belief-blind gate (p≤1% ∧ LB>3% ∧ ≥2 non-soccer regimes).
+
+**Most candidates correctly FAILED** (the screen working): freshness cuts go *negative*
+(fresh≤180m −0.83%, fresh≤5m −1.53% — fresher isn't better here), depth/pstd/rank cuts don't clear.
+**Two nested price-band tightenings cleared the full-record gate:** band 0.70-0.95 (LB +4.39%) and
+**band 0.75-0.98 (obs +8.47%, LB +5.57%, p 0.0000, 3 non-soccer regimes)** — dropping the 0.65-0.75
+mild-favorite slice.
+
+I treated this as the exact "tuning to chase a number" trap the brief warns about and stress-tested it:
+
+1. **OOS temporal split** (`scripts/edge_refine_oos.py`, cutoff 2026-07-04): band 0.75-0.98 *appeared*
+   to beat champion out-of-sample too (OUT obs +5.93% vs +3.28%, OUT LB +1.71% vs −1.11%).
+2. **Independent adversarial skeptic (Opus, read-only, refute-stance)** → **REFUTED.** The decisive
+   findings:
+   - The dropped mild band 0.65-0.75 is **+8.37% in-sample but −1.60% OOS** — the tight band's "OOS
+     win" is manufactured by a 36-event mild-favorite blip dipping negative in one 4-day window; a
+     band whose sign flips between adjacent windows is noise.
+   - **84% of the OOS tight-band events are expiring World Cup + Wimbledon**; non-expiring support is
+     ~zero (1 MLB event). It generalizes beyond those two tournaments not at all.
+   - **Bonferroni ×14 → OOS p 0.0095 × 14 ≈ 0.13**, fails the p≤0.01 gate. Belief-blind surplus is
+     near-monotonic in price, so "raise the floor" mechanically raises the mean — the definition of
+     garden-of-forking-paths, not a discovered edge.
+   - OUT LB +1.71% is also **< the +3% adoption margin**, and the champion is itself under-powered OOS.
+
+**Verdict: CHAMPION STANDS. Nothing adopted.** band 0.75-0.98 is a *suggestive-but-refuted* candidate.
+The honest, disciplined action (not taken here — it's a live-config change for Tue) is to
+**pre-register the 0.75 floor as a single forward hypothesis** and re-test it on forward **non-soccer**
+months, exactly as the persistence gate requires. This is a first-class success: a tempting positive,
+surfaced, adversarially refuted, correctly declined.
 
 ## 4. Execution realism
 
