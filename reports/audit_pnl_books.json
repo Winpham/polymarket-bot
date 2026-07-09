@@ -1,18 +1,22 @@
 {
   "summary": {
-    "n_resolved_clean": 349,
-    "total_net_pnl": 2008.14,
-    "win_rate": 0.9026,
-    "n_days_detection": 8,
+    "n_resolved_clean": 419,
+    "total_net_pnl": 1922.12,
+    "win_rate": 0.8878,
+    "n_days_detection": 11,
     "peak_concurrent_capital": 3160.0,
     "peak_concurrent_positions": 38,
     "detection_negative_days": [
       "2026-06-30",
-      "2026-07-06"
+      "2026-07-06",
+      "2026-07-07",
+      "2026-07-08"
     ],
     "cash_negative_days": [
       "2026-06-30",
-      "2026-07-05"
+      "2026-07-05",
+      "2026-07-07",
+      "2026-07-08"
     ],
     "positive_days_flipped_negative_on_cash": [
       "2026-07-05"
@@ -50,58 +54,76 @@
       "staked": 3427.26
     },
     "2026-07-04": {
-      "bets": 42,
-      "wins": 37,
-      "net": 100.27,
-      "staked": 3529.15
+      "bets": 43,
+      "wins": 38,
+      "net": 126.53,
+      "staked": 3601.44
     },
     "2026-07-05": {
-      "bets": 28,
-      "wins": 26,
-      "net": 116.35,
-      "staked": 2434.95
+      "bets": 32,
+      "wins": 30,
+      "net": 195.0,
+      "staked": 2750.0
     },
     "2026-07-06": {
-      "bets": 14,
-      "wins": 12,
-      "net": -24.13,
-      "staked": 1200.13
+      "bets": 35,
+      "wins": 28,
+      "net": -152.35,
+      "staked": 2894.46
+    },
+    "2026-07-07": {
+      "bets": 21,
+      "wins": 18,
+      "net": -43.54,
+      "staked": 1807.39
+    },
+    "2026-07-08": {
+      "bets": 21,
+      "wins": 16,
+      "net": -63.08,
+      "staked": 1630.47
+    },
+    "2026-07-09": {
+      "bets": 2,
+      "wins": 2,
+      "net": 43.9,
+      "staked": 153.04
     }
   },
   "B2_exclusions": {
-    "open_unresolved": 16,
-    "open_entry_min": 0.659,
-    "open_entry_max": 0.945,
-    "open_entry_mean": 0.794,
-    "open_age_h_min": 0.0,
-    "open_age_h_max": 45.2,
+    "open_unresolved": 7,
+    "open_entry_min": 0.662,
+    "open_entry_max": 0.91,
+    "open_entry_mean": 0.813,
+    "open_age_h_min": 2.8,
+    "open_age_h_max": 48.3,
     "resolved_void_null": 0,
     "resolved_no_ts": 0,
     "void_as_loss_pnl": 0
   },
   "B3_resolution_lag": {
-    "n_won": 315,
-    "n_lost": 34,
+    "n_won": 372,
+    "n_lost": 47,
     "median_hold_won_h": 2.74,
-    "median_hold_lost_h": 5.43,
-    "mean_hold_won_h": 6.38,
-    "mean_hold_lost_h": 17.64
+    "median_hold_lost_h": 5.3,
+    "mean_hold_won_h": 6.85,
+    "mean_hold_lost_h": 14.77
   },
   "B3_mark_to_market_open": {
-    "open_with_mark": 15,
-    "open_missing_mark": 1,
-    "mtm_total_open_pnl": -5.93,
-    "mtm_open_losers": 12,
+    "open_with_mark": 7,
+    "open_missing_mark": 0,
+    "mtm_total_open_pnl": -80.63,
+    "mtm_open_losers": 4,
     "last2_days": [
-      "2026-07-05",
-      "2026-07-06"
+      "2026-07-08",
+      "2026-07-09"
     ],
-    "last2_resolved_net": 92.22,
-    "last2_open_mtm": -3.69,
-    "last2_combined": 88.53
+    "last2_resolved_net": -19.18,
+    "last2_open_mtm": 3.9,
+    "last2_combined": -15.28
   },
   "B4_grading_lag": {
-    "distinct_grade_minutes": 295,
+    "distinct_grade_minutes": 358,
     "max_graded_one_minute": 5,
     "top_sweeps": [
       {
@@ -113,15 +135,15 @@
         "n": 4
       },
       {
+        "minute": "2026-07-07T02:39:00+00:00",
+        "n": 4
+      },
+      {
         "minute": "2026-06-29T19:33:00+00:00",
         "n": 3
       },
       {
         "minute": "2026-06-29T19:29:00+00:00",
-        "n": 3
-      },
-      {
-        "minute": "2026-06-29T19:32:00+00:00",
         "n": 3
       }
     ],
@@ -179,15 +201,30 @@
       "net": -280.8
     },
     "2026-07-06": {
-      "bets": 24,
-      "wins": 22,
-      "net": 91.28
+      "bets": 41,
+      "wins": 37,
+      "net": 167.96
+    },
+    "2026-07-07": {
+      "bets": 26,
+      "wins": 21,
+      "net": -104.88
+    },
+    "2026-07-08": {
+      "bets": 22,
+      "wins": 16,
+      "net": -159.14
+    },
+    "2026-07-09": {
+      "bets": 5,
+      "wins": 5,
+      "net": 101.33
     }
   },
   "_meta": {
     "strategy": "favorite",
-    "n_rows_total": 365,
-    "now_proxy_utc": "2026-07-06T17:07:25.047592+00:00",
+    "n_rows_total": 426,
+    "now_proxy_utc": "2026-07-09T02:26:54.989644+00:00",
     "convention": "entry=COALESCE(initial_mean,mean)+0.005; fee=0.02*entry*100; 100sh"
   }
 }

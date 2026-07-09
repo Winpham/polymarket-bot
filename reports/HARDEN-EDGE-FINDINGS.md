@@ -30,8 +30,11 @@ Reproduced the frozen champion (`reports/STANDARD-BASELINE.md`, frozen 2026-07-0
 | favorite events | 158 | 197 | +39 |
 | selection surplus | +8.06% | **+6.29%** | ↓ |
 | belief-blind LB | +4.93% | **+3.44%** | ↓ (toward the +3% floor) |
-| resolved ROI | +2.17% | **+1.27%** | ↓ |
+| resolved ROI (honest_paper_ledger basis)* | +2.17% | **+1.27%** | ↓ |
 | non-soccer positive regimes | 3 | **2** | ↓ (`other` flipped −3.12%) |
+
+*\*The ledger-basis ROI shows DECAY consistently, but is NOT the authoritative baseline — the
+cash-basis `audit_pnl_books.py` reads ≈5.6–7% ROI-on-turnover (4.38% ex-soccer). See §7.*
 
 **favorite per-regime (current):** soccer 82 ev **+7.11%**, tennis 76 ev **+5.27%**,
 mlb 18 ev **+13.54%**, other 21 ev **−3.12%**.
@@ -109,13 +112,27 @@ coverage-biased low because data-api /trades caps offset so the busiest markets 
 historically). Precise taker impact-at-size needs order-book depth we don't have historically (the
 same wall G3 hit); the honest read is qualitative.
 
-**Realistic compounding ceiling: ~$500–1,000 per signal**, and well below that on the thin tail. At
-~45 favorite signals/week × +2.8% resolved edge, even the optimistic $1k cap implies **only ~$1k/week
-gross edge** — and that assumes the edge (measured at flat $100) survives at 10× size, which is
-unproven and probably optimistic. **The compounding mirage is dead:** you cannot turn a small +2.8%
-edge on $100 into meaningful absolute profit by scaling stake, because per-signal capacity caps at
-low-thousands and marginal liquidity is thinner still. This is consistent with the frozen finding that
-a thin, capacity-capped edge cannot be safely levered.
+**Two DIFFERENT compounding axes — size is capped, throughput is the live lever (CORRECTED 2026-07-09
+after reconciling with `audit_pnl_books.py`, the authoritative cash-basis source):**
+
+- **Per-event SIZE — capped (this finding stands): ~$500–1,000 per signal**, well below on the thin
+  tail. Scaling stake past that makes us the flow and the historical edge (measured small) no longer
+  applies. ⅛-Kelly ≈ flat (§5). So you cannot grow via bigger bets.
+- **THROUGHPUT (turnover-multiple) — the REAL growth axis, with headroom.** Realized daily $ =
+  **turnover-multiple × ROI-on-turnover**. The authoritative audit measures the multiple at **1.14×/day**
+  (bankroll recycles ~once/day; median resolved hold 2.7h ⇒ a ~**8.8×/day** resolution-speed ceiling).
+  Holding the ex-soccer edge (~4.4% ROI-turn) constant and lifting the multiple 1.14×→3× would ~triple
+  daily dollars with **no bigger edge** — the honest ambition target.
+
+**But the throughput lever is gated by the SAME resource as persistence — out-of-soccer event supply.**
+You can only recycle freed capital into *concurrent soft-favorite events that exist*; out-of-soccer
+that supply is thin (~0.9 MLB clusters/day; ~2.6 recurring ev/day historically). So the 8.8× ceiling is
+theoretical — the *achievable* multiple out-of-soccer is supply-limited well below it, and the recent
+cash days are **negative** (07-05 −$281, 07-07 −$105, 07-08 −$159 — the P1 decay, on a cash basis). So
+my earlier "compounding mirage is dead" was **half-right and half-wrong**: mirage-via-SIZE is dead;
+growth-via-THROUGHPUT is real but bottlenecked by exactly the out-of-soccer event supply that also
+gates persistence. **This unifies P1 and P2: the single binding resource is non-soccer event supply —
+it caps both the persistence gate AND the turnover-multiple.**
 
 **Maker path (from G3, not re-derived):** real +2–4% entry edge (rest at the sharp's price, cheaper
 than taking at detection) but adverse selection dominates at realistic rest windows (adverse-WR gap
@@ -165,8 +182,10 @@ fee is **inconsistent**: `backtest.py` uses flat `0.03·stake` (over-charges fav
 / selection_null use a 2% buffer. The correct Polymarket sports taker fee is **0.03·(1−p)** per $ of
 stake (entry-only; makers pay 0) — ~0.5% at favorite prices, far below the flat fees.
 
-**Realizable-edge ROI (at-fire entry basis; = the §3b honest_roi view, matches the prior +8.36%; the
-CANONICAL resolved-P&L on actual fills stays +1.27%). All labeled:**
+**Realizable-edge ROI (at-fire entry basis; = the §3b honest_roi view, matches the prior +8.36%). The
+authoritative CASH-basis resolved number is `audit_pnl_books.py`: +$1,922 / 419 bets, ROI-on-turnover
+≈5.6% (11-day) / 6.95% (8-day), 4.38% ex-soccer — NOT the +1.27% honest_paper_ledger figure (a
+truncated/decayed sub-window; see §3b/§7). All labeled:**
 
 | entry basis | correct 0.03(1−p) | flat 2% buffer | flat 3%·stake | maker (fee 0) |
 |---|---|---|---|---|
@@ -183,8 +202,11 @@ even the (optimistically-contaminated) captured ask drops the realizable edge to
 causal decision-time ask (per G3, the sharp lifts the ask ~3min pre-detection) would likely land it
 near or below break-even on a taker basis. The gap between the +8% at-fire-mid basis and the ~+1.4%
 measured-ask basis **is the execution tax, and it is the difference between "looks great" and
-"marginal."** This is why the canonical resolved-P&L (+1.27%) — not the realizable +8% — is the number
-to trust for real-money reasoning.
+"marginal."** For real-money reasoning, trust the **authoritative cash-basis (`audit_pnl_books.py`):
+ROI-on-turnover ≈5.6–7% (4.38% ex-soccer), front-loaded, with the last 3 of 4 days negative** — the
+edge is real and better than the stale +1.27% suggested, but decaying and execution-sensitive. (The
++1.27% honest_paper_ledger figure I initially anchored on is a truncated/decayed sub-window and is
+**not** the baseline — corrected per the cross-chat reconciliation in §7.)
 
 ## 5. Sizing / risk — cannot be safely levered (confirmed)
 
@@ -212,10 +234,12 @@ that its **recurring, non-expiring regimes are net-positive after the copy tax**
 +32.8%). But every lever I could reach now hit the same wall: the edge is **decaying as data accrues**
 (belief-blind LB +4.93%→+3.44%, non-soccer regimes 3→2 since the 07-06 freeze), it is **power-limited
 not point-estimate-limited** (0/4 recurring regimes clear the 10-cluster floor; the transfer null is
-structurally inert below ~5–6 regimes; OOS pooled surplus is ~0), it **cannot be scaled** (capacity
-caps at ~$500–1k/signal before we become the flow — the compounding mirage is dead), and its **measured
-execution entry is dear** (the realizable +8% at at-fire-mid drops to ~+1.4% at the captured ask; the
-canonical resolved-P&L is +1.27%). I searched hard for a better sub-region and the one tempting
+structurally inert below ~5–6 regimes; OOS pooled surplus is ~0), its **per-bet SIZE cannot be scaled**
+(caps at ~$500–1k/signal — though THROUGHPUT/turnover-multiple is a real growth axis with headroom,
+gated by the same non-soccer supply; see §2/§7), and its **measured execution entry is dear** (the
+realizable +8% at at-fire-mid drops to ~+1.4% at the captured ask). The authoritative cash baseline is
+**≈5.6–7% ROI-on-turnover (4.38% ex-soccer)** — real and better than the stale +1.27% I first cited,
+but front-loaded with the **last 3 of 4 days negative**. I searched hard for a better sub-region and the one tempting
 candidate — tightening to the strong-favorite band 0.75–0.98 — was **adversarially REFUTED** as an
 expiring-tournament / multiple-comparisons artifact. **The single thing standing in the way is
 unchanged and unmanufacturable: months of independent NON-SOCCER regime persistence.** The concrete
@@ -246,3 +270,36 @@ chase the one lead this run surfaced.
   `strict`/alert path touched. DB read-only. Cost-zero (no API key, no child claude).**
 - Verdict re-run: `real_money_eligible=False`, **2/4 GO gates**, binding=persistence — **unchanged; no
   gate flipped; no ESCALATE banner** (correct — nothing was adopted).
+
+---
+
+## 7. Cross-chat reconciliation (2026-07-09) — baseline corrected, throughput reframed
+
+A parallel chat ran `scripts/audit_pnl_books.py` (the authoritative cash-basis audit). I reproduced it
+here (`reports/audit_pnl_books.json`): **419 resolved bets, +$1,922 net, win-rate 88.8%,
+ROI-on-turnover ≈5.6% (11-day) / 6.95% (8-day window), 4.38% ex-soccer** (07-02 alone ≈46% of profit,
+but stripping it stays clearly positive — soccer-**heavy**, not soccer-**only**). Two corrections to my
+run:
+
+1. **Baseline number (I was wrong):** I anchored §4/§6 on `honest_paper_ledger`'s **+1.27%** as "the
+   resolved number to trust." That is a *truncated/decayed* sub-window (306 flat-$100 bets; excludes the
+   pre-ledger 06-29/06-30 World-Cup front-load the cash audit includes). **The authoritative baseline is
+   ≈5.6–7% ROI-turn (4.38% ex-soccer)** — my +8% realizable-at-mid was directionally right, not the
+   +1.27%. Corrected throughout. (Note: the audit is front-loaded and the **last 3 of 4 cash days are
+   negative** — the same decay my P1 found, now on a cash basis. So "5.6–7%" is a decaying, front-loaded
+   number, not a forward run-rate.)
+
+2. **Compounding reframe (I was half-wrong):** I said "compounding mirage is dead." Precisely: mirage
+   **via SIZE** is dead (per-event ~$500–1k cap stands, ⅛-Kelly≈flat). But growth **via THROUGHPUT** is
+   real: `daily $ = turnover-multiple × ROI-turn`, and the multiple is only **1.14×/day** against a
+   ~**8.8×/day** resolution-speed ceiling (median hold 2.7h). Lifting 1.14×→3× ~triples daily $ with no
+   bigger edge — the honest ambition. **Critical caveat (mine, standing):** that headroom is gated by
+   the *same* out-of-soccer event supply that gates persistence — you can only recycle capital into
+   concurrent soft-favorite events that exist, and out-of-soccer that supply is thin (~0.9 MLB
+   clusters/day). And the 2.7h hold is `resolved_at` = our grading pass (backlog-sweep inflated), so the
+   8.8× is itself soft. **Net: the binding resource is non-soccer event SUPPLY — it caps both the
+   persistence gate and the turnover-multiple.** The reframe correctly names the growth axis; it does
+   not move the wall.
+
+**Verdict unchanged:** real, better-than-I-said, still NOT-YET, still gated by months of non-soccer
+supply/persistence — which now also explains why throughput can't be lifted yet.
