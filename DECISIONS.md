@@ -1045,3 +1045,54 @@ churn axis.
 **Bottom line:** the skilled traders are real; past PnL cannot find them (re-confirmed five more
 ways); the only forward-shaped lead is CLV, now measurable and accruing — decidable in months, not
 today. Honest null + one live instrument, exactly the mission's anticipated deliverable.
+
+## D31 — Maker-Copy G3: forward maker-fill measured — real entry edge, real adverse selection, INDETERMINATE-BY-POWER; extends D26 (2026-07-08, entry maker-copy-g3)
+
+Branch `feat/maker-copy-g3`. Instrument `scripts/maker_copy_g3.py` (`--selftest` 6/6),
+`reports/maker_copy_g3.json`, entry `reports/entries/2026-07-08-maker-copy-g3.md`. Pre-registered
+blind (`reports/PREREG_20260709T011424Z_maker_copy_g3.md` + `_ADDENDUM`). **Extends D26 — does NOT
+reopen it.** Read-only, paper-only, no capital, promotes nothing.
+
+**Why now:** G2/G2b punted the realized fill-capture question to a forward simulator that never
+existed. The 2026-07-07 `clob_price_tape` ingestion made G3 buildable. The idea had been wrong twice
+(G2 v1 "+4.8% LB" = units × backwards-complement bugs), so it was gated on pre-registration + an
+adversarial audit.
+
+**Load-bearing data finding:** `clob_price_tape` is a top-of-book (`best_bid`/`best_ask`) inflection
+series with **NO trade tape** — on a `price_change`, `last_size` is order-book-level churn, not a
+trade (`live_tape.rs:222`; audit-verified). So the pre-registered volume-based REALISTIC model is
+**not measurable** (it would count flicker as volume — the G2 trap); replaced by a `best_ask`-only
+DWELL model, deviation documented in the ADDENDUM. Realized **volume/queue-capture fraction remains
+OPEN** (needs a real trade tape). The instrument never reads `last_size` in a fill decision.
+
+**Measurement (N=20 resolved favorites, 19 event-clusters, 2 calendar days; fill menu
+optimistic/dwell/pessimistic × lag{0,12,60}s × cancel{5,15,60m,RES}):**
+- Taker reference on the same signals = **decision-time tape ask** (mean 0.809): ROI **−18.6%**
+  (−17.8% anchor+1¢, −16.0% capture-lagged entry_ask). Favorites won 70% at ~0.77–0.81 → the **taker
+  also loses** on this unlucky 2-day window.
+- **Maker gets a better entry than taking-at-detection** (rest at sharp P mean 0.786 vs ask 0.809) →
+  **maker−taker on filled = +2.4% to +3.7%** everywhere. Real entry edge (the sharp lifted the ask
+  before we detect), power-limited.
+- **Adverse selection real and dominant at realistic windows:** at cancel=RES, fill 80–85% but
+  `wr_missed→100%`, `wr_filled≈62–65%` (gap **−35..−38%**), miss **21–29% of winners**, filled ROI
+  −21..−23%. The entry edge is swamped by catching the reverters. The only non-negative cells
+  (dwell/pess 15m, +8/+14%) are **noise** (Fisher p=0.64/1.0) + short-horizon censoring.
+
+**Audit (3 independent Opus skeptics, refute stance):** fill machinery SOUND (no look-ahead, clock
+clean, `last_size` inert, G2 bugs structurally unrepresentable, verdict double-locked). **One real
+leak fixed:** the taker's stored `entry_ask` is captured ~20min post-detection (`entry_ask_at=NOW()`)
+— a future price flattering the taker ~1.8pp; replaced with the causal decision-time tape ask, which
+**reversed** the pre-fix "maker worse everywhere" into "maker has a real +2–4% entry edge, adversely
+selected." DWELL relabeled (2 touches spanning 30s, not continuous); `maker_edge_per_signal` flagged
+abstention-confounded.
+
+**Decision (binding): INDETERMINATE-BY-POWER — ACCRUE, promote nothing.** N=20 (filled ≤17 < 30) and
+**2 day-clusters < 5** (the binding wall; day-LB t(1) uninformative, −0.78 to −1.64). No cell reaches
+GO (needs power AND filled-LB>0 after fees AND adverse-gap≥0 AND maker≥taker AND audit-survival). The
+lean confirms the adverse-selection trap at realistic rest windows, now paired with a genuine but
+under-powered entry edge. **D26 KILL+PARK and the legal-posture gate stand; no live Polymarket
+capital under any outcome of this run.** Forward path: the instrument is idempotent/read-only — re-run
+as the tape deepens. A GO would need ≥30 filled across ≥5 day-clusters with filled-LB>0 and
+adverse-gap≥0, at which point Phase 2 (persisted forward maker paper-ledger, migration 041,
+coordinated) could be earned — NOT today. **Rollback:** additive (`scripts/maker_copy_g3.py`, the
+prereg + addendum, the entry, this D31); git-revert the merge.
