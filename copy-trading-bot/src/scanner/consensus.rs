@@ -164,6 +164,12 @@ pub struct ConsensusParams {
     pub elite_rank: i32,
 
     // --- additive portfolio knobs (all default to no-op) ---
+    /// Minimum number of distinct one-sided opposers REQUIRED (favorite_opposed
+    /// variant, prereg 2026-07-09: an opposer means the market has not fully
+    /// converged on the favorite — the slice where the favorite edge
+    /// concentrates, +11.3%/event vs −0.7% unopposed, held forward). Default
+    /// `0` = no-op (every signal trivially satisfies it).
+    pub min_opposers: usize,
     /// Require ≥1 backer with rank ≤ `elite_rank`, else drop the signal.
     pub require_elite: bool,
     /// Keep only signals whose mean entry price ∈ [lo, hi]. `None` = no band.
@@ -206,6 +212,7 @@ impl Default for ConsensusParams {
             elite_net: 6,
             elite_rank: 10,
             // no-op defaults → Default() is behaviorally unchanged
+            min_opposers: 0,
             require_elite: false,
             price_band: None,
             sports_mode: SportsMode::Include,
@@ -457,6 +464,7 @@ pub fn score_market(
         // --- Hard gates ---
         if n_backers < params.min_backers
             || n_opposers > params.max_opposers
+            || n_opposers < params.min_opposers
             || price_std > params.max_price_std
             || recency_mins > params.max_age_mins
         {
@@ -650,6 +658,22 @@ pub fn default_portfolio(base: &ConsensusParams) -> Vec<StrategyDef> {
             name: "favorite",
             params: ConsensusParams {
                 price_band: Some((0.65, 0.98)),
+                ..base.clone()
+            },
+            alerting: false,
+        },
+        // Opposed favorites (prereg 2026-07-09, nominated by the 07-02 slice
+        // study and confirmed on its own out-of-sample window): `favorite` ∩
+        // ≥1 opposer. An opposer means the market has NOT fully converged on
+        // the favorite — the whole favorite edge concentrates here
+        // (+11.3%/event clustered, 85 events vs −0.7% unopposed, 124). Silent
+        // challenger in the EXPERIMENTAL family (never tightens core's
+        // Bonferroni bar); judged only by the standing gate.
+        StrategyDef {
+            name: "favorite_opposed",
+            params: ConsensusParams {
+                price_band: Some((0.65, 0.98)),
+                min_opposers: 1,
                 ..base.clone()
             },
             alerting: false,
@@ -1207,6 +1231,77 @@ mod tests {
             ],
         );
         assert_eq!(score_market(&b2, now, &elite).len(), 1);
+    }
+
+    #[test]
+    fn min_opposers_gate() {
+        let now = Utc::now();
+        // 4 tight backers on Yes in the favorite band, NO opposer.
+        let unopposed = book_with(
+            now,
+            vec![
+                (0, "wa", None, 0.80, 5),
+                (0, "wb", None, 0.81, 5),
+                (0, "wc", None, 0.79, 5),
+                (0, "wd", None, 0.80, 5),
+            ],
+        );
+        // Same consensus plus ONE opposer on No.
+        let opposed = book_with(
+            now,
+            vec![
+                (0, "wa", None, 0.80, 5),
+                (0, "wb", None, 0.81, 5),
+                (0, "wc", None, 0.79, 5),
+                (0, "wd", None, 0.80, 5),
+                (1, "wx", None, 0.20, 5),
+            ],
+        );
+        // Default `min_opposers: 0` is a NO-OP: both fire (incumbent behavior).
+        assert_eq!(
+            score_market(&unopposed, now, &ConsensusParams::default()).len(),
+            1,
+            "default params unchanged for unopposed"
+        );
+        assert_eq!(
+            score_market(&opposed, now, &ConsensusParams::default()).len(),
+            1,
+            "default params unchanged for opposed"
+        );
+        // favorite_opposed's gate: the unopposed favorite is dropped, the
+        // opposed one (the slice the edge concentrates in) fires.
+        let req = ConsensusParams {
+            min_opposers: 1,
+            price_band: Some((0.65, 0.98)),
+            ..ConsensusParams::default()
+        };
+        assert!(
+            score_market(&unopposed, now, &req).is_empty(),
+            "no opposer ⇒ dropped by min_opposers"
+        );
+        let sigs = score_market(&opposed, now, &req);
+        assert_eq!(sigs.len(), 1, "opposed favorite fires");
+        assert_eq!(sigs[0].n_opposers, 1);
+    }
+
+    #[test]
+    fn favorite_opposed_registered_as_silent_variant() {
+        let defs = default_portfolio(&ConsensusParams::default());
+        let d = defs
+            .iter()
+            .find(|d| d.name == "favorite_opposed")
+            .expect("favorite_opposed in the default portfolio");
+        assert!(!d.alerting, "challenger is silent");
+        assert_eq!(d.params.min_opposers, 1);
+        assert_eq!(d.params.price_band, Some((0.65, 0.98)));
+        // Every OTHER strategy keeps the no-op default — non-regression.
+        for other in defs.iter().filter(|d| d.name != "favorite_opposed") {
+            assert_eq!(
+                other.params.min_opposers, 0,
+                "{} must keep the no-op min_opposers",
+                other.name
+            );
+        }
     }
 
     #[test]

@@ -350,6 +350,7 @@ pub fn family(strategy: &str) -> &'static str {
         "sharp_tail_fresh",
         "sharp_tail",
         "slice_sport_tail",
+        "favorite_opposed",
     ];
     if EXPERIMENTAL.contains(&strategy) {
         "experimental"
@@ -371,6 +372,9 @@ mod tests {
         // The pooled per-cell specialist arm must NOT land in the core Bonferroni
         // family (FORGE_PLAN Item 3) — else it tightens strict's bar.
         assert_eq!(family("slice_sport_tail"), "experimental");
+        // The opposed-favorites challenger (prereg 2026-07-09) likewise must
+        // never tighten the core family's promotion bar.
+        assert_eq!(family("favorite_opposed"), "experimental");
     }
 
     #[test]

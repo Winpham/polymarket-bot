@@ -44,6 +44,7 @@ pub(crate) fn params_from_cfg(cfg: &CopyTradingConfig) -> ConsensusParams {
         elite_rank: cfg.elite_rank,
         // Incumbent `strict` knobs: sports treatment mirrors the legacy global flag;
         // the other portfolio knobs are no-ops for strict.
+        min_opposers: 0,
         require_elite: false,
         price_band: None,
         sports_mode: if cfg.consensus_include_sports {
