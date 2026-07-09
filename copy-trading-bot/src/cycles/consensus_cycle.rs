@@ -474,7 +474,9 @@ pub async fn consensus_cycle(
                     );
                     signals.extend(wide_signals);
                 }
-                Err(e) => tracing::warn!(err = %e, "load_wide_window_votes failed; wide pass skipped"),
+                Err(e) => {
+                    tracing::warn!(err = %e, "load_wide_window_votes failed; wide pass skipped")
+                }
             }
         }
     }
