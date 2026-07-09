@@ -1,0 +1,500 @@
+{
+ "n_tested": 14,
+ "champion": {
+  "n_ev": 198,
+  "obs": 0.0639,
+  "null_mu": -0.0001,
+  "null_sd": 0.018,
+  "z": 3.56,
+  "p_emp": 0.0,
+  "lb": 0.0344,
+  "non_soccer_pos": 2,
+  "regimes": {
+   "soccer": [
+    0.0748,
+    82
+   ],
+   "tennis": [
+    0.0604,
+    76
+   ],
+   "other": [
+    -0.0227,
+    22
+   ],
+   "mlb": [
+    0.1348,
+    18
+   ]
+  },
+  "belief_blind_gate": true,
+  "readable": true
+ },
+ "survivors": [
+  "band 0.70-0.95",
+  "band 0.75-0.98"
+ ],
+ "results": {
+  "CHAMPION favorite (all)": {
+   "n_ev": 198,
+   "obs": 0.0639,
+   "null_mu": -0.0001,
+   "null_sd": 0.018,
+   "z": 3.56,
+   "p_emp": 0.0,
+   "lb": 0.0344,
+   "non_soccer_pos": 2,
+   "regimes": {
+    "soccer": [
+     0.0748,
+     82
+    ],
+    "tennis": [
+     0.0604,
+     76
+    ],
+    "other": [
+     -0.0227,
+     22
+    ],
+    "mlb": [
+     0.1348,
+     18
+    ]
+   },
+   "belief_blind_gate": true,
+   "readable": true
+  },
+  "band 0.65-0.80": {
+   "n_ev": 122,
+   "obs": 0.0727,
+   "null_mu": 0.0004,
+   "null_sd": 0.0339,
+   "z": 2.13,
+   "p_emp": 0.0145,
+   "lb": 0.0171,
+   "non_soccer_pos": 2,
+   "regimes": {
+    "soccer": [
+     0.1352,
+     50
+    ],
+    "tennis": [
+     0.0339,
+     46
+    ],
+    "other": [
+     -0.0826,
+     14
+    ],
+    "mlb": [
+     0.1425,
+     12
+    ]
+   },
+   "belief_blind_gate": false,
+   "readable": true
+  },
+  "band 0.80-0.90": {
+   "n_ev": 81,
+   "obs": 0.0515,
+   "null_mu": -0.0007,
+   "null_sd": 0.0229,
+   "z": 2.29,
+   "p_emp": 0.0035,
+   "lb": 0.014,
+   "non_soccer_pos": 3,
+   "regimes": {
+    "tennis": [
+     0.1114,
+     24
+    ],
+    "other": [
+     0.1375,
+     7
+    ],
+    "soccer": [
+     -0.0025,
+     45
+    ],
+    "mlb": [
+     0.1293,
+     5
+    ]
+   },
+   "belief_blind_gate": false,
+   "readable": true
+  },
+  "band 0.90-0.98": {
+   "n_ev": 63,
+   "obs": 0.0464,
+   "null_mu": 0.0012,
+   "null_sd": 0.0209,
+   "z": 2.16,
+   "p_emp": 0.006,
+   "lb": 0.0121,
+   "non_soccer_pos": 2,
+   "regimes": {
+    "tennis": [
+     0.0592,
+     6
+    ],
+    "soccer": [
+     0.0446,
+     51
+    ],
+    "other": [
+     0.0443,
+     5
+    ],
+    "mlb": [
+     0.0696,
+     1
+    ]
+   },
+   "belief_blind_gate": false,
+   "readable": true
+  },
+  "band 0.70-0.95": {
+   "n_ev": 150,
+   "obs": 0.0771,
+   "null_mu": -0.0008,
+   "null_sd": 0.0202,
+   "z": 3.85,
+   "p_emp": 0.0,
+   "lb": 0.0439,
+   "non_soccer_pos": 3,
+   "regimes": {
+    "soccer": [
+     0.0577,
+     70
+    ],
+    "tennis": [
+     0.0853,
+     58
+    ],
+    "other": [
+     0.0931,
+     14
+    ],
+    "mlb": [
+     0.1597,
+     8
+    ]
+   },
+   "belief_blind_gate": true,
+   "readable": true
+  },
+  "band 0.75-0.98": {
+   "n_ev": 125,
+   "obs": 0.0847,
+   "null_mu": 0.0,
+   "null_sd": 0.0177,
+   "z": 4.79,
+   "p_emp": 0.0,
+   "lb": 0.0557,
+   "non_soccer_pos": 3,
+   "regimes": {
+    "tennis": [
+     0.13,
+     40
+    ],
+    "other": [
+     0.1206,
+     12
+    ],
+    "soccer": [
+     0.0482,
+     67
+    ],
+    "mlb": [
+     0.1193,
+     6
+    ]
+   },
+   "belief_blind_gate": true,
+   "readable": true
+  },
+  "fresh <=180m": {
+   "n_ev": 80,
+   "obs": -0.0083,
+   "null_mu": 0.0007,
+   "null_sd": 0.0285,
+   "z": -0.32,
+   "p_emp": 0.6365,
+   "lb": -0.055,
+   "non_soccer_pos": 0,
+   "regimes": {
+    "soccer": [
+     0.068,
+     39
+    ],
+    "other": [
+     -0.143,
+     11
+    ],
+    "tennis": [
+     -0.0662,
+     24
+    ],
+    "mlb": [
+     -0.0261,
+     6
+    ]
+   },
+   "belief_blind_gate": false,
+   "readable": true
+  },
+  "fresh <=60m": {
+   "n_ev": 80,
+   "obs": -0.0075,
+   "null_mu": 0.0003,
+   "null_sd": 0.0287,
+   "z": -0.27,
+   "p_emp": 0.613,
+   "lb": -0.0546,
+   "non_soccer_pos": 0,
+   "regimes": {
+    "soccer": [
+     0.0697,
+     39
+    ],
+    "other": [
+     -0.143,
+     11
+    ],
+    "tennis": [
+     -0.0662,
+     24
+    ],
+    "mlb": [
+     -0.0261,
+     6
+    ]
+   },
+   "belief_blind_gate": false,
+   "readable": true
+  },
+  "fresh <=5m": {
+   "n_ev": 77,
+   "obs": -0.0153,
+   "null_mu": 0.0006,
+   "null_sd": 0.0297,
+   "z": -0.53,
+   "p_emp": 0.7105,
+   "lb": -0.0641,
+   "non_soccer_pos": 0,
+   "regimes": {
+    "soccer": [
+     0.0727,
+     38
+    ],
+    "other": [
+     -0.143,
+     11
+    ],
+    "tennis": [
+     -0.1005,
+     22
+    ],
+    "mlb": [
+     -0.0261,
+     6
+    ]
+   },
+   "belief_blind_gate": false,
+   "readable": true
+  },
+  "depth > median": {
+   "n_ev": 47,
+   "obs": 0.023,
+   "null_mu": 0.0012,
+   "null_sd": 0.0312,
+   "z": 0.7,
+   "p_emp": 0.2345,
+   "lb": -0.0281,
+   "non_soccer_pos": 2,
+   "regimes": {
+    "soccer": [
+     0.0293,
+     37
+    ],
+    "tennis": [
+     0.0294,
+     6
+    ],
+    "other": [
+     0.1619,
+     3
+    ],
+    "mlb": [
+     -0.6661,
+     1
+    ]
+   },
+   "belief_blind_gate": false,
+   "readable": true
+  },
+  "depth > p75": {
+   "n_ev": 27,
+   "obs": 0.0254,
+   "null_mu": -0.0003,
+   "null_sd": 0.0429,
+   "z": 0.6,
+   "p_emp": 0.294,
+   "lb": -0.0449,
+   "non_soccer_pos": 0,
+   "regimes": {
+    "soccer": [
+     -0.0089,
+     23
+    ],
+    "tennis": [
+     0.2614,
+     2
+    ],
+    "other": [
+     0.1839,
+     2
+    ]
+   },
+   "belief_blind_gate": false,
+   "readable": true
+  },
+  "netcount >=5": {
+   "n_ev": 5,
+   "obs": 0.09422841095869013,
+   "readable": false
+  },
+  "netcount >=6": {
+   "n_ev": 2,
+   "obs": 0.27886560009672123,
+   "readable": false
+  },
+  "elite rank <=10": {
+   "n_ev": 84,
+   "obs": 0.0445,
+   "null_mu": 0.0022,
+   "null_sd": 0.027,
+   "z": 1.56,
+   "p_emp": 0.0515,
+   "lb": 0.0002,
+   "non_soccer_pos": 0,
+   "regimes": {
+    "mlb": [
+     -0.0259,
+     7
+    ],
+    "soccer": [
+     0.117,
+     46
+    ],
+    "tennis": [
+     -0.0126,
+     21
+    ],
+    "other": [
+     -0.1201,
+     10
+    ]
+   },
+   "belief_blind_gate": false,
+   "readable": true
+  },
+  "elite rank <=3": {
+   "n_ev": 59,
+   "obs": 0.0826,
+   "null_mu": -0.0026,
+   "null_sd": 0.0352,
+   "z": 2.42,
+   "p_emp": 0.008,
+   "lb": 0.0248,
+   "non_soccer_pos": 2,
+   "regimes": {
+    "soccer": [
+     0.1466,
+     33
+    ],
+    "tennis": [
+     0.0908,
+     14
+    ],
+    "other": [
+     -0.1896,
+     8
+    ],
+    "mlb": [
+     0.0694,
+     4
+    ]
+   },
+   "belief_blind_gate": false,
+   "readable": true
+  },
+  "tight pstd <=0.05": {
+   "n_ev": 96,
+   "obs": 0.0104,
+   "null_mu": 0.0014,
+   "null_sd": 0.0251,
+   "z": 0.36,
+   "p_emp": 0.3555,
+   "lb": -0.0308,
+   "non_soccer_pos": 0,
+   "regimes": {
+    "soccer": [
+     0.0772,
+     51
+    ],
+    "other": [
+     -0.098,
+     13
+    ],
+    "tennis": [
+     -0.0629,
+     25
+    ],
+    "mlb": [
+     -0.0136,
+     7
+    ]
+   },
+   "belief_blind_gate": false,
+   "readable": true
+  },
+  "fresh<=180 & depth>med": {
+   "n_ev": 36,
+   "obs": -0.0074,
+   "null_mu": -0.0003,
+   "null_sd": 0.0364,
+   "z": -0.2,
+   "p_emp": 0.584,
+   "lb": -0.0671,
+   "non_soccer_pos": 1,
+   "regimes": {
+    "soccer": [
+     0.004,
+     28
+    ],
+    "tennis": [
+     -0.0492,
+     4
+    ],
+    "other": [
+     0.1619,
+     3
+    ],
+    "mlb": [
+     -0.6661,
+     1
+    ]
+   },
+   "belief_blind_gate": false,
+   "readable": true
+  },
+  "band0.80-0.98 & netc>=5": {
+   "n_ev": 0,
+   "obs": NaN,
+   "readable": false
+  }
+ }
+}
