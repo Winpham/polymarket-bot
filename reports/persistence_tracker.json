@@ -1,56 +1,56 @@
 {
- "cutoff": "2026-07-01",
+ "cutoff": "2026-07-04",
  "in_sample": {
-  "n_events": 48,
-  "n_clusters": 2,
-  "surplus": 0.08748219050448064,
-  "lb": 0.07586423756406122,
-  "hi": 0.09910014344490006,
+  "n_events": 90,
+  "n_clusters": 5,
+  "surplus": 0.08945429611710153,
+  "lb": 0.017507307271503875,
+  "hi": 0.16140128496269918,
   "regimes": {
    "soccer": {
-    "n": 10,
-    "surplus": 0.0768940494428717
+    "n": 18,
+    "surplus": 0.05114990296191423
    },
    "tennis": {
-    "n": 33,
-    "surplus": 0.06803643883766855
+    "n": 52,
+    "surplus": 0.0789323605257766
    },
    "other": {
-    "n": 3,
-    "surplus": 0.19537928696757337
+    "n": 10,
+    "surplus": 0.08363425565375311
    },
    "mlb": {
-    "n": 2,
-    "surplus": 0.29943215362028597
+    "n": 10,
+    "surplus": 0.2189363093346767
    }
   }
  },
  "out_of_sample": {
-  "n_events": 26,
-  "n_clusters": 2,
-  "surplus": 0.19202612210802267,
-  "lb": 0.16183909005770764,
-  "hi": 0.2222131541583377,
+  "n_events": 49,
+  "n_clusters": 5,
+  "surplus": -0.008691217866385426,
+  "lb": -0.1075200564240034,
+  "hi": 0.09013762069123256,
   "regimes": {
    "soccer": {
-    "n": 1,
-    "surplus": 0.056350803364164266
-   },
-   "tennis": {
-    "n": 15,
-    "surplus": 0.2101068981854037
-   },
-   "mlb": {
-    "n": 7,
-    "surplus": 0.2026537108766262
+    "n": 6,
+    "surplus": 0.07925614432065581
    },
    "other": {
-    "n": 3,
-    "surplus": 0.12204964084232879
+    "n": 11,
+    "surplus": -0.1470578596080033
+   },
+   "tennis": {
+    "n": 24,
+    "surplus": 0.020006449046279778
+   },
+   "mlb": {
+    "n": 8,
+    "surplus": 0.029509392150062583
    }
   },
   "new_regimes": []
  },
  "verdict": "PENDING",
- "why": "only 2 independent OUT-of-sample clusters (< 10 floor) \u2014 need ~8 more days of forward firing"
+ "why": "only 5 independent OUT-of-sample clusters (< 10 floor) \u2014 need ~5 more days of forward firing"
 }

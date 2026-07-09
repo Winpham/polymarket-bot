@@ -12,8 +12,8 @@
     },
     "forward_only": "fill ts >= 2026-07-06T06:25:17Z",
     "best_single": {
-      "name": null,
-      "calmar": null
+      "name": "master-wuji",
+      "calmar": "inf"
     },
     "posture": "PAPER-ONLY, promotes NOTHING, arms NOTHING, no Rust, DB read-only"
   },
@@ -25,11 +25,11 @@
         "master-wuji"
       ],
       "status": "INDETERMINATE-BY-POWER",
-      "n_events": 0,
-      "n_days": 0,
+      "n_events": 4,
+      "n_days": 2,
       "non_soccer_regimes": 0,
       "regimes": [],
-      "realizable_calmar": null,
+      "realizable_calmar": "inf",
       "first_binding": "power_events",
       "needs": "accrue >= 30 forward resolved events",
       "eta": "weeks",
@@ -37,7 +37,7 @@
         {
           "check": 1,
           "name": "power_events",
-          "current": "0 forward events",
+          "current": "4 forward events",
           "threshold": ">= 30",
           "passed": false,
           "kind": "power",
@@ -46,10 +46,10 @@
         {
           "check": 2,
           "name": "realizable_calmar_positive",
-          "current": "realizable Calmar n/a",
+          "current": "realizable Calmar inf",
           "threshold": "> 0",
-          "passed": null,
-          "kind": "data",
+          "passed": true,
+          "kind": "value",
           "eta": "weeks"
         },
         {
@@ -64,7 +64,7 @@
         {
           "check": 4,
           "name": "beats_best_single",
-          "current": "play Calmar n/a vs best-single n/a",
+          "current": "play Calmar inf vs best-single n/a",
           "threshold": "play Calmar >= best single reliable trader",
           "passed": null,
           "kind": "data",
@@ -123,11 +123,11 @@
         "DaBossHogg"
       ],
       "status": "INDETERMINATE-BY-POWER",
-      "n_events": 0,
-      "n_days": 0,
+      "n_events": 14,
+      "n_days": 3,
       "non_soccer_regimes": 0,
       "regimes": [],
-      "realizable_calmar": null,
+      "realizable_calmar": -0.2895,
       "first_binding": "power_events",
       "needs": "accrue >= 30 forward resolved events",
       "eta": "weeks",
@@ -135,7 +135,7 @@
         {
           "check": 1,
           "name": "power_events",
-          "current": "0 forward events",
+          "current": "14 forward events",
           "threshold": ">= 30",
           "passed": false,
           "kind": "power",
@@ -144,10 +144,10 @@
         {
           "check": 2,
           "name": "realizable_calmar_positive",
-          "current": "realizable Calmar n/a",
+          "current": "realizable Calmar -0.290",
           "threshold": "> 0",
-          "passed": null,
-          "kind": "data",
+          "passed": false,
+          "kind": "value",
           "eta": "weeks"
         },
         {
@@ -162,7 +162,7 @@
         {
           "check": 4,
           "name": "beats_best_single",
-          "current": "play Calmar n/a vs best-single n/a",
+          "current": "play Calmar -0.290 vs best-single n/a",
           "threshold": "play Calmar >= best single reliable trader",
           "passed": null,
           "kind": "data",
@@ -224,31 +224,31 @@
         "DaBossHogg"
       ],
       "status": "INDETERMINATE-BY-POWER",
-      "n_events": 0,
-      "n_days": 0,
+      "n_events": 34,
+      "n_days": 3,
       "non_soccer_regimes": 0,
       "regimes": [],
-      "realizable_calmar": null,
-      "first_binding": "power_events",
-      "needs": "accrue >= 30 forward resolved events",
-      "eta": "weeks",
+      "realizable_calmar": 0.0794,
+      "first_binding": "beats_random_book_belief_blind",
+      "needs": "run the belief-blind random-book null once power clears",
+      "eta": "months",
       "gate": [
         {
           "check": 1,
           "name": "power_events",
-          "current": "0 forward events",
+          "current": "34 forward events",
           "threshold": ">= 30",
-          "passed": false,
+          "passed": true,
           "kind": "power",
           "eta": "weeks"
         },
         {
           "check": 2,
           "name": "realizable_calmar_positive",
-          "current": "realizable Calmar n/a",
+          "current": "realizable Calmar +0.079",
           "threshold": "> 0",
-          "passed": null,
-          "kind": "data",
+          "passed": true,
+          "kind": "value",
           "eta": "weeks"
         },
         {
@@ -263,10 +263,10 @@
         {
           "check": 4,
           "name": "beats_best_single",
-          "current": "play Calmar n/a vs best-single n/a",
+          "current": "play Calmar +0.079 vs best-single inf",
           "threshold": "play Calmar >= best single reliable trader",
-          "passed": null,
-          "kind": "data",
+          "passed": false,
+          "kind": "value",
           "eta": "months"
         },
         {

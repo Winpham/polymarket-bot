@@ -9,126 +9,125 @@
  },
  "arms": {
   "favorite": {
-   "n_events": 93,
-   "cutoff": "2026-07-02",
+   "n_events": 138,
+   "cutoff": "2026-07-04",
    "temporal": {
-    "cutoff": "2026-07-02",
-    "n_in": 67,
-    "n_out": 26,
+    "cutoff": "2026-07-04",
+    "n_in": 89,
+    "n_out": 49,
     "recurring_out": {
-     "n_events": 11,
-     "n_clusters": 3,
-     "surplus": 0.2144115258756896,
-     "lb": 0.11248769966330191,
-     "net_taker": 0.1685421875147535,
-     "net_taker_lb": 0.05634676237612138,
-     "mass": 2.3585267846325855,
-     "hi": 0.3163353520880773
+     "n_events": 10,
+     "n_clusters": 4,
+     "surplus": 0.13115558184076406,
+     "lb": -0.21981703221746698,
+     "net_taker": 0.09502180409935253,
+     "net_taker_lb": -0.2549914198910208,
+     "mass": 1.3115558184076406,
+     "hi": 0.48212819589899514
     },
     "expiring_out": {
-     "n_events": 15,
-     "n_clusters": 3,
-     "surplus": -0.005660454945908455,
-     "lb": -0.3866421061169561,
-     "net_taker": -0.05566323012631182,
-     "net_taker_lb": -0.43379741039316416,
-     "mass": -0.08490682418862683,
-     "hi": 0.3753211962251392
+     "n_events": 39,
+     "n_clusters": 5,
+     "surplus": -0.025399010746810557,
+     "lb": -0.1026761266254514,
+     "net_taker": -0.0644860204297262,
+     "net_taker_lb": -0.14089310837104185,
+     "mass": -0.9905614191256118,
+     "hi": 0.05187810513183029
     },
     "all_out": {
-     "n_events": 26,
-     "n_clusters": 3,
-     "surplus": 0.08744692155553688,
-     "lb": -0.20774406512100427,
-     "net_taker": 0.03919290810644657,
-     "net_taker_lb": -0.2581796917789271,
-     "mass": 2.2736199604439586,
-     "hi": 0.382637908232078
+     "n_events": 49,
+     "n_clusters": 5,
+     "surplus": 0.006550906107796494,
+     "lb": -0.10289632174546143,
+     "net_taker": -0.031933403178893836,
+     "net_taker_lb": -0.14130937017148992,
+     "mass": 0.3209943992820282,
+     "hi": 0.11599813396105442
     },
     "verdict": "PENDING"
    },
    "transfer": {
     "n_recurring_regimes": 4,
-    "real_transfer_count": 2,
+    "real_transfer_count": 1,
     "required": 2,
-    "p_conc": 0.993,
+    "p_conc": 0.861,
     "concentration_flagged": false,
-    "count_ok": true,
-    "min_p_conc": 0.24,
+    "count_ok": false,
+    "min_p_conc": 0.353,
     "guard_can_fire": false,
-    "p_beat": 0.206,
+    "p_beat": 0.647,
     "beat_null_can_pass": false,
-    "null_mean": 0.973,
+    "null_mean": 0.786,
     "null_dist": {
-     "0": 240,
-     "1": 554,
-     "2": 199,
-     "3": 7
+     "0": 353,
+     "1": 508,
+     "2": 139
     },
     "per_regime": {
      "mlb|2026-07": {
-      "n_events": 11,
-      "held_surplus": 0.21109181260772872,
-      "held_lb": 0.08085673343894037,
-      "fit_surplus": 0.1656880264743519,
-      "transfers": true
+      "n_events": 16,
+      "held_surplus": 0.11231817436473629,
+      "held_lb": -0.04859274946859646,
+      "fit_surplus": 0.2199445564716502,
+      "transfers": false
      },
      "mlb|2026-06": {
       "n_events": 2,
-      "held_surplus": 0.3602145978278968,
+      "held_surplus": 0.33212611546540344,
       "held_lb": null,
-      "fit_surplus": 0.17304726012502225,
+      "fit_surplus": 0.12725954543840595,
       "transfers": false
      },
      "nba/cbb|2026-07": {
-      "n_events": 3,
-      "held_surplus": 0.30556427779597145,
-      "held_lb": 0.20232636862349596,
-      "fit_surplus": 0.17138894743880093,
+      "n_events": 4,
+      "held_surplus": 0.36345565492601517,
+      "held_lb": 0.30258157556057746,
+      "fit_surplus": 0.09909895081227744,
       "transfers": true
      },
      "nba/cbb|2026-06": {
       "n_events": 1,
-      "held_surplus": -0.6429938701975964,
+      "held_surplus": -0.578462955333316,
       "held_lb": null,
-      "fit_surplus": 0.24744574798304525,
+      "fit_surplus": 0.17796207456684765,
       "transfers": false
      }
     },
-    "passes": true,
+    "passes": false,
     "guard_inert_note": "permutation null non-discriminating on this data (guard cannot fire, beat-null cannot pass) \u2192 leg(b) is a RAW count, not a passed test"
    },
-   "expiring_edge_mass_share": 0.5728010893734863,
+   "expiring_edge_mass_share": 0.6730920119912587,
    "verdict": "SOCCER-ARTIFACT",
-   "why": "edge is expiring-carried (57% of edge mass) and recurring regimes are below the floor \u2014 not yet certifiable"
+   "why": "edge is expiring-carried (67% of edge mass) and recurring regimes are below the floor \u2014 not yet certifiable"
   },
   "proven_router": {
-   "n_events": 1,
-   "cutoff": "2026-07-04",
+   "n_events": 7,
+   "cutoff": "2026-07-05",
    "temporal": {
-    "cutoff": "2026-07-04",
-    "n_in": 0,
-    "n_out": 1,
+    "cutoff": "2026-07-05",
+    "n_in": 2,
+    "n_out": 5,
     "recurring_out": null,
     "expiring_out": {
-     "n_events": 1,
-     "n_clusters": 1,
-     "surplus": -0.5967539061354175,
-     "lb": null,
-     "net_taker": -0.6399539061354175,
-     "net_taker_lb": null,
-     "mass": -0.5967539061354175,
-     "hi": null
+     "n_events": 5,
+     "n_clusters": 2,
+     "surplus": -0.23556168112027076,
+     "lb": -1.1652798090199674,
+     "net_taker": -0.28018102254968524,
+     "net_taker_lb": -1.2139887982105604,
+     "mass": -1.1778084056013538,
+     "hi": 0.6941564467794259
     },
     "all_out": {
-     "n_events": 1,
-     "n_clusters": 1,
-     "surplus": -0.5967539061354175,
-     "lb": null,
-     "net_taker": -0.6399539061354175,
-     "net_taker_lb": null,
-     "mass": -0.5967539061354175,
-     "hi": null
+     "n_events": 5,
+     "n_clusters": 2,
+     "surplus": -0.23556168112027076,
+     "lb": -1.1652798090199674,
+     "net_taker": -0.28018102254968524,
+     "net_taker_lb": -1.2139887982105604,
+     "mass": -1.1778084056013538,
+     "hi": 0.6941564467794259
     },
     "verdict": "PENDING"
    },

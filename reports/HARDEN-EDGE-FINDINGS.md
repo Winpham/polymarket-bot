@@ -48,9 +48,32 @@ coverage ~2%). Nothing here flips a gate.
 
 ---
 
-## 1. Persistence (the binding gate)
+## 1. Persistence (the binding gate) — full ledger in `reports/PERSISTENCE-LEDGER.md`
 
-_(in progress)_
+Re-generated all four persistence instruments live (`regime_edge`, `regime_net_edge`,
+`regime_persistence`, `persistence_tracker` — all `--selftest` green) on the current record.
+
+**Verdict: `SOCCER-ARTIFACT` / INDETERMINATE-BY-POWER — re-confirmed and quantified.**
+
+- The **recurring (non-expiring) regimes are directionally positive AND net-positive after the copy
+  tax** — mlb\|2026-07 +11.2% gross / **+7.4% net**, nba/cbb\|2026-07 +36.4% / **+32.8% net**. This
+  is the most hopeful fact in the system.
+- But the gate is **power**, not the point estimate:
+  - **0/4** recurring regimes clear the 10-cluster floor (best: mlb\|07 at 7 clusters).
+  - Only **1** recurring regime is net-positive with **LB>0** (nba/cbb, N=4) — need ≥2.
+  - Cross-regime permutation null is **structurally inert** (min achievable p_conc 0.353 — can't fire
+    below ~5–6 regimes).
+  - Temporal OOS pooled surplus is **−0.87% (flat)** — so count-power could resolve **REFUTED**.
+  - Expiring regimes carry **67% of edge mass** (tennis 43%, other 27%, soccer 17%).
+- **`forward_track.py` verified**: correctly accrues + gates forward non-soccer regimes (0 since the
+  07-06 seal — only ~2 days elapsed — all INDETERMINATE-BY-POWER, binding = months). Working; needs time.
+
+**Months-to-power (concrete):** Only **MLB** is a non-expiring sport firing at volume now (~0.9
+clusters/day). MLB alone hits its 10-cluster floor in ~1 week, but that is one sport. The binding wall
+is a **second non-soccer sport in-season**: World Cup ends ~07-19, Wimbledon ~07-12, NBA offseason to
+~10-21, NFL starts ~09-10. ⇒ earliest 2nd independent non-soccer recurring regime at power = **NFL,
+~early Oct 2026 (≈3 months)**; robust ≥5-regime non-expiring panel = **~Nov 2026–Feb 2027 (4–6
+months)**. Even then, PERSISTS is conditional — current OOS edge ≈ 0. **No run can manufacture this.**
 
 ## 2. Capacity & fills
 
