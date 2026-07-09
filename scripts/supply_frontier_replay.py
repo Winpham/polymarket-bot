@@ -103,6 +103,18 @@ SWEEP = [
                      band=(0.65, 0.98), anchor=None, echo_s=60)),
 ]
 
+# v4 candidate grid: refinements of the v3 winner (k2-anchored), one lever each.
+GRID2 = [
+    ("v3_k2a", dict(pool="wide", min_backers=2, max_opposers=1,
+                    band=(0.65, 0.98), anchor=40, echo_s=60)),
+    ("k2a_opp0", dict(pool="wide", min_backers=2, max_opposers=0,
+                      band=(0.65, 0.98), anchor=40, echo_s=60)),
+    ("k2a_anch10", dict(pool="wide", min_backers=2, max_opposers=1,
+                        band=(0.65, 0.98), anchor=10, echo_s=60)),
+    ("k2a_anch100", dict(pool="wide", min_backers=2, max_opposers=1,
+                         band=(0.65, 0.98), anchor=100, echo_s=60)),
+]
+
 
 def q(sql):
     out = subprocess.run(PG + ["-f", "-"], input=sql, capture_output=True, text=True)
@@ -487,7 +499,7 @@ def selftest():
 
 # ---------------------------------------------------------------------------
 
-def run(configs):
+def run(configs, dump=None):
     print("pulling fills…", file=sys.stderr)
     raw = fetch_fills()
     by_cond = defaultdict(list)
@@ -543,20 +555,42 @@ def run(configs):
         json.dump(out, fh, indent=2, default=str)
     print(f"\nwrote {REPORT}", file=sys.stderr)
 
+    if dump and dump in detected:
+        path = os.path.join(reg.REPORT_DIR, f"supply_frontier_signals_{dump}.csv")
+        with open(path, "w", newline="") as fh:
+            wtr = csv.writer(fh)
+            wtr.writerow(["cond", "oidx", "det", "day", "mean_p", "n_backers",
+                          "n_raw_backers", "spread_1_3", "resolved", "won",
+                          "sport", "ev", "tape_ask", "overlap_live_favorite"])
+            for s in sorted(detected[dump], key=lambda x: x["det"]):
+                ask = tape_entry(tape_by_leg.get((s["cond"], s["oidx"]), []), s["det"])
+                wtr.writerow([s["cond"], s["oidx"], s["det"], day_of(s["det"]),
+                              round(s["mean_p"], 4), s["n_backers"], s["n_raw_backers"],
+                              round(s["spread_1_3"], 1), s["resolved"], s["won"],
+                              s["sport"], s["ev"], ask,
+                              (s["cond"], s["oidx"]) in live_fav])
+        print(f"wrote {path}", file=sys.stderr)
+
 
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--selftest", action="store_true")
     ap.add_argument("--config", help="named version (v1/v2/v3/champ)")
     ap.add_argument("--sweep", action="store_true")
+    ap.add_argument("--grid2", action="store_true", help="v4 refinement grid")
+    ap.add_argument("--dump", metavar="NAME",
+                    help="also write per-signal rows for this config to "
+                         "reports/supply_frontier_signals_<NAME>.csv")
     args = ap.parse_args()
     if args.selftest:
         selftest()
         return
     if args.config:
-        run([(args.config, VERSIONS[args.config])])
+        run([(args.config, VERSIONS[args.config])], dump=args.dump)
+    elif args.grid2:
+        run(GRID2, dump=args.dump)
     else:
-        run(SWEEP)
+        run(SWEEP, dump=args.dump)
 
 
 if __name__ == "__main__":

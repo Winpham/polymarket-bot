@@ -1034,6 +1034,26 @@ pub fn wide_arms(base: &ConsensusParams, anchor: i32) -> Vec<StrategyDef> {
             },
             alerting: false,
         },
+        // SUPPLY-FRONTIER arm (FABLE run 2, replay-selected v3, prereg
+        // PREREG_20260709_supply_frontier): the plateau point of the measured
+        // supply×quality frontier. min_backers=2 counted ECHO-INDEPENDENTLY
+        // (60s collapse — one sharp mirrored into N instant echoes counts once)
+        // + ≥1 top-cohort anchor co-sign. Replay (10d, 2.1M fills): n=476
+        // (~52/day post-cliff, RISING through the tournament cliff) at +7.7%
+        // ROI at the causal tape best_ask (incremental-only +8.7%); the grid
+        // around it (k3, opposers=0, anchor 10/100, band 0.60, unanchored k2)
+        // is flat-or-worse on the tape basis. Judgment: standing gate, forward.
+        StrategyDef {
+            name: "frontier_k2a",
+            params: ConsensusParams {
+                min_backers: 2,
+                price_band: favorite_band,
+                max_best_backer_rank: Some(anchor),
+                echo_collapse_secs: Some(60),
+                ..base.clone()
+            },
+            alerting: false,
+        },
         // Capture-all blind baseline on the wide book (mirrors `_blind`). Never
         // alerted, never ledgered (`_blind` prefix), exists only so band-matched
         // surplus/null baselines come from the same voter pool.
@@ -1891,7 +1911,12 @@ mod tests {
         let names: Vec<&str> = arms.iter().map(|d| d.name).collect();
         assert_eq!(
             names,
-            vec!["favorite_wide", "favorite_wide_anchored", "_blind_wide"]
+            vec![
+                "favorite_wide",
+                "favorite_wide_anchored",
+                "frontier_k2a",
+                "_blind_wide"
+            ]
         );
         assert!(
             arms.iter().all(|d| !d.alerting),
@@ -1909,12 +1934,65 @@ mod tests {
         // anchored adds only the anchor.
         assert_eq!(arms[1].params.max_best_backer_rank, Some(40));
         assert_eq!(arms[1].params.price_band, Some((0.65, 0.98)));
+        // frontier_k2a: replay-selected v3 — k2, anchored, echo-independent.
+        let frontier = &arms[2].params;
+        assert_eq!(frontier.min_backers, 2);
+        assert_eq!(frontier.max_opposers, base.max_opposers);
+        assert_eq!(frontier.max_best_backer_rank, Some(40));
+        assert_eq!(frontier.echo_collapse_secs, Some(60));
+        assert_eq!(frontier.price_band, Some((0.65, 0.98)));
         // _blind_wide mirrors `_blind`: permissive capture-all, no band.
-        let blind = &arms[2].params;
+        let blind = &arms[3].params;
         assert_eq!(blind.min_backers, 1);
         assert_eq!(blind.max_opposers, usize::MAX);
         assert_eq!(blind.price_band, None);
         assert_eq!(blind.max_best_backer_rank, None);
+        assert_eq!(blind.echo_collapse_secs, None);
+    }
+
+    #[test]
+    fn echo_collapse_gates_min_backers_but_not_reporting() {
+        let now = Utc::now();
+        // 3 backers whose fills land within seconds of each other (echo burst):
+        // ages 10min ± seconds — first fills 600s, 590s, 580s ago.
+        let burst = book_with(
+            now,
+            vec![
+                (0, "wa", Some(5), 0.80, 10),
+                (0, "wb", Some(80), 0.80, 10),
+                (0, "wc", Some(120), 0.81, 10),
+            ],
+        );
+        let echo = ConsensusParams {
+            price_band: Some((0.65, 0.98)),
+            echo_collapse_secs: Some(60),
+            ..Default::default()
+        };
+        let plain = ConsensusParams {
+            price_band: Some((0.65, 0.98)),
+            ..Default::default()
+        };
+        // book_with uses minute-granularity ages: all three first fills are the
+        // SAME minute → within 60s of each other → collapse to 1 independent.
+        assert!(
+            score_market(&burst, now, &echo).is_empty(),
+            "echo burst must not satisfy min_backers=3"
+        );
+        assert_eq!(score_market(&burst, now, &plain).len(), 1);
+
+        // Spread the same wallets minutes apart → all independent → fires, and
+        // reporting still shows raw n_backers.
+        let spread = book_with(
+            now,
+            vec![
+                (0, "wa", Some(5), 0.80, 30),
+                (0, "wb", Some(80), 0.80, 20),
+                (0, "wc", Some(120), 0.81, 10),
+            ],
+        );
+        let sigs = score_market(&spread, now, &echo);
+        assert_eq!(sigs.len(), 1);
+        assert_eq!(sigs[0].n_backers, 3, "reporting stays raw");
     }
 
     #[test]
