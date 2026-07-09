@@ -253,7 +253,8 @@ def residual_scan():
     """§1.6 re-scan: does conditioning INTO the arm's non-tournament cells (or OUT of the discarded
     tournament cells) unmask a realizable negative? Compares the flat champion book, the arm's
     fired subset, and the discarded subset on belief-blind skill + within-subset null + realizable
-    ROI(ask). Writes reports/RESIDUAL-SCAN.md."""
+    ROI(ask). Writes reports/BYSPORT-RESIDUAL-SCAN.md (distinct from the garbage-policy run's
+    RESIDUAL-SCAN.md, which is a different artifact and must not be clobbered)."""
     global GLOBAL_FAV_SKILL
     fav = csm.load_fav_full()
     blind = csm.load_blind_rich()
@@ -294,12 +295,12 @@ def residual_scan():
               "the non-tournament subset is not, per-sport conditioning SUBTRACTS realizable value — the",
               "efficient-market skill is un-harvestable through thin-book spreads, and the realizable money",
               "lives in the soft-but-liquid tournament cells the arm discards. See BYSPORT-VERDICT.md.\n"]
-    with open(os.path.join(RDIR, "RESIDUAL-SCAN.md"), "w") as f:
+    with open(os.path.join(RDIR, "BYSPORT-RESIDUAL-SCAN.md"), "w") as f:
         f.write("\n".join(lines) + "\n")
     print("RESIDUAL SCAN " + "=" * 90)
     for c in console:
         print(c)
-    print(f"\nglobal fav skill {100*GLOBAL_FAV_SKILL:+.2f}% · wrote {os.path.join(RDIR, 'RESIDUAL-SCAN.md')}")
+    print(f"\nglobal fav skill {100*GLOBAL_FAV_SKILL:+.2f}% · wrote {os.path.join(RDIR, 'BYSPORT-RESIDUAL-SCAN.md')}")
     return 0
 
 

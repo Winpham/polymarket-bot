@@ -42,7 +42,7 @@ trustworthy verdict, not a bigger in-sample number.
 
 ## Residual scan (§1.6) — the regressive-conditioning finding
 
-_As-of this run (`cell_certify.py --residual` → `RESIDUAL-SCAN.md`); figures drift ±0.5pp as the
+_As-of this run (`cell_certify.py --residual` → `BYSPORT-RESIDUAL-SCAN.md`); figures drift ±0.5pp as the
 live book accrues, but the ordering is stable._
 
 | population | nEv | raw skill | LB | null p | realizable ROI(ask) |
