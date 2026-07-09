@@ -27,6 +27,9 @@ tmp/
 backups/
 .backup.log
 
+# paper-tracker daily-cadence log (local-only; the report JSON/MD it refreshes ARE committed)
+.paper_tracker.log
+
 # local coordination worktrees (never committed)
 wt/
 

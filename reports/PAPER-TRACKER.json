@@ -1,6 +1,6 @@
 {
   "meta": {
-    "generated_at": "2026-07-09T19:50:16.896125+00:00",
+    "generated_at": "2026-07-09T19:55:12.362447+00:00",
     "strategies": [
       "favorite",
       "favorite_liq",
@@ -167,9 +167,9 @@
         "turnover_multiple": 0.76
       },
       "open_positions_mtm": {
-        "n_open": 16,
+        "n_open": 15,
         "n_with_mark": 15,
-        "mtm_total_open_pnl": -80.96,
+        "mtm_total_open_pnl": -81.71,
         "mtm_open_losers": 10,
         "n_fresh_24h": 11,
         "censoring_note": "Winners resolve roughly 2x faster than losers (see audit_pnl_books.py's B3 hold-time asymmetry, reproduced live in this report's cross-check) -- so a FRESH day's still-open book is winner-enriched almost by construction. Never read a fresh day's open-MTM as a floor on eventual resolved P&L; it is a snapshot mid-flight, not a settled record."
@@ -179,18 +179,18 @@
         "soccer": {
           "events": 24,
           "ev_per_day": 2.1818181818181817,
-          "win_pct": 90.63545150501672,
+          "win_pct": 90.66666666666667,
           "softness": 0.06410142615811695,
-          "skill": 0.055924256460817556,
-          "total": 0.07098102267380231,
+          "skill": 0.05589998843730124,
+          "total": 0.07088596445855914,
           "status": "OK"
         },
         "tennis": {
           "events": 83,
           "ev_per_day": 8.3,
           "win_pct": 85.5421686746988,
-          "softness": 0.0335084539859583,
-          "skill": 0.05473720404284587,
+          "softness": 0.03346751831701094,
+          "skill": 0.05465907109995673,
           "total": 0.08089415882590821,
           "status": "OK"
         },
@@ -198,8 +198,8 @@
           "events": 16,
           "ev_per_day": 2.0,
           "win_pct": 82.6086956521739,
-          "softness": 0.007006341769003051,
-          "skill": -0.07056161291489757,
+          "softness": 0.006900044818644633,
+          "skill": -0.07054083299439373,
           "total": -0.05767178298282942,
           "status": "INDETERMINATE (N<20)"
         },
@@ -234,20 +234,20 @@
         "key_arm_metrics": {
           "strategy": "favorite",
           "events": 211,
-          "observed": 0.06480000000000001,
-          "null_sigma": 0.0172,
-          "z": 3.79,
+          "observed": 0.0649,
+          "null_sigma": 0.0171,
+          "z": 3.76,
           "p_emp": 0.0,
           "verdict": "SELECTION-REAL",
-          "belief_blind_lb": 0.03659200000000001,
+          "belief_blind_lb": 0.036856,
           "non_soccer_regimes_positive": 2,
           "realizable_roi": 0.040015959879637734,
           "realizable_events": 180
         },
         "regression_status": {
           "status": "HEALTHY",
-          "reason": "belief-blind LB +3.66% > +0.00%, p_emp 0.0000, 211 ev",
-          "belief_blind_lb": 0.03659200000000001,
+          "reason": "belief-blind LB +3.69% > +0.00%, p_emp 0.0000, 211 ev",
+          "belief_blind_lb": 0.036856,
           "floor": 0.0
         },
         "resolved_ledger_family": {
@@ -324,8 +324,8 @@
           "events": 1,
           "ev_per_day": 1.0,
           "win_pct": 100.0,
-          "softness": 0.007006341769003051,
-          "skill": 0.03413790566604039,
+          "softness": 0.006900044818644633,
+          "skill": 0.03417450882876276,
           "total": 0.043340132105434304,
           "status": "INDETERMINATE (N<20)"
         }

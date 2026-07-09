@@ -1,6 +1,6 @@
 # PAPER-TRACKER — champion vs favorite_liq vs favorite_v2 (read-only)
 
-_Generated: 2026-07-09T19:50:16.896125+00:00 (UTC). Paper-only. Read-only DB. No rows written; nothing armed, deployed, or merged._
+_Generated: 2026-07-09T19:55:12.362447+00:00 (UTC). Paper-only. Read-only DB. No rows written; nothing armed, deployed, or merged._
 
 ## Champion anchor self-test: TIED OUT
 
@@ -43,7 +43,7 @@ basis-flip days (red in one basis, not the other): 2026-06-29, 2026-06-30, 2026-
 
 **Realizable/CLV** (event-clustered, honest_pnl_by_strategy convention): 180 distinct events · hit-rate +84.6% · CLV-ROI +6.39% · honest-ROI +4.55% (sd +0.472)
 
-**Open positions (MTM):** 16 open, 15 with a mark, total open MTM $-80.96, 10 losers, 11 fresh (<24h)
+**Open positions (MTM):** 15 open, 15 with a mark, total open MTM $-81.71, 10 losers, 11 fresh (<24h)
 
 > Winners resolve roughly 2x faster than losers (see audit_pnl_books.py's B3 hold-time asymmetry, reproduced live in this report's cross-check) -- so a FRESH day's still-open book is winner-enriched almost by construction. Never read a fresh day's open-MTM as a floor on eventual resolved P&L; it is a snapshot mid-flight, not a settled record.
 
@@ -52,13 +52,13 @@ basis-flip days (red in one basis, not the other): 2026-06-29, 2026-06-30, 2026-
 | sport | events | win% | softness | skill | total |
 |---|---:|---:|---:|---:|---:|
 | tennis | 83 | 86% | +3.35% | +5.47% | +8.09% |
-| soccer | 24 | 91% | +6.41% | +5.59% | +7.10% |
+| soccer | 24 | 91% | +6.41% | +5.59% | +7.09% |
 | mlb | 20 | 91% | +2.84% | +14.01% | +15.71% |
-| other | 16 | 83% | +0.70% | -7.06% | -5.77% |
+| other | 16 | 83% | +0.69% | -7.05% | -5.77% |
 | nba/cbb | 6 | 67% | +4.36% | -8.04% | -3.82% |
 
-**Belief-blind reference (champion):** 211 ev · surplus +6.48% · LB +3.66% · 2 non-soccer regimes+ · SELECTION-REAL
-Regression status: **HEALTHY** -- belief-blind LB +3.66% > +0.00%, p_emp 0.0000, 211 ev
+**Belief-blind reference (champion):** 211 ev · surplus +6.49% · LB +3.69% · 2 non-soccer regimes+ · SELECTION-REAL
+Regression status: **HEALTHY** -- belief-blind LB +3.69% > +0.00%, p_emp 0.0000, 211 ev
 
 ---
 
