@@ -142,30 +142,49 @@ pub async fn housekeeping_cycle(
     // Built once per cycle. With the flag off, none of this runs and the ledger is
     // written EXACTLY as before (champion `append_paper_bet` only). Even ON, the
     // kernel books 0 until `kernel_gate.json` certifies an edge (the k=0 posture).
-    // `game_n` = correlated cluster size = # same-strategy unresolved signals that
-    // share this signal's match-level super-key (the per-game budget split).
+    // `game_n` = TRUE correlated cluster size = # distinct (condition,outcome) bets
+    // the SAME strategy placed in this signal's match (super-key), counted over the
+    // FULL signal history (resolved + open) so a cluster whose siblings already
+    // resolved in earlier cycles is NOT undercounted (which would over-size the
+    // survivor). The per-game budget is split across that count.
     let kernel_ctx = cfg
         .sized_books
         .then(|| crate::scanner::decide::KernelCtx::load(&cfg.kernel_gate_path));
-    let sized_sources: std::collections::HashSet<&str> = if cfg.sized_books {
+    let sized_source_list: Vec<String> = if cfg.sized_books {
         cfg.sized_source_strategies
             .split(',')
-            .map(str::trim)
+            .map(|s| s.trim().to_string())
             .filter(|s| !s.is_empty())
             .collect()
     } else {
-        std::collections::HashSet::new()
+        Vec::new()
     };
+    let sized_sources: std::collections::HashSet<&str> =
+        sized_source_list.iter().map(String::as_str).collect();
     let game_n_by_key: std::collections::HashMap<(String, String), i64> = if cfg.sized_books {
-        let mut counts = std::collections::HashMap::new();
-        for sig in &unresolved {
+        // distinct (condition_id, outcome_index) per (strategy, super-key)
+        let mut clusters: std::collections::HashMap<
+            (String, String),
+            std::collections::HashSet<(String, i32)>,
+        > = std::collections::HashMap::new();
+        let rows = portfolio
+            .signal_cluster_rows(&sized_source_list)
+            .await
+            .unwrap_or_default();
+        for (strategy, event_slug, slug, cond_id, oi) in rows {
             if let Some(key) =
-                polymarket_common::superkey::super_event(sig.event_slug.as_deref(), &sig.slug)
+                polymarket_common::superkey::super_event(event_slug.as_deref(), &slug)
             {
-                *counts.entry((sig.strategy.clone(), key)).or_insert(0) += 1;
+                clusters
+                    .entry((strategy, key))
+                    .or_default()
+                    .insert((cond_id, oi));
             }
         }
-        counts
+        clusters
+            .into_iter()
+            .map(|(k, set)| (k, set.len() as i64))
+            .collect()
     } else {
         std::collections::HashMap::new()
     };
@@ -241,8 +260,18 @@ pub async fn housekeeping_cycle(
                                 // (skips the append) until the gate certifies.
                                 if let Some(ctx) = &kernel_ctx
                                     && sized_sources.contains(sig.strategy.as_str())
+                                    && should_ledger(&sig.strategy)
                                 {
-                                    let entry = sig.entry_ask.unwrap_or(sig.mean_price);
+                                    // Band from the SAME entry the PnL SQL prices at:
+                                    // COALESCE(entry_ask, initial_market_price + haircut),
+                                    // mean_price only as a last resort — so the Kelly
+                                    // coefficient matches the realized entry's band.
+                                    let entry = sig
+                                        .entry_ask
+                                        .or_else(|| {
+                                            sig.initial_market_price.map(|p| p + cfg.exec_haircut)
+                                        })
+                                        .unwrap_or(sig.mean_price);
                                     let key = polymarket_common::superkey::super_event(
                                         sig.event_slug.as_deref(),
                                         &sig.slug,

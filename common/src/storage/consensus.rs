@@ -174,6 +174,11 @@ pub struct UnresolvedConsensus {
     /// ([`crate::superkey::super_event`]) that groups correlated same-match
     /// signals for the per-game budget split (`game_n`). Additive, read-only.
     pub event_slug: Option<String>,
+    /// Decision-time market mid (may be NULL). The kernel derives the price BAND
+    /// from `COALESCE(entry_ask, initial_market_price + haircut)` — the SAME entry
+    /// the sized-bet PnL SQL prices at — so the Kelly coefficient matches the
+    /// realized entry. Additive, read-only.
+    pub initial_market_price: Option<f64>,
 }
 
 impl PgPortfolio {
@@ -454,12 +459,34 @@ impl PgPortfolio {
         let rows: Vec<UnresolvedConsensus> = sqlx::query_as(
             "SELECT id, strategy, condition_id, COALESCE(slug, '') AS slug, outcome_index, \
                     mean_price, net_count, n_backers, is_sports, entry_ask, first_detected_at, \
-                    event_slug \
+                    event_slug, initial_market_price \
              FROM consensus_signals WHERE resolved = FALSE",
         )
         .fetch_all(&self.pool)
         .await
         .context("unresolved_consensus_signals")?;
+        Ok(rows)
+    }
+
+    /// Raw `(event_slug, slug, condition_id, outcome_index)` for EVERY signal
+    /// (resolved OR not) of the given strategies — the input to the TRUE per-match
+    /// cluster size (`game_n`). Counting only the unresolved snapshot undercounts
+    /// clusters whose sibling markets already resolved in earlier cycles, which
+    /// would OVER-size the survivor; this full read fixes that. Bounded (one arm's
+    /// signal history is small); the caller groups by `super_event` in Rust so the
+    /// key matches the append site exactly. Read-only.
+    pub async fn signal_cluster_rows(
+        &self,
+        strategies: &[String],
+    ) -> Result<Vec<(String, Option<String>, String, String, i32)>> {
+        let rows = sqlx::query_as(
+            "SELECT strategy, event_slug, COALESCE(slug, '') AS slug, condition_id, outcome_index \
+             FROM consensus_signals WHERE strategy = ANY($1)",
+        )
+        .bind(strategies)
+        .fetch_all(&self.pool)
+        .await
+        .context("signal_cluster_rows")?;
         Ok(rows)
     }
 

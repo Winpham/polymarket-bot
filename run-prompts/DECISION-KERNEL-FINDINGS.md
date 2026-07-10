@@ -50,6 +50,34 @@ not information). It manufactures NO edge; the only verdict-mover is MLB skill p
   the first weeks of true-close λ̂. Full workspace green (140 bin + 93 common + 73 trading-bot),
   clippy clean.
 
+## Double-check + hardening (adversarial review pass)
+
+An adversarial review CONFIRMED the two headline safety claims: **byte-identical-when-off is sound**
+(the only unconditional change is verified-additive column reads on the unresolved SELECT), and
+**`append_sized_paper_bet` cannot read/write/overwrite champion rows** and reproduces the champion PnL
+math exactly — nothing can touch real money. It found latent bugs that fire ONLY once the gate is
+armed; since arming is meant to be "a JSON flip on correct code," all were fixed now:
+
+- **band-6 Kelly collapse (MEDIUM, fixed):** `price_band` returns 6 for entry ≥ $1 but `KELLY_BAND`
+  had 6 slots and `[band.min(5)]` silently sized band-6 at band-5's full Kelly. `KELLY_BAND` is now 7
+  wide with index 6 = 0.0 (matching the Python cert, which gives band-6 zero) → never size an
+  un-bettable ≥$1 entry. New test `band6_entry_ge_one_books_zero_even_when_armed`.
+- **`game_n` undercount (MEDIUM, fixed):** counted only the cycle-start UNRESOLVED snapshot, so a
+  cluster whose siblings resolved earlier over-sized the survivor. Now counts distinct
+  (condition,outcome) per (strategy, super-key) over the FULL signal history via new
+  `signal_cluster_rows` — verified real soccer matches carry up to **20** correlated markets under one
+  key (the old path would have over-sized ~20× once armed).
+- **band-entry fallback (LOW, fixed):** the band now derives from the SAME entry the PnL SQL prices at
+  (`COALESCE(entry_ask, initial_market_price + haircut)`, added `initial_market_price` to the SELECT),
+  not `mean_price`.
+- **`sport_of` whitespace (LOW, fixed):** now trims the classified value, matching Python `kernel_sport`.
+- **should_ledger footgun (LOW, fixed):** the sized block now also respects `should_ledger`, so a
+  `ledger_strategies` allowlist that excludes `favorite` won't leak a shadow row.
+
+Post-fix: 141 bin + 93 common tests green, clippy clean, release build green. Flags-off byte-identical
+guarantee UNCHANGED (the two new SELECT columns are additive; `signal_cluster_rows` runs only when
+`sized_books` is on).
+
 ## Verdict (one paragraph)
 
 The orphaned intelligence is now WIRED into ONE auditable pure `decide()` kernel at the single seam

@@ -30,8 +30,12 @@ pub const KELLY_K: f64 = 1.0 / 12.0;
 /// Per-band full-Kelly fraction, indexed by `price_band` (0..=5). Bands 4 and 5
 /// are the favorite arm (0.6–0.8, 0.8–1.0); the values are `corr_risk_delever`'s
 /// `kelly_by_band` {4: 0.1933, 5: 0.5584}. Bands 0–3 are 0 (not the favorite
-/// regime this book shadows).
-pub const KELLY_BAND: [f64; 6] = [0.0, 0.0, 0.0, 0.0, 0.1933, 0.5584];
+/// regime this book shadows). Index 6 (`price_band` returns 6 for entry ≥ 1.0 —
+/// an un-bettable near-certain ask) is 0.0 too, MATCHING the Python certification
+/// (`kelly_by_band` has no band-6 entry → 0): never size an entry ≥ $1. The array
+/// is 7 wide so `price_band`'s full 0..=6 range indexes it panic-free with NO
+/// coefficient substitution (the old `[6].min(5)` silently sized band-6 at band-5).
+pub const KELLY_BAND: [f64; 7] = [0.0, 0.0, 0.0, 0.0, 0.1933, 0.5584, 0.0];
 
 /// Headline paper bankroll — `= corr_risk_engine.B_HEADLINE` (10_000), the B on
 /// which the k=1/12 knee was pinned. Recorded per row (`sized_bankroll`) so the
@@ -54,7 +58,13 @@ pub fn price_band(p: f64) -> usize {
 /// CASE in `honest_pnl_by_strategy` (applied to `COALESCE(event_slug, slug)`).
 /// First match wins, matching the SQL branch order. Unknown → `"other"`.
 pub fn sport_of(event_slug: Option<&str>, slug: &str) -> String {
-    let s = event_slug.filter(|e| !e.trim().is_empty()).unwrap_or(slug);
+    // Trim the classified value (matches Python `kernel_sport`: `.strip()` before
+    // prefix tests) so a leading-space-but-nonempty event_slug still classifies.
+    let s = event_slug
+        .map(str::trim)
+        .filter(|e| !e.is_empty())
+        .unwrap_or(slug)
+        .trim();
     const CRYPTO: [&str; 9] = [
         "btc", "eth", "sol", "xrp", "bnb", "doge", "hype", "bitcoin", "ethereum",
     ];
@@ -175,7 +185,10 @@ pub fn decide(f: &SigFeatures, ctx: &KernelCtx) -> Decision {
     let m_sport = ctx.sport_mult(&f.sport);
     let gate = ctx.readiness_fraction;
     let earned = f.earned.clamp(0.5, 1.5);
-    let kelly_full = KELLY_BAND[f.band.min(5)];
+    // `price_band` yields 0..=6; KELLY_BAND is 7 wide so band 6 (entry ≥ $1) maps
+    // to its own 0.0 — no coefficient substitution. `.min(6)` is a belt-and-braces
+    // guard against a hand-constructed out-of-range band in a fixture.
+    let kelly_full = KELLY_BAND[f.band.min(6)];
     let raw = KELLY_K * kelly_full * m_sport * gate * earned * BANKROLL;
     let per_game = raw / (f.game_n.max(1) as f64);
     // Capacity clamp: cap_usd <= 0 means UNSET (no clamp); otherwise clamp down.
@@ -298,6 +311,20 @@ mod tests {
         let d = decide(&feat(4, 1, 0.0), &ctx);
         let want = KELLY_K * KELLY_BAND[4] * BANKROLL; // 1/12 * .1933 * 10000
         assert!((d.books[0].stake - want).abs() < 1e-9);
+    }
+
+    #[test]
+    fn band6_entry_ge_one_books_zero_even_when_armed() {
+        // Regression: price_band(>=1.0) = 6; KELLY_BAND[6] must be 0.0 (never size an
+        // un-bettable entry ≥ $1) — NOT silently substituted with band-5's coefficient.
+        assert_eq!(KELLY_BAND[6], 0.0);
+        let ctx = ctx_open(1.0, 1.0);
+        let mut f = feat(6, 1, 0.0);
+        f.entry = 1.0;
+        assert!(decide(&f, &ctx).books.is_empty());
+        // and price_band routes a >=1.0 entry to band 6
+        assert_eq!(price_band(1.0), 6);
+        assert_eq!(price_band(1.2), 6);
     }
 
     #[test]
