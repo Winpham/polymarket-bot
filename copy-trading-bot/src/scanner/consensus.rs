@@ -115,7 +115,9 @@ impl MarketBook {
 pub enum SportsMode {
     /// Score both sports and non-sports (incumbent behavior).
     Include,
-    /// Only sports/esports markets.
+    /// Only sports/esports markets. Retained tunable option (no active arm uses it since the
+    /// `sports_only` noise arm was retired 2026-07-09); the scorer still honors it.
+    #[allow(dead_code)]
     Only,
     /// Drop sports/esports markets.
     Exclude,
@@ -130,7 +132,9 @@ pub enum WeightMode {
     Count,
     /// Rank by rank-derived `net_quality` (incumbent).
     Quality,
-    /// Rank by log-$ committed (whale-weighted).
+    /// Rank by log-$ committed (whale-weighted). Retained tunable option (no active arm uses it
+    /// since the `whales` noise arm was retired 2026-07-09); the scorer still honors it.
+    #[allow(dead_code)]
     Dollars,
     /// Rank by summed EARNED-trust quality of the backers (Phase 4). Tiering
     /// still keys on `net_count`, so this changes only the composite ranking.
@@ -193,6 +197,16 @@ pub struct ConsensusParams {
     /// set counts nothing (the arm fires nothing until a re-score qualifies
     /// wallets). Default `None` = no-op for every other strategy.
     pub router_set: Option<Arc<HashSet<String>>>,
+    /// Minimum at-fire backer volume (USD) required, else drop the signal
+    /// (`favorite_v2` liquidity floor — thin books are unfillable/mispriced).
+    /// Default `0.0` = no-op (every real book clears a zero floor).
+    pub min_total_usd: f64,
+    /// With `Some(k)`, require ≥1 backer with leaderboard rank strictly `< k`
+    /// (`favorite_v2` "require a top-k backer" skill gate). Unlike `require_elite`
+    /// (which keys on `elite_rank` and accepts any ranked-≤10 backer), this is a
+    /// tighter top-of-book requirement and FAILS a book with no ranked backer.
+    /// Default `None` = no-op (the field is never read).
+    pub require_backer_rank_lt: Option<i32>,
 }
 
 impl Default for ConsensusParams {
@@ -214,6 +228,8 @@ impl Default for ConsensusParams {
             cross_cohort_cutoff: None,
             certified_only: false,
             router_set: None,
+            min_total_usd: 0.0,
+            require_backer_rank_lt: None,
         }
     }
 }
@@ -479,6 +495,24 @@ pub fn score_market(
             continue;
         }
 
+        // Backer-volume floor (favorite_v2): thin books (< min_total_usd of
+        // one-sided backing at fire) are unfillable / price-fiction — the
+        // derived garbage class (removed set −11% ROI, belief-blind surplus −12%).
+        // Default 0.0 → no-op for every incumbent arm.
+        if total_usd < params.min_total_usd {
+            continue;
+        }
+
+        // Top-backer-rank gate (favorite_v2): require an actual top-`k`
+        // leaderboard backer (skill mechanism — rank ≥ k is net-negative even
+        // controlling for price/liquidity/sport). A book with no ranked backer
+        // fails. Default None → no-op.
+        if let Some(k) = params.require_backer_rank_lt
+            && best_backer_rank.is_none_or(|r| r >= k)
+        {
+            continue;
+        }
+
         // Cross-cohort conviction gate (cross_cohort variant): a whale AND a
         // certified deep sharp must both back. `trusted` rides on the vote (from
         // the trust map); a deep backer can only be in a live book if earned in.
@@ -612,84 +646,62 @@ pub fn score_all_strategies(
 /// `strict` params from config) so global env tuning moves the whole portfolio
 /// coherently. Only `strict` alerts; the rest forward-track silently.
 pub fn default_portfolio(base: &ConsensusParams) -> Vec<StrategyDef> {
+    // 2026-07-09 (Tue): the net-negative pure-betting noise arms (loose/whales/count/fresh2h/
+    // sports_only/nonsports/elite_gated/tight_cluster/longshot + the inert favorite_tail) were
+    // REMOVED — each loses at realizable entry (spread tax) and an ML model over all features
+    // found no hidden combined edge to rescue them (reports/ML-EDGE-FINDINGS.md). Alerting moved
+    // to `favorite` (the only realizable-positive arm). `strict` is KEPT but silenced: it is the
+    // canonical broad-consensus REFERENCE signal the enrichment/feature pipeline is built on
+    // (market_resid / bayes / ml / features / board shadow / earned-trust all key on strategy=
+    // "strict") — net-negative as a bet, but load-bearing plumbing, not a promotable strategy.
+    // Env-gated experimental arms (trust_arms/slice_sport_tail/proven_router/retuned) unchanged.
     vec![
-        StrategyDef {
-            name: "strict",
-            params: base.clone(),
-            alerting: true,
-        },
-        StrategyDef {
-            name: "loose",
-            params: ConsensusParams {
-                min_backers: 2,
-                max_opposers: 2,
-                max_price_std: 0.15,
-                strong_net: 3,
-                elite_net: 5,
-                ..base.clone()
-            },
-            alerting: false,
-        },
-        StrategyDef {
-            name: "fresh2h",
-            params: ConsensusParams {
-                max_age_mins: 120,
-                ..base.clone()
-            },
-            alerting: false,
-        },
-        StrategyDef {
-            name: "longshot",
-            params: ConsensusParams {
-                price_band: Some((0.02, 0.35)),
-                ..base.clone()
-            },
-            alerting: false,
-        },
+        // favorite — the champion + the SOLE alerter (moved off `strict`).
         StrategyDef {
             name: "favorite",
             params: ConsensusParams {
                 price_band: Some((0.65, 0.98)),
                 ..base.clone()
             },
+            alerting: true,
+        },
+        // strict — the base-config reference arm; SILENT now (alerting → favorite). Retained
+        // because the enrichment/feature/board/earned pipeline anchors on its signals, NOT as a
+        // bet (it is net-negative at realizable entry, like every broad arm).
+        StrategyDef {
+            name: "strict",
+            params: base.clone(),
             alerting: false,
         },
+        // favorite_liq — the TRUSTWORTHY half, DECOUPLED (Tue 2026-07-09): champion
+        // `favorite` band + ONLY the $1k at-fire backer-volume floor (illiquidity
+        // mechanism). Cuts just ~9% of volume, removes the −11% thin-book garbage,
+        // improves OOS non-FIFWC (−2.08% → −1.02%). Registered ALONGSIDE favorite_v2
+        // so the forward gate scores the liquidity floor INDEPENDENTLY of the fraught
+        // rank gate — instead of the two riding together and rank's story hiding
+        // behind liquidity's. SHADOW-ONLY, alerting=false.
         StrategyDef {
-            name: "sports_only",
+            name: "favorite_liq",
             params: ConsensusParams {
-                sports_mode: SportsMode::Only,
+                price_band: Some((0.65, 0.98)),
+                min_total_usd: 1000.0,
                 ..base.clone()
             },
             alerting: false,
         },
+        // favorite_v2 — liquidity floor PLUS the require-top-5-backer skill gate.
+        // The rank gate is the FRAUGHT half: it re-opens the leaderboard-rank axis
+        // that identify-skilled refuted 5 ways, its rank profile is non-monotonic (a
+        // small-N noise tell), its non-FIFWC "flip" is tennis/Wimbledon-carried (an
+        // expiring regime), and it cuts ~39% of volume. Kept as a shadow arm ONLY so
+        // the forward gate can rule on rank vs favorite_liq — NOT billed as a
+        // validated +9.66%. SHADOW-ONLY, alerting=false.
         StrategyDef {
-            name: "nonsports",
+            name: "favorite_v2",
             params: ConsensusParams {
-                sports_mode: SportsMode::Exclude,
-                ..base.clone()
-            },
-            alerting: false,
-        },
-        StrategyDef {
-            name: "elite_gated",
-            params: ConsensusParams {
-                require_elite: true,
-                ..base.clone()
-            },
-            alerting: false,
-        },
-        StrategyDef {
-            name: "whales",
-            params: ConsensusParams {
-                weight_mode: WeightMode::Dollars,
-                ..base.clone()
-            },
-            alerting: false,
-        },
-        StrategyDef {
-            name: "count",
-            params: ConsensusParams {
-                weight_mode: WeightMode::Count,
+                price_band: Some((0.65, 0.98)),
+                min_total_usd: 1000.0,
+                require_backer_rank_lt: Some(5),
                 ..base.clone()
             },
             alerting: false,
@@ -716,19 +728,6 @@ pub fn default_portfolio(base: &ConsensusParams) -> Vec<StrategyDef> {
             },
             alerting: false,
         },
-        // --- strategy-foundry quick-wins (2026-06-28 catalog, pre-registered) ---
-        // Denser, tighter-agreeing sharp cluster than `strict` tolerates.
-        StrategyDef {
-            name: "tight_cluster",
-            params: ConsensusParams {
-                min_backers: 4,
-                max_opposers: 0,
-                max_price_std: 0.04,
-                max_age_mins: 720,
-                ..base.clone()
-            },
-            alerting: false,
-        },
         // Fresh elite-sharp entry in the favorite tail (the one FLB region with
         // documented positive net returns). Decisive control = beat blind-favorite-band.
         StrategyDef {
@@ -737,17 +736,6 @@ pub fn default_portfolio(base: &ConsensusParams) -> Vec<StrategyDef> {
                 require_elite: true,
                 price_band: Some((0.80, 0.97)),
                 max_age_mins: 180,
-                ..base.clone()
-            },
-            alerting: false,
-        },
-        // Favorite-tail FLB MEASUREMENT probe (non-sports). Expected to collapse to
-        // blind-by-band — kept as an instrument, NOT a promotable edge.
-        StrategyDef {
-            name: "favorite_tail",
-            params: ConsensusParams {
-                price_band: Some((0.85, 0.96)),
-                sports_mode: SportsMode::Exclude,
                 ..base.clone()
             },
             alerting: false,
@@ -1210,6 +1198,83 @@ mod tests {
     }
 
     #[test]
+    fn favorite_v2_liquidity_and_rank_gates() {
+        let now = Utc::now();
+        // 3 backers @ $1000 each = $3000 total; best rank = 3, price 0.80 (in band).
+        let b = book_with(
+            now,
+            vec![
+                (0, "wa", Some(3), 0.80, 5),
+                (0, "wb", Some(8), 0.80, 5),
+                (0, "wc", None, 0.80, 5),
+            ],
+        );
+        // Champion `favorite` (default knobs) fires.
+        let fav = ConsensusParams {
+            price_band: Some((0.65, 0.98)),
+            ..ConsensusParams::default()
+        };
+        assert_eq!(score_market(&b, now, &fav).len(), 1, "champion favorite fires");
+
+        // favorite_v2 config: $1k floor (3000 ≥ 1000 → pass) + top-5 backer
+        // (rank 3 < 5 → pass) → fires.
+        let v2 = ConsensusParams {
+            price_band: Some((0.65, 0.98)),
+            min_total_usd: 1000.0,
+            require_backer_rank_lt: Some(5),
+            ..ConsensusParams::default()
+        };
+        assert_eq!(score_market(&b, now, &v2).len(), 1, "v2 fires on liquid, top-5-backed");
+
+        // Liquidity floor bites: 3000 < 5000 → dropped (champion still fires).
+        let thin = ConsensusParams {
+            min_total_usd: 5000.0,
+            ..v2.clone()
+        };
+        assert!(score_market(&b, now, &thin).is_empty(), "v2 drops thin book");
+        assert_eq!(score_market(&b, now, &fav).len(), 1, "champion unaffected by v2 floor");
+
+        // Rank gate bites: no backer ranked < 3 → dropped.
+        let no_top5 = book_with(
+            now,
+            vec![
+                (0, "wa", Some(6), 0.80, 5),
+                (0, "wb", Some(9), 0.80, 5),
+                (0, "wc", None, 0.80, 5),
+            ],
+        );
+        assert!(
+            score_market(&no_top5, now, &v2).is_empty(),
+            "v2 drops book with no top-5 backer"
+        );
+        assert_eq!(
+            score_market(&no_top5, now, &fav).len(),
+            1,
+            "champion favorite fires regardless of rank"
+        );
+
+        // Knobs are inert by default: Default() and every incumbent arm behave
+        // identically to before. Only the two decoupled shadow arms set knobs:
+        // favorite_liq = liquidity floor only; favorite_v2 = liquidity + rank.
+        let base = ConsensusParams::default();
+        for def in default_portfolio(&base) {
+            let sets_floor = matches!(def.name, "favorite_liq" | "favorite_v2");
+            assert_eq!(
+                def.params.min_total_usd,
+                if sets_floor { 1000.0 } else { 0.0 },
+                "only favorite_liq/favorite_v2 set a liquidity floor: {}",
+                def.name
+            );
+            assert_eq!(
+                def.params.require_backer_rank_lt,
+                if def.name == "favorite_v2" { Some(5) } else { None },
+                "only favorite_v2 sets the rank gate (favorite_liq must NOT): {}",
+                def.name
+            );
+        }
+    }
+
+    #[test]
     fn sports_mode_filters_market() {
         let now = Utc::now();
         let mut sportsbook = book_with(
@@ -1243,25 +1308,35 @@ mod tests {
     #[test]
     fn score_all_strategies_tags_and_runs_portfolio() {
         let now = Utc::now();
+        // Favorite-priced book (0.80) so the champion `favorite` fires; 4 backers @ $1000.
         let b = book_with(
             now,
             vec![
-                (0, "wa", Some(5), 0.50, 5),
-                (0, "wb", Some(20), 0.51, 5),
-                (0, "wc", Some(30), 0.49, 5),
-                (0, "wd", Some(40), 0.50, 5),
+                (0, "wa", Some(3), 0.80, 5),
+                (0, "wb", Some(20), 0.81, 5),
+                (0, "wc", Some(30), 0.79, 5),
+                (0, "wd", Some(40), 0.80, 5),
             ],
         );
         let portfolio = default_portfolio(&ConsensusParams::default());
         let sigs = score_all_strategies(&[b], now, &portfolio);
-        // strict + loose + fresh2h + favorite(0.50∉) ... at least strict & loose fire.
-        assert!(sigs.iter().any(|s| s.strategy == "strict"));
+        // favorite (0.65-0.98) fires; _blind captures everything.
+        assert!(sigs.iter().any(|s| s.strategy == "favorite"));
+        assert!(sigs.iter().any(|s| s.strategy == "_blind"));
         assert!(
             sigs.iter().all(|s| !s.strategy.is_empty()),
             "every signal tagged"
         );
-        // longshot (band 0.02-0.35) must NOT fire on a 0.50 market.
-        assert!(!sigs.iter().any(|s| s.strategy == "longshot"));
+        // The retired pure-betting noise arms must be GONE (strict is KEPT as the silent
+        // reference/enrichment anchor, so it is NOT in this list).
+        for dead in ["loose", "longshot", "whales", "count", "tight_cluster", "fresh2h",
+                     "sports_only", "nonsports", "elite_gated", "favorite_tail"] {
+            assert!(!sigs.iter().any(|s| s.strategy == dead), "{dead} retired");
+        }
+        // strict remains the reference arm (silent).
+        assert!(sigs.iter().any(|s| s.strategy == "strict"));
+        assert!(!portfolio.iter().find(|d| d.name == "strict").unwrap().alerting,
+                "strict is silent now");
     }
 
     // --- capture-hardening Item 2: the hot lane's scoped scorer ---
@@ -1309,29 +1384,21 @@ mod tests {
     }
 
     #[test]
-    fn default_strict_is_non_regressive() {
-        // The portfolio's `strict` params must equal ConsensusParams::default-derived base,
-        // i.e. score identically to the pre-portfolio scorer on a representative book.
-        let now = Utc::now();
-        let b = book_with(
-            now,
-            vec![
-                (0, "wa", Some(5), 0.50, 10),
-                (0, "wb", Some(20), 0.51, 20),
-                (0, "wc", Some(30), 0.49, 30),
-                (0, "wd", Some(40), 0.52, 40),
-            ],
-        );
+    fn favorite_is_the_sole_alerter() {
+        // After retiring the noise arms (2026-07-09), `favorite` is the portfolio head and the
+        // ONLY alerting arm; every other arm is a silent shadow/benchmark.
         let base = ConsensusParams::default();
-        let strict = &default_portfolio(&base)[0];
-        assert_eq!(strict.name, "strict");
-        assert!(strict.alerting, "strict is the sole alerter");
-        let a = score_market(&b, now, &base);
-        let c = score_market(&b, now, &strict.params);
-        assert_eq!(a.len(), c.len());
-        assert_eq!(a[0].tier, c[0].tier);
-        assert_eq!(a[0].net_count, c[0].net_count);
-        assert!((a[0].score - c[0].score).abs() < 1e-12);
+        let portfolio = default_portfolio(&base);
+        assert_eq!(portfolio[0].name, "favorite", "favorite leads the portfolio");
+        let alerters: Vec<&str> = portfolio
+            .iter()
+            .filter(|d| d.alerting)
+            .map(|d| d.name)
+            .collect();
+        assert_eq!(alerters, vec!["favorite"], "favorite is the sole alerter");
+        // The favorite arm is the champion band on the unchanged base scorer (non-regressive).
+        assert_eq!(portfolio[0].params.price_band, Some((0.65, 0.98)));
+        assert_eq!(portfolio[0].params.min_backers, base.min_backers);
     }
 
     // --- Phase 4: earned-trust arms are silent + non-regressive ---

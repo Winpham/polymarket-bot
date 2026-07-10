@@ -1,0 +1,23 @@
+{
+  "n_train": 1050,
+  "n_test": 670,
+  "split_day": "2026-07-05",
+  "models": {
+    "logistic": {
+      "n_picks": 287,
+      "n_ev": 179,
+      "roi_realizable": -2.416,
+      "phat_dev_from_price": 0.1016,
+      "nonsoccer_regimes_pos": 1
+    },
+    "histgbm": {
+      "n_picks": 276,
+      "n_ev": 181,
+      "roi_realizable": 1.576,
+      "phat_dev_from_price": 0.1084,
+      "nonsoccer_regimes_pos": 3
+    }
+  },
+  "champion_roi": 0.546,
+  "all_loose_roi": 1.49
+}
