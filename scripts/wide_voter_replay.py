@@ -324,6 +324,10 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--data", required=True)
     ap.add_argument("--json", default=None)
+    ap.add_argument("--prod-fav", default=None,
+                    help="prod_fav.tsv (cond\\toidx\\t...) — the REAL top-40 favorite set")
+    ap.add_argument("--prod-fav-full", default=None,
+                    help="prod_fav_full.tsv — prod favorite resolved picks for baseline ROI")
     args = ap.parse_args()
 
     ranks, meta, book, nfill = load(args.data)
@@ -339,10 +343,48 @@ def main():
         blind[C] = replay(book, meta, C, 1, 10**9, 10.0, None)
         print(f"  C={C}: favorite={len(fav[C])} blind={len(blind[C])}", file=sys.stderr)
 
-    base_set = set(fav[40].keys())
-    result = {"cutoffs": {}, "fidelity": {}, "meta": {"n_perm": N_PERM, "seed": SEED,
+    # Anchor the top-40 baseline on prod's REAL favorite set (faithful, +7% ev-clustered),
+    # and purge top-40 contamination from every marginal set by subtracting BOTH the
+    # replayed-40 set AND prod's real set. What remains genuinely needs rank 41..C voters.
+    prod_set = set()
+    if args.prod_fav:
+        with open(args.prod_fav) as f:
+            for line in f:
+                p = line.rstrip("\n").split("\t")
+                if len(p) >= 2 and p[0]:
+                    try:
+                        prod_set.add((p[0], int(p[1])))
+                    except ValueError:
+                        pass
+    base_set = set(fav[40].keys()) | prod_set
+
+    # prod baseline ROI (the real champion top-40), my exact honest metric
+    prod_baseline = None
+    if args.prod_fav_full:
+        pp = []
+        for line in open(args.prod_fav_full):
+            p = line.rstrip("\n").split("\t")
+            if len(p) < 9:
+                continue
+            _ev, slug, eslug, spo, entry, won, day, tot, br = p
+            entry = float(entry); won = int(won); spo = (spo == "t")
+            rg = regime(eslug or None)
+            fee = (REGIME_FEE.get(rg, 0.03) if spo else REGIME_FEE.get(rg, 0.05)) * (1 - entry)
+            pp.append({"ev": super_event(eslug or None, slug or None), "entry": entry,
+                       "won": won, "pnl_frac": (won - entry) / entry - fee, "a": won - entry,
+                       "day": day, "regime": rg, "band": sn.band(entry)})
+        prod_baseline = {
+            "all": roi_stats(pp),
+            "A": roi_stats([p for p in pp if p["day"] <= "2026-07-01"]),
+            "B": roi_stats([p for p in pp if p["day"] >= "2026-07-02"]),
+            "per_day": len(pp) / max(1, len({p["day"] for p in pp})),
+        }
+
+    result = {"cutoffs": {}, "fidelity": {}, "prod_baseline": prod_baseline,
+              "meta": {"n_perm": N_PERM, "seed": SEED, "prod_fav_n": len(prod_set),
               "window": "2026-06-27..2026-07-10", "fee": "corrected catrate*(1-p) entry-only",
-              "entry": "at-fire initial_mean_price"}}
+              "entry": "at-fire initial_mean_price",
+              "marginal_def": "replay_fav(C) - replay_fav(40) - prod_fav_set"}}
 
     # day span for turnover
     all_days = sorted({datetime_day(s["fire_ts"]) for s in fav[200].values()})
@@ -415,6 +457,14 @@ def print_report(r):
     print("\n" + "=" * 78)
     print("WIDE-VOTER REPLAY — marginal edge by voter cutoff (at-fire entry, corrected fee)")
     print("=" * 78)
+    pb = r.get("prod_baseline")
+    if pb:
+        a = pb["all"]
+        print(f"PROD top-40 favorite baseline (REAL set, my honest metric): "
+              f"roi_ev={fmt(a['roi_ev'])} n_ev={a['n_ev']} hit={a['hit']:.0%} "
+              f"| splitA={fmt(pb['A']['roi_ev'])} splitB={fmt(pb['B']['roi_ev'])} "
+              f"| {pb['per_day']:.0f} picks/day")
+    print(f"Marginal def: {r['meta']['marginal_def']}  (prod_fav_n={r['meta'].get('prod_fav_n')})")
     print(f"{'C':>4} {'sigs':>5} {'marg':>5} {'marg/d':>7} {'MARGINAL':>9} {'bb_surp':>8} "
           f"{'bb_LB':>7} {'p_emp':>7} {'full_roi':>9}")
     for C in CUTOFFS:
