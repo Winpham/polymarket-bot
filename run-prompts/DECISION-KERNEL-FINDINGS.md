@@ -98,6 +98,29 @@ promotion. (Caveat: IN-SAMPLE, same summer/tournament window — and it says not
 durability, which only the forward gate answers.) The verdict-mover remains the FORWARD edge, not the
 sizing mechanics — which is exactly why the kernel is correctly parked at k=0.
 
+## STATUS: PARKED — forward re-check runbook (no deploy)
+
+Decision (2026-07-10): keep `feat/decision-kernel` UNMERGED and ready at k=0; do NOT deploy. The prod
+bot already logs every `favorite` signal to the DB, so the forward evaluation needs no code in prod —
+just re-run these on the growing (increasingly out-of-sample) data:
+
+```
+# from the worktree, DB reachable via docker:
+python3 scripts/sized_book_replay.py          # Kelly-per-game vs flat (add --cap N to test a clamp)
+python3 scripts/sport_multiplier.py --dry-run # refresh the per-sport belief-blind gate
+```
+
+**Promotion gate (BOTH must clear before merging to prod + arming the kernel):**
+1. **Sizing earns it:** on a FORWARD window (post-tournament / MLB-season data, not this summer), the
+   replay shows Kelly-per-game beats flat-$100 **risk-adjusted** (higher Sharpe, not just higher raw
+   ROI) — the current in-sample read is the opposite (flat wins on Sharpe/maxDD).
+2. **Edge is real:** `sport_multiplier.py` certifies MLB (`sport_mult["mlb"] = 1.0`) — belief-blind
+   p ≤ 0.01 across ≥ 2 non-expiring regimes — AND `readiness_fraction` flips to 1.0 (forward
+   true-close λ̂ shows coverage ≥ 50% with the λ CI lower bound > 0, i.e. information not variance).
+
+When both clear: merge the (still default-off) branch to prod main, then arm by JSON alone — no code
+change. Until then it stays parked; nothing is promoted or armed.
+
 ## Verdict (one paragraph)
 
 The orphaned intelligence is now WIRED into ONE auditable pure `decide()` kernel at the single seam
