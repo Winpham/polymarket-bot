@@ -170,6 +170,10 @@ pub struct UnresolvedConsensus {
     /// When the signal was first detected — the decision-time anchor. Used to
     /// meter the capture lag (`entry_ask_at − first_detected_at`).
     pub first_detected_at: DateTime<Utc>,
+    /// Event slug (may be NULL/empty). Feeds the match-level super-key
+    /// ([`crate::superkey::super_event`]) that groups correlated same-match
+    /// signals for the per-game budget split (`game_n`). Additive, read-only.
+    pub event_slug: Option<String>,
 }
 
 impl PgPortfolio {
@@ -449,7 +453,8 @@ impl PgPortfolio {
     pub async fn unresolved_consensus_signals(&self) -> Result<Vec<UnresolvedConsensus>> {
         let rows: Vec<UnresolvedConsensus> = sqlx::query_as(
             "SELECT id, strategy, condition_id, COALESCE(slug, '') AS slug, outcome_index, \
-                    mean_price, net_count, n_backers, is_sports, entry_ask, first_detected_at \
+                    mean_price, net_count, n_backers, is_sports, entry_ask, first_detected_at, \
+                    event_slug \
              FROM consensus_signals WHERE resolved = FALSE",
         )
         .fetch_all(&self.pool)
@@ -939,6 +944,61 @@ impl PgPortfolio {
         .execute(&self.pool)
         .await
         .context("append_paper_bet")?;
+        Ok(res.rows_affected() > 0)
+    }
+
+    /// SIZED shadow sibling of [`append_paper_bet`]. Reads the CHAMPION signal's
+    /// realizable entry/outcome (`WHERE strategy = source_strategy`) and writes a
+    /// row under a DIFFERENT `ledger_strategy` LABEL (e.g. `favorite__k12`) with a
+    /// caller-supplied `stake` (the Kelly-sized amount from `decide()`). Byte-for-
+    /// byte the same P&L math as the champion — `pnl = stake × ((won − entry)/entry
+    /// − fee)` — only `stake` and the write-label differ, so the champion `favorite`
+    /// book is UNTOUCHED and `favorite__k12` coexists via `UNIQUE(strategy, cond, oi)`.
+    /// `cum_equity` sums over the LEDGER label (the shadow book's own running
+    /// equity). Idempotent (`ON CONFLICT DO NOTHING`). PAPER only — never real money.
+    #[allow(clippy::too_many_arguments)]
+    pub async fn append_sized_paper_bet(
+        &self,
+        source_strategy: &str,
+        ledger_strategy: &str,
+        condition_id: &str,
+        outcome_index: i32,
+        stake: f64,
+        exec_haircut: f64,
+        fee_pct: f64,
+    ) -> Result<bool> {
+        let res = sqlx::query(
+            "WITH src AS ( \
+                 SELECT condition_id, outcome_index, \
+                        COALESCE(resolved_at, NOW()) AS rat, \
+                        COALESCE(entry_ask, initial_market_price + $6) AS entry, \
+                        outcome_won \
+                 FROM consensus_signals \
+                 WHERE condition_id = $3 AND outcome_index = $4 AND strategy = $1 \
+                   AND resolved AND outcome_won IS NOT NULL AND initial_market_price IS NOT NULL \
+             ), \
+             calc AS ( \
+                 SELECT condition_id, outcome_index, rat, entry, outcome_won, \
+                        $5 * (((outcome_won::int)::double precision - entry) / NULLIF(entry, 0) - $7) AS pnl \
+                 FROM src \
+             ) \
+             INSERT INTO honest_paper_ledger \
+                 (strategy, condition_id, outcome_index, resolved_at, stake, entry, outcome_won, pnl, cum_equity) \
+             SELECT $2, c.condition_id, c.outcome_index, c.rat, $5, c.entry, c.outcome_won, c.pnl, \
+                    COALESCE((SELECT SUM(pnl) FROM honest_paper_ledger WHERE strategy = $2), 0) + c.pnl \
+             FROM calc c \
+             ON CONFLICT (strategy, condition_id, outcome_index) DO NOTHING",
+        )
+        .bind(source_strategy)
+        .bind(ledger_strategy)
+        .bind(condition_id)
+        .bind(outcome_index)
+        .bind(stake)
+        .bind(exec_haircut)
+        .bind(fee_pct)
+        .execute(&self.pool)
+        .await
+        .context("append_sized_paper_bet")?;
         Ok(res.rows_affected() > 0)
     }
 

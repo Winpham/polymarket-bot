@@ -532,6 +532,41 @@ pub struct CopyTradingConfig {
     #[config(env = "HONEST_MAX_DRAWDOWN_USD", default = 500.0)]
     pub honest_max_drawdown_usd: f64,
 
+    // --- Sized shadow book (decide() kernel — GAP-1/5/7/8 wiring) ---
+    // All default-OFF/inert: with `sized_books=false` the binary is byte-identical
+    // and `honest_paper_ledger` is written EXACTLY as before (champion only).
+    /// Enable the SIZED SHADOW book: after the flat champion `append_paper_bet`,
+    /// run the pure `decide()` kernel and append a Kelly-sized row under a
+    /// `{source}__k12` LABEL in the SAME ledger. Default OFF. Even ON, the book
+    /// stakes 0 (accrues nothing) until `kernel_gate.json` certifies an edge —
+    /// the k=0 shadow posture. PAPER only; promotes/arms nothing.
+    #[config(env = "SIZED_BOOKS", default = false)]
+    pub sized_books: bool,
+
+    /// Comma-separated CHAMPION strategies the sized shadow book mirrors (each
+    /// gets a `{strategy}__k12` shadow label). Default `favorite` — the only arm
+    /// the Kelly bands + sport map were pinned on.
+    #[config(env = "SIZED_SOURCE_STRATEGIES", default = "favorite")]
+    pub sized_source_strategies: String,
+
+    /// Headline bankroll ($) the kernel sizes against — matches
+    /// `corr_risk_engine.B_HEADLINE`. Recorded for re-scalability. The kernel's
+    /// `BANKROLL` const is authoritative; this knob only documents/overrides intent.
+    #[config(env = "SIZED_BANKROLL", default = 10000.0)]
+    pub sized_bankroll: f64,
+
+    /// Per-signal capacity ceiling ($) applied by the kernel. `0.0` = UNSET (no
+    /// capacity clamp; the per-market taker-depth curve is GAP-6, deferred while
+    /// the coarse λ̂ is bearish). A positive value clamps every sized stake down.
+    #[config(env = "SIZED_CAP_USD", default = 0.0)]
+    pub sized_cap_usd: f64,
+
+    /// Path to the kernel gate JSON (`sport_mult` + `readiness_fraction`). Absent
+    /// or unreadable → the all-zero floor (k=0, everything books 0) — the safe
+    /// default. Written offline by `scripts/sport_multiplier.py`.
+    #[config(env = "KERNEL_GATE_PATH", default = "reports/kernel_gate.json")]
+    pub kernel_gate_path: String,
+
     /// Port for the Prometheus metrics HTTP endpoint.
     #[config(env = "METRICS_PORT", default = 9001)]
     pub metrics_port: u16,

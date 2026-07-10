@@ -137,6 +137,39 @@ pub async fn housekeeping_cycle(
     let should_ledger =
         |strat: &str| strat != "_blind" && (ledger_set.is_empty() || ledger_set.contains(strat));
     let mut ledger_appends = 0usize;
+
+    // --- Sized shadow book (decide() kernel) — INERT unless SIZED_BOOKS is on ---
+    // Built once per cycle. With the flag off, none of this runs and the ledger is
+    // written EXACTLY as before (champion `append_paper_bet` only). Even ON, the
+    // kernel books 0 until `kernel_gate.json` certifies an edge (the k=0 posture).
+    // `game_n` = correlated cluster size = # same-strategy unresolved signals that
+    // share this signal's match-level super-key (the per-game budget split).
+    let kernel_ctx = cfg
+        .sized_books
+        .then(|| crate::scanner::decide::KernelCtx::load(&cfg.kernel_gate_path));
+    let sized_sources: std::collections::HashSet<&str> = if cfg.sized_books {
+        cfg.sized_source_strategies
+            .split(',')
+            .map(str::trim)
+            .filter(|s| !s.is_empty())
+            .collect()
+    } else {
+        std::collections::HashSet::new()
+    };
+    let game_n_by_key: std::collections::HashMap<(String, String), i64> = if cfg.sized_books {
+        let mut counts = std::collections::HashMap::new();
+        for sig in &unresolved {
+            if let Some(key) =
+                polymarket_common::superkey::super_event(sig.event_slug.as_deref(), &sig.slug)
+            {
+                *counts.entry((sig.strategy.clone(), key)).or_insert(0) += 1;
+            }
+        }
+        counts
+    } else {
+        std::collections::HashMap::new()
+    };
+    let mut sized_appends = 0usize;
     for cond in &all_conds {
         tokio::time::sleep(Duration::from_millis(120)).await;
         let market = match crate::data::models::fetch_clob_market(http, cond).await {
@@ -177,6 +210,67 @@ pub async fn housekeeping_cycle(
                                         Err(e) => tracing::warn!(
                                             err = %e, signal_id = sig.id, "append_paper_bet failed"
                                         ),
+                                    }
+                                }
+                                // SIZED SHADOW book (decide() kernel). Runs AFTER
+                                // the byte-identical champion append; writes a
+                                // `{strategy}__k12` shadow LABEL with a Kelly-sized
+                                // stake. Inert unless SIZED_BOOKS is on; books 0
+                                // (skips the append) until the gate certifies.
+                                if let Some(ctx) = &kernel_ctx
+                                    && sized_sources.contains(sig.strategy.as_str())
+                                {
+                                    let entry = sig.entry_ask.unwrap_or(sig.mean_price);
+                                    let key = polymarket_common::superkey::super_event(
+                                        sig.event_slug.as_deref(),
+                                        &sig.slug,
+                                    );
+                                    let game_n = key
+                                        .and_then(|k| {
+                                            game_n_by_key.get(&(sig.strategy.clone(), k)).copied()
+                                        })
+                                        .unwrap_or(1);
+                                    let f = crate::scanner::decide::SigFeatures {
+                                        source: sig.strategy.clone(),
+                                        band: crate::scanner::decide::price_band(entry),
+                                        entry,
+                                        sport: crate::scanner::decide::sport_of(
+                                            sig.event_slug.as_deref(),
+                                            &sig.slug,
+                                        ),
+                                        game_n,
+                                        cap_usd: cfg.sized_cap_usd,
+                                        earned: 1.0,
+                                    };
+                                    let dec = crate::scanner::decide::decide(&f, ctx);
+                                    for book in &dec.books {
+                                        match portfolio
+                                            .append_sized_paper_bet(
+                                                &sig.strategy,
+                                                &book.label,
+                                                cond,
+                                                sig.outcome_index,
+                                                book.stake,
+                                                cfg.exec_haircut,
+                                                cfg.fee_pct,
+                                            )
+                                            .await
+                                        {
+                                            Ok(true) => {
+                                                sized_appends += 1;
+                                                tracing::debug!(
+                                                    signal_id = sig.id,
+                                                    sized_bankroll = cfg.sized_bankroll,
+                                                    reason = %dec.reason,
+                                                    "sized shadow bet appended"
+                                                );
+                                            }
+                                            Ok(false) => {}
+                                            Err(e) => tracing::warn!(
+                                                err = %e, signal_id = sig.id,
+                                                "append_sized_paper_bet failed"
+                                            ),
+                                        }
                                     }
                                 }
                             }
@@ -322,6 +416,12 @@ pub async fn housekeeping_cycle(
         tracing::info!(
             ledger_appends,
             "Honest tracker: paper equity-ledger bets appended"
+        );
+    }
+    if sized_appends > 0 {
+        tracing::info!(
+            sized_appends,
+            "Sized shadow book: Kelly-sized shadow bets appended"
         );
     }
     if fills_resolved > 0 {

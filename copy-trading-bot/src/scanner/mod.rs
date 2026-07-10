@@ -1,6 +1,7 @@
 pub mod cohort;
 pub mod consensus;
 pub mod copy_trader;
+pub mod decide;
 pub mod earned;
 pub mod enrich;
 pub mod honest;

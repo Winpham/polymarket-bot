@@ -6,4 +6,5 @@ pub mod ntfy;
 pub mod pricing;
 pub mod signal;
 pub mod storage;
+pub mod superkey;
 pub mod telegram;
