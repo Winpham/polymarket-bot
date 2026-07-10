@@ -342,6 +342,31 @@ mod tests {
     }
 
     #[test]
+    fn on_disk_gate_json_yields_k0_today() {
+        // Verify the ACTUAL reports/kernel_gate.json (written by sport_multiplier.py)
+        // books stake 0 everywhere — the k=0 posture. Robust when the file is absent
+        // (CI without it) → the default all-zero floor also books 0. This test failing
+        // means a human flipped readiness_fraction>0 with a certified sport; that is
+        // the intended human-review checkpoint, not a spurious failure.
+        let path = concat!(env!("CARGO_MANIFEST_DIR"), "/../reports/kernel_gate.json");
+        let ctx = KernelCtx::load(path);
+        assert_eq!(
+            ctx.readiness_fraction, 0.0,
+            "today's gate must be k=0 (readiness 0.0); flip is human-review gated"
+        );
+        for band in [4usize, 5] {
+            for sport in ["mlb", "soccer", "tennis", "other", "crypto"] {
+                let mut f = feat(band, 1, 0.0);
+                f.sport = sport.into();
+                assert!(
+                    decide(&f, &ctx).books.is_empty(),
+                    "on-disk gate must book 0 for {sport} band{band}"
+                );
+            }
+        }
+    }
+
+    #[test]
     fn from_json_reads_gate_fields() {
         let j = r#"{"sport_mult":{"mlb":1.0,"soccer":0.0},"readiness_fraction":0.0}"#;
         let c = KernelCtx::from_json(j).unwrap();

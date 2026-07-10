@@ -15,3 +15,18 @@ not information). It manufactures NO edge; the only verdict-mover is MLB skill p
   (139 bin + 93 common), clippy clean. With the flag off, `kernel_ctx=None` → the sized block is
   skipped entirely → champion `honest_paper_ledger` writes are byte-identical (only additive change is
   reading one extra column). k=0 proven in-test: `gate_zero_books_nothing_today`.
+
+- **Item 2+3 (sport_multiplier.py → kernel_gate.json + readiness_fraction):** DONE. New
+  `scripts/sport_multiplier.py` composes the REAL instruments — `selection_null` (belief-blind
+  selection-matched null, ≥1000 draws, p≤0.01), an event-clustered skill + SE, a ≥2 NON-EXPIRING
+  time-regime persistence wall (World Cup/Wimbledon pre-registered expiring → 0 regimes), K_POOL=40
+  partial pooling + Bonferroni(×#sports) lower bound > 0. Sports are keyed by `kernel_sport()`, an
+  EXACT mirror of Rust `sport_of`, so every JSON key is kernel-lookupable (mis-partition would
+  silently fail-closed a real edge). `--selftest` (no DB) proves the gate says BOTH no (fail-closed:
+  soft soccer, single-week MLB) AND yes (multi-week efficient+skilled MLB → 1.0). **Live output
+  (honest):** `sport_mult` all 0.0, `certified_cells: []`, `readiness_fraction: 0.0` (edge_reality
+  INDETERMINATE, coverage 20% < 50%, λ̂=0.1357). MLB IS the forward candidate — +13.2% skill in a
+  near-efficient market — but at only 20 events the belief-blind null gives p=0.067 > 0.01 (power-
+  limited), so it correctly certifies NOTHING yet. Rust `on_disk_gate_json_yields_k0_today` confirms
+  the real JSON books stake=0 for every sport/band (k=0). This is the human-review checkpoint: MLB
+  flips to 1.0 once it clears p≤0.01 across ≥2 non-expiring regimes forward.

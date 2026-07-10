@@ -1,0 +1,57 @@
+{
+  "sport_mult": {
+    "mlb": 0.0,
+    "other": 0.0,
+    "soccer": 0.0,
+    "tennis": 0.0
+  },
+  "readiness_fraction": 0.0,
+  "edge_reality": "INDETERMINATE (coverage 20% < 50%; \u03bb\u0302=0.1357306407689214)",
+  "certified_cells": [],
+  "n_sports_tested": 4,
+  "strategy": "favorite",
+  "gate": {
+    "N_FLOOR": 20,
+    "P_BAR": 0.01,
+    "MIN_DRAWS": 1000,
+    "MIN_REGIMES": 2,
+    "K_POOL": 40.0,
+    "ALPHA": 0.05
+  },
+  "diagnostics": [
+    {
+      "sport": "mlb",
+      "events": 20,
+      "skill": 0.13161430010929856,
+      "null_draws": 2000,
+      "p": 0.0675,
+      "reason": "belief-blind p 0.0675 > 0.01"
+    },
+    {
+      "sport": "other",
+      "events": 29,
+      "skill": -0.07265574672464223,
+      "null_draws": 2000,
+      "p": 0.8895,
+      "reason": "belief-blind p 0.8895 > 0.01"
+    },
+    {
+      "sport": "soccer",
+      "events": 25,
+      "skill": 0.054372211090158364,
+      "null_draws": 2000,
+      "p": 0.0515,
+      "reason": "belief-blind p 0.0515 > 0.01"
+    },
+    {
+      "sport": "tennis",
+      "events": 84,
+      "skill": 0.0528711281874303,
+      "null_draws": 2000,
+      "p": 0.073,
+      "reason": "belief-blind p 0.0730 > 0.01"
+    }
+  ],
+  "as_of": "2026-07-10T04:35:40+00:00",
+  "note": "k=0 shadow posture: with readiness_fraction=0.0 the kernel books stake=0 for every sport regardless of sport_mult. sport_mult is fail-closed (unlisted \u2192 0.0)."
+}
