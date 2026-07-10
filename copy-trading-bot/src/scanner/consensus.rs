@@ -743,6 +743,48 @@ pub fn default_portfolio(base: &ConsensusParams) -> Vec<StrategyDef> {
     ]
 }
 
+/// Soft-market shadow arms (Soft-Market Edge Hunt, 2026-07-09). Scored against a
+/// SEPARATE esports-only book assembled from the WIDER-eligibility vote set
+/// (`load_soft_window_votes`) — NEVER the incumbent eligible-only book — and
+/// registered ONLY when `CONSENSUS_SOFT_MARKET_ARM` is on, so the live portfolio and
+/// every existing arm stay byte-identical. Both silent (`alerting: false`); they
+/// PROMOTE nothing (forward data is the arbiter).
+///
+/// The diagnosed conversion bottleneck is the rank-40 eligibility gate, NOT
+/// fragmentation/liquidity/band (reports/ESPORTS-CONVERSION-GAP.json), so the ONLY
+/// relaxation vs champion `favorite` is the vote POPULATION (wider eligibility
+/// recovers the excluded esports sharps). The convergence bar stays at
+/// `min_backers` distinct one-sided backers (the base config's 3) so a signal is
+/// still REAL sharp consensus — never "bet every esports favorite". `sports_mode` is
+/// forced `Include` (the book is esports, i.e. `is_sports=true`; an `Exclude` base
+/// config would otherwise drop every row). Two arms so the forward gate can rule on
+/// whether the thin-book spread tax eats the edge:
+///   `soft_fav`     — champion favorite band, wider-eligibility esports book.
+///   `soft_fav_liq` — same + the $1k at-fire liquidity floor (thin-book screen).
+pub fn soft_market_arms(base: &ConsensusParams) -> Vec<StrategyDef> {
+    vec![
+        StrategyDef {
+            name: "soft_fav",
+            params: ConsensusParams {
+                price_band: Some((0.65, 0.98)),
+                sports_mode: SportsMode::Include,
+                ..base.clone()
+            },
+            alerting: false,
+        },
+        StrategyDef {
+            name: "soft_fav_liq",
+            params: ConsensusParams {
+                price_band: Some((0.65, 0.98)),
+                sports_mode: SportsMode::Include,
+                min_total_usd: 1000.0,
+                ..base.clone()
+            },
+            alerting: false,
+        },
+    ]
+}
+
 /// Phase-4 earned-trust arms — silent (`alerting: false`), judged by the gate in
 /// the EXPERIMENTAL family (see [`crate::scanner::enrich::family`]) so they never
 /// tighten core's Bonferroni bar. Appended to the portfolio ONLY when
@@ -1272,6 +1314,48 @@ mod tests {
                 def.name
             );
         }
+    }
+
+    #[test]
+    fn soft_market_arms_shape_and_isolation() {
+        // Both soft arms: favorite band, silent, Include sports, 3-backer convergence
+        // kept; only soft_fav_liq sets the $1k floor. Named distinctly from every
+        // incumbent arm so upserts never collide.
+        let base = ConsensusParams::default();
+        let arms = soft_market_arms(&base);
+        assert_eq!(arms.len(), 2);
+        for a in &arms {
+            assert!(!a.alerting, "{} must be silent (shadow-only)", a.name);
+            assert_eq!(a.params.price_band, Some((0.65, 0.98)), "{} favorite band", a.name);
+            assert_eq!(a.params.sports_mode, SportsMode::Include, "{} keeps esports", a.name);
+            assert_eq!(a.params.min_backers, base.min_backers, "{} keeps convergence bar", a.name);
+        }
+        let names: Vec<&str> = arms.iter().map(|d| d.name).collect();
+        assert_eq!(names, vec!["soft_fav", "soft_fav_liq"]);
+        assert_eq!(arms[0].params.min_total_usd, 0.0, "soft_fav = no liquidity floor");
+        assert_eq!(arms[1].params.min_total_usd, 1000.0, "soft_fav_liq = $1k floor");
+
+        // The champion + incumbent portfolio is untouched by the soft arms existing.
+        let portfolio = default_portfolio(&base);
+        for soft in &names {
+            assert!(!portfolio.iter().any(|d| &d.name == soft),
+                    "soft arm {soft} must NOT be in the incumbent portfolio");
+        }
+
+        // soft_fav FIRES on a 3-deep esports-priced book (0.80) — the wider-eligibility
+        // convergence the live gate misses becomes a real signal here.
+        let now = Utc::now();
+        let mut esb = book_with(
+            now,
+            vec![
+                (0, "wa", Some(150), 0.80, 5),
+                (0, "wb", Some(180), 0.81, 5),
+                (0, "wc", Some(210), 0.79, 5),
+            ],
+        );
+        esb.is_sports = true;
+        assert_eq!(score_market(&esb, now, &arms[0].params).len(), 1,
+                   "soft_fav fires on 3 deep-ranked one-sided esports backers in band");
     }
 
     #[test]

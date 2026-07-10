@@ -401,7 +401,32 @@ pub async fn consensus_cycle(
             }
         }
     }
-    let signals = score_all_strategies(&book_vec, now, &strategies);
+    let mut signals = score_all_strategies(&book_vec, now, &strategies);
+
+    // Soft-market detection arm (Soft-Market Edge Hunt, 2026-07-09): score a SEPARATE
+    // esports-only book assembled from the WIDER-eligibility vote set — recovering the
+    // esports sharps the rank-40 `consensus_eligible` gate excludes (the diagnosed
+    // dominant conversion cause). Default-OFF ⇒ no extra DB load or scoring ⇒ the live
+    // path is byte-identical; the incumbent `book_vec` (eligible-only) is untouched.
+    if cfg.consensus_soft_market_arm {
+        let soft_window = portfolio
+            .load_soft_window_votes(window_start, cfg.soft_market_rank_cutoff)
+            .await
+            .unwrap_or_default();
+        if !soft_window.is_empty() {
+            let base = params_from_cfg(cfg);
+            let soft_books = books_from_window_votes(&soft_window, trust);
+            let soft_strats = crate::scanner::consensus::soft_market_arms(&base);
+            let soft_sigs = score_all_strategies(&soft_books, now, &soft_strats);
+            tracing::info!(
+                soft_votes = soft_window.len(),
+                soft_books = soft_books.len(),
+                soft_signals = soft_sigs.len(),
+                "Soft-market arm scored (shadow, esports wider-eligibility book)"
+            );
+            signals.extend(soft_sigs);
+        }
+    }
 
     // Enricher seam: silent cross-check arms re-emit `strict` picks under new
     // strategy names; the originals pass through untouched, so `strict` alerting

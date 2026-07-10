@@ -1,0 +1,77 @@
+{
+  "as_of": "2026-07-09",
+  "window": {
+    "go_live": "2026-06-29",
+    "rank_cutoff": 40
+  },
+  "hypotheses": {
+    "a_fragmentation": {
+      "claim": "esports bets too fragmented to converge 3-deep within 48h",
+      "verdict": "REFUTED",
+      "esports_outcomes_1sided": 2141,
+      "esports_converged_ge3": 649,
+      "esports_conv_rate_pct": 30.3,
+      "soccer_conv_rate_pct": 33.3,
+      "note": "esports converges 3-deep within 48h at ~same rate as soccer \u2014 fragmentation is NOT the cause."
+    },
+    "b_liquidity_floor": {
+      "claim": "min_total_usd excludes thin esports books",
+      "verdict": "REFUTED",
+      "note": "champion `favorite` sets min_total_usd=0.0 (no floor); only shadow favorite_liq/v2 do. Not the cause."
+    },
+    "c_price_band": {
+      "claim": "favorite band [0.65,0.98] misses esports favorite pricing",
+      "verdict": "SHARED_MINOR",
+      "esports_convergent": 651,
+      "esports_in_band": 179,
+      "esports_in_band_pct": 27.5,
+      "soccer_in_band_pct": 32.8,
+      "note": "band loses ~2/3 for BOTH esports (in-band ~27%) and soccer (~33%) \u2014 a shared filter, not esports-specific."
+    },
+    "d_eligibility_gate": {
+      "claim": "esports sharps tracked but rank>40 => consensus_eligible=FALSE => votes filtered from backer counts",
+      "verdict": "DOMINANT_CAUSE",
+      "mechanism": "load_window_votes filters COALESCE(consensus_eligible OR earned_eligible, TRUE); consensus_eligible = (rank <= TRACK_CONSENSUS_RANK_CUTOFF=40) [leaderboard_tracker.rs:91]",
+      "live_store_eligible_ge3": {
+        "esports": 1,
+        "soccer": 17
+      },
+      "live_store_alltracked_ge3": {
+        "esports": 102,
+        "soccer": 298
+      },
+      "esports_eligibility_loss_pct": 99.0,
+      "soccer_eligibility_loss_pct": 94.3,
+      "esports_active_tracked": 194,
+      "esports_active_eligible": 19,
+      "esports_median_global_rank": 170.0,
+      "total_eligible_of_tracked": "192/1105",
+      "note": "eligibility drops esports 3-backer convergence ~99% (all-tracked->eligible) on the LIVE store; esports sharps sit at median global rank ~170, far past the rank-40 cutoff."
+    }
+  },
+  "signal_detection_by_arm": {
+    "_blind": {
+      "esports": 1181,
+      "soccer": 7969,
+      "total": 28583
+    },
+    "strict": {
+      "esports": 32,
+      "soccer": 874,
+      "total": 1399
+    },
+    "favorite": {
+      "esports": 10,
+      "soccer": 323,
+      "total": 457
+    },
+    "elite_fresh_fav": {
+      "esports": 1,
+      "soccer": 127,
+      "total": 162
+    }
+  },
+  "dominant_cause": "ELIGIBILITY (d): the esports sharps are tracked and their votes stored in consensus_vote_window, but the global rank-40 `consensus_eligible` gate filters them out of backer counts \u2014 so real esports 3-backer convergence (which happens at ~soccer rate) is invisible to the consensus engine. It is a CONVERSION gap (a gate), not a coverage gap (missing data) and not fragmentation.",
+  "is_pipeline_defect": false,
+  "pipeline_defect_note": "NOT a schema/grading defect (which the brief says would STOP the run): esports resolves into consensus_signals/snapshots correctly and its votes are captured in the window store. The gap is a deliberate rank-eligibility TUNING gate, addressable by a detection variant \u2014 no migration."
+}

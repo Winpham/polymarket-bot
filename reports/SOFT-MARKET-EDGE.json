@@ -1,0 +1,298 @@
+{
+  "as_of": "2026-07-09",
+  "objective": "cluster-robust LB of realizable copyable ROI-on-turnover, volume+duration floors, time-split OOS",
+  "params": {
+    "soft_cutoff": 250,
+    "min_backers": 3,
+    "band": [
+      0.65,
+      0.98
+    ],
+    "fee": "0.03*p*(1-p)",
+    "vol_floor_clusters": 20,
+    "alpha": 0.05
+  },
+  "coverage": {
+    "soft_picks_resolved_inband": 118,
+    "with_realizable_entry": 58,
+    "realizable_coverage_pct": 49.2,
+    "entry_ask_n": 12,
+    "tape_ask_n": 46,
+    "note": "realizable entry (entry_ask \u222a tape_ask) is the copyability cap; where absent the pick is EXCLUDED from the objective, not measured at mid."
+  },
+  "soft_esports": {
+    "REALIZABLE_objective": {
+      "label": "soft_realizable",
+      "n_picks": 58,
+      "roi_turn_point": 0.2685,
+      "roi_turn_LB": 0.116,
+      "N_events": 58,
+      "G_clusters": 40,
+      "win_rate_diag": 0.914,
+      "active_days": 7,
+      "disciplines": {
+        "lol": 9,
+        "dota2": 20,
+        "cs2": 9,
+        "val": 2
+      },
+      "regimes_over_subfloor": [
+        "lol",
+        "dota2",
+        "cs2"
+      ],
+      "lodo_drop": "dota2",
+      "lodo_LB_without_dominant": -0.102,
+      "meets_volume_floor": true,
+      "meets_duration_floor": true,
+      "meets_regime_floor": true,
+      "survives_lodo_jackknife": false,
+      "verdict": "INDETERMINATE (LODO-drop-dota2-kills-edge)"
+    },
+    "directional_ceiling_NOT_copyable": {
+      "label": "soft_sharp_fill",
+      "n_picks": 118,
+      "roi_turn_point": 0.2215,
+      "roi_turn_LB": 0.1547,
+      "N_events": 118,
+      "G_clusters": 77,
+      "win_rate_diag": 0.915,
+      "active_days": 10,
+      "disciplines": {
+        "lol": 16,
+        "cs2": 28,
+        "dota2": 22,
+        "val": 11
+      },
+      "regimes_over_subfloor": [
+        "lol",
+        "cs2",
+        "dota2",
+        "val"
+      ],
+      "lodo_drop": "cs2",
+      "lodo_LB_without_dominant": 0.1277,
+      "meets_volume_floor": true,
+      "meets_duration_floor": true,
+      "meets_regime_floor": true,
+      "survives_lodo_jackknife": true,
+      "verdict": "POSITIVE_LB_DURABLE"
+    },
+    "time_split_OOS": {
+      "split_day": "2026-07-05",
+      "early": {
+        "label": "soft_early",
+        "n_picks": 6,
+        "roi_turn_point": 0.032,
+        "roi_turn_LB": -0.5121,
+        "N_events": 6,
+        "G_clusters": 4,
+        "win_rate_diag": 0.833,
+        "active_days": 3,
+        "disciplines": {
+          "lol": 2,
+          "cs2": 2
+        },
+        "regimes_over_subfloor": [],
+        "lodo_drop": "lol",
+        "lodo_LB_without_dominant": -4.7486,
+        "meets_volume_floor": false,
+        "meets_duration_floor": false,
+        "meets_regime_floor": false,
+        "survives_lodo_jackknife": false,
+        "verdict": "INDETERMINATE (volume<20clusters; duration<7days(3); regimes<2)"
+      },
+      "late": {
+        "label": "soft_late",
+        "n_picks": 52,
+        "roi_turn_point": 0.2958,
+        "roi_turn_LB": 0.131,
+        "N_events": 52,
+        "G_clusters": 36,
+        "win_rate_diag": 0.923,
+        "active_days": 4,
+        "disciplines": {
+          "lol": 7,
+          "dota2": 20,
+          "cs2": 7,
+          "val": 2
+        },
+        "regimes_over_subfloor": [
+          "dota2"
+        ],
+        "lodo_drop": "dota2",
+        "lodo_LB_without_dominant": -0.1352,
+        "meets_volume_floor": true,
+        "meets_duration_floor": false,
+        "meets_regime_floor": false,
+        "survives_lodo_jackknife": false,
+        "verdict": "INDETERMINATE (duration<7days(4); regimes<2)"
+      }
+    },
+    "belief_blind_skill_directional": {
+      "soft_mean_edge": 0.1665,
+      "esports_blind_favorite_baseline": 0.012,
+      "skill_surplus_over_blind": 0.1545,
+      "note": "skill = consensus edge beyond the blind esports favorite; \u22640 \u21d2 just riding softness (won't transfer). Directional entry (full coverage); NOT the realizable objective."
+    }
+  },
+  "champion_favorite_realizable": {
+    "label": "champion_favorite",
+    "n_picks": 179,
+    "roi_turn_point": 0.0033,
+    "roi_turn_LB": -0.0648,
+    "N_events": 179,
+    "G_clusters": 61,
+    "win_rate_diag": 0.832,
+    "active_days": 11,
+    "disciplines": {
+      "other": 59,
+      "lol": 2
+    },
+    "regimes_over_subfloor": [
+      "other"
+    ],
+    "lodo_drop": "other",
+    "lodo_LB_without_dominant": 0.0846,
+    "meets_volume_floor": true,
+    "meets_duration_floor": true,
+    "meets_regime_floor": true,
+    "survives_lodo_jackknife": true,
+    "verdict": "NON_POSITIVE_LB"
+  },
+  "head_to_head": {
+    "metric": "realizable cluster-robust ROI-turn LB (durability-gated)",
+    "soft_esports_LB": 0.116,
+    "champion_soccer_LB": -0.0648,
+    "soft_durable": false,
+    "champion_meets_floor": true,
+    "beats_champion": false,
+    "note": "beats_champion requires the soft edge to CLEAR volume+duration+regime floors AND survive the leave-one-discipline-out jackknife \u2014 a 3-day one-discipline chalk streak reads False even at a fat point LB."
+  },
+  "trader_track_record_SELECT_only": {
+    "ranking": [
+      {
+        "wallet_tail": "348973",
+        "rank": 173,
+        "n_fills": 33,
+        "mean_edge": 0.3018,
+        "sd": 0.0076,
+        "consistency": 15.8527
+      },
+      {
+        "wallet_tail": "0ccded",
+        "rank": 199,
+        "n_fills": 69,
+        "mean_edge": 0.327,
+        "sd": 0.0247,
+        "consistency": 7.6603
+      },
+      {
+        "wallet_tail": "bbd49f",
+        "rank": 167,
+        "n_fills": 54,
+        "mean_edge": 0.2724,
+        "sd": 0.027,
+        "consistency": 5.2363
+      },
+      {
+        "wallet_tail": "742eff",
+        "rank": 179,
+        "n_fills": 62,
+        "mean_edge": 0.314,
+        "sd": 0.0346,
+        "consistency": 5.0287
+      },
+      {
+        "wallet_tail": "7f7980",
+        "rank": 152,
+        "n_fills": 41,
+        "mean_edge": 0.3232,
+        "sd": 0.0332,
+        "consistency": 4.381
+      },
+      {
+        "wallet_tail": "5e7433",
+        "rank": 199,
+        "n_fills": 255,
+        "mean_edge": 0.2728,
+        "sd": 0.0613,
+        "consistency": 3.7191
+      },
+      {
+        "wallet_tail": "4fedf1",
+        "rank": 147,
+        "n_fills": 92,
+        "mean_edge": 0.2563,
+        "sd": 0.0731,
+        "consistency": 2.2719
+      },
+      {
+        "wallet_tail": "b21be9",
+        "rank": 141,
+        "n_fills": 31,
+        "mean_edge": 0.2574,
+        "sd": 0.0574,
+        "consistency": 1.7159
+      },
+      {
+        "wallet_tail": "10dc70",
+        "rank": 169,
+        "n_fills": 228,
+        "mean_edge": 0.1218,
+        "sd": 0.062,
+        "consistency": 1.6094
+      },
+      {
+        "wallet_tail": "fb0d9e",
+        "rank": 196,
+        "n_fills": 229,
+        "mean_edge": 0.1403,
+        "sd": 0.0747,
+        "consistency": 1.5411
+      },
+      {
+        "wallet_tail": "adea39",
+        "rank": 115,
+        "n_fills": 139,
+        "mean_edge": 0.2387,
+        "sd": 0.1287,
+        "consistency": 1.3638
+      },
+      {
+        "wallet_tail": "92a9fe",
+        "rank": 149,
+        "n_fills": 292,
+        "mean_edge": 0.2528,
+        "sd": 0.1976,
+        "consistency": 1.0925
+      },
+      {
+        "wallet_tail": "33bf18",
+        "rank": 199,
+        "n_fills": 155,
+        "mean_edge": 0.1575,
+        "sd": 0.1303,
+        "consistency": 0.9136
+      },
+      {
+        "wallet_tail": "fec67e",
+        "rank": 200,
+        "n_fills": 136,
+        "mean_edge": 0.2139,
+        "sd": 0.2276,
+        "consistency": 0.6873
+      },
+      {
+        "wallet_tail": "fd0d7c",
+        "rank": 165,
+        "n_fills": 33,
+        "mean_edge": 0.1402,
+        "sd": 0.0833,
+        "consistency": 0.6692
+      }
+    ],
+    "guard": "SELECT-only hypothesis generator. Past-PnL rank was REFUTED 5 ways (survivorship + uncopyable timing/price). These candidates are certified ONLY by the forward/OOS belief-blind gate at OUR entry_ask, Bonferroni over the # screened \u2014 NOT by this record."
+  },
+  "verdict": "INDETERMINATE \u2014 NOT durable. 58/118 soft esports picks have a realizable entry (49.2%); the realizable ROI-turn LB is 0.116 over 40 match-clusters BUT: INDETERMINATE (LODO-drop-dota2-kills-edge). The apparent edge is a short-window, single-discipline favorite-chalk artifact (disciplines={'lol': 9, 'dota2': 20, 'cs2': 9, 'val': 2}, active_days=7, LODO-drop-dota2 LB=-0.102) \u2014 the 'fat edge on a soft week' trap the run is built to reject. The conversion gap IS closed (soft_fav captures real esports consensus the rank-40 gate misses), but whether the softer market yields a fatter, more-CONSISTENT per-dollar edge than the crowded favorites is NOT answerable at realizable cost on this data: the arm never ran live, so ask coverage is thin and the clob tape is only 72h \u2014 there is no multi-regime realizable history to validate durability. The pre-registered forward gate is the arbiter. Directional ceiling (NOT copyable) + belief-blind skill are context only; a directional/soft-week number is exactly what must NOT be reported as an edge."
+}

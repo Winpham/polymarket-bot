@@ -1254,6 +1254,39 @@ impl PgPortfolio {
         Ok(rows)
     }
 
+    /// Load window fill atoms for the SOFT-MARKET arm (Soft-Market Edge Hunt,
+    /// 2026-07-09): ESPORTS markets only, from tracked traders admitted under a WIDER
+    /// eligibility rank cutoff (`ft.rank <= cutoff`) OR the standard
+    /// consensus_eligible/earned set. This recovers the esports sharps the global
+    /// rank-40 `consensus_eligible` gate excludes — the diagnosed dominant conversion
+    /// cause (reports/ESPORTS-CONVERSION-GAP.json) — WITHOUT touching the live feed:
+    /// `load_window_votes` is unchanged, so every incumbent arm's book stays
+    /// byte-identical. Esports isolation is by the documented discipline slug-prefix
+    /// set (mirrors the diagnosis classifier); non-esports markets are never returned.
+    /// Called ONLY when `CONSENSUS_SOFT_MARKET_ARM` is on.
+    pub async fn load_soft_window_votes(
+        &self,
+        since: DateTime<Utc>,
+        rank_cutoff: i32,
+    ) -> Result<Vec<WindowVote>> {
+        let rows: Vec<WindowVote> = sqlx::query_as(
+            "SELECT cw.trader_wallet, cw.name, cw.rank, cw.pnl, cw.quality, cw.condition_id, \
+                    cw.outcome_index, cw.outcome, cw.title, cw.slug, cw.event_slug, \
+                    cw.is_sports, cw.price, cw.size_usd, cw.ts \
+             FROM consensus_vote_window cw \
+             JOIN followed_traders ft ON LOWER(ft.proxy_wallet) = cw.trader_wallet \
+             WHERE cw.ts >= $1 \
+               AND cw.event_slug ~ '^(lol|cs2|csgo|dota|dota2|val|valorant)' \
+               AND (ft.rank <= $2 OR ft.consensus_eligible OR ft.earned_eligible)",
+        )
+        .bind(since)
+        .bind(rank_cutoff)
+        .fetch_all(&self.pool)
+        .await
+        .context("load_soft_window_votes")?;
+        Ok(rows)
+    }
+
     /// Record an EARNED promotion: flip `earned_eligible` on for the given tracked
     /// wallets (exact `proxy_wallet` match). Idempotent — already-earned rows are
     /// untouched; returns how many rows newly flipped. Called only by the
