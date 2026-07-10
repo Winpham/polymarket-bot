@@ -78,6 +78,26 @@ Post-fix: 141 bin + 93 common tests green, clippy clean, release build green. Fl
 guarantee UNCHANGED (the two new SELECT columns are additive; `signal_cluster_rows` runs only when
 `sized_books` is on).
 
+## "See how it performs" — in-sample sizing replay (read-only, no deploy)
+
+`scripts/sized_book_replay.py` re-sizes every resolved `favorite` signal with the kernel's exact
+ungated formula and compares paper P&L vs the deployed flat-$100 champion, on identical fills. **The
+sizing does NOT prove itself in-sample:**
+
+| sizing | legs | ROI-turn | P&L | maxDD | Sharpe |
+|---|---|---|---|---|---|
+| kernel Kelly-per-game (uncapped) | 324 | **+3.35%** | +$1227 | **$1300** | 0.25 |
+| flat $100 (champion) | 351 | +2.91% | +$1021 | $644 | **0.27** |
+| flat 100-shares | 351 | +2.72% | +$783 | $497 | 0.28 |
+
+Kelly-per-game posts a higher raw ROI/P&L ONLY by concentrating into a few large band-5 singleton
+bets (~$465 each) — which **doubles the drawdown** and leaves Sharpe slightly BELOW flat. Capping to
+tame the drawdown destroys the return (cap $100 → +1.01% ROI, Sharpe 0.08; cap $300 → +2.08%). So on
+the history we have, **flat-$100 is competitive-to-better risk-adjusted**; the sizing has not earned
+promotion. (Caveat: IN-SAMPLE, same summer/tournament window — and it says nothing about edge
+durability, which only the forward gate answers.) The verdict-mover remains the FORWARD edge, not the
+sizing mechanics — which is exactly why the kernel is correctly parked at k=0.
+
 ## Verdict (one paragraph)
 
 The orphaned intelligence is now WIRED into ONE auditable pure `decide()` kernel at the single seam
