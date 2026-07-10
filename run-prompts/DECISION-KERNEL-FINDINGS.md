@@ -30,3 +30,14 @@ not information). It manufactures NO edge; the only verdict-mover is MLB skill p
   limited), so it correctly certifies NOTHING yet. Rust `on_disk_gate_json_yields_k0_today` confirms
   the real JSON books stake=0 for every sport/band (k=0). This is the human-review checkpoint: MLB
   flips to 1.0 once it clears p≤0.01 across ≥2 non-expiring regimes forward.
+
+- **Item 5 (surface the sized shadow book):** DONE. New read-only `scripts/sized_book.py` reads
+  `honest_paper_ledger WHERE strategy ~ '__k'` and reports the SAME stats as Rust
+  `LedgerStats::from_rows` (STAKE-WEIGHTED ROI-on-turnover Σpnl/Σstake, maxDD $, daily Sharpe,
+  win-rate) — repairs the blueprint's noted gap that shadow labels don't auto-appear in the
+  `consensus_signals`-grouped scoreboard panel. `--selftest` (no DB) proves the stat math. Live: no
+  `%__k%` rows yet (correct — k=0). **End-to-end WRITE-path verified against real data, fully
+  reversibly:** in a single ROLLBACK'd psql transaction the exact `append_sized_paper_bet` SQL wrote a
+  `favorite__k12` shadow row off a real resolved champion signal (entry 0.725 = 0.715+0.01 haircut,
+  won, pnl=+71.86 = 200×((1−0.725)/0.725−0.02)); champion `favorite` count unchanged (234 before /
+  during / after); ROLLBACK left 0 persistent shadow rows. Champion book byte-untouched.
