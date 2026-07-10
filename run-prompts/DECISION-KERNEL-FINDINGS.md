@@ -41,3 +41,32 @@ not information). It manufactures NO edge; the only verdict-mover is MLB skill p
   `favorite__k12` shadow row off a real resolved champion signal (entry 0.725 = 0.715+0.01 haircut,
   won, pnl=+71.86 = 200×((1−0.725)/0.725−0.02)); champion `favorite` count unchanged (234 before /
   during / after); ROLLBACK left 0 persistent shadow rows. Champion book byte-untouched.
+
+- **Item 4 (flag-gated resolution-close capture):** DONE. ~4-line reuse of `insert_trajectory_point`
+  in the resolution branch, using the mid already fetched that pass, behind `capture_resolution_close`
+  (default OFF). Flag off = the live resolution path is byte-identical (guarded, block skipped). Left
+  OFF and HUMAN-REVIEW-DEFERRED: enabling writes resolution mids that change a gate INPUT mid-run (a
+  tape-budget touch to coordinate with `feat/maker-copy-g3`), so it stays off until a human reviews
+  the first weeks of true-close λ̂. Full workspace green (140 bin + 93 common + 73 trading-bot),
+  clippy clean.
+
+## Verdict (one paragraph)
+
+The orphaned intelligence is now WIRED into ONE auditable pure `decide()` kernel at the single seam
+paper P&L is created, and the sized shadow book (`{strategy}__k12` labels in the existing
+`honest_paper_ledger`, no migration) is READY to Kelly-size the moment `edge_reality` clears — but it
+runs at **k = 0 today** because the coarse λ̂ ≈ 0.14 leans the favorite surplus toward variance, not
+information (`readiness_fraction = 0.0`). The per-sport multiplier is fail-closed and certifies
+**nothing** yet: MLB is the standout forward candidate (+13.2% skill in a near-efficient market) but at
+only 20 events the belief-blind selection-null gives p = 0.067 > 0.01 (power-limited), and soccer/
+tennis are pre-registered expiring (World Cup / Wimbledon) → 0 non-expiring regimes. Everything new is
+behind default-off flags (`sized_books`, `capture_resolution_close`) or new files/labels, so with the
+flags off the binary is byte-identical and the champion `favorite`/`favorite_liq`/`favorite_v2`/… arms
+and their ledger are UNTOUCHED (verified: reversible real-DB write test, champion count 234 unchanged).
+This manufactures **no edge** and proves nothing about the edge — the forward clock is the only
+arbiter. **What flips `readiness_fraction` to 1.0:** a human reviews the first forward weeks of
+true-close λ̂ (unlock `capture_resolution_close`) and finds coverage ≥ 50% with the λ CI lower bound
+> 0 (information, not variance); **what flips `sport_mult["mlb"]` to 1.0:** MLB skill persisting to
+p ≤ 0.01 across ≥ 2 non-expiring regimes as its sample grows past 20 events. Both are JSON-field
+changes the kernel already consumes — no code change, no re-deploy. Branch `feat/decision-kernel` left
+UNMERGED for human review (paper-only; promotes/arms nothing).

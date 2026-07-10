@@ -567,6 +567,16 @@ pub struct CopyTradingConfig {
     #[config(env = "KERNEL_GATE_PATH", default = "reports/kernel_gate.json")]
     pub kernel_gate_path: String,
 
+    /// Capture a TRUE pre-resolution close price per resolving signal (reuse of
+    /// `insert_trajectory_point` at the resolution branch, using the mid already
+    /// fetched that pass) — the right ~100%-coverage horizon for forward true-close
+    /// λ̂, cheaper than the dense-early loop and at the correct horizon.
+    /// Default OFF and HUMAN-REVIEW-DEFERRED: enabling it changes a gate INPUT
+    /// mid-run, so it stays off until a human reviews the first weeks of true-close
+    /// λ̂. Flag off = the live resolution path is byte-identical.
+    #[config(env = "CAPTURE_RESOLUTION_CLOSE", default = false)]
+    pub capture_resolution_close: bool,
+
     /// Port for the Prometheus metrics HTTP endpoint.
     #[config(env = "METRICS_PORT", default = 9001)]
     pub metrics_port: u16,

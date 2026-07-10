@@ -190,6 +190,28 @@ pub async fn housekeeping_cycle(
                                     won,
                                     sig.is_sports,
                                 );
+                                // Resolution-close capture (Item 4): a TRUE
+                                // pre-resolution close per resolving signal, from
+                                // the mid already fetched this pass — the right
+                                // ~100%-coverage horizon for forward true-close λ̂.
+                                // Reuse of insert_trajectory_point, best-effort.
+                                // HUMAN-REVIEW-DEFERRED: flag OFF = byte-identical.
+                                if cfg.capture_resolution_close
+                                    && let Some(mid) = price
+                                {
+                                    let secs = (Utc::now() - sig.first_detected_at)
+                                        .num_seconds()
+                                        as i32;
+                                    let _ = portfolio
+                                        .insert_trajectory_point(
+                                            sig.id,
+                                            secs,
+                                            Some(mid),
+                                            None,
+                                            Some(sig.n_backers),
+                                        )
+                                        .await;
+                                }
                                 // Phase 3: append the PAPER equity-ledger bet at the
                                 // realizable entry. Idempotent (ON CONFLICT DO NOTHING),
                                 // so re-resolution never double-appends. PAPER only.
