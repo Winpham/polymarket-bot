@@ -65,6 +65,25 @@ pub struct CopyTradingConfig {
     #[config(env = "TRACK_CONSENSUS_RANK_CUTOFF", default = 40)]
     pub track_consensus_rank_cutoff: i32,
 
+    /// Soft-market detection arm (Soft-Market Edge Hunt, 2026-07-09). When ON, the
+    /// consensus cycle scores a SEPARATE esports-only book assembled from a WIDER
+    /// eligibility set (tracked traders with rank ≤ `soft_market_rank_cutoff`, OR the
+    /// standard consensus_eligible/earned set) — recovering the esports sharps the
+    /// global rank-40 gate excludes, the DIAGNOSED dominant conversion cause
+    /// (reports/ESPORTS-CONVERSION-GAP.json). The incumbent eligible-only book
+    /// (`load_window_votes`) is untouched, so every existing arm is byte-identical.
+    /// Default FALSE ⇒ no soft book is loaded/scored ⇒ the live path is byte-for-byte
+    /// unchanged. SHADOW-ONLY (arms alerting=false); promotes nothing.
+    #[config(env = "CONSENSUS_SOFT_MARKET_ARM", default = false)]
+    pub consensus_soft_market_arm: bool,
+
+    /// Wider eligibility rank cutoff for the soft-market arm ONLY (read only when
+    /// `consensus_soft_market_arm` is on). Esports specialists sit at median global
+    /// rank ~170 — past the rank-40 consensus gate — so 250 admits the specialist
+    /// pool without opening the entire long tail. Never affects the live feed.
+    #[config(env = "SOFT_MARKET_RANK_CUTOFF", default = 250)]
+    pub soft_market_rank_cutoff: i32,
+
     /// Comma-separated inclusive upper rank bounds defining the cohort BANDS the
     /// deep-pool observatory slices/groups by (see `scanner::cohort`). The first
     /// band is the trusted top cohort — keep its bound aligned with
