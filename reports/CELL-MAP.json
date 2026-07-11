@@ -1,0 +1,1972 @@
+{
+  "as_of": "2026-07-11",
+  "run": "generalize-band-strategy phase 1 (cell map + power flags)",
+  "objective": "cluster-robust LB of realizable copyable ROI-turn @ match super-key; beat/complement champion favorite 0.71-0.98. Win-rate + total-P&L are DIAGNOSTIC ONLY.",
+  "floors": {
+    "volume_match_clusters": 20,
+    "duration_active_days": 7,
+    "regimes": 2,
+    "regime_subfloor_clusters": 8
+  },
+  "realizability_note": "clob_price_tape retains ~72h \u2192 any REPLAY cohort's realizable (tape_ask) coverage is duration-capped and reads INDETERMINATE by construction. Only the LIVE favorite arm (leak-free entry_ask) yields a durable realizable measurement; it is top-40-cohort-only (consensus_eligible == rank\u226440, verified). This is the binding data limitation the run inherits.",
+  "A_live_favorite_realizable": {
+    "baseball": {
+      "_all_bands": {
+        "n_picks_total": 7,
+        "n_picks_realizable": 7,
+        "realizable_coverage_pct": 100.0,
+        "power": {
+          "n_matches": 7,
+          "active_days": 6,
+          "n_regimes_over_subfloor": 0,
+          "regimes": [],
+          "meets_volume_floor": false,
+          "meets_duration_floor": false,
+          "meets_regime_floor": false,
+          "regime_clusters": {
+            "baseball:2026w26": 6,
+            "baseball:2026w27": 1
+          }
+        },
+        "power_flag": "INDETERMINATE"
+      },
+      "a_55_65": {
+        "n_picks_total": 1,
+        "n_picks_realizable": 1,
+        "realizable_coverage_pct": 100.0,
+        "power": {
+          "n_matches": 1,
+          "active_days": 1,
+          "n_regimes_over_subfloor": 0,
+          "regimes": [],
+          "meets_volume_floor": false,
+          "meets_duration_floor": false,
+          "meets_regime_floor": false,
+          "regime_clusters": {
+            "baseball:2026w26": 1
+          }
+        },
+        "power_flag": "INDETERMINATE"
+      },
+      "b_65_71": {
+        "n_picks_total": 3,
+        "n_picks_realizable": 3,
+        "realizable_coverage_pct": 100.0,
+        "power": {
+          "n_matches": 3,
+          "active_days": 3,
+          "n_regimes_over_subfloor": 0,
+          "regimes": [],
+          "meets_volume_floor": false,
+          "meets_duration_floor": false,
+          "meets_regime_floor": false,
+          "regime_clusters": {
+            "baseball:2026w26": 3
+          }
+        },
+        "power_flag": "INDETERMINATE"
+      },
+      "c_71_82": {
+        "n_picks_total": 2,
+        "n_picks_realizable": 2,
+        "realizable_coverage_pct": 100.0,
+        "power": {
+          "n_matches": 2,
+          "active_days": 2,
+          "n_regimes_over_subfloor": 0,
+          "regimes": [],
+          "meets_volume_floor": false,
+          "meets_duration_floor": false,
+          "meets_regime_floor": false,
+          "regime_clusters": {
+            "baseball:2026w26": 1,
+            "baseball:2026w27": 1
+          }
+        },
+        "power_flag": "INDETERMINATE"
+      },
+      "d_82_90": {
+        "n_picks_total": 1,
+        "n_picks_realizable": 1,
+        "realizable_coverage_pct": 100.0,
+        "power": {
+          "n_matches": 1,
+          "active_days": 1,
+          "n_regimes_over_subfloor": 0,
+          "regimes": [],
+          "meets_volume_floor": false,
+          "meets_duration_floor": false,
+          "meets_regime_floor": false,
+          "regime_clusters": {
+            "baseball:2026w26": 1
+          }
+        },
+        "power_flag": "INDETERMINATE"
+      },
+      "champion_pool_71_98": {
+        "n_picks_total": 3,
+        "n_picks_realizable": 3,
+        "realizable_coverage_pct": 100.0,
+        "power": {
+          "n_matches": 3,
+          "active_days": 3,
+          "n_regimes_over_subfloor": 0,
+          "regimes": [],
+          "meets_volume_floor": false,
+          "meets_duration_floor": false,
+          "meets_regime_floor": false,
+          "regime_clusters": {
+            "baseball:2026w26": 2,
+            "baseball:2026w27": 1
+          }
+        },
+        "power_flag": "INDETERMINATE"
+      }
+    },
+    "basketball": {
+      "_all_bands": {
+        "n_picks_total": 4,
+        "n_picks_realizable": 4,
+        "realizable_coverage_pct": 100.0,
+        "power": {
+          "n_matches": 4,
+          "active_days": 3,
+          "n_regimes_over_subfloor": 0,
+          "regimes": [],
+          "meets_volume_floor": false,
+          "meets_duration_floor": false,
+          "meets_regime_floor": false,
+          "regime_clusters": {
+            "basketball:2026w26": 4
+          }
+        },
+        "power_flag": "INDETERMINATE"
+      },
+      "b_65_71": {
+        "n_picks_total": 1,
+        "n_picks_realizable": 1,
+        "realizable_coverage_pct": 100.0,
+        "power": {
+          "n_matches": 1,
+          "active_days": 1,
+          "n_regimes_over_subfloor": 0,
+          "regimes": [],
+          "meets_volume_floor": false,
+          "meets_duration_floor": false,
+          "meets_regime_floor": false,
+          "regime_clusters": {
+            "basketball:2026w26": 1
+          }
+        },
+        "power_flag": "INDETERMINATE"
+      },
+      "c_71_82": {
+        "n_picks_total": 3,
+        "n_picks_realizable": 3,
+        "realizable_coverage_pct": 100.0,
+        "power": {
+          "n_matches": 3,
+          "active_days": 3,
+          "n_regimes_over_subfloor": 0,
+          "regimes": [],
+          "meets_volume_floor": false,
+          "meets_duration_floor": false,
+          "meets_regime_floor": false,
+          "regime_clusters": {
+            "basketball:2026w26": 3
+          }
+        },
+        "power_flag": "INDETERMINATE"
+      },
+      "champion_pool_71_98": {
+        "n_picks_total": 3,
+        "n_picks_realizable": 3,
+        "realizable_coverage_pct": 100.0,
+        "power": {
+          "n_matches": 3,
+          "active_days": 3,
+          "n_regimes_over_subfloor": 0,
+          "regimes": [],
+          "meets_volume_floor": false,
+          "meets_duration_floor": false,
+          "meets_regime_floor": false,
+          "regime_clusters": {
+            "basketball:2026w26": 3
+          }
+        },
+        "power_flag": "INDETERMINATE"
+      }
+    },
+    "esports": {
+      "_all_bands": {
+        "n_picks_total": 3,
+        "n_picks_realizable": 3,
+        "realizable_coverage_pct": 100.0,
+        "power": {
+          "n_matches": 3,
+          "active_days": 3,
+          "n_regimes_over_subfloor": 0,
+          "regimes": [],
+          "meets_volume_floor": false,
+          "meets_duration_floor": false,
+          "meets_regime_floor": false,
+          "regime_clusters": {
+            "esports:lol": 3
+          }
+        },
+        "power_flag": "INDETERMINATE"
+      },
+      "c_71_82": {
+        "n_picks_total": 1,
+        "n_picks_realizable": 1,
+        "realizable_coverage_pct": 100.0,
+        "power": {
+          "n_matches": 1,
+          "active_days": 1,
+          "n_regimes_over_subfloor": 0,
+          "regimes": [],
+          "meets_volume_floor": false,
+          "meets_duration_floor": false,
+          "meets_regime_floor": false,
+          "regime_clusters": {
+            "esports:lol": 1
+          }
+        },
+        "power_flag": "INDETERMINATE"
+      },
+      "e_90_98": {
+        "n_picks_total": 2,
+        "n_picks_realizable": 2,
+        "realizable_coverage_pct": 100.0,
+        "power": {
+          "n_matches": 2,
+          "active_days": 2,
+          "n_regimes_over_subfloor": 0,
+          "regimes": [],
+          "meets_volume_floor": false,
+          "meets_duration_floor": false,
+          "meets_regime_floor": false,
+          "regime_clusters": {
+            "esports:lol": 2
+          }
+        },
+        "power_flag": "INDETERMINATE"
+      },
+      "champion_pool_71_98": {
+        "n_picks_total": 3,
+        "n_picks_realizable": 3,
+        "realizable_coverage_pct": 100.0,
+        "power": {
+          "n_matches": 3,
+          "active_days": 3,
+          "n_regimes_over_subfloor": 0,
+          "regimes": [],
+          "meets_volume_floor": false,
+          "meets_duration_floor": false,
+          "meets_regime_floor": false,
+          "regime_clusters": {
+            "esports:lol": 3
+          }
+        },
+        "power_flag": "INDETERMINATE"
+      }
+    },
+    "nonsport": {
+      "_all_bands": {
+        "n_picks_total": 11,
+        "n_picks_realizable": 11,
+        "realizable_coverage_pct": 100.0,
+        "power": {
+          "n_matches": 10,
+          "active_days": 4,
+          "n_regimes_over_subfloor": 0,
+          "regimes": [],
+          "meets_volume_floor": false,
+          "meets_duration_floor": false,
+          "meets_regime_floor": false,
+          "regime_clusters": {
+            "nonsport:dateless": 1,
+            "nonsport:2026w27": 6,
+            "nonsport:2026w26": 3
+          }
+        },
+        "power_flag": "INDETERMINATE"
+      },
+      "a_55_65": {
+        "n_picks_total": 1,
+        "n_picks_realizable": 1,
+        "realizable_coverage_pct": 100.0,
+        "power": {
+          "n_matches": 1,
+          "active_days": 1,
+          "n_regimes_over_subfloor": 0,
+          "regimes": [],
+          "meets_volume_floor": false,
+          "meets_duration_floor": false,
+          "meets_regime_floor": false,
+          "regime_clusters": {
+            "nonsport:2026w27": 1
+          }
+        },
+        "power_flag": "INDETERMINATE"
+      },
+      "b_65_71": {
+        "n_picks_total": 1,
+        "n_picks_realizable": 1,
+        "realizable_coverage_pct": 100.0,
+        "power": {
+          "n_matches": 1,
+          "active_days": 1,
+          "n_regimes_over_subfloor": 0,
+          "regimes": [],
+          "meets_volume_floor": false,
+          "meets_duration_floor": false,
+          "meets_regime_floor": false,
+          "regime_clusters": {
+            "nonsport:2026w27": 1
+          }
+        },
+        "power_flag": "INDETERMINATE"
+      },
+      "c_71_82": {
+        "n_picks_total": 5,
+        "n_picks_realizable": 5,
+        "realizable_coverage_pct": 100.0,
+        "power": {
+          "n_matches": 4,
+          "active_days": 4,
+          "n_regimes_over_subfloor": 0,
+          "regimes": [],
+          "meets_volume_floor": false,
+          "meets_duration_floor": false,
+          "meets_regime_floor": false,
+          "regime_clusters": {
+            "nonsport:dateless": 1,
+            "nonsport:2026w26": 2,
+            "nonsport:2026w27": 1
+          }
+        },
+        "power_flag": "INDETERMINATE"
+      },
+      "d_82_90": {
+        "n_picks_total": 2,
+        "n_picks_realizable": 2,
+        "realizable_coverage_pct": 100.0,
+        "power": {
+          "n_matches": 2,
+          "active_days": 2,
+          "n_regimes_over_subfloor": 0,
+          "regimes": [],
+          "meets_volume_floor": false,
+          "meets_duration_floor": false,
+          "meets_regime_floor": false,
+          "regime_clusters": {
+            "nonsport:2026w26": 1,
+            "nonsport:2026w27": 1
+          }
+        },
+        "power_flag": "INDETERMINATE"
+      },
+      "e_90_98": {
+        "n_picks_total": 2,
+        "n_picks_realizable": 2,
+        "realizable_coverage_pct": 100.0,
+        "power": {
+          "n_matches": 2,
+          "active_days": 1,
+          "n_regimes_over_subfloor": 0,
+          "regimes": [],
+          "meets_volume_floor": false,
+          "meets_duration_floor": false,
+          "meets_regime_floor": false,
+          "regime_clusters": {
+            "nonsport:2026w27": 2
+          }
+        },
+        "power_flag": "INDETERMINATE"
+      },
+      "champion_pool_71_98": {
+        "n_picks_total": 8,
+        "n_picks_realizable": 8,
+        "realizable_coverage_pct": 100.0,
+        "power": {
+          "n_matches": 7,
+          "active_days": 4,
+          "n_regimes_over_subfloor": 0,
+          "regimes": [],
+          "meets_volume_floor": false,
+          "meets_duration_floor": false,
+          "meets_regime_floor": false,
+          "regime_clusters": {
+            "nonsport:dateless": 1,
+            "nonsport:2026w26": 3,
+            "nonsport:2026w27": 3
+          }
+        },
+        "power_flag": "INDETERMINATE"
+      }
+    },
+    "soccer": {
+      "_all_bands": {
+        "n_picks_total": 141,
+        "n_picks_realizable": 141,
+        "realizable_coverage_pct": 100.0,
+        "power": {
+          "n_matches": 17,
+          "active_days": 12,
+          "n_regimes_over_subfloor": 1,
+          "regimes": [
+            "soccer:2026w26"
+          ],
+          "meets_volume_floor": false,
+          "meets_duration_floor": true,
+          "meets_regime_floor": false,
+          "regime_clusters": {
+            "soccer:2026w26": 15,
+            "soccer:2026w27": 2
+          }
+        },
+        "power_flag": "INDETERMINATE"
+      },
+      "b_65_71": {
+        "n_picks_total": 23,
+        "n_picks_realizable": 23,
+        "realizable_coverage_pct": 100.0,
+        "power": {
+          "n_matches": 14,
+          "active_days": 7,
+          "n_regimes_over_subfloor": 1,
+          "regimes": [
+            "soccer:2026w26"
+          ],
+          "meets_volume_floor": false,
+          "meets_duration_floor": true,
+          "meets_regime_floor": false,
+          "regime_clusters": {
+            "soccer:2026w26": 12,
+            "soccer:2026w27": 2
+          }
+        },
+        "power_flag": "INDETERMINATE"
+      },
+      "c_71_82": {
+        "n_picks_total": 29,
+        "n_picks_realizable": 29,
+        "realizable_coverage_pct": 100.0,
+        "power": {
+          "n_matches": 14,
+          "active_days": 10,
+          "n_regimes_over_subfloor": 1,
+          "regimes": [
+            "soccer:2026w26"
+          ],
+          "meets_volume_floor": false,
+          "meets_duration_floor": true,
+          "meets_regime_floor": false,
+          "regime_clusters": {
+            "soccer:2026w26": 12,
+            "soccer:2026w27": 2
+          }
+        },
+        "power_flag": "INDETERMINATE"
+      },
+      "d_82_90": {
+        "n_picks_total": 40,
+        "n_picks_realizable": 40,
+        "realizable_coverage_pct": 100.0,
+        "power": {
+          "n_matches": 14,
+          "active_days": 10,
+          "n_regimes_over_subfloor": 1,
+          "regimes": [
+            "soccer:2026w26"
+          ],
+          "meets_volume_floor": false,
+          "meets_duration_floor": true,
+          "meets_regime_floor": false,
+          "regime_clusters": {
+            "soccer:2026w26": 12,
+            "soccer:2026w27": 2
+          }
+        },
+        "power_flag": "INDETERMINATE"
+      },
+      "e_90_98": {
+        "n_picks_total": 49,
+        "n_picks_realizable": 49,
+        "realizable_coverage_pct": 100.0,
+        "power": {
+          "n_matches": 16,
+          "active_days": 10,
+          "n_regimes_over_subfloor": 1,
+          "regimes": [
+            "soccer:2026w26"
+          ],
+          "meets_volume_floor": false,
+          "meets_duration_floor": true,
+          "meets_regime_floor": false,
+          "regime_clusters": {
+            "soccer:2026w26": 14,
+            "soccer:2026w27": 2
+          }
+        },
+        "power_flag": "INDETERMINATE"
+      },
+      "champion_pool_71_98": {
+        "n_picks_total": 115,
+        "n_picks_realizable": 115,
+        "realizable_coverage_pct": 100.0,
+        "power": {
+          "n_matches": 17,
+          "active_days": 12,
+          "n_regimes_over_subfloor": 1,
+          "regimes": [
+            "soccer:2026w26"
+          ],
+          "meets_volume_floor": false,
+          "meets_duration_floor": true,
+          "meets_regime_floor": false,
+          "regime_clusters": {
+            "soccer:2026w26": 15,
+            "soccer:2026w27": 2
+          }
+        },
+        "power_flag": "INDETERMINATE"
+      }
+    },
+    "tennis": {
+      "_all_bands": {
+        "n_picks_total": 34,
+        "n_picks_realizable": 34,
+        "realizable_coverage_pct": 100.0,
+        "power": {
+          "n_matches": 34,
+          "active_days": 8,
+          "n_regimes_over_subfloor": 1,
+          "regimes": [
+            "tennis:2026w26"
+          ],
+          "meets_volume_floor": true,
+          "meets_duration_floor": true,
+          "meets_regime_floor": false,
+          "regime_clusters": {
+            "tennis:2026w26": 27,
+            "tennis:2026w27": 7
+          }
+        },
+        "power_flag": "INDETERMINATE"
+      },
+      "a_55_65": {
+        "n_picks_total": 3,
+        "n_picks_realizable": 3,
+        "realizable_coverage_pct": 100.0,
+        "power": {
+          "n_matches": 3,
+          "active_days": 3,
+          "n_regimes_over_subfloor": 0,
+          "regimes": [],
+          "meets_volume_floor": false,
+          "meets_duration_floor": false,
+          "meets_regime_floor": false,
+          "regime_clusters": {
+            "tennis:2026w26": 2,
+            "tennis:2026w27": 1
+          }
+        },
+        "power_flag": "INDETERMINATE"
+      },
+      "b_65_71": {
+        "n_picks_total": 7,
+        "n_picks_realizable": 7,
+        "realizable_coverage_pct": 100.0,
+        "power": {
+          "n_matches": 7,
+          "active_days": 4,
+          "n_regimes_over_subfloor": 0,
+          "regimes": [],
+          "meets_volume_floor": false,
+          "meets_duration_floor": false,
+          "meets_regime_floor": false,
+          "regime_clusters": {
+            "tennis:2026w26": 7
+          }
+        },
+        "power_flag": "INDETERMINATE"
+      },
+      "c_71_82": {
+        "n_picks_total": 7,
+        "n_picks_realizable": 7,
+        "realizable_coverage_pct": 100.0,
+        "power": {
+          "n_matches": 7,
+          "active_days": 5,
+          "n_regimes_over_subfloor": 0,
+          "regimes": [],
+          "meets_volume_floor": false,
+          "meets_duration_floor": false,
+          "meets_regime_floor": false,
+          "regime_clusters": {
+            "tennis:2026w26": 4,
+            "tennis:2026w27": 3
+          }
+        },
+        "power_flag": "INDETERMINATE"
+      },
+      "d_82_90": {
+        "n_picks_total": 7,
+        "n_picks_realizable": 7,
+        "realizable_coverage_pct": 100.0,
+        "power": {
+          "n_matches": 7,
+          "active_days": 5,
+          "n_regimes_over_subfloor": 0,
+          "regimes": [],
+          "meets_volume_floor": false,
+          "meets_duration_floor": false,
+          "meets_regime_floor": false,
+          "regime_clusters": {
+            "tennis:2026w26": 5,
+            "tennis:2026w27": 2
+          }
+        },
+        "power_flag": "INDETERMINATE"
+      },
+      "e_90_98": {
+        "n_picks_total": 10,
+        "n_picks_realizable": 10,
+        "realizable_coverage_pct": 100.0,
+        "power": {
+          "n_matches": 10,
+          "active_days": 6,
+          "n_regimes_over_subfloor": 1,
+          "regimes": [
+            "tennis:2026w26"
+          ],
+          "meets_volume_floor": false,
+          "meets_duration_floor": false,
+          "meets_regime_floor": false,
+          "regime_clusters": {
+            "tennis:2026w26": 9,
+            "tennis:2026w27": 1
+          }
+        },
+        "power_flag": "INDETERMINATE"
+      },
+      "champion_pool_71_98": {
+        "n_picks_total": 24,
+        "n_picks_realizable": 24,
+        "realizable_coverage_pct": 100.0,
+        "power": {
+          "n_matches": 24,
+          "active_days": 7,
+          "n_regimes_over_subfloor": 1,
+          "regimes": [
+            "tennis:2026w26"
+          ],
+          "meets_volume_floor": true,
+          "meets_duration_floor": true,
+          "meets_regime_floor": false,
+          "regime_clusters": {
+            "tennis:2026w26": 18,
+            "tennis:2026w27": 6
+          }
+        },
+        "power_flag": "INDETERMINATE"
+      }
+    },
+    "_CHAMPION_POOLED_71_98": {
+      "n_picks_total": 156,
+      "n_picks_realizable": 156,
+      "realizable_coverage_pct": 100.0,
+      "power": {
+        "n_matches": 57,
+        "active_days": 13,
+        "n_regimes_over_subfloor": 2,
+        "regimes": [
+          "soccer:2026w26",
+          "tennis:2026w26"
+        ],
+        "meets_volume_floor": true,
+        "meets_duration_floor": true,
+        "meets_regime_floor": true,
+        "regime_clusters": {
+          "soccer:2026w26": 15,
+          "tennis:2026w26": 18,
+          "basketball:2026w26": 3,
+          "esports:lol": 3,
+          "nonsport:dateless": 1,
+          "soccer:2026w27": 2,
+          "nonsport:2026w26": 3,
+          "tennis:2026w27": 6,
+          "baseball:2026w26": 2,
+          "baseball:2026w27": 1,
+          "nonsport:2026w27": 3
+        }
+      },
+      "power_flag": "POWERED"
+    }
+  },
+  "B_replay_cohorts_directional_and_tape": {
+    "top40": {
+      "_all_categories": {
+        "directional": {
+          "n_picks_total": 117,
+          "n_picks_realizable": 117,
+          "realizable_coverage_pct": 100.0,
+          "power": {
+            "n_matches": 54,
+            "active_days": 13,
+            "n_regimes_over_subfloor": 2,
+            "regimes": [
+              "soccer:2026w26",
+              "tennis:2026w26"
+            ],
+            "meets_volume_floor": true,
+            "meets_duration_floor": true,
+            "meets_regime_floor": true,
+            "regime_clusters": {
+              "tennis:2026w26": 8,
+              "soccer:2026w25": 7,
+              "soccer:2026w26": 16,
+              "soccer:2026w27": 3,
+              "esports:lol": 2,
+              "esports:dota2": 1,
+              "nonsport:2026w27": 2,
+              "baseball:2026w26": 3,
+              "baseball:2026w25": 2,
+              "nonsport:2026w26": 3,
+              "tennis:2026w27": 2,
+              "nonsport:dateless": 1,
+              "soccer:dateless": 1,
+              "tennis:2026w25": 3
+            }
+          },
+          "power_flag": "POWERED"
+        },
+        "tape_realizable": {
+          "n_picks_total": 117,
+          "n_picks_realizable": 21,
+          "realizable_coverage_pct": 17.9,
+          "power": {
+            "n_matches": 13,
+            "active_days": 4,
+            "n_regimes_over_subfloor": 0,
+            "regimes": [],
+            "meets_volume_floor": false,
+            "meets_duration_floor": false,
+            "meets_regime_floor": false,
+            "regime_clusters": {
+              "tennis:2026w26": 3,
+              "soccer:2026w27": 3,
+              "esports:dota2": 1,
+              "nonsport:2026w27": 2,
+              "baseball:2026w26": 1,
+              "tennis:2026w27": 2,
+              "esports:lol": 1
+            }
+          },
+          "power_flag": "INDETERMINATE"
+        }
+      },
+      "baseball": {
+        "directional": {
+          "n_picks_total": 5,
+          "n_picks_realizable": 5,
+          "realizable_coverage_pct": 100.0,
+          "power": {
+            "n_matches": 5,
+            "active_days": 4,
+            "n_regimes_over_subfloor": 0,
+            "regimes": [],
+            "meets_volume_floor": false,
+            "meets_duration_floor": false,
+            "meets_regime_floor": false,
+            "regime_clusters": {
+              "baseball:2026w26": 3,
+              "baseball:2026w25": 2
+            }
+          },
+          "power_flag": "INDETERMINATE"
+        },
+        "tape_realizable": {
+          "n_picks_total": 5,
+          "n_picks_realizable": 1,
+          "realizable_coverage_pct": 20.0,
+          "power": {
+            "n_matches": 1,
+            "active_days": 1,
+            "n_regimes_over_subfloor": 0,
+            "regimes": [],
+            "meets_volume_floor": false,
+            "meets_duration_floor": false,
+            "meets_regime_floor": false,
+            "regime_clusters": {
+              "baseball:2026w26": 1
+            }
+          },
+          "power_flag": "INDETERMINATE"
+        }
+      },
+      "nonsport": {
+        "directional": {
+          "n_picks_total": 6,
+          "n_picks_realizable": 6,
+          "realizable_coverage_pct": 100.0,
+          "power": {
+            "n_matches": 6,
+            "active_days": 5,
+            "n_regimes_over_subfloor": 0,
+            "regimes": [],
+            "meets_volume_floor": false,
+            "meets_duration_floor": false,
+            "meets_regime_floor": false,
+            "regime_clusters": {
+              "nonsport:2026w27": 2,
+              "nonsport:2026w26": 3,
+              "nonsport:dateless": 1
+            }
+          },
+          "power_flag": "INDETERMINATE"
+        },
+        "tape_realizable": {
+          "n_picks_total": 6,
+          "n_picks_realizable": 2,
+          "realizable_coverage_pct": 33.3,
+          "power": {
+            "n_matches": 2,
+            "active_days": 1,
+            "n_regimes_over_subfloor": 0,
+            "regimes": [],
+            "meets_volume_floor": false,
+            "meets_duration_floor": false,
+            "meets_regime_floor": false,
+            "regime_clusters": {
+              "nonsport:2026w27": 2
+            }
+          },
+          "power_flag": "INDETERMINATE"
+        }
+      },
+      "soccer": {
+        "directional": {
+          "n_picks_total": 89,
+          "n_picks_realizable": 89,
+          "realizable_coverage_pct": 100.0,
+          "power": {
+            "n_matches": 27,
+            "active_days": 11,
+            "n_regimes_over_subfloor": 1,
+            "regimes": [
+              "soccer:2026w26"
+            ],
+            "meets_volume_floor": true,
+            "meets_duration_floor": true,
+            "meets_regime_floor": false,
+            "regime_clusters": {
+              "soccer:2026w25": 7,
+              "soccer:2026w26": 16,
+              "soccer:2026w27": 3,
+              "soccer:dateless": 1
+            }
+          },
+          "power_flag": "INDETERMINATE"
+        },
+        "tape_realizable": {
+          "n_picks_total": 89,
+          "n_picks_realizable": 10,
+          "realizable_coverage_pct": 11.2,
+          "power": {
+            "n_matches": 3,
+            "active_days": 2,
+            "n_regimes_over_subfloor": 0,
+            "regimes": [],
+            "meets_volume_floor": false,
+            "meets_duration_floor": false,
+            "meets_regime_floor": false,
+            "regime_clusters": {
+              "soccer:2026w27": 3
+            }
+          },
+          "power_flag": "INDETERMINATE"
+        }
+      },
+      "tennis": {
+        "directional": {
+          "n_picks_total": 13,
+          "n_picks_realizable": 13,
+          "realizable_coverage_pct": 100.0,
+          "power": {
+            "n_matches": 13,
+            "active_days": 7,
+            "n_regimes_over_subfloor": 1,
+            "regimes": [
+              "tennis:2026w26"
+            ],
+            "meets_volume_floor": false,
+            "meets_duration_floor": true,
+            "meets_regime_floor": false,
+            "regime_clusters": {
+              "tennis:2026w26": 8,
+              "tennis:2026w27": 2,
+              "tennis:2026w25": 3
+            }
+          },
+          "power_flag": "INDETERMINATE"
+        },
+        "tape_realizable": {
+          "n_picks_total": 13,
+          "n_picks_realizable": 5,
+          "realizable_coverage_pct": 38.5,
+          "power": {
+            "n_matches": 5,
+            "active_days": 3,
+            "n_regimes_over_subfloor": 0,
+            "regimes": [],
+            "meets_volume_floor": false,
+            "meets_duration_floor": false,
+            "meets_regime_floor": false,
+            "regime_clusters": {
+              "tennis:2026w26": 3,
+              "tennis:2026w27": 2
+            }
+          },
+          "power_flag": "INDETERMINATE"
+        }
+      }
+    },
+    "r41_100": {
+      "_all_categories": {
+        "directional": {
+          "n_picks_total": 589,
+          "n_picks_realizable": 589,
+          "realizable_coverage_pct": 100.0,
+          "power": {
+            "n_matches": 229,
+            "active_days": 13,
+            "n_regimes_over_subfloor": 3,
+            "regimes": [
+              "nonsport:dateless",
+              "soccer:2026w26",
+              "soccer:dateless"
+            ],
+            "meets_volume_floor": true,
+            "meets_duration_floor": true,
+            "meets_regime_floor": true,
+            "regime_clusters": {
+              "soccer:2026w26": 17,
+              "nonsport:dateless": 175,
+              "soccer:2026w25": 5,
+              "nonsport:2026w27": 4,
+              "tennis:2026w26": 5,
+              "baseball:2026w26": 3,
+              "soccer:2026w27": 3,
+              "crypto:dateless": 2,
+              "soccer:dateless": 8,
+              "baseball:2026w27": 2,
+              "nonsport:2026w26": 3,
+              "esports:lol": 1,
+              "tennis:2026w25": 1
+            }
+          },
+          "power_flag": "POWERED"
+        },
+        "tape_realizable": {
+          "n_picks_total": 589,
+          "n_picks_realizable": 25,
+          "realizable_coverage_pct": 4.2,
+          "power": {
+            "n_matches": 12,
+            "active_days": 4,
+            "n_regimes_over_subfloor": 0,
+            "regimes": [],
+            "meets_volume_floor": false,
+            "meets_duration_floor": false,
+            "meets_regime_floor": false,
+            "regime_clusters": {
+              "nonsport:2026w27": 4,
+              "soccer:2026w27": 3,
+              "baseball:2026w27": 2,
+              "baseball:2026w26": 1,
+              "esports:lol": 1,
+              "nonsport:2026w26": 1
+            }
+          },
+          "power_flag": "INDETERMINATE"
+        }
+      },
+      "baseball": {
+        "directional": {
+          "n_picks_total": 6,
+          "n_picks_realizable": 6,
+          "realizable_coverage_pct": 100.0,
+          "power": {
+            "n_matches": 5,
+            "active_days": 4,
+            "n_regimes_over_subfloor": 0,
+            "regimes": [],
+            "meets_volume_floor": false,
+            "meets_duration_floor": false,
+            "meets_regime_floor": false,
+            "regime_clusters": {
+              "baseball:2026w26": 3,
+              "baseball:2026w27": 2
+            }
+          },
+          "power_flag": "INDETERMINATE"
+        },
+        "tape_realizable": {
+          "n_picks_total": 6,
+          "n_picks_realizable": 3,
+          "realizable_coverage_pct": 50.0,
+          "power": {
+            "n_matches": 3,
+            "active_days": 3,
+            "n_regimes_over_subfloor": 0,
+            "regimes": [],
+            "meets_volume_floor": false,
+            "meets_duration_floor": false,
+            "meets_regime_floor": false,
+            "regime_clusters": {
+              "baseball:2026w27": 2,
+              "baseball:2026w26": 1
+            }
+          },
+          "power_flag": "INDETERMINATE"
+        }
+      },
+      "nonsport": {
+        "directional": {
+          "n_picks_total": 424,
+          "n_picks_realizable": 424,
+          "realizable_coverage_pct": 100.0,
+          "power": {
+            "n_matches": 182,
+            "active_days": 9,
+            "n_regimes_over_subfloor": 1,
+            "regimes": [
+              "nonsport:dateless"
+            ],
+            "meets_volume_floor": true,
+            "meets_duration_floor": true,
+            "meets_regime_floor": false,
+            "regime_clusters": {
+              "nonsport:dateless": 175,
+              "nonsport:2026w27": 4,
+              "nonsport:2026w26": 3
+            }
+          },
+          "power_flag": "INDETERMINATE"
+        },
+        "tape_realizable": {
+          "n_picks_total": 424,
+          "n_picks_realizable": 7,
+          "realizable_coverage_pct": 1.7,
+          "power": {
+            "n_matches": 5,
+            "active_days": 2,
+            "n_regimes_over_subfloor": 0,
+            "regimes": [],
+            "meets_volume_floor": false,
+            "meets_duration_floor": false,
+            "meets_regime_floor": false,
+            "regime_clusters": {
+              "nonsport:2026w27": 4,
+              "nonsport:2026w26": 1
+            }
+          },
+          "power_flag": "INDETERMINATE"
+        }
+      },
+      "soccer": {
+        "directional": {
+          "n_picks_total": 149,
+          "n_picks_realizable": 149,
+          "realizable_coverage_pct": 100.0,
+          "power": {
+            "n_matches": 33,
+            "active_days": 12,
+            "n_regimes_over_subfloor": 2,
+            "regimes": [
+              "soccer:2026w26",
+              "soccer:dateless"
+            ],
+            "meets_volume_floor": true,
+            "meets_duration_floor": true,
+            "meets_regime_floor": true,
+            "regime_clusters": {
+              "soccer:2026w26": 17,
+              "soccer:2026w25": 5,
+              "soccer:2026w27": 3,
+              "soccer:dateless": 8
+            }
+          },
+          "power_flag": "POWERED"
+        },
+        "tape_realizable": {
+          "n_picks_total": 149,
+          "n_picks_realizable": 14,
+          "realizable_coverage_pct": 9.4,
+          "power": {
+            "n_matches": 3,
+            "active_days": 3,
+            "n_regimes_over_subfloor": 0,
+            "regimes": [],
+            "meets_volume_floor": false,
+            "meets_duration_floor": false,
+            "meets_regime_floor": false,
+            "regime_clusters": {
+              "soccer:2026w27": 3
+            }
+          },
+          "power_flag": "INDETERMINATE"
+        }
+      },
+      "tennis": {
+        "directional": {
+          "n_picks_total": 6,
+          "n_picks_realizable": 6,
+          "realizable_coverage_pct": 100.0,
+          "power": {
+            "n_matches": 6,
+            "active_days": 5,
+            "n_regimes_over_subfloor": 0,
+            "regimes": [],
+            "meets_volume_floor": false,
+            "meets_duration_floor": false,
+            "meets_regime_floor": false,
+            "regime_clusters": {
+              "tennis:2026w26": 5,
+              "tennis:2026w25": 1
+            }
+          },
+          "power_flag": "INDETERMINATE"
+        },
+        "tape_realizable": {
+          "n_picks_total": 6,
+          "n_picks_realizable": 0,
+          "realizable_coverage_pct": 0.0,
+          "power": {
+            "n_matches": 0,
+            "active_days": 0,
+            "n_regimes_over_subfloor": 0,
+            "regimes": [],
+            "meets_volume_floor": false,
+            "meets_duration_floor": false,
+            "meets_regime_floor": false,
+            "regime_clusters": {}
+          },
+          "power_flag": "INDETERMINATE"
+        }
+      }
+    },
+    "r101_250": {
+      "_all_categories": {
+        "directional": {
+          "n_picks_total": 544,
+          "n_picks_realizable": 544,
+          "realizable_coverage_pct": 100.0,
+          "power": {
+            "n_matches": 205,
+            "active_days": 13,
+            "n_regimes_over_subfloor": 11,
+            "regimes": [
+              "baseball:2026w26",
+              "basketball:2026w26",
+              "esports:cs2",
+              "esports:dota2",
+              "esports:lol",
+              "nonsport:2026w26",
+              "nonsport:2026w27",
+              "soccer:2026w25",
+              "soccer:2026w26",
+              "tennis:2026w26",
+              "tennis:2026w27"
+            ],
+            "meets_volume_floor": true,
+            "meets_duration_floor": true,
+            "meets_regime_floor": true,
+            "regime_clusters": {
+              "soccer:2026w26": 20,
+              "tennis:2026w26": 46,
+              "soccer:2026w25": 9,
+              "soccer:2026w27": 4,
+              "esports:lol": 10,
+              "tennis:2026w27": 14,
+              "esports:dota2": 12,
+              "nonsport:2026w26": 18,
+              "nonsport:2026w27": 19,
+              "baseball:2026w26": 16,
+              "basketball:2026w26": 9,
+              "soccer:dateless": 3,
+              "basketball:2026w27": 3,
+              "esports:cs2": 9,
+              "baseball:2026w25": 2,
+              "crypto:dateless": 1,
+              "tennis:2026w25": 4,
+              "esports:val": 5,
+              "nonsport:dateless": 1
+            }
+          },
+          "power_flag": "POWERED"
+        },
+        "tape_realizable": {
+          "n_picks_total": 544,
+          "n_picks_realizable": 134,
+          "realizable_coverage_pct": 24.6,
+          "power": {
+            "n_matches": 70,
+            "active_days": 5,
+            "n_regimes_over_subfloor": 3,
+            "regimes": [
+              "esports:dota2",
+              "nonsport:2026w27",
+              "tennis:2026w27"
+            ],
+            "meets_volume_floor": true,
+            "meets_duration_floor": false,
+            "meets_regime_floor": true,
+            "regime_clusters": {
+              "tennis:2026w26": 6,
+              "soccer:2026w27": 4,
+              "tennis:2026w27": 14,
+              "nonsport:2026w27": 19,
+              "esports:lol": 2,
+              "nonsport:2026w26": 5,
+              "esports:dota2": 9,
+              "basketball:2026w26": 1,
+              "basketball:2026w27": 3,
+              "soccer:2026w26": 1,
+              "esports:cs2": 3,
+              "esports:val": 1,
+              "baseball:2026w26": 2
+            }
+          },
+          "power_flag": "INDETERMINATE"
+        }
+      },
+      "baseball": {
+        "directional": {
+          "n_picks_total": 20,
+          "n_picks_realizable": 20,
+          "realizable_coverage_pct": 100.0,
+          "power": {
+            "n_matches": 18,
+            "active_days": 8,
+            "n_regimes_over_subfloor": 1,
+            "regimes": [
+              "baseball:2026w26"
+            ],
+            "meets_volume_floor": false,
+            "meets_duration_floor": true,
+            "meets_regime_floor": false,
+            "regime_clusters": {
+              "baseball:2026w26": 16,
+              "baseball:2026w25": 2
+            }
+          },
+          "power_flag": "INDETERMINATE"
+        },
+        "tape_realizable": {
+          "n_picks_total": 20,
+          "n_picks_realizable": 2,
+          "realizable_coverage_pct": 10.0,
+          "power": {
+            "n_matches": 2,
+            "active_days": 2,
+            "n_regimes_over_subfloor": 0,
+            "regimes": [],
+            "meets_volume_floor": false,
+            "meets_duration_floor": false,
+            "meets_regime_floor": false,
+            "regime_clusters": {
+              "baseball:2026w26": 2
+            }
+          },
+          "power_flag": "INDETERMINATE"
+        }
+      },
+      "basketball": {
+        "directional": {
+          "n_picks_total": 13,
+          "n_picks_realizable": 13,
+          "realizable_coverage_pct": 100.0,
+          "power": {
+            "n_matches": 12,
+            "active_days": 6,
+            "n_regimes_over_subfloor": 1,
+            "regimes": [
+              "basketball:2026w26"
+            ],
+            "meets_volume_floor": false,
+            "meets_duration_floor": false,
+            "meets_regime_floor": false,
+            "regime_clusters": {
+              "basketball:2026w26": 9,
+              "basketball:2026w27": 3
+            }
+          },
+          "power_flag": "INDETERMINATE"
+        },
+        "tape_realizable": {
+          "n_picks_total": 13,
+          "n_picks_realizable": 4,
+          "realizable_coverage_pct": 30.8,
+          "power": {
+            "n_matches": 4,
+            "active_days": 2,
+            "n_regimes_over_subfloor": 0,
+            "regimes": [],
+            "meets_volume_floor": false,
+            "meets_duration_floor": false,
+            "meets_regime_floor": false,
+            "regime_clusters": {
+              "basketball:2026w26": 1,
+              "basketball:2026w27": 3
+            }
+          },
+          "power_flag": "INDETERMINATE"
+        }
+      },
+      "esports": {
+        "directional": {
+          "n_picks_total": 56,
+          "n_picks_realizable": 56,
+          "realizable_coverage_pct": 100.0,
+          "power": {
+            "n_matches": 36,
+            "active_days": 11,
+            "n_regimes_over_subfloor": 3,
+            "regimes": [
+              "esports:cs2",
+              "esports:dota2",
+              "esports:lol"
+            ],
+            "meets_volume_floor": true,
+            "meets_duration_floor": true,
+            "meets_regime_floor": true,
+            "regime_clusters": {
+              "esports:lol": 10,
+              "esports:dota2": 12,
+              "esports:cs2": 9,
+              "esports:val": 5
+            }
+          },
+          "power_flag": "POWERED"
+        },
+        "tape_realizable": {
+          "n_picks_total": 56,
+          "n_picks_realizable": 16,
+          "realizable_coverage_pct": 28.6,
+          "power": {
+            "n_matches": 15,
+            "active_days": 4,
+            "n_regimes_over_subfloor": 1,
+            "regimes": [
+              "esports:dota2"
+            ],
+            "meets_volume_floor": false,
+            "meets_duration_floor": false,
+            "meets_regime_floor": false,
+            "regime_clusters": {
+              "esports:lol": 2,
+              "esports:dota2": 9,
+              "esports:cs2": 3,
+              "esports:val": 1
+            }
+          },
+          "power_flag": "INDETERMINATE"
+        }
+      },
+      "nonsport": {
+        "directional": {
+          "n_picks_total": 57,
+          "n_picks_realizable": 57,
+          "realizable_coverage_pct": 100.0,
+          "power": {
+            "n_matches": 38,
+            "active_days": 7,
+            "n_regimes_over_subfloor": 2,
+            "regimes": [
+              "nonsport:2026w26",
+              "nonsport:2026w27"
+            ],
+            "meets_volume_floor": true,
+            "meets_duration_floor": true,
+            "meets_regime_floor": true,
+            "regime_clusters": {
+              "nonsport:2026w26": 18,
+              "nonsport:2026w27": 19,
+              "nonsport:dateless": 1
+            }
+          },
+          "power_flag": "POWERED"
+        },
+        "tape_realizable": {
+          "n_picks_total": 57,
+          "n_picks_realizable": 40,
+          "realizable_coverage_pct": 70.2,
+          "power": {
+            "n_matches": 24,
+            "active_days": 3,
+            "n_regimes_over_subfloor": 1,
+            "regimes": [
+              "nonsport:2026w27"
+            ],
+            "meets_volume_floor": true,
+            "meets_duration_floor": false,
+            "meets_regime_floor": false,
+            "regime_clusters": {
+              "nonsport:2026w27": 19,
+              "nonsport:2026w26": 5
+            }
+          },
+          "power_flag": "INDETERMINATE"
+        }
+      },
+      "soccer": {
+        "directional": {
+          "n_picks_total": 333,
+          "n_picks_realizable": 333,
+          "realizable_coverage_pct": 100.0,
+          "power": {
+            "n_matches": 36,
+            "active_days": 12,
+            "n_regimes_over_subfloor": 2,
+            "regimes": [
+              "soccer:2026w25",
+              "soccer:2026w26"
+            ],
+            "meets_volume_floor": true,
+            "meets_duration_floor": true,
+            "meets_regime_floor": true,
+            "regime_clusters": {
+              "soccer:2026w26": 20,
+              "soccer:2026w25": 9,
+              "soccer:2026w27": 4,
+              "soccer:dateless": 3
+            }
+          },
+          "power_flag": "POWERED"
+        },
+        "tape_realizable": {
+          "n_picks_total": 333,
+          "n_picks_realizable": 52,
+          "realizable_coverage_pct": 15.6,
+          "power": {
+            "n_matches": 5,
+            "active_days": 4,
+            "n_regimes_over_subfloor": 0,
+            "regimes": [],
+            "meets_volume_floor": false,
+            "meets_duration_floor": false,
+            "meets_regime_floor": false,
+            "regime_clusters": {
+              "soccer:2026w27": 4,
+              "soccer:2026w26": 1
+            }
+          },
+          "power_flag": "INDETERMINATE"
+        }
+      },
+      "tennis": {
+        "directional": {
+          "n_picks_total": 64,
+          "n_picks_realizable": 64,
+          "realizable_coverage_pct": 100.0,
+          "power": {
+            "n_matches": 64,
+            "active_days": 12,
+            "n_regimes_over_subfloor": 2,
+            "regimes": [
+              "tennis:2026w26",
+              "tennis:2026w27"
+            ],
+            "meets_volume_floor": true,
+            "meets_duration_floor": true,
+            "meets_regime_floor": true,
+            "regime_clusters": {
+              "tennis:2026w26": 46,
+              "tennis:2026w27": 14,
+              "tennis:2026w25": 4
+            }
+          },
+          "power_flag": "POWERED"
+        },
+        "tape_realizable": {
+          "n_picks_total": 64,
+          "n_picks_realizable": 20,
+          "realizable_coverage_pct": 31.2,
+          "power": {
+            "n_matches": 20,
+            "active_days": 4,
+            "n_regimes_over_subfloor": 1,
+            "regimes": [
+              "tennis:2026w27"
+            ],
+            "meets_volume_floor": true,
+            "meets_duration_floor": false,
+            "meets_regime_floor": false,
+            "regime_clusters": {
+              "tennis:2026w26": 6,
+              "tennis:2026w27": 14
+            }
+          },
+          "power_flag": "INDETERMINATE"
+        }
+      }
+    },
+    "wide_1_250": {
+      "_all_categories": {
+        "directional": {
+          "n_picks_total": 1741,
+          "n_picks_realizable": 1741,
+          "realizable_coverage_pct": 100.0,
+          "power": {
+            "n_matches": 680,
+            "active_days": 13,
+            "n_regimes_over_subfloor": 15,
+            "regimes": [
+              "baseball:2026w25",
+              "baseball:2026w26",
+              "basketball:2026w26",
+              "esports:cs2",
+              "esports:dota2",
+              "esports:lol",
+              "nonsport:2026w26",
+              "nonsport:2026w27",
+              "nonsport:dateless",
+              "soccer:2026w25",
+              "soccer:2026w26",
+              "soccer:dateless",
+              "tennis:2026w25",
+              "tennis:2026w26",
+              "tennis:2026w27"
+            ],
+            "meets_volume_floor": true,
+            "meets_duration_floor": true,
+            "meets_regime_floor": true,
+            "regime_clusters": {
+              "soccer:2026w26": 35,
+              "tennis:2026w26": 140,
+              "nonsport:dateless": 235,
+              "soccer:2026w25": 9,
+              "nonsport:2026w26": 29,
+              "nonsport:2026w27": 30,
+              "soccer:2026w27": 7,
+              "tennis:2026w27": 41,
+              "baseball:2026w26": 23,
+              "esports:lol": 12,
+              "esports:dota2": 19,
+              "soccer:dateless": 17,
+              "baseball:2026w25": 9,
+              "crypto:dateless": 7,
+              "tennis:2026w25": 27,
+              "esports:val": 7,
+              "basketball:2026w26": 13,
+              "basketball:2026w27": 4,
+              "baseball:2026w27": 5,
+              "esports:cs2": 8,
+              "baseball:2026w17": 1,
+              "basketball:2026w25": 1,
+              "nonsport:2026w25": 1
+            }
+          },
+          "power_flag": "POWERED"
+        },
+        "tape_realizable": {
+          "n_picks_total": 1741,
+          "n_picks_realizable": 251,
+          "realizable_coverage_pct": 14.4,
+          "power": {
+            "n_matches": 135,
+            "active_days": 6,
+            "n_regimes_over_subfloor": 4,
+            "regimes": [
+              "esports:dota2",
+              "nonsport:2026w27",
+              "tennis:2026w26",
+              "tennis:2026w27"
+            ],
+            "meets_volume_floor": true,
+            "meets_duration_floor": false,
+            "meets_regime_floor": true,
+            "regime_clusters": {
+              "tennis:2026w26": 18,
+              "nonsport:2026w27": 30,
+              "soccer:2026w27": 7,
+              "tennis:2026w27": 39,
+              "nonsport:2026w26": 6,
+              "esports:dota2": 14,
+              "baseball:2026w26": 4,
+              "basketball:2026w26": 1,
+              "basketball:2026w27": 4,
+              "baseball:2026w27": 5,
+              "soccer:2026w26": 1,
+              "baseball:2026w17": 1,
+              "esports:lol": 2,
+              "esports:val": 2,
+              "esports:cs2": 1
+            }
+          },
+          "power_flag": "INDETERMINATE"
+        }
+      },
+      "baseball": {
+        "directional": {
+          "n_picks_total": 43,
+          "n_picks_realizable": 43,
+          "realizable_coverage_pct": 100.0,
+          "power": {
+            "n_matches": 38,
+            "active_days": 13,
+            "n_regimes_over_subfloor": 2,
+            "regimes": [
+              "baseball:2026w25",
+              "baseball:2026w26"
+            ],
+            "meets_volume_floor": true,
+            "meets_duration_floor": true,
+            "meets_regime_floor": true,
+            "regime_clusters": {
+              "baseball:2026w26": 23,
+              "baseball:2026w25": 9,
+              "baseball:2026w27": 5,
+              "baseball:2026w17": 1
+            }
+          },
+          "power_flag": "POWERED"
+        },
+        "tape_realizable": {
+          "n_picks_total": 43,
+          "n_picks_realizable": 12,
+          "realizable_coverage_pct": 27.9,
+          "power": {
+            "n_matches": 10,
+            "active_days": 4,
+            "n_regimes_over_subfloor": 0,
+            "regimes": [],
+            "meets_volume_floor": false,
+            "meets_duration_floor": false,
+            "meets_regime_floor": false,
+            "regime_clusters": {
+              "baseball:2026w26": 4,
+              "baseball:2026w27": 5,
+              "baseball:2026w17": 1
+            }
+          },
+          "power_flag": "INDETERMINATE"
+        }
+      },
+      "basketball": {
+        "directional": {
+          "n_picks_total": 19,
+          "n_picks_realizable": 19,
+          "realizable_coverage_pct": 100.0,
+          "power": {
+            "n_matches": 18,
+            "active_days": 7,
+            "n_regimes_over_subfloor": 1,
+            "regimes": [
+              "basketball:2026w26"
+            ],
+            "meets_volume_floor": false,
+            "meets_duration_floor": true,
+            "meets_regime_floor": false,
+            "regime_clusters": {
+              "basketball:2026w26": 13,
+              "basketball:2026w27": 4,
+              "basketball:2026w25": 1
+            }
+          },
+          "power_flag": "INDETERMINATE"
+        },
+        "tape_realizable": {
+          "n_picks_total": 19,
+          "n_picks_realizable": 5,
+          "realizable_coverage_pct": 26.3,
+          "power": {
+            "n_matches": 5,
+            "active_days": 2,
+            "n_regimes_over_subfloor": 0,
+            "regimes": [],
+            "meets_volume_floor": false,
+            "meets_duration_floor": false,
+            "meets_regime_floor": false,
+            "regime_clusters": {
+              "basketball:2026w26": 1,
+              "basketball:2026w27": 4
+            }
+          },
+          "power_flag": "INDETERMINATE"
+        }
+      },
+      "crypto": {
+        "directional": {
+          "n_picks_total": 10,
+          "n_picks_realizable": 10,
+          "realizable_coverage_pct": 100.0,
+          "power": {
+            "n_matches": 7,
+            "active_days": 3,
+            "n_regimes_over_subfloor": 0,
+            "regimes": [],
+            "meets_volume_floor": false,
+            "meets_duration_floor": false,
+            "meets_regime_floor": false,
+            "regime_clusters": {
+              "crypto:dateless": 7
+            }
+          },
+          "power_flag": "INDETERMINATE"
+        },
+        "tape_realizable": {
+          "n_picks_total": 10,
+          "n_picks_realizable": 0,
+          "realizable_coverage_pct": 0.0,
+          "power": {
+            "n_matches": 0,
+            "active_days": 0,
+            "n_regimes_over_subfloor": 0,
+            "regimes": [],
+            "meets_volume_floor": false,
+            "meets_duration_floor": false,
+            "meets_regime_floor": false,
+            "regime_clusters": {}
+          },
+          "power_flag": "INDETERMINATE"
+        }
+      },
+      "esports": {
+        "directional": {
+          "n_picks_total": 73,
+          "n_picks_realizable": 73,
+          "realizable_coverage_pct": 100.0,
+          "power": {
+            "n_matches": 46,
+            "active_days": 11,
+            "n_regimes_over_subfloor": 3,
+            "regimes": [
+              "esports:cs2",
+              "esports:dota2",
+              "esports:lol"
+            ],
+            "meets_volume_floor": true,
+            "meets_duration_floor": true,
+            "meets_regime_floor": true,
+            "regime_clusters": {
+              "esports:lol": 12,
+              "esports:dota2": 19,
+              "esports:val": 7,
+              "esports:cs2": 8
+            }
+          },
+          "power_flag": "POWERED"
+        },
+        "tape_realizable": {
+          "n_picks_total": 73,
+          "n_picks_realizable": 26,
+          "realizable_coverage_pct": 35.6,
+          "power": {
+            "n_matches": 19,
+            "active_days": 4,
+            "n_regimes_over_subfloor": 1,
+            "regimes": [
+              "esports:dota2"
+            ],
+            "meets_volume_floor": false,
+            "meets_duration_floor": false,
+            "meets_regime_floor": false,
+            "regime_clusters": {
+              "esports:dota2": 14,
+              "esports:lol": 2,
+              "esports:val": 2,
+              "esports:cs2": 1
+            }
+          },
+          "power_flag": "INDETERMINATE"
+        }
+      },
+      "nonsport": {
+        "directional": {
+          "n_picks_total": 746,
+          "n_picks_realizable": 746,
+          "realizable_coverage_pct": 100.0,
+          "power": {
+            "n_matches": 295,
+            "active_days": 11,
+            "n_regimes_over_subfloor": 3,
+            "regimes": [
+              "nonsport:2026w26",
+              "nonsport:2026w27",
+              "nonsport:dateless"
+            ],
+            "meets_volume_floor": true,
+            "meets_duration_floor": true,
+            "meets_regime_floor": true,
+            "regime_clusters": {
+              "nonsport:dateless": 235,
+              "nonsport:2026w26": 29,
+              "nonsport:2026w27": 30,
+              "nonsport:2026w25": 1
+            }
+          },
+          "power_flag": "POWERED"
+        },
+        "tape_realizable": {
+          "n_picks_total": 746,
+          "n_picks_realizable": 79,
+          "realizable_coverage_pct": 10.6,
+          "power": {
+            "n_matches": 36,
+            "active_days": 5,
+            "n_regimes_over_subfloor": 1,
+            "regimes": [
+              "nonsport:2026w27"
+            ],
+            "meets_volume_floor": true,
+            "meets_duration_floor": false,
+            "meets_regime_floor": false,
+            "regime_clusters": {
+              "nonsport:2026w27": 30,
+              "nonsport:2026w26": 6
+            }
+          },
+          "power_flag": "INDETERMINATE"
+        }
+      },
+      "soccer": {
+        "directional": {
+          "n_picks_total": 640,
+          "n_picks_realizable": 640,
+          "realizable_coverage_pct": 100.0,
+          "power": {
+            "n_matches": 68,
+            "active_days": 13,
+            "n_regimes_over_subfloor": 3,
+            "regimes": [
+              "soccer:2026w25",
+              "soccer:2026w26",
+              "soccer:dateless"
+            ],
+            "meets_volume_floor": true,
+            "meets_duration_floor": true,
+            "meets_regime_floor": true,
+            "regime_clusters": {
+              "soccer:2026w26": 35,
+              "soccer:2026w25": 9,
+              "soccer:2026w27": 7,
+              "soccer:dateless": 17
+            }
+          },
+          "power_flag": "POWERED"
+        },
+        "tape_realizable": {
+          "n_picks_total": 640,
+          "n_picks_realizable": 71,
+          "realizable_coverage_pct": 11.1,
+          "power": {
+            "n_matches": 8,
+            "active_days": 6,
+            "n_regimes_over_subfloor": 0,
+            "regimes": [],
+            "meets_volume_floor": false,
+            "meets_duration_floor": false,
+            "meets_regime_floor": false,
+            "regime_clusters": {
+              "soccer:2026w27": 7,
+              "soccer:2026w26": 1
+            }
+          },
+          "power_flag": "INDETERMINATE"
+        }
+      },
+      "tennis": {
+        "directional": {
+          "n_picks_total": 210,
+          "n_picks_realizable": 210,
+          "realizable_coverage_pct": 100.0,
+          "power": {
+            "n_matches": 208,
+            "active_days": 13,
+            "n_regimes_over_subfloor": 3,
+            "regimes": [
+              "tennis:2026w25",
+              "tennis:2026w26",
+              "tennis:2026w27"
+            ],
+            "meets_volume_floor": true,
+            "meets_duration_floor": true,
+            "meets_regime_floor": true,
+            "regime_clusters": {
+              "tennis:2026w26": 140,
+              "tennis:2026w27": 41,
+              "tennis:2026w25": 27
+            }
+          },
+          "power_flag": "POWERED"
+        },
+        "tape_realizable": {
+          "n_picks_total": 210,
+          "n_picks_realizable": 58,
+          "realizable_coverage_pct": 27.6,
+          "power": {
+            "n_matches": 57,
+            "active_days": 5,
+            "n_regimes_over_subfloor": 2,
+            "regimes": [
+              "tennis:2026w26",
+              "tennis:2026w27"
+            ],
+            "meets_volume_floor": true,
+            "meets_duration_floor": false,
+            "meets_regime_floor": true,
+            "regime_clusters": {
+              "tennis:2026w26": 18,
+              "tennis:2026w27": 39
+            }
+          },
+          "power_flag": "INDETERMINATE"
+        }
+      }
+    }
+  },
+  "coverage_overview": {
+    "live_favorite_realizable_picks": 200,
+    "live_favorite_realizable_matches": 75,
+    "champion_pooled_71_98": {
+      "n_picks_total": 156,
+      "n_picks_realizable": 156,
+      "realizable_coverage_pct": 100.0,
+      "power": {
+        "n_matches": 57,
+        "active_days": 13,
+        "n_regimes_over_subfloor": 2,
+        "regimes": [
+          "soccer:2026w26",
+          "tennis:2026w26"
+        ],
+        "meets_volume_floor": true,
+        "meets_duration_floor": true,
+        "meets_regime_floor": true,
+        "regime_clusters": {
+          "soccer:2026w26": 15,
+          "tennis:2026w26": 18,
+          "basketball:2026w26": 3,
+          "esports:lol": 3,
+          "nonsport:dateless": 1,
+          "soccer:2026w27": 2,
+          "nonsport:2026w26": 3,
+          "tennis:2026w27": 6,
+          "baseball:2026w26": 2,
+          "baseball:2026w27": 1,
+          "nonsport:2026w27": 3
+        }
+      },
+      "power_flag": "POWERED"
+    },
+    "replay_top40_picks": 214,
+    "replay_wide_1_250_picks": 2959,
+    "tape_window_days": 3,
+    "powered_live_cells": []
+  }
+}
