@@ -27,3 +27,41 @@ soccer/tennis (baseball, basketball, esports, nonsport) is ≤7 realizable match
 tells the shape: **the answerable realizable question is confined to soccer + tennis; the cohort and
 other-category axes are answerable only directionally (non-copyable ceiling), not at realizable cost.**
 Phase 2 measures the edges; phase 3 runs the anti-overfit battery + champion head-to-head.
+
+---
+
+## Phase 2 — edge measurement (`reports/CELL-EDGE-MAP.json`)
+
+**The capture-bias correction is the load-bearing methodological result.** Measured on the copyable
+`entry_ask` alone, EVERY cell — the champion included — has a negative realizable LB (champion
+−0.019). But that is the capture bias, not the truth: `entry_ask` is present only on the slow,
+loser-tilted subsample. Confirming the brief §2 condition per cell, the **capture-haircut
+(ask − at-fire mid on the SAME picks) is ≈0 everywhere** (champion +0.13¢, soccer +0.31¢, tennis
+−1.05¢, 0.71–0.82 band −0.47¢) — so `entry_ask ≈ at-fire mid`, and the entire atfire-vs-ask-bracket
+gap is **sample composition**, not the ask/mid spread. That vindicates the **at-fire mid on the FULL
+population** as the unbiased realizable basis (also the handoff's headline basis and a fast-copier
+proxy). `entry_ask` is reported as the conservative, capture-biased bracket only.
+
+**On the vindicated at-fire basis (cluster-robust ROI-turn LB, match super-key):**
+
+| cell | LB | boot LB | skill/blind | G | verdict |
+|---|---|---|---|---|---|
+| **CHAMPION favorite 0.71–0.98** | **+0.056** | +0.053 | +0.050 | 130 | positive, powered (5 regimes) |
+| live_favorite **tennis** 0.71–0.98 | +0.075 | +0.076 | **+0.092** | 69 | beats champ; 3 wks all Wimbledon |
+| live_favorite pooled **0.71–0.82** | +0.086 | +0.083 | +0.094 | 79 | beats champ; sub-band of champ |
+| live_favorite **soccer** 0.71–0.98 | +0.027 | +0.025 | +0.033 | 29 | positive but WEAKEST half |
+| pooled 0.82–0.90 / 0.90–0.98 | +0.008 / +0.030 | — | +0.021 / +0.035 | 61 / 41 | positive, deeper = thinner edge |
+| baseball / basketball / esports / nonsport | +0.16 / +0.08 / −0.12 / −0.09 | — | — | 10 / 2 / 8 / 12 | all under-powered → INDETERMINATE |
+
+**Replay cohorts (DIRECTIONAL, at the sharps' own fill = NON-copyable ceiling):** wider cohorts show
+*more* directional edge — top40 +0.052, r41–100 +0.076, r101–250 +0.104, wide 1–250 +0.107 (G=680) —
+but this is the sharps' price, not ours; the copyable (72h-tape) coverage is 4–25% over 3 days, so
+none is realizably certifiable. A directionally-fatter wider cohort that we cannot copy certifies to ~0.
+
+**Read:** the champion's edge is REAL and positive on the unbiased basis (+5.6% LB, +5.0% skill over
+the blind favorite). The two cells that "beat" it — **tennis** and the **0.71–0.82 band** — are
+SUBSETS of the champion pool (its strongest regime and its softest band), NOT new venues or
+low-correlated complements; soccer (the bulk of picks) is the champion's WEAKEST component. No other
+CATEGORY is powered; no wider COHORT is copyable. Phase 3 runs the anti-overfit battery (LODO,
+time-split, Bonferroni, selection_null) + the champion head-to-head + correlation to decide whether
+tennis/the-band is a durable, promotable refinement or the same summer-Wimbledon softness re-labeled.

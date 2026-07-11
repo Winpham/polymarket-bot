@@ -1,0 +1,836 @@
+{
+  "as_of": "2026-07-11",
+  "run": "generalize-band-strategy phase 2 (edge measurement)",
+  "objective": "cluster-robust one-sided 95% LB of realizable copyable ROI-turn @ match super-key",
+  "entry_basis": "PRIMARY = at-fire mid COALESCE(initial_mean_price,mean_price): unbiased FULL population (the handoff's headline basis + a fast-copier proxy). BRACKET = entry_ask: copyable executable ask but CAPTURE-BIASED (only slow/loser-tilted picks get one) \u2192 pessimistic, never truth (brief \u00a72). REPLAY primary = the sharps' own fill (non-copyable ceiling); its bracket = 72h clob tape ask.",
+  "diagnostics_note": "win_rate/total-P&L/capacity are DIAGNOSTIC ONLY. skill_over_blind = consensus edge beyond the blind favorite at the same cell on the CLEAN at-fire basis; \u22640 \u21d2 riding softness (won't transfer).",
+  "live_cells": [
+    {
+      "label": "CHAMPION_favorite_0.71-0.98",
+      "primary_atfire": {
+        "n_picks": 381,
+        "roi_turn_point": 0.0883,
+        "roi_turn_LB": 0.0562,
+        "bootstrap_LB": 0.0531,
+        "G_clusters": 130,
+        "N_events": 380,
+        "win_rate_diag": 0.932
+      },
+      "realizable_bracket_ask": {
+        "n_picks": 160,
+        "roi_turn_point": 0.0473,
+        "roi_turn_LB": -0.019,
+        "bootstrap_LB": -0.0162,
+        "G_clusters": 58,
+        "N_events": 160,
+        "win_rate_diag": 0.887
+      },
+      "capture_haircut_ask_minus_atfire": 0.0013,
+      "mean_edge_atfire_diag": 0.0742,
+      "blind_baseline_diag": 0.0239,
+      "skill_over_blind_diag": 0.0503,
+      "active_days": 13,
+      "n_match_clusters": 130,
+      "regimes_over_subfloor": [
+        "soccer:2026w25",
+        "soccer:2026w26",
+        "tennis:2026w25",
+        "tennis:2026w26",
+        "tennis:2026w27"
+      ],
+      "regime_clusters": {
+        "soccer:2026w25": 10,
+        "tennis:2026w25": 35,
+        "esports:lol": 7,
+        "baseball:2026w25": 7,
+        "soccer:2026w26": 16,
+        "tennis:2026w26": 25,
+        "esports:cod": 1,
+        "nonsport:dateless": 2,
+        "basketball:2026w26": 2,
+        "soccer:2026w27": 3,
+        "tennis:2026w27": 9,
+        "baseball:2026w26": 2,
+        "nonsport:2026w27": 7,
+        "nonsport:2026w26": 3,
+        "baseball:2026w27": 1
+      },
+      "meets_volume_floor": true,
+      "meets_duration_floor": true,
+      "meets_regime_floor": true,
+      "roi_turn_LB": 0.0562,
+      "bootstrap_LB": 0.0531,
+      "G_clusters": 130,
+      "capacity_diag": {
+        "median_trade_shares": 2243.0,
+        "conds_with_tape": 45
+      },
+      "verdict": "CANDIDATE_POSITIVE_LB"
+    },
+    {
+      "label": "live_favorite:soccer:0.71-0.98",
+      "primary_atfire": {
+        "n_picks": 273,
+        "roi_turn_point": 0.0677,
+        "roi_turn_LB": 0.0271,
+        "bootstrap_LB": 0.0246,
+        "G_clusters": 29,
+        "N_events": 272,
+        "win_rate_diag": 0.93
+      },
+      "realizable_bracket_ask": {
+        "n_picks": 118,
+        "roi_turn_point": 0.0432,
+        "roi_turn_LB": -0.0391,
+        "bootstrap_LB": -0.033,
+        "G_clusters": 17,
+        "N_events": 118,
+        "win_rate_diag": 0.898
+      },
+      "capture_haircut_ask_minus_atfire": 0.0031,
+      "mean_edge_atfire_diag": 0.057,
+      "blind_baseline_diag": 0.0236,
+      "skill_over_blind_diag": 0.0334,
+      "active_days": 13,
+      "n_match_clusters": 29,
+      "regimes_over_subfloor": [
+        "soccer:2026w25",
+        "soccer:2026w26"
+      ],
+      "regime_clusters": {
+        "soccer:2026w25": 10,
+        "soccer:2026w26": 16,
+        "soccer:2026w27": 3
+      },
+      "meets_volume_floor": true,
+      "meets_duration_floor": true,
+      "meets_regime_floor": true,
+      "roi_turn_LB": 0.0271,
+      "bootstrap_LB": 0.0246,
+      "G_clusters": 29,
+      "capacity_diag": {
+        "median_trade_shares": 2250.0,
+        "conds_with_tape": 14
+      },
+      "verdict": "CANDIDATE_POSITIVE_LB"
+    },
+    {
+      "label": "live_favorite:tennis:0.71-0.98",
+      "primary_atfire": {
+        "n_picks": 69,
+        "roi_turn_point": 0.1424,
+        "roi_turn_LB": 0.0749,
+        "bootstrap_LB": 0.0758,
+        "G_clusters": 69,
+        "N_events": 69,
+        "win_rate_diag": 0.928
+      },
+      "realizable_bracket_ask": {
+        "n_picks": 29,
+        "roi_turn_point": 0.0769,
+        "roi_turn_LB": -0.0843,
+        "bootstrap_LB": -0.0556,
+        "G_clusters": 29,
+        "N_events": 29,
+        "win_rate_diag": 0.862
+      },
+      "capture_haircut_ask_minus_atfire": -0.0105,
+      "mean_edge_atfire_diag": 0.1196,
+      "blind_baseline_diag": 0.0273,
+      "skill_over_blind_diag": 0.0923,
+      "active_days": 12,
+      "n_match_clusters": 69,
+      "regimes_over_subfloor": [
+        "tennis:2026w25",
+        "tennis:2026w26",
+        "tennis:2026w27"
+      ],
+      "regime_clusters": {
+        "tennis:2026w25": 35,
+        "tennis:2026w26": 25,
+        "tennis:2026w27": 9
+      },
+      "meets_volume_floor": true,
+      "meets_duration_floor": true,
+      "meets_regime_floor": true,
+      "roi_turn_LB": 0.0749,
+      "bootstrap_LB": 0.0758,
+      "G_clusters": 69,
+      "capacity_diag": {
+        "median_trade_shares": 2453.4,
+        "conds_with_tape": 15
+      },
+      "verdict": "CANDIDATE_POSITIVE_LB"
+    },
+    {
+      "label": "live_favorite:nonsport:0.71-0.98",
+      "primary_atfire": {
+        "n_picks": 14,
+        "roi_turn_point": 0.076,
+        "roi_turn_LB": -0.0849,
+        "bootstrap_LB": -0.0782,
+        "G_clusters": 12,
+        "N_events": 14,
+        "win_rate_diag": 0.929
+      },
+      "realizable_bracket_ask": {
+        "n_picks": 7,
+        "roi_turn_point": 0.0078,
+        "roi_turn_LB": -0.38,
+        "bootstrap_LB": -0.2883,
+        "G_clusters": 6,
+        "N_events": 7,
+        "win_rate_diag": 0.857
+      },
+      "capture_haircut_ask_minus_atfire": 0.0148,
+      "mean_edge_atfire_diag": 0.068,
+      "blind_baseline_diag": 0.024,
+      "skill_over_blind_diag": 0.0441,
+      "active_days": 6,
+      "n_match_clusters": 12,
+      "regimes_over_subfloor": [],
+      "regime_clusters": {
+        "nonsport:dateless": 2,
+        "nonsport:2026w27": 7,
+        "nonsport:2026w26": 3
+      },
+      "meets_volume_floor": false,
+      "meets_duration_floor": false,
+      "meets_regime_floor": false,
+      "roi_turn_LB": -0.0849,
+      "bootstrap_LB": -0.0782,
+      "G_clusters": 12,
+      "capacity_diag": {
+        "median_trade_shares": 2000.0,
+        "conds_with_tape": 11
+      },
+      "verdict": "INDETERMINATE (volume<20clusters(12); duration<7days(6); regimes<2(0))"
+    },
+    {
+      "label": "live_favorite:esports:0.71-0.98",
+      "primary_atfire": {
+        "n_picks": 12,
+        "roi_turn_point": 0.105,
+        "roi_turn_LB": -0.115,
+        "bootstrap_LB": -0.1137,
+        "G_clusters": 8,
+        "N_events": 12,
+        "win_rate_diag": 0.917
+      },
+      "realizable_bracket_ask": {
+        "n_picks": 3,
+        "roi_turn_point": -0.2792,
+        "roi_turn_LB": -1.3412,
+        "bootstrap_LB": -0.6018,
+        "G_clusters": 3,
+        "N_events": 3,
+        "win_rate_diag": 0.667
+      },
+      "capture_haircut_ask_minus_atfire": 0.0207,
+      "mean_edge_atfire_diag": 0.091,
+      "blind_baseline_diag": 0.0151,
+      "skill_over_blind_diag": 0.076,
+      "active_days": 6,
+      "n_match_clusters": 8,
+      "regimes_over_subfloor": [],
+      "regime_clusters": {
+        "esports:lol": 7,
+        "esports:cod": 1
+      },
+      "meets_volume_floor": false,
+      "meets_duration_floor": false,
+      "meets_regime_floor": false,
+      "roi_turn_LB": -0.115,
+      "bootstrap_LB": -0.1137,
+      "G_clusters": 8,
+      "capacity_diag": {
+        "median_trade_shares": 2528.0,
+        "conds_with_tape": 2
+      },
+      "verdict": "INDETERMINATE (volume<20clusters(8); duration<7days(6); regimes<2(0))"
+    },
+    {
+      "label": "live_favorite:baseball:0.71-0.98",
+      "primary_atfire": {
+        "n_picks": 11,
+        "roi_turn_point": 0.2159,
+        "roi_turn_LB": 0.1577,
+        "bootstrap_LB": 0.163,
+        "G_clusters": 10,
+        "N_events": 11,
+        "win_rate_diag": 1.0
+      },
+      "realizable_bracket_ask": {
+        "n_picks": 1
+      },
+      "capture_haircut_ask_minus_atfire": 0.06,
+      "mean_edge_atfire_diag": 0.1756,
+      "blind_baseline_diag": 0.0358,
+      "skill_over_blind_diag": 0.1398,
+      "active_days": 7,
+      "n_match_clusters": 10,
+      "regimes_over_subfloor": [],
+      "regime_clusters": {
+        "baseball:2026w25": 7,
+        "baseball:2026w26": 2,
+        "baseball:2026w27": 1
+      },
+      "meets_volume_floor": false,
+      "meets_duration_floor": true,
+      "meets_regime_floor": false,
+      "roi_turn_LB": 0.1577,
+      "bootstrap_LB": 0.163,
+      "G_clusters": 10,
+      "capacity_diag": {
+        "median_trade_shares": 2000.0,
+        "conds_with_tape": 2
+      },
+      "verdict": "INDETERMINATE (volume<20clusters(10); regimes<2(0))"
+    },
+    {
+      "label": "live_favorite:basketball:0.71-0.98",
+      "primary_atfire": {
+        "n_picks": 2,
+        "roi_turn_point": 0.31,
+        "roi_turn_LB": 0.0751,
+        "bootstrap_LB": 0.2728,
+        "G_clusters": 2,
+        "N_events": 2,
+        "win_rate_diag": 1.0
+      },
+      "realizable_bracket_ask": {
+        "n_picks": 2,
+        "roi_turn_point": 0.3829,
+        "roi_turn_LB": 0.0226,
+        "bootstrap_LB": 0.3258,
+        "G_clusters": 2,
+        "N_events": 2,
+        "win_rate_diag": 1.0
+      },
+      "capture_haircut_ask_minus_atfire": -0.0398,
+      "mean_edge_atfire_diag": 0.2402,
+      "blind_baseline_diag": -0.0564,
+      "skill_over_blind_diag": 0.2966,
+      "active_days": 2,
+      "n_match_clusters": 2,
+      "regimes_over_subfloor": [],
+      "regime_clusters": {
+        "basketball:2026w26": 2
+      },
+      "meets_volume_floor": false,
+      "meets_duration_floor": false,
+      "meets_regime_floor": false,
+      "roi_turn_LB": 0.0751,
+      "bootstrap_LB": 0.2728,
+      "G_clusters": 2,
+      "capacity_diag": {
+        "median_trade_shares": 2214.8,
+        "conds_with_tape": 1
+      },
+      "verdict": "INDETERMINATE (volume<20clusters(2); duration<7days(2); regimes<2(0))"
+    },
+    {
+      "label": "live_favorite:pooled:c_71_82",
+      "primary_atfire": {
+        "n_picks": 126,
+        "roi_turn_point": 0.1516,
+        "roi_turn_LB": 0.0863,
+        "bootstrap_LB": 0.0825,
+        "G_clusters": 79,
+        "N_events": 126,
+        "win_rate_diag": 0.881
+      },
+      "realizable_bracket_ask": {
+        "n_picks": 58,
+        "roi_turn_point": 0.095,
+        "roi_turn_LB": -0.0311,
+        "bootstrap_LB": -0.0407,
+        "G_clusters": 38,
+        "N_events": 58,
+        "win_rate_diag": 0.828
+      },
+      "capture_haircut_ask_minus_atfire": -0.0047,
+      "mean_edge_atfire_diag": 0.1197,
+      "blind_baseline_diag": 0.0258,
+      "skill_over_blind_diag": 0.0939,
+      "active_days": 13,
+      "n_match_clusters": 79,
+      "regimes_over_subfloor": [
+        "soccer:2026w25",
+        "soccer:2026w26",
+        "tennis:2026w25",
+        "tennis:2026w26"
+      ],
+      "regime_clusters": {
+        "soccer:2026w25": 8,
+        "esports:lol": 5,
+        "tennis:2026w25": 20,
+        "baseball:2026w25": 3,
+        "soccer:2026w26": 14,
+        "tennis:2026w26": 14,
+        "basketball:2026w26": 2,
+        "nonsport:dateless": 1,
+        "tennis:2026w27": 5,
+        "baseball:2026w27": 1,
+        "soccer:2026w27": 2,
+        "nonsport:2026w27": 3,
+        "baseball:2026w26": 1
+      },
+      "meets_volume_floor": true,
+      "meets_duration_floor": true,
+      "meets_regime_floor": true,
+      "roi_turn_LB": 0.0863,
+      "bootstrap_LB": 0.0825,
+      "G_clusters": 79,
+      "verdict": "CANDIDATE_POSITIVE_LB"
+    },
+    {
+      "label": "live_favorite:pooled:d_82_90",
+      "primary_atfire": {
+        "n_picks": 113,
+        "roi_turn_point": 0.0642,
+        "roi_turn_LB": 0.0075,
+        "bootstrap_LB": 0.0068,
+        "G_clusters": 61,
+        "N_events": 113,
+        "win_rate_diag": 0.92
+      },
+      "realizable_bracket_ask": {
+        "n_picks": 52,
+        "roi_turn_point": -0.0004,
+        "roi_turn_LB": -0.1079,
+        "bootstrap_LB": -0.1101,
+        "G_clusters": 27,
+        "N_events": 52,
+        "win_rate_diag": 0.865
+      },
+      "capture_haircut_ask_minus_atfire": 0.0068,
+      "mean_edge_atfire_diag": 0.0593,
+      "blind_baseline_diag": 0.0386,
+      "skill_over_blind_diag": 0.0207,
+      "active_days": 13,
+      "n_match_clusters": 61,
+      "regimes_over_subfloor": [
+        "soccer:2026w25",
+        "soccer:2026w26",
+        "tennis:2026w25"
+      ],
+      "regime_clusters": {
+        "tennis:2026w25": 12,
+        "esports:lol": 3,
+        "soccer:2026w25": 9,
+        "baseball:2026w25": 4,
+        "soccer:2026w26": 12,
+        "tennis:2026w26": 7,
+        "nonsport:dateless": 1,
+        "soccer:2026w27": 3,
+        "baseball:2026w26": 1,
+        "tennis:2026w27": 4,
+        "nonsport:2026w27": 3,
+        "nonsport:2026w26": 2
+      },
+      "meets_volume_floor": true,
+      "meets_duration_floor": true,
+      "meets_regime_floor": true,
+      "roi_turn_LB": 0.0075,
+      "bootstrap_LB": 0.0068,
+      "G_clusters": 61,
+      "verdict": "CANDIDATE_POSITIVE_LB"
+    },
+    {
+      "label": "live_favorite:pooled:e_90_98",
+      "primary_atfire": {
+        "n_picks": 142,
+        "roi_turn_point": 0.0476,
+        "roi_turn_LB": 0.0304,
+        "bootstrap_LB": 0.0304,
+        "G_clusters": 41,
+        "N_events": 142,
+        "win_rate_diag": 0.986
+      },
+      "realizable_bracket_ask": {
+        "n_picks": 50,
+        "roi_turn_point": 0.0415,
+        "roi_turn_LB": 0.0052,
+        "bootstrap_LB": 0.0091,
+        "G_clusters": 21,
+        "N_events": 50,
+        "win_rate_diag": 0.98
+      },
+      "capture_haircut_ask_minus_atfire": 0.0027,
+      "mean_edge_atfire_diag": 0.0457,
+      "blind_baseline_diag": 0.0105,
+      "skill_over_blind_diag": 0.0351,
+      "active_days": 13,
+      "n_match_clusters": 41,
+      "regimes_over_subfloor": [
+        "soccer:2026w25",
+        "soccer:2026w26"
+      ],
+      "regime_clusters": {
+        "tennis:2026w25": 3,
+        "soccer:2026w25": 10,
+        "soccer:2026w26": 15,
+        "esports:cod": 1,
+        "esports:lol": 1,
+        "baseball:2026w25": 1,
+        "soccer:2026w27": 2,
+        "nonsport:2026w27": 3,
+        "nonsport:2026w26": 1,
+        "tennis:2026w26": 4
+      },
+      "meets_volume_floor": true,
+      "meets_duration_floor": true,
+      "meets_regime_floor": true,
+      "roi_turn_LB": 0.0304,
+      "bootstrap_LB": 0.0304,
+      "G_clusters": 41,
+      "verdict": "CANDIDATE_POSITIVE_LB"
+    }
+  ],
+  "live_cells_ranked_by_objective": [
+    {
+      "label": "live_favorite:baseball:0.71-0.98",
+      "roi_turn_LB": 0.1577,
+      "bootstrap_LB": 0.163,
+      "G_clusters": 10,
+      "skill_over_blind_diag": 0.1398,
+      "bracket_ask_LB": null,
+      "verdict": "INDETERMINATE (volume<20clusters(10); regimes<2(0))"
+    },
+    {
+      "label": "live_favorite:pooled:c_71_82",
+      "roi_turn_LB": 0.0863,
+      "bootstrap_LB": 0.0825,
+      "G_clusters": 79,
+      "skill_over_blind_diag": 0.0939,
+      "bracket_ask_LB": -0.0311,
+      "verdict": "CANDIDATE_POSITIVE_LB"
+    },
+    {
+      "label": "live_favorite:basketball:0.71-0.98",
+      "roi_turn_LB": 0.0751,
+      "bootstrap_LB": 0.2728,
+      "G_clusters": 2,
+      "skill_over_blind_diag": 0.2966,
+      "bracket_ask_LB": 0.0226,
+      "verdict": "INDETERMINATE (volume<20clusters(2); duration<7days(2); regimes<2(0))"
+    },
+    {
+      "label": "live_favorite:tennis:0.71-0.98",
+      "roi_turn_LB": 0.0749,
+      "bootstrap_LB": 0.0758,
+      "G_clusters": 69,
+      "skill_over_blind_diag": 0.0923,
+      "bracket_ask_LB": -0.0843,
+      "verdict": "CANDIDATE_POSITIVE_LB"
+    },
+    {
+      "label": "CHAMPION_favorite_0.71-0.98",
+      "roi_turn_LB": 0.0562,
+      "bootstrap_LB": 0.0531,
+      "G_clusters": 130,
+      "skill_over_blind_diag": 0.0503,
+      "bracket_ask_LB": -0.019,
+      "verdict": "CANDIDATE_POSITIVE_LB"
+    },
+    {
+      "label": "live_favorite:pooled:e_90_98",
+      "roi_turn_LB": 0.0304,
+      "bootstrap_LB": 0.0304,
+      "G_clusters": 41,
+      "skill_over_blind_diag": 0.0351,
+      "bracket_ask_LB": 0.0052,
+      "verdict": "CANDIDATE_POSITIVE_LB"
+    },
+    {
+      "label": "live_favorite:soccer:0.71-0.98",
+      "roi_turn_LB": 0.0271,
+      "bootstrap_LB": 0.0246,
+      "G_clusters": 29,
+      "skill_over_blind_diag": 0.0334,
+      "bracket_ask_LB": -0.0391,
+      "verdict": "CANDIDATE_POSITIVE_LB"
+    },
+    {
+      "label": "live_favorite:pooled:d_82_90",
+      "roi_turn_LB": 0.0075,
+      "bootstrap_LB": 0.0068,
+      "G_clusters": 61,
+      "skill_over_blind_diag": 0.0207,
+      "bracket_ask_LB": -0.1079,
+      "verdict": "CANDIDATE_POSITIVE_LB"
+    },
+    {
+      "label": "live_favorite:nonsport:0.71-0.98",
+      "roi_turn_LB": -0.0849,
+      "bootstrap_LB": -0.0782,
+      "G_clusters": 12,
+      "skill_over_blind_diag": 0.0441,
+      "bracket_ask_LB": -0.38,
+      "verdict": "INDETERMINATE (volume<20clusters(12); duration<7days(6); regimes<2(0))"
+    },
+    {
+      "label": "live_favorite:esports:0.71-0.98",
+      "roi_turn_LB": -0.115,
+      "bootstrap_LB": -0.1137,
+      "G_clusters": 8,
+      "skill_over_blind_diag": 0.076,
+      "bracket_ask_LB": -1.3412,
+      "verdict": "INDETERMINATE (volume<20clusters(8); duration<7days(6); regimes<2(0))"
+    }
+  ],
+  "replay_cohorts": {
+    "top40": {
+      "label": "replay:top40:0.71-0.98",
+      "primary_atfire": {
+        "n_picks": 114,
+        "roi_turn_point": 0.1062,
+        "roi_turn_LB": 0.0524,
+        "bootstrap_LB": 0.0555,
+        "G_clusters": 54,
+        "N_events": 114,
+        "win_rate_diag": 0.939
+      },
+      "realizable_bracket_ask": {
+        "n_picks": 21,
+        "roi_turn_point": 0.0928,
+        "roi_turn_LB": 0.0505,
+        "bootstrap_LB": 0.045,
+        "G_clusters": 13,
+        "N_events": 21,
+        "win_rate_diag": 1.0
+      },
+      "capture_haircut_ask_minus_atfire": 0.0708,
+      "mean_edge_atfire_diag": 0.0917,
+      "blind_baseline_diag": 0.0272,
+      "skill_over_blind_diag": 0.0645,
+      "active_days": 13,
+      "n_match_clusters": 54,
+      "regimes_over_subfloor": [
+        "soccer:2026w26",
+        "tennis:2026w26"
+      ],
+      "regime_clusters": {
+        "tennis:2026w26": 8,
+        "soccer:2026w25": 7,
+        "soccer:2026w26": 16,
+        "soccer:2026w27": 3,
+        "esports:lol": 2,
+        "esports:dota2": 1,
+        "nonsport:2026w27": 2,
+        "baseball:2026w26": 3,
+        "baseball:2026w25": 2,
+        "nonsport:2026w26": 3,
+        "tennis:2026w27": 2,
+        "nonsport:dateless": 1,
+        "soccer:dateless": 1,
+        "tennis:2026w25": 3
+      },
+      "meets_volume_floor": true,
+      "meets_duration_floor": true,
+      "meets_regime_floor": true,
+      "roi_turn_LB": 0.0524,
+      "bootstrap_LB": 0.0555,
+      "G_clusters": 54,
+      "verdict": "CANDIDATE_POSITIVE_LB"
+    },
+    "r41_100": {
+      "label": "replay:r41_100:0.71-0.98",
+      "primary_atfire": {
+        "n_picks": 589,
+        "roi_turn_point": 0.0943,
+        "roi_turn_LB": 0.0757,
+        "bootstrap_LB": 0.0715,
+        "G_clusters": 228,
+        "N_events": 589,
+        "win_rate_diag": 0.952
+      },
+      "realizable_bracket_ask": {
+        "n_picks": 24,
+        "roi_turn_point": 0.149,
+        "roi_turn_LB": 0.0638,
+        "bootstrap_LB": 0.0877,
+        "G_clusters": 11,
+        "N_events": 24,
+        "win_rate_diag": 1.0
+      },
+      "capture_haircut_ask_minus_atfire": 0.0452,
+      "mean_edge_atfire_diag": 0.0808,
+      "blind_baseline_diag": 0.0225,
+      "skill_over_blind_diag": 0.0583,
+      "active_days": 13,
+      "n_match_clusters": 228,
+      "regimes_over_subfloor": [
+        "nonsport:dateless",
+        "soccer:2026w26",
+        "soccer:dateless"
+      ],
+      "regime_clusters": {
+        "soccer:2026w26": 17,
+        "nonsport:dateless": 175,
+        "soccer:2026w25": 5,
+        "nonsport:2026w27": 4,
+        "tennis:2026w26": 5,
+        "baseball:2026w26": 3,
+        "soccer:2026w27": 3,
+        "crypto:dateless": 2,
+        "soccer:dateless": 8,
+        "baseball:2026w27": 2,
+        "nonsport:2026w26": 3,
+        "tennis:2026w25": 1
+      },
+      "meets_volume_floor": true,
+      "meets_duration_floor": true,
+      "meets_regime_floor": true,
+      "roi_turn_LB": 0.0757,
+      "bootstrap_LB": 0.0715,
+      "G_clusters": 228,
+      "verdict": "CANDIDATE_POSITIVE_LB"
+    },
+    "r101_250": {
+      "label": "replay:r101_250:0.71-0.98",
+      "primary_atfire": {
+        "n_picks": 544,
+        "roi_turn_point": 0.1309,
+        "roi_turn_LB": 0.1042,
+        "bootstrap_LB": 0.1004,
+        "G_clusters": 205,
+        "N_events": 544,
+        "win_rate_diag": 0.943
+      },
+      "realizable_bracket_ask": {
+        "n_picks": 134,
+        "roi_turn_point": 0.0815,
+        "roi_turn_LB": 0.0395,
+        "bootstrap_LB": 0.0304,
+        "G_clusters": 70,
+        "N_events": 134,
+        "win_rate_diag": 0.955
+      },
+      "capture_haircut_ask_minus_atfire": 0.0705,
+      "mean_edge_atfire_diag": 0.1079,
+      "blind_baseline_diag": 0.0264,
+      "skill_over_blind_diag": 0.0815,
+      "active_days": 13,
+      "n_match_clusters": 205,
+      "regimes_over_subfloor": [
+        "baseball:2026w26",
+        "basketball:2026w26",
+        "esports:cs2",
+        "esports:dota2",
+        "esports:lol",
+        "nonsport:2026w26",
+        "nonsport:2026w27",
+        "soccer:2026w25",
+        "soccer:2026w26",
+        "tennis:2026w26",
+        "tennis:2026w27"
+      ],
+      "regime_clusters": {
+        "soccer:2026w26": 20,
+        "tennis:2026w26": 46,
+        "soccer:2026w25": 9,
+        "soccer:2026w27": 4,
+        "esports:lol": 10,
+        "tennis:2026w27": 14,
+        "esports:dota2": 12,
+        "nonsport:2026w26": 18,
+        "nonsport:2026w27": 19,
+        "baseball:2026w26": 16,
+        "basketball:2026w26": 9,
+        "soccer:dateless": 3,
+        "basketball:2026w27": 3,
+        "esports:cs2": 9,
+        "baseball:2026w25": 2,
+        "crypto:dateless": 1,
+        "tennis:2026w25": 4,
+        "esports:val": 5,
+        "nonsport:dateless": 1
+      },
+      "meets_volume_floor": true,
+      "meets_duration_floor": true,
+      "meets_regime_floor": true,
+      "roi_turn_LB": 0.1042,
+      "bootstrap_LB": 0.1004,
+      "G_clusters": 205,
+      "verdict": "CANDIDATE_POSITIVE_LB"
+    },
+    "wide_1_250": {
+      "label": "replay:wide_1_250:0.71-0.98",
+      "primary_atfire": {
+        "n_picks": 1741,
+        "roi_turn_point": 0.1173,
+        "roi_turn_LB": 0.1065,
+        "bootstrap_LB": 0.1016,
+        "G_clusters": 680,
+        "N_events": 1741,
+        "win_rate_diag": 0.952
+      },
+      "realizable_bracket_ask": {
+        "n_picks": 251,
+        "roi_turn_point": 0.0956,
+        "roi_turn_LB": 0.0655,
+        "bootstrap_LB": 0.0642,
+        "G_clusters": 135,
+        "N_events": 251,
+        "win_rate_diag": 0.964
+      },
+      "capture_haircut_ask_minus_atfire": 0.0607,
+      "mean_edge_atfire_diag": 0.0985,
+      "blind_baseline_diag": 0.0237,
+      "skill_over_blind_diag": 0.0748,
+      "active_days": 13,
+      "n_match_clusters": 680,
+      "regimes_over_subfloor": [
+        "baseball:2026w25",
+        "baseball:2026w26",
+        "basketball:2026w26",
+        "esports:cs2",
+        "esports:dota2",
+        "esports:lol",
+        "nonsport:2026w26",
+        "nonsport:2026w27",
+        "nonsport:dateless",
+        "soccer:2026w25",
+        "soccer:2026w26",
+        "soccer:dateless",
+        "tennis:2026w25",
+        "tennis:2026w26",
+        "tennis:2026w27"
+      ],
+      "regime_clusters": {
+        "soccer:2026w26": 35,
+        "tennis:2026w26": 140,
+        "nonsport:dateless": 235,
+        "soccer:2026w25": 9,
+        "nonsport:2026w26": 29,
+        "nonsport:2026w27": 30,
+        "soccer:2026w27": 7,
+        "tennis:2026w27": 41,
+        "baseball:2026w26": 23,
+        "esports:lol": 12,
+        "esports:dota2": 19,
+        "soccer:dateless": 17,
+        "baseball:2026w25": 9,
+        "crypto:dateless": 7,
+        "tennis:2026w25": 27,
+        "esports:val": 7,
+        "basketball:2026w26": 13,
+        "basketball:2026w27": 4,
+        "baseball:2026w27": 5,
+        "esports:cs2": 8,
+        "baseball:2026w17": 1,
+        "basketball:2026w25": 1,
+        "nonsport:2026w25": 1
+      },
+      "meets_volume_floor": true,
+      "meets_duration_floor": true,
+      "meets_regime_floor": true,
+      "roi_turn_LB": 0.1065,
+      "bootstrap_LB": 0.1016,
+      "G_clusters": 680,
+      "verdict": "CANDIDATE_POSITIVE_LB"
+    }
+  }
+}
