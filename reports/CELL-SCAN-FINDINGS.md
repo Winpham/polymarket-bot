@@ -65,3 +65,46 @@ low-correlated complements; soccer (the bulk of picks) is the champion's WEAKEST
 CATEGORY is powered; no wider COHORT is copyable. Phase 3 runs the anti-overfit battery (LODO,
 time-split, Bonferroni, selection_null) + the champion head-to-head + correlation to decide whether
 tennis/the-band is a durable, promotable refinement or the same summer-Wimbledon softness re-labeled.
+
+---
+
+## Phase 3 — anti-overfit battery + champion head-to-head (`reports/CELL-VERDICT.json`)
+
+Battery on the unbiased at-fire basis, M=14 Bonferroni family (10 live + 4 cohort cells).
+
+| candidate | LB | skill | LODO | late-half | Bonf | null p | corr | verdict |
+|---|---|---|---|---|---|---|---|---|
+| **CHAMPION 0.71–0.98** | +0.056 | +0.050 | **+0.041** | **+0.044** | **+0.035** | **0.0005** | — | **SURVIVES FULL BATTERY** |
+| tennis 0.71–0.98 | +0.075 | +0.092 | **−0.048** | +0.006 | +0.030 | 0.0035 | −0.25 | FAILS LODO (1-Wimbledon-week artifact) |
+| soccer 0.71–0.98 | +0.027 | +0.033 | +0.056 | +0.031 | **−0.002** | **0.44** | −0.16 | FAILS null+Bonf (no skill; rides structure) |
+| 0.71–0.82 band | +0.086 | +0.094 | +0.057 | +0.056 | +0.043 | 0.0055 | −0.20 | survives, but SUBSET/refinement of champ |
+
+**Findings.**
+1. **The champion is genuinely validated** on the unbiased basis and survives the full battery —
+   more robustly than the capture-biased handoff numbers implied. Its documented "late-half fade"
+   (LB −1.2% on the 58-cluster ask sample) was largely a **capture-bias artifact**: on the 130-cluster
+   at-fire population the late half holds at **+0.044**. selection_null p=0.0005, Bonferroni +0.035.
+2. **Tennis is the soft-week trap, caught.** It "beats" the champion in-sample (+7.5%, skill +9.2%)
+   but its edge is carried entirely by **one Wimbledon week**: leave-one-regime-out drops that week and
+   the LB collapses to **−0.048**. It also fails the +2.0pp NI margin. Tennis's three "disjoint regimes"
+   are all Wimbledon 2026 — not disjoint non-expiring regimes. NOT durable; NOT promotable.
+3. **Soccer has no consensus skill.** Its positive LB is entirely the structural favorite-longshot
+   underpricing: the selection-null p=0.44 (the `favorite` consensus does no better than random soccer
+   favorites at the same band×day), and it fails Bonferroni. Soccer rides softness, exactly as flagged.
+4. **The 0.71–0.82 band survives the battery but is a REFINEMENT, not a new/complementary cell.** It is
+   the champion pool's own softest sub-band (the handoff already documented 0.71–0.82 = +13% vs pooled
+   +11%). Its "complement" flag is a mechanical artifact of correlating a sub-band against its
+   within-pool remainder; it is a SUBSET of the champion, reachable only by a finer band cut the handoff
+   already refused, and the +3.0pp in-sample beat is within selection-reward from picking the best
+   sub-band on the same data. It needs **no new arm** — it is a post-hoc band filter on the existing
+   `favorite` signals — so the forward gate can arbitrate it directly from the champion arm.
+5. **Durability is pooled, and pooled across TWO summer tournaments.** The champion and its 0.71–0.82
+   sub-band survive LODO only because they pool soccer (World Cup) + tennis (Wimbledon); each sport
+   ALONE fails (tennis→LODO, soccer→no-skill). Both "disjoint regimes" are summer-tournament softness,
+   so transfer to fall/regular-season/efficient markets remains **completely untested** — the standing
+   open question the forward gate must answer.
+
+**Bottom line (phase 3):** No genuinely NEW or COMPLEMENTARY cell generalizes. The champion `favorite`
+0.71–0.98 is the singular validated edge; every apparent "beat" is either an overfit artifact (tennis),
+a structure-rider with no skill (soccer), or a within-pool refinement (the 0.71–0.82 band). No other
+category is powered; no wider cohort is copyable.

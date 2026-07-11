@@ -1,0 +1,231 @@
+{
+  "as_of": "2026-07-11",
+  "run": "generalize-band-strategy phase 3 (anti-overfit battery + head-to-head)",
+  "champion_objective_LB": 0.0562,
+  "NI_margin_pp": 0.02,
+  "M_cells_scanned_bonferroni_family": 14,
+  "candidates": {
+    "CHAMPION_favorite_0.71-0.98": {
+      "n_picks": 381,
+      "n_match_clusters": 130,
+      "active_days": 13,
+      "regimes_over_subfloor": [
+        "soccer:2026w25",
+        "soccer:2026w26",
+        "tennis:2026w25",
+        "tennis:2026w26",
+        "tennis:2026w27"
+      ],
+      "base_objective_LB": 0.0562,
+      "bootstrap_LB": 0.0531,
+      "skill_over_blind": 0.0503,
+      "lodo": {
+        "dropped": "tennis:2026w25",
+        "n_regimes": 15,
+        "lb_without_dominant": 0.0414,
+        "G_without_dominant": 95
+      },
+      "time_split": {
+        "split_day": "2026-07-05",
+        "early_LB": 0.046,
+        "early_G": 76,
+        "late_LB": 0.0438,
+        "late_G": 60,
+        "late_half_holds": true
+      },
+      "bonferroni": {
+        "alpha_adj": 0.0036,
+        "m_cells": 14,
+        "bonferroni_LB": 0.0354
+      },
+      "selection_null": {
+        "observed_surplus": 0.0715,
+        "p_emp": 0.0005,
+        "draws": 2000,
+        "pass_p01": true,
+        "note": null
+      },
+      "head_to_head_vs_champion_pp": 0.0,
+      "beats_champion_by_NI_margin": false,
+      "complement_correlation": {
+        "note": "champion itself / no disjoint remainder"
+      },
+      "is_low_correlated_complement": false,
+      "battery": {
+        "powered": true,
+        "base_LB_positive": true,
+        "lodo_survives": true,
+        "late_half_holds": true,
+        "bonferroni_positive": true,
+        "selection_null_p01": true
+      },
+      "survives_full_battery": true
+    },
+    "tennis_0.71-0.98": {
+      "n_picks": 69,
+      "n_match_clusters": 69,
+      "active_days": 12,
+      "regimes_over_subfloor": [
+        "tennis:2026w25",
+        "tennis:2026w26",
+        "tennis:2026w27"
+      ],
+      "base_objective_LB": 0.0749,
+      "bootstrap_LB": 0.0758,
+      "skill_over_blind": 0.0923,
+      "lodo": {
+        "dropped": "tennis:2026w25",
+        "n_regimes": 3,
+        "lb_without_dominant": -0.0481,
+        "G_without_dominant": 34
+      },
+      "time_split": {
+        "split_day": "2026-07-06",
+        "early_LB": 0.0711,
+        "early_G": 42,
+        "late_LB": 0.0059,
+        "late_G": 27,
+        "late_half_holds": true
+      },
+      "bonferroni": {
+        "alpha_adj": 0.0036,
+        "m_cells": 14,
+        "bonferroni_LB": 0.0301
+      },
+      "selection_null": {
+        "observed_surplus": 0.0925,
+        "p_emp": 0.0035,
+        "draws": 2000,
+        "pass_p01": true,
+        "note": null
+      },
+      "head_to_head_vs_champion_pp": 0.0187,
+      "beats_champion_by_NI_margin": false,
+      "complement_correlation": {
+        "n_common_days": 12,
+        "corr": -0.253
+      },
+      "is_low_correlated_complement": false,
+      "battery": {
+        "powered": true,
+        "base_LB_positive": true,
+        "lodo_survives": false,
+        "late_half_holds": true,
+        "bonferroni_positive": true,
+        "selection_null_p01": true
+      },
+      "survives_full_battery": false
+    },
+    "soccer_0.71-0.98": {
+      "n_picks": 273,
+      "n_match_clusters": 29,
+      "active_days": 13,
+      "regimes_over_subfloor": [
+        "soccer:2026w25",
+        "soccer:2026w26"
+      ],
+      "base_objective_LB": 0.0271,
+      "bootstrap_LB": 0.0246,
+      "skill_over_blind": 0.0334,
+      "lodo": {
+        "dropped": "soccer:2026w26",
+        "n_regimes": 3,
+        "lb_without_dominant": 0.0564,
+        "G_without_dominant": 13
+      },
+      "time_split": {
+        "split_day": "2026-07-05",
+        "early_LB": 0.0073,
+        "early_G": 21,
+        "late_LB": 0.0308,
+        "late_G": 14,
+        "late_half_holds": true
+      },
+      "bonferroni": {
+        "alpha_adj": 0.0036,
+        "m_cells": 14,
+        "bonferroni_LB": -0.0016
+      },
+      "selection_null": {
+        "observed_surplus": 0.0205,
+        "p_emp": 0.4378,
+        "draws": 2000,
+        "pass_p01": false,
+        "note": null
+      },
+      "head_to_head_vs_champion_pp": -0.0291,
+      "beats_champion_by_NI_margin": false,
+      "complement_correlation": {
+        "n_common_days": 13,
+        "corr": -0.163
+      },
+      "is_low_correlated_complement": false,
+      "battery": {
+        "powered": true,
+        "base_LB_positive": true,
+        "lodo_survives": true,
+        "late_half_holds": true,
+        "bonferroni_positive": false,
+        "selection_null_p01": false
+      },
+      "survives_full_battery": false
+    },
+    "band_0.71-0.82_pooled": {
+      "n_picks": 126,
+      "n_match_clusters": 79,
+      "active_days": 13,
+      "regimes_over_subfloor": [
+        "soccer:2026w25",
+        "soccer:2026w26",
+        "tennis:2026w25",
+        "tennis:2026w26"
+      ],
+      "base_objective_LB": 0.0863,
+      "bootstrap_LB": 0.0825,
+      "skill_over_blind": 0.0939,
+      "lodo": {
+        "dropped": "tennis:2026w25",
+        "n_regimes": 13,
+        "lb_without_dominant": 0.0572,
+        "G_without_dominant": 59
+      },
+      "time_split": {
+        "split_day": "2026-07-05",
+        "early_LB": 0.0605,
+        "early_G": 51,
+        "late_LB": 0.0559,
+        "late_G": 33,
+        "late_half_holds": true
+      },
+      "bonferroni": {
+        "alpha_adj": 0.0036,
+        "m_cells": 14,
+        "bonferroni_LB": 0.0432
+      },
+      "selection_null": {
+        "observed_surplus": 0.0847,
+        "p_emp": 0.0055,
+        "draws": 2000,
+        "pass_p01": true,
+        "note": null
+      },
+      "head_to_head_vs_champion_pp": 0.0301,
+      "beats_champion_by_NI_margin": true,
+      "complement_correlation": {
+        "n_common_days": 13,
+        "corr": -0.201
+      },
+      "is_low_correlated_complement": true,
+      "battery": {
+        "powered": true,
+        "base_LB_positive": true,
+        "lodo_survives": true,
+        "late_half_holds": true,
+        "bonferroni_positive": true,
+        "selection_null_p01": true
+      },
+      "survives_full_battery": true
+    }
+  },
+  "note": "at-fire full-population basis (unbiased; entry_ask\u2248at-fire confirmed phase 2). A 'beat' needs LB \u2265 champion + 0.02 AND survive the full battery; a 'complement' needs that PLUS |match-day corr| < 0.3 with the champion remainder. Tennis and the 0.71-0.82 band are SUBSETS of the champion pool (refinements, not disjoint complements)."
+}
