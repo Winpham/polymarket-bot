@@ -108,3 +108,36 @@ Battery on the unbiased at-fire basis, M=14 Bonferroni family (10 live + 4 cohor
 0.71–0.98 is the singular validated edge; every apparent "beat" is either an overfit artifact (tennis),
 a structure-rider with no skill (soccer), or a within-pool refinement (the 0.71–0.82 band). No other
 category is powered; no wider cohort is copyable.
+
+---
+
+## Phase 4 — registration + bottom line (`reports/PREREG_20260711T185304Z_cellscan.md`)
+
+**No new cell warrants a shadow arm; none was built (`consensus.rs` + every incumbent + `.env`
+byte-identical, verified zero diff).** The single candidate that survived the battery (the 0.71–0.82
+band) is a post-hoc band filter on the EXISTING `favorite` signals — a "0.71–0.82 arm" would emit a
+strict subset of what the champion arm already captures, so it needs no code; the frozen prereg
+measures it forward directly. Tennis failed (LODO), soccer failed (selection_null), other categories
+are under-powered, wider cohorts are non-copyable.
+
+### Bottom line (one paragraph)
+
+Across the full cell space — 10 categories, 5 price bands, 4 trader-eligibility cohorts, match-clustered
+and measured belief-blind at the unbiased at-fire entry (vindicated because the ask↔mid capture-haircut
+is ≈0 everywhere) — **no other optimized cell matches or beats the champion `favorite` 0.71–0.98 as a
+durable, copyable, per-dollar edge; the champion is the singular validated edge.** It survives the full
+anti-overfit battery (LB +5.6%, skill +5.0% over the blind favorite, LODO +4.1%, late-half +4.4%,
+Bonferroni +3.5%, selection_null p=0.0005) — in fact more robustly than its own capture-biased handoff
+numbers, whose "late-half fade" was largely a capture artifact. Every apparent challenger is an
+artifact or a subset: **tennis** looks fatter (+7.5%) but its edge is one Wimbledon week (LODO −4.8%);
+**soccer** is positive but carries zero consensus skill (selection_null p=0.44 — pure structural
+favorite-longshot); the **0.71–0.82 band** beats the pool in-sample but is the champion's own softest
+sub-band (a refinement within selection-reward, needing no new arm); no **other category** clears the
+20-cluster floor; and **wider trader cohorts** show fatter *directional* edge (up to +10.7% at rank
+101–250) that is **not copyable** at our realizable entry and cannot be certified on the 3-day price
+tape. The one caveat that dominates everything: the champion's durability is **pooled across two summer
+tournaments** (World Cup + Wimbledon), so its transfer to fall/efficient markets is untested — that,
+plus the capture-at-detection fix, is what the frozen forward gate must decide. This is a
+trustworthy per-dollar-edge verdict across the whole space: the edge is singular, and no amount of
+in-sample re-slicing improves on it — saving the wasted build effort of chasing a second cell that
+isn't there.
