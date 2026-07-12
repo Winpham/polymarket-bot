@@ -87,3 +87,38 @@ low-correlated with the champion — **but it is confined to a single week and t
 uncertifiable in-sample.** The ONLY way to resolve it is forward accrual of disjoint weeks. Enable the
 arm to accrue; promote nothing; require ≥2 disjoint weeks + forward selection_null + a real LODO-by-week
 before any human promotion review.
+
+---
+
+## Phase 4 — verdict + arm decision + forward gate
+
+**Arm decision: KEEP the capture band broad at 0.71–0.98; CERTIFY narrow at 0.71–0.90.** The arm's job
+is to capture — capturing the (in-sample dead) 0.90–0.98 deep-chalk band forward is free data that
+confirms whether it's really dead, so narrowing the arm now would discard information on one week of
+evidence. The prereg makes **0.71–0.90 the primary certification cell** (a-priori mechanism: deep chalk
+earns ~0/$ and adds no selection skill) with 0.90–0.98 tracked separately. **No arm code changed in
+phase 4** — `weather_fav`/`weather_fav_liq` stay at 0.71–0.98, incumbents byte-identical.
+
+**Forward instruments built** (`weather_scan.py`, `weather_verdict.py`, both `--selftest` green): the
+gate is re-run with one command as weeks accrue — no new tooling to certify.
+
+**Prereg updated** with the two in-sample lessons: primary cell 0.71–0.90, and a hard **≥2-disjoint-weeks
+floor** (θ reads INDETERMINATE—SINGLE-WINDOW until a second qualifying week exists).
+
+### Bottom line
+
+Weather is the **strongest complement candidate the entire investigation has produced** — and the honest
+verdict is *promising but uncertifiable in-sample, resolve it forward.* On the copyable at-fire-mid
+basis (haircut ≈0), day-clustered, the mid-favorite cell **weather_fav 0.71–0.90** shows a **+9.2% LB**,
+**passes the forecast-co-reading `selection_null` (p=0.0065)** — so it is real selection skill, not
+several bots co-reading NOAA — is **diffuse across 49 cities** (not a one-city artifact), and is
+**low-correlated with the champion (−0.48)**, exactly the positively-EV, copyable, diversifying cell the
+generalize-band run went looking for and did NOT find in sports. **But every one of those numbers is a
+single consecutive week (july 2–8)**, so leave-one-week-out is impossible and it could be one favorable
+early-July regime — the tennis-one-Wimbledon trap by data availability. It therefore certifies nothing:
+it clears everything the in-sample data CAN test and fails only the one thing it structurally cannot
+(disjoint-week robustness). The right action is precisely the default-off arm already built: **enable it
+to accrue disjoint weeks** (weather's evergreen daily flow means a real leave-one-week-out verdict in
+2–4 weeks, not a season), certify forward against the frozen gate (≥2 disjoint weeks + selection_null +
+LODO), and bring a human promotion decision only if the lower bound holds across weeks. Unlike the
+summer sports, weather can actually *answer* the transfer question — that is its whole value.

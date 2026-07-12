@@ -29,6 +29,18 @@ city-day observations. **But two things the backtest could NOT resolve, by const
 The arm is default-OFF (`CONSENSUS_WEATHER_ARM=false`); `weather_fav` / `weather_fav_liq` are silent
 (`alerting=false`). Nothing promotes. The forward record is the arbiter.
 
+**In-sample refinement (Weather Edge Refinement run, phases 1–3 — `WEATHER-FINDINGS.md`; this is
+in-sample, no forward data has accrued, so it legitimately refines the gate below):** on the at-fire
+mid (realizable-proxy) basis, day-clustered, the edge is real and copyable (copyability haircut ≈0,
+diffuse across 49 cities, top-city share 4.6%). The **0.71–0.90 sub-cell** (dropping the 0.90–0.98
+deep-chalk band, which is DEAD — LB −2.1%, no selection skill, the win-rate trap) is markedly stronger:
+day-clustered LB **+9.2%**, Bonferroni +7.2%, **passes the forecast-co-reading `selection_null`
+(p=0.0065)**, and is **low-correlated with the champion (day-level −0.48)** — a genuine complement
+profile. The pooled 0.71–0.98 cell FAILS the null (p=0.0125) because the dead deep-chalk band dilutes
+it. **THE decisive limitation: all in-sample weather convergence is ONE consecutive week (july 2–8)**,
+so LODO-by-week is impossible and the numbers could be a single early-July weather regime. The forward
+gate below is therefore built around a hard ≥2-DISJOINT-WEEKS requirement.
+
 ## 1. What accrues forward (enablement)
 
 On merge, the integrator sets `CONSENSUS_WEATHER_ARM=true` (keeping `SOFT_MARKET_RANK_CUTOFF=250`) in
@@ -38,6 +50,12 @@ wider-eligibility daily-temperature book and upserts their signals like any othe
 has never had).** No other behavior changes; every incumbent arm stays byte-identical. Nothing arms
 real money or auto-promotes.
 
+**Forward instruments (already built, `--selftest` green):** `scripts/weather_scan.py` (day-clustered
+map + dual-basis edge) and `scripts/weather_verdict.py` (the full battery: day-clustered LB,
+leave-one-week-out jackknife, forecast-co-reading `selection_null`, Bonferroni, champion correlation).
+Re-run them as forward weeks accrue; they read the same `entry_ask`-captured signals the arm produces.
+Certification is one command — no new tooling needed to arbitrate the gate.
+
 ## 2. The locked objective (identical to the run objective; no re-derivation)
 
 > **θ = cluster-robust one-sided 95% LOWER BOUND of realizable ROI-on-turnover, clustered at the
@@ -45,18 +63,26 @@ real money or auto-promotes.
 > Realizable entry = the captured `entry_ask` (fee `0.03·p·(1−p)`); a pick with no captured ask is
 > EXCLUDED from θ. Win rate and total P&L are DIAGNOSTIC ONLY.
 
-Forward θ uses ONLY `entry_ask` captured on live `weather_fav` signals — never the sharps' fill, never
-mid, never a directional number.
+**Primary certification cell = `weather_fav` 0.71–0.90** (a-priori mechanism, frozen: the 0.90–0.98
+deep-chalk band earns ~0/$ — the win-rate trap — and adds no selection skill, in-sample LB −2.1% and
+it is what breaks the pooled `selection_null`). The arm still CAPTURES the full 0.71–0.98 band (broad
+capture is free forward data that confirms whether 0.90–0.98 is really dead); the 0.90–0.98 slice is
+tracked separately, NOT part of the primary θ. Forward θ uses ONLY `entry_ask` captured on live
+`weather_fav` signals — never the sharps' fill, never mid, never a directional number.
 
 ## 3. Floors — INDETERMINATE until ALL met (frozen)
 
 1. **Volume:** ≥ **20** distinct resolution-DAY clusters with a captured `entry_ask` AND resolution.
 2. **Deployment:** ≥ **3** weather signals per active day (trivially met if it fires at all — ~20 cities/day).
-3. **Duration:** the day-clusters span ≥ **14 distinct active days** (weather is daily, so the day-count
-   IS the regime count — no tournament can carry it; require two full weeks minimum).
-4. **Disjoint-regime robustness (the decisive test):** θ LB must stay **> 0** under a **leave-one-ISO-
-   week-out jackknife** (drop the calendar week with the most day-clusters and recompute). An edge that
-   only survives WITH its dominant heat-wave week is that week's streak, not a strategy.
+3. **Duration + ≥2 DISJOINT WEEKS (the decisive floor — the in-sample failure mode):** the day-clusters
+   must span ≥ **20 distinct active days** across ≥ **2 disjoint calendar weeks each with ≥ 5
+   day-clusters**. The entire in-sample edge was ONE consecutive week (july 2–8); a second disjoint week
+   is the minimum that distinguishes a strategy from a single weather regime. Until a second qualifying
+   week exists, θ reads **INDETERMINATE — SINGLE WINDOW**, never PASS, regardless of point value.
+4. **Disjoint-regime robustness:** θ LB must stay **> 0** under the **leave-one-week-out jackknife** (drop
+   the calendar week with the most day-clusters and recompute) — a test that is IMPOSSIBLE today (one week)
+   and becomes the gate the moment a second week accrues. An edge that only survives WITH its dominant
+   week is that week's streak.
 
 ## 4. Belief-blind + skill (frozen, both required)
 
