@@ -785,6 +785,49 @@ pub fn soft_market_arms(base: &ConsensusParams) -> Vec<StrategyDef> {
     ]
 }
 
+/// Weather shadow arms (Generalize-the-Band run, 2026-07-11). Scored against a
+/// SEPARATE daily-temperature book assembled from the WIDER-eligibility vote set
+/// (`load_weather_window_votes`) — NEVER the incumbent eligible-only book — and
+/// registered ONLY when `CONSENSUS_WEATHER_ARM` is on, so the live portfolio and
+/// every existing arm stay byte-identical. Both silent (`alerting: false`); they
+/// PROMOTE nothing (forward data is the arbiter).
+///
+/// Motivation (reports/CELL-SCAN-FINDINGS.md + this run): daily weather markets are
+/// the most EVERGREEN venue we track (~20 cities/day, year-round, tournament-
+/// independent). The wider trader universe converges on them at real volume
+/// (+8.4% directional edge vs +2.1% blind favorite ⇒ ~+6pt belief-blind skill), but
+/// the rank-40 gate excludes their forecast-specialist backers (rank 41–250), so the
+/// live `favorite` arm fired on weather ZERO times — and there is NO captured ask/tape
+/// for weather, so the copyable edge is UNMEASURABLE from history. These arms exist to
+/// START that realizable capture forward; the frozen prereg is the arbiter. The band
+/// stays the validated champion 0.71–0.98 (0.65–0.71 is efficient coin-flips) and the
+/// convergence bar stays `min_backers` (3) — never "bet every hot forecast".
+///   `weather_fav`     — champion favorite band, wider-eligibility weather book.
+///   `weather_fav_liq` — same + the $1k at-fire liquidity floor (thin-book spread screen).
+pub fn weather_market_arms(base: &ConsensusParams) -> Vec<StrategyDef> {
+    vec![
+        StrategyDef {
+            name: "weather_fav",
+            params: ConsensusParams {
+                price_band: Some((0.71, 0.98)),
+                sports_mode: SportsMode::Include,
+                ..base.clone()
+            },
+            alerting: false,
+        },
+        StrategyDef {
+            name: "weather_fav_liq",
+            params: ConsensusParams {
+                price_band: Some((0.71, 0.98)),
+                sports_mode: SportsMode::Include,
+                min_total_usd: 1000.0,
+                ..base.clone()
+            },
+            alerting: false,
+        },
+    ]
+}
+
 /// Phase-4 earned-trust arms — silent (`alerting: false`), judged by the gate in
 /// the EXPERIMENTAL family (see [`crate::scanner::enrich::family`]) so they never
 /// tighten core's Bonferroni bar. Appended to the portfolio ONLY when
@@ -1356,6 +1399,67 @@ mod tests {
         esb.is_sports = true;
         assert_eq!(score_market(&esb, now, &arms[0].params).len(), 1,
                    "soft_fav fires on 3 deep-ranked one-sided esports backers in band");
+    }
+
+    #[test]
+    fn weather_market_arms_shape_and_isolation() {
+        // Both weather arms: champion favorite band (0.71–0.98, not the soft 0.65),
+        // silent, Include sports (weather is nonsport — Include scores it; the
+        // weather-only book is supplied by load_weather_window_votes), 3-backer
+        // convergence kept; only weather_fav_liq sets the $1k floor. Named distinctly
+        // from every incumbent arm so upserts never collide.
+        let base = ConsensusParams::default();
+        let arms = weather_market_arms(&base);
+        assert_eq!(arms.len(), 2);
+        for a in &arms {
+            assert!(!a.alerting, "{} must be silent (shadow-only)", a.name);
+            assert_eq!(a.params.price_band, Some((0.71, 0.98)), "{} champion band", a.name);
+            assert_eq!(a.params.sports_mode, SportsMode::Include, "{} scores nonsport weather", a.name);
+            assert_eq!(a.params.min_backers, base.min_backers, "{} keeps convergence bar", a.name);
+        }
+        let names: Vec<&str> = arms.iter().map(|d| d.name).collect();
+        assert_eq!(names, vec!["weather_fav", "weather_fav_liq"]);
+        assert_eq!(arms[0].params.min_total_usd, 0.0, "weather_fav = no liquidity floor");
+        assert_eq!(arms[1].params.min_total_usd, 1000.0, "weather_fav_liq = $1k floor");
+
+        // The champion + incumbent portfolio is untouched by the weather arms existing.
+        let portfolio = default_portfolio(&base);
+        for w in &names {
+            assert!(!portfolio.iter().any(|d| &d.name == w),
+                    "weather arm {w} must NOT be in the incumbent portfolio");
+        }
+        // ...and the soft arms are a disjoint set (no name collision).
+        let soft: Vec<&str> = soft_market_arms(&base).iter().map(|d| d.name).collect();
+        for w in &names {
+            assert!(!soft.contains(w), "weather arm {w} must not collide with a soft arm");
+        }
+
+        // weather_fav FIRES on a 3-deep NONSPORT temperature book (0.80) — the
+        // wider-eligibility convergence the rank-40 gate misses becomes a real signal.
+        let now = Utc::now();
+        let mut wxb = book_with(
+            now,
+            vec![
+                (0, "wa", Some(150), 0.80, 5),
+                (0, "wb", Some(180), 0.81, 5),
+                (0, "wc", Some(210), 0.79, 5),
+            ],
+        );
+        wxb.is_sports = false;
+        assert_eq!(score_market(&wxb, now, &arms[0].params).len(), 1,
+                   "weather_fav fires on 3 deep-ranked one-sided nonsport favorites in band");
+        // ...and does NOT fire below the champion band (0.68 < 0.71 — efficient coin-flips).
+        let mut cold = book_with(
+            now,
+            vec![
+                (0, "wa", Some(150), 0.68, 5),
+                (0, "wb", Some(180), 0.68, 5),
+                (0, "wc", Some(210), 0.68, 5),
+            ],
+        );
+        cold.is_sports = false;
+        assert_eq!(score_market(&cold, now, &arms[0].params).len(), 0,
+                   "weather_fav skips the sub-0.71 efficient band");
     }
 
     #[test]

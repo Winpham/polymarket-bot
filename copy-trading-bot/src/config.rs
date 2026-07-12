@@ -84,6 +84,19 @@ pub struct CopyTradingConfig {
     #[config(env = "SOFT_MARKET_RANK_CUTOFF", default = 250)]
     pub soft_market_rank_cutoff: i32,
 
+    /// Weather detection arm (Generalize-the-Band run, 2026-07-11). When ON, the
+    /// consensus cycle scores a SEPARATE daily-temperature book assembled from the
+    /// WIDER eligibility set (reusing `soft_market_rank_cutoff`) — recovering the
+    /// forecast-specialist backers (rank 41–250) the rank-40 gate excludes, so the
+    /// live `favorite` arm fires on weather zero times. The incumbent eligible-only
+    /// book is untouched, so every existing arm is byte-identical. Default FALSE ⇒ no
+    /// weather book is loaded/scored ⇒ the live path is byte-for-byte unchanged.
+    /// SHADOW-ONLY (arms alerting=false); promotes nothing; starts the realizable
+    /// entry_ask capture weather has never had (the copyability question the replay
+    /// backtest could not answer — no weather ask/tape exists in history).
+    #[config(env = "CONSENSUS_WEATHER_ARM", default = false)]
+    pub consensus_weather_arm: bool,
+
     /// Comma-separated inclusive upper rank bounds defining the cohort BANDS the
     /// deep-pool observatory slices/groups by (see `scanner::cohort`). The first
     /// band is the trusted top cohort — keep its bound aligned with
