@@ -1287,6 +1287,37 @@ impl PgPortfolio {
         Ok(rows)
     }
 
+    /// Wider-eligibility vote window for the WEATHER shadow arm (Generalize-the-Band
+    /// run, 2026-07-11). Exact mirror of `load_soft_window_votes` but scoped to daily
+    /// temperature markets (`slug ~ 'highest-temperature'`) instead of esports. The
+    /// live `favorite` arm fired on weather ZERO times because its forecast-specialist
+    /// backers sit at rank 41–250, past the rank-40 `consensus_eligible` gate — the same
+    /// conversion gap diagnosed for esports. Same wider eligibility JOIN (rank ≤ cutoff
+    /// OR consensus_eligible/earned); the incumbent eligible-only book is untouched, so
+    /// every existing arm is byte-identical. Read ONLY when `consensus_weather_arm` is on.
+    pub async fn load_weather_window_votes(
+        &self,
+        since: DateTime<Utc>,
+        rank_cutoff: i32,
+    ) -> Result<Vec<WindowVote>> {
+        let rows: Vec<WindowVote> = sqlx::query_as(
+            "SELECT cw.trader_wallet, cw.name, cw.rank, cw.pnl, cw.quality, cw.condition_id, \
+                    cw.outcome_index, cw.outcome, cw.title, cw.slug, cw.event_slug, \
+                    cw.is_sports, cw.price, cw.size_usd, cw.ts \
+             FROM consensus_vote_window cw \
+             JOIN followed_traders ft ON LOWER(ft.proxy_wallet) = cw.trader_wallet \
+             WHERE cw.ts >= $1 \
+               AND cw.slug ~ 'highest-temperature' \
+               AND (ft.rank <= $2 OR ft.consensus_eligible OR ft.earned_eligible)",
+        )
+        .bind(since)
+        .bind(rank_cutoff)
+        .fetch_all(&self.pool)
+        .await
+        .context("load_weather_window_votes")?;
+        Ok(rows)
+    }
+
     /// Record an EARNED promotion: flip `earned_eligible` on for the given tracked
     /// wallets (exact `proxy_wallet` match). Idempotent — already-earned rows are
     /// untouched; returns how many rows newly flipped. Called only by the

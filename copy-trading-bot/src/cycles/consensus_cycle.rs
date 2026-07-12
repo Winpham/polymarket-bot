@@ -428,6 +428,33 @@ pub async fn consensus_cycle(
         }
     }
 
+    // Weather detection arm (Generalize-the-Band run, 2026-07-11): score a SEPARATE
+    // daily-temperature book from the WIDER-eligibility vote set — recovering the
+    // forecast-specialist backers (rank 41–250) the rank-40 gate excludes, so the live
+    // `favorite` arm fires on weather zero times. Its whole purpose is to START the
+    // realizable entry_ask capture weather has never had (no weather ask/tape exists in
+    // history ⇒ the copyable edge is unmeasurable without it). Default-OFF ⇒ no extra DB
+    // load or scoring ⇒ the live path is byte-identical; the incumbent `book_vec` is untouched.
+    if cfg.consensus_weather_arm {
+        let weather_window = portfolio
+            .load_weather_window_votes(window_start, cfg.soft_market_rank_cutoff)
+            .await
+            .unwrap_or_default();
+        if !weather_window.is_empty() {
+            let base = params_from_cfg(cfg);
+            let weather_books = books_from_window_votes(&weather_window, trust);
+            let weather_strats = crate::scanner::consensus::weather_market_arms(&base);
+            let weather_sigs = score_all_strategies(&weather_books, now, &weather_strats);
+            tracing::info!(
+                weather_votes = weather_window.len(),
+                weather_books = weather_books.len(),
+                weather_signals = weather_sigs.len(),
+                "Weather arm scored (shadow, daily-temperature wider-eligibility book)"
+            );
+            signals.extend(weather_sigs);
+        }
+    }
+
     // Enricher seam: silent cross-check arms re-emit `strict` picks under new
     // strategy names; the originals pass through untouched, so `strict` alerting
     // is non-regressive. Market-dependent arms need per-market data fetched once

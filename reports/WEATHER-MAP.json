@@ -1,0 +1,20 @@
+{
+  "as_of": "2026-07-11",
+  "run": "weather edge refinement \u2014 phase 1 (map + power)",
+  "cluster_unit": "resolution DAY (cross-city same-day temp correlated; city-market over-counts)",
+  "coverage": {
+    "consensus_picks": 433,
+    "day_clusters": 7,
+    "distinct_cities": 49,
+    "bands": {
+      "a_55_65": 12,
+      "b_65_71": 21,
+      "c_71_82": 68,
+      "d_82_90": 103,
+      "e_90_98": 224,
+      "other": 5
+    },
+    "copyability_haircut_atfire_minus_sharp": 0.0011
+  },
+  "power_note": "only 7 independent day-clusters \u2014 below the 20-cluster volume floor; weather is EVERGREEN so this accrues daily forward."
+}

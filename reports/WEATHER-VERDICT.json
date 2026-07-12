@@ -1,0 +1,104 @@
+{
+  "as_of": "2026-07-11",
+  "run": "weather edge refinement \u2014 phase 3 (anti-overfit battery)",
+  "cluster_unit": "resolution DAY (conservative \u2014 also lumps weather-independent global cities)",
+  "M_cells": 3,
+  "candidates": {
+    "WEATHER_0.71-0.98": {
+      "label": "WEATHER_0.71-0.98",
+      "n_picks": 433,
+      "day_clusters": 7,
+      "base_objective_LB": 0.0289,
+      "clustering_bracket": {
+        "day_clustered_LB": 0.0289,
+        "day_clusters": 7,
+        "region_day_LB": 0.0463,
+        "region_day_clusters": 45,
+        "note": "temporal caveat unchanged \u2014 all clusters within one calendar week (july 2-8); region-day recovers SPATIAL independence only, LODO-by-week still impossible."
+      },
+      "lodo_by_week": {
+        "dropped_week": null,
+        "lb_without_dominant": null,
+        "n_weeks_over_2days": 1,
+        "note": "SINGLE-WINDOW: <2 weeks with \u22652 day-clusters \u2014 LODO-by-week IMPOSSIBLE; the edge is one consecutive-day window (regime-correlated), uncertifiable until disjoint weeks accrue"
+      },
+      "time_split": {
+        "early_LB": -0.1099,
+        "late_LB": 0.0359,
+        "split_at": "on-july-2"
+      },
+      "bonferroni": {
+        "alpha_adj": 0.0167,
+        "m": 3,
+        "bonferroni_LB": 0.0083
+      },
+      "selection_null_FORECAST_CO_READING": {
+        "observed_surplus": 0.0568,
+        "p_emp": 0.0125,
+        "draws": 2000,
+        "pass_p01": false,
+        "note": null
+      },
+      "champion_day_correlation": {
+        "n_common_days": 6,
+        "corr": -0.018
+      },
+      "battery": {
+        "base_LB_positive": true,
+        "lodo_week_survives": false,
+        "bonferroni_positive": true,
+        "selection_null_p01": false
+      },
+      "survives_battery_modulo_power": false,
+      "power_note": "day-clusters < 20 volume floor \u21d2 INDETERMINATE regardless; the battery tests whether the DIRECTION is real signal or a 7-day/forecast artifact."
+    },
+    "WEATHER_0.71-0.90_refined": {
+      "label": "WEATHER_0.71-0.90_refined",
+      "n_picks": 171,
+      "day_clusters": 6,
+      "base_objective_LB": 0.0915,
+      "clustering_bracket": {
+        "day_clustered_LB": 0.0915,
+        "day_clusters": 6,
+        "region_day_LB": 0.0884,
+        "region_day_clusters": 36,
+        "note": "temporal caveat unchanged \u2014 all clusters within one calendar week (july 2-8); region-day recovers SPATIAL independence only, LODO-by-week still impossible."
+      },
+      "lodo_by_week": {
+        "dropped_week": null,
+        "lb_without_dominant": null,
+        "n_weeks_over_2days": 1,
+        "note": "SINGLE-WINDOW: <2 weeks with \u22652 day-clusters \u2014 LODO-by-week IMPOSSIBLE; the edge is one consecutive-day window (regime-correlated), uncertifiable until disjoint weeks accrue"
+      },
+      "time_split": {
+        "early_LB": -0.0179,
+        "late_LB": 0.0659,
+        "split_at": "on-july-2"
+      },
+      "bonferroni": {
+        "alpha_adj": 0.0167,
+        "m": 3,
+        "bonferroni_LB": 0.0719
+      },
+      "selection_null_FORECAST_CO_READING": {
+        "observed_surplus": 0.0702,
+        "p_emp": 0.0065,
+        "draws": 2000,
+        "pass_p01": true,
+        "note": null
+      },
+      "champion_day_correlation": {
+        "n_common_days": 5,
+        "corr": -0.482
+      },
+      "battery": {
+        "base_LB_positive": true,
+        "lodo_week_survives": false,
+        "bonferroni_positive": true,
+        "selection_null_p01": true
+      },
+      "survives_battery_modulo_power": false,
+      "power_note": "day-clusters < 20 volume floor \u21d2 INDETERMINATE regardless; the battery tests whether the DIRECTION is real signal or a 7-day/forecast artifact."
+    }
+  }
+}
