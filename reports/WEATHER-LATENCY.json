@@ -1,0 +1,133 @@
+{
+  "as_of": "2026-07-12",
+  "run": "weather deepen \u2014 WS1 (capture cadence & latency)",
+  "question": "is the ~10-15 min housekeeping cadence good enough, or does the realizable weather edge decay inside the capture window?",
+  "n_captures": 38,
+  "n_with_sharp_join": 38,
+  "weather_fav_liq_captures": 0,
+  "capture_lag_min": {
+    "n": 38,
+    "mean": 29.0084,
+    "median": 30.1184,
+    "min": 23.9107,
+    "max": 34.563,
+    "p90": 33.2231
+  },
+  "spread_ask_minus_mid": {
+    "n": 38,
+    "mean": 0.0122,
+    "median": 0.007,
+    "min": -0.005,
+    "max": 0.06,
+    "p90": 0.0465
+  },
+  "adverse_drift_mid_minus_sharp": {
+    "n": 38,
+    "mean": 0.0065,
+    "median": 0.0111,
+    "min": -0.2259,
+    "max": 0.2893,
+    "p90": 0.0828
+  },
+  "executable_haircut_ask_minus_sharp": {
+    "n": 38,
+    "mean": 0.0187,
+    "median": 0.0171,
+    "min": -0.2109,
+    "max": 0.2933,
+    "p90": 0.0928
+  },
+  "corr_lag_vs_spread": 0.034,
+  "corr_lag_vs_drift": -0.305,
+  "by_band": {
+    "b_65_71": {
+      "n": 1,
+      "spread": {
+        "n": 1,
+        "mean": 0.015,
+        "median": 0.015,
+        "min": 0.015,
+        "max": 0.015,
+        "p90": 0.015
+      },
+      "haircut_vs_sharp": {
+        "n": 1,
+        "mean": -0.2109,
+        "median": -0.2109,
+        "min": -0.2109,
+        "max": -0.2109,
+        "p90": -0.2109
+      }
+    },
+    "c_71_82": {
+      "n": 9,
+      "spread": {
+        "n": 9,
+        "mean": 0.0273,
+        "median": 0.025,
+        "min": 0.005,
+        "max": 0.06,
+        "p90": 0.06
+      },
+      "haircut_vs_sharp": {
+        "n": 9,
+        "mean": -0.0372,
+        "median": -0.0367,
+        "min": -0.147,
+        "max": 0.01,
+        "p90": 0.01
+      }
+    },
+    "d_82_90": {
+      "n": 3,
+      "spread": {
+        "n": 3,
+        "mean": 0.019,
+        "median": 0.01,
+        "min": 0.0,
+        "max": 0.047,
+        "p90": 0.047
+      },
+      "haircut_vs_sharp": {
+        "n": 3,
+        "mean": 0.0527,
+        "median": 0.0403,
+        "min": 0.01,
+        "max": 0.1079,
+        "p90": 0.1079
+      }
+    },
+    "e_90_98": {
+      "n": 25,
+      "spread": {
+        "n": 25,
+        "mean": 0.0058,
+        "median": 0.005,
+        "min": -0.005,
+        "max": 0.02,
+        "p90": 0.015
+      },
+      "haircut_vs_sharp": {
+        "n": 25,
+        "mean": 0.0439,
+        "median": 0.0228,
+        "min": -0.0081,
+        "max": 0.2933,
+        "p90": 0.0928
+      }
+    }
+  },
+  "capture_pass_mix": {
+    "decision_pass": 38,
+    "lagged_pass": 0
+  },
+  "realized_within_window_decay": {
+    "status": "PENDING \u2014 needs RESOLVED captured signals (weather_fav captures are days-fresh, july 12-14 markets unresolved). Re-run this instrument as they resolve to read (won - entry_ask) vs lag."
+  },
+  "verdict": "CAPTURE-AT-DETECTION NOT WARRANTED \u2014 lag is uncorrelated with spread/drift; the binding realizable constraint is the bid-ask SPREAD + thin-book SIZE, not cadence",
+  "notes": [
+    "entry_ask & entry_ask_mid are captured on the SAME housekeeping pass (/book ask + /markets mid, ~sub-second apart) so spread is the true contemporaneous half-spread, NOT drift.",
+    "weather_fav_liq (the $1k-liquidity twin) captured 0 \u2014 thin weather books are the binding SIZE constraint; a fat % on unfillable size is not a strategy.",
+    "captures skew high-price (fresh july 12-14 markets, many deep chalk) \u2014 the haircut here is a FIRST read, not the 0.71-0.90 cert-cell number; re-run as the cert-cell band captures accrue."
+  ]
+}
