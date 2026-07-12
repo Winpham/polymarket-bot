@@ -1,52 +1,85 @@
 {
   "as_of": "2026-07-12",
-  "family": "highest-temperature",
-  "run": "evergreen portfolio \u2014 per-family anti-overfit battery",
-  "cluster_unit": "resolution DAY (conservative \u2014 also lumps weather-independent global cities)",
+  "run": "weather deepen \u2014 WS4 (forward certification, CLOB-graded)",
+  "basis": "at-fire mid RECONSTRUCTED from CLOB prices-history at convergence ts0 (uniform across weeks); PROXY basis, NOT captured entry_ask (w27/w28 predate live capture).",
+  "grading": {
+    "source": "CLOB /markets winner (bounded to weather conds), read-only",
+    "total": 1159,
+    "open_dropped": 125,
+    "no_mid_dropped": 0,
+    "out_of_band": 174,
+    "blind_cross_n": 351,
+    "blind_cross_abs_err": 26.23569896147682,
+    "graded": 860,
+    "blind_cross_mae": 0.0747,
+    "clob_fetches": 0,
+    "blind_universe_clob_n": 1258,
+    "week_day_clusters": {
+      "w26": 6,
+      "w27": 5
+    },
+    "disjoint_weeks_with_ge2_dayclusters": 2,
+    "lodo_by_week_now_possible": true
+  },
+  "basis_cross_check": {
+    "blind_mid_overlap_n": 351,
+    "reconstruction_vs_ALL_blind_MAE": 0.0747,
+    "validated_split": {
+      "prompt_detected_le30min": {
+        "n": 9,
+        "MAE_recon_vs_blind": 0.0097
+      },
+      "late_detected_gt30min": {
+        "n": 424,
+        "MAE_recon_vs_blind": 0.0892
+      },
+      "finding": "the CLOB-at-ts0 reconstruction AGREES with `_blind` to 0.97c when `_blind` was captured promptly (<=30min), but 424/433 (98%) in-sample `_blind` mids were captured >30min late (often DAYS \u2014 housekeeping lag), landing near resolution (0.2, 0.55...). So the CLOB-at-ts0 mid is the CORRECT at-fire basis; the in-sample `_blind` basis was lag-contaminated and COMPRESSED the edge toward 0. The 7.5c aggregate MAE is that contamination, not recon error."
+    }
+  },
   "M_cells": 3,
   "candidates": {
     "WEATHER_0.71-0.98": {
       "label": "WEATHER_0.71-0.98",
-      "n_picks": 433,
-      "day_clusters": 7,
-      "base_objective_LB": 0.0289,
+      "n_picks": 860,
+      "day_clusters": 11,
+      "base_objective_LB": 0.0949,
       "clustering_bracket": {
-        "day_clustered_LB": 0.0289,
-        "day_clusters": 7,
-        "region_day_LB": 0.0463,
-        "region_day_clusters": 45,
+        "day_clustered_LB": 0.0949,
+        "day_clusters": 11,
+        "region_day_LB": 0.0951,
+        "region_day_clusters": 95,
         "note": "temporal caveat unchanged \u2014 all clusters within one calendar week (july 2-8); region-day recovers SPATIAL independence only, LODO-by-week still impossible."
       },
       "lodo_by_week": {
-        "dropped_week": null,
-        "lb_without_dominant": null,
-        "n_weeks_over_2days": 1,
-        "note": "SINGLE-WINDOW: <2 weeks with \u22652 day-clusters \u2014 LODO-by-week IMPOSSIBLE; the edge is one consecutive-day window (regime-correlated), uncertifiable until disjoint weeks accrue"
+        "dropped_week": "w26",
+        "n_weeks": 2,
+        "lb_without_dominant": 0.1081,
+        "days_left": 5
       },
       "time_split": {
-        "early_LB": 0.0187,
-        "late_LB": -0.0688,
+        "early_LB": 0.078,
+        "late_LB": 0.1114,
         "split_at": "on-july-7"
       },
       "bonferroni": {
         "alpha_adj": 0.0167,
         "m": 3,
-        "bonferroni_LB": 0.0083
+        "bonferroni_LB": 0.0899
       },
       "selection_null_FORECAST_CO_READING": {
-        "observed_surplus": 0.0568,
-        "p_emp": 0.0125,
+        "observed_surplus": 0.009,
+        "p_emp": 0.4803,
         "draws": 2000,
         "pass_p01": false,
         "note": null
       },
       "champion_day_correlation": {
-        "n_common_days": 6,
-        "corr": -0.018
+        "n_common_days": 10,
+        "corr": 0.486
       },
       "battery": {
         "base_LB_positive": true,
-        "lodo_week_survives": false,
+        "lodo_week_survives": true,
         "bonferroni_positive": true,
         "selection_null_p01": false
       },
@@ -55,51 +88,57 @@
     },
     "WEATHER_0.71-0.90_refined": {
       "label": "WEATHER_0.71-0.90_refined",
-      "n_picks": 171,
-      "day_clusters": 6,
-      "base_objective_LB": 0.0915,
+      "n_picks": 485,
+      "day_clusters": 11,
+      "base_objective_LB": 0.1551,
       "clustering_bracket": {
-        "day_clustered_LB": 0.0915,
-        "day_clusters": 6,
-        "region_day_LB": 0.0884,
-        "region_day_clusters": 36,
+        "day_clustered_LB": 0.1551,
+        "day_clusters": 11,
+        "region_day_LB": 0.148,
+        "region_day_clusters": 86,
         "note": "temporal caveat unchanged \u2014 all clusters within one calendar week (july 2-8); region-day recovers SPATIAL independence only, LODO-by-week still impossible."
       },
       "lodo_by_week": {
-        "dropped_week": null,
-        "lb_without_dominant": null,
-        "n_weeks_over_2days": 1,
-        "note": "SINGLE-WINDOW: <2 weeks with \u22652 day-clusters \u2014 LODO-by-week IMPOSSIBLE; the edge is one consecutive-day window (regime-correlated), uncertifiable until disjoint weeks accrue"
+        "dropped_week": "w26",
+        "n_weeks": 2,
+        "lb_without_dominant": 0.1379,
+        "days_left": 5
       },
       "time_split": {
-        "early_LB": 0.0659,
-        "late_LB": -0.0179,
+        "early_LB": 0.147,
+        "late_LB": 0.1442,
         "split_at": "on-july-7"
       },
       "bonferroni": {
         "alpha_adj": 0.0167,
         "m": 3,
-        "bonferroni_LB": 0.0719
+        "bonferroni_LB": 0.15
       },
       "selection_null_FORECAST_CO_READING": {
-        "observed_surplus": 0.0702,
-        "p_emp": 0.0065,
+        "observed_surplus": 0.0108,
+        "p_emp": 0.5277,
         "draws": 2000,
-        "pass_p01": true,
+        "pass_p01": false,
         "note": null
       },
       "champion_day_correlation": {
-        "n_common_days": 5,
-        "corr": -0.482
+        "n_common_days": 9,
+        "corr": 0.351
       },
       "battery": {
         "base_LB_positive": true,
-        "lodo_week_survives": false,
+        "lodo_week_survives": true,
         "bonferroni_positive": true,
-        "selection_null_p01": true
+        "selection_null_p01": false
       },
       "survives_battery_modulo_power": false,
       "power_note": "day-clusters < 20 volume floor \u21d2 INDETERMINATE regardless; the battery tests whether the DIRECTION is real signal or a 7-day/forecast artifact."
     }
-  }
+  },
+  "selection_null_definition": {
+    "pool": "1+-backer wider-universe weather favorites (band 0.71-0.98), CLOB-graded on the SAME at-fire basis. This tests: does the \u22653-backer CONSENSUS add skill over a single-sharp weather favorite at the same (band \u00d7 day)?",
+    "result": "p \u2248 0.47-0.53 \u2192 NO. On the corrected CLOB at-fire basis the consensus/convergence requirement adds NOTHING over 'a tracked sharp bought this weather favorite'. The phase-3 pass (p=0.0065) was on the lag-CONTAMINATED `_blind` mid basis and does not survive the basis correction. So the weather edge is a PRICE-BAND property of mid-favorite weather, NOT a consensus-copy skill.",
+    "caveat_entry_timing": "the at-fire mid is reconstructed at ts0 = a SHARP's first-buy time; if sharps buy transient dips, this systematically understates a late copier's entry (WS1: executable ask is +1.87c over the sharp fill). A neutral-reference blind pool (priced off a sharp's entry) is the next build; the FORWARD captured entry_ask gate settles it regardless."
+  },
+  "gate_note": "Frozen gate (PREREG_20260712T052717Z_weather) PASS still requires the entry_ask-captured \u03b8 over \u22652 disjoint FORWARD weeks; this proxy-basis LODO is the necessary disjoint-week-robustness evidence, NOT the sufficient frozen PASS. The consensus-null failure means the arm should track the mid-favorite BAND edge, not claim consensus skill."
 }

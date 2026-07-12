@@ -36,3 +36,4 @@ reports/*.jsonl.assets.json
 reports/token_map*.json
 reports/capture.log
 reports/escalate.log
+reports/cache/
