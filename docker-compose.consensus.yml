@@ -90,6 +90,13 @@ services:
       TRUST_REFRESH_MINS: ${TRUST_REFRESH_MINS:-60}          # trust-map (and earn-pass) cadence
       EARN_DEEP_SHARPS: ${EARN_DEEP_SHARPS:-false}           # flip earned_eligible for gate-Trusted deep sharps
       CONSENSUS_RETUNED: ${CONSENSUS_RETUNED:-}              # "min_backers,strong_net,elite_net" silent strict variant
+      # --- weather shadow arm (Weather Edge Refinement, 2026-07-11, PAPER-only).
+      #     Scores weather_fav/weather_fav_liq on a wider-eligibility daily-temperature
+      #     book (rank ≤ SOFT_MARKET_RANK_CUTOFF) — recovering the forecast-specialist
+      #     backers the rank-40 gate excludes. Both SILENT (alerting=false); starts the
+      #     realizable entry_ask capture weather has never had. OFF ⇒ byte-identical. ---
+      CONSENSUS_WEATHER_ARM: ${CONSENSUS_WEATHER_ARM:-false}  # enable the weather shadow arm (paper capture)
+      SOFT_MARKET_RANK_CUTOFF: ${SOFT_MARKET_RANK_CUTOFF:-250} # wider eligibility cutoff for weather/soft arms
       # --- dense early-life capture (decay Phase 0): sub-5-min trajectory for
       #     fresh actionable signals; OFF = loop never spawned. ---
       DENSE_CAPTURE: ${DENSE_CAPTURE:-false}
