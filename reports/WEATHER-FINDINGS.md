@@ -50,3 +50,40 @@ conservative floor.
 Phase 3 stresses this with the battery — LODO-by-week, selection_null (the forecast-co-reading + easy-day
 traps), Bonferroni — to decide if the +5.4% skill is real signal or a 7-day artifact, and whether the
 0.71–0.90 refinement holds.
+
+---
+
+## Phase 3 — anti-overfit battery (`WEATHER-VERDICT.json`)
+
+| candidate | LB | Bonf | selection_null p | champ-corr | LODO-by-week | battery |
+|---|---|---|---|---|---|---|
+| WEATHER 0.71–0.98 | +2.9% | +0.8% | **0.0125** (fail) | −0.02 | IMPOSSIBLE | fails null |
+| **WEATHER 0.71–0.90 (refined)** | **+9.2%** | +7.2% | **0.0065** (pass) | **−0.48** | IMPOSSIBLE | passes all *except power* |
+
+**The decisive test — forecast-co-reading (`selection_null`).** Weather is forecastable public info, so
+the real question is whether the consensus SELECTION beats a random weather favorite at the same
+(band × day). The **refined 0.71–0.90 cell passes (p=0.0065)** — in the mid-favorite band the sharps'
+selection is genuinely informative, NOT just several bots co-reading NOAA. The pooled 0.71–0.98 cell
+**fails (p=0.0125)** because the dead 0.90–0.98 deep-chalk band (efficient, no selection skill) dilutes
+it. This vindicates the a-priori 0.71–0.90 refinement: drop the band where deep chalk earns ~0/$ and
+adds no selection skill.
+
+**The refined cell also looks like a genuine COMPLEMENT to the champion:** day-level return correlation
+**−0.48** (weather resolves independently of summer sports), copyability haircut ≈0, diffuse across 49
+cities. On paper it is exactly what the generalize-band run went looking for and did NOT find in
+sports — a positively-EV, low-correlated, copyable cell.
+
+**THE FATAL CAVEAT (why this certifies nothing yet): it is ONE calendar week.** The 7 day-clusters are
+**july 2–8 consecutive** (w26=6 days, w27=1). So:
+- **LODO-by-week is IMPOSSIBLE** — there is no second disjoint week to leave out.
+- **Consecutive days share weather regimes** (a stable high-pressure system spans days), so the effective
+  independent-N is well below 7 — the day-clustered LB is itself optimistic here.
+- This is the **tennis-one-Wimbledon-week trap by data availability**, not by choice. Every positive
+  number above is one week of early-July weather; it could be a single favorable regime.
+
+**Phase-3 verdict:** the weather 0.71–0.90 cell is the most promising complement candidate the whole
+investigation has surfaced — positive on the copyable basis, passes the forecast-co-reading test,
+low-correlated with the champion — **but it is confined to a single week and therefore INDETERMINATE and
+uncertifiable in-sample.** The ONLY way to resolve it is forward accrual of disjoint weeks. Enable the
+arm to accrue; promote nothing; require ≥2 disjoint weeks + forward selection_null + a real LODO-by-week
+before any human promotion review.
