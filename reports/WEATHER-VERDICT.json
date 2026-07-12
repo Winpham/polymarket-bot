@@ -9,6 +9,13 @@
       "n_picks": 433,
       "day_clusters": 7,
       "base_objective_LB": 0.0289,
+      "clustering_bracket": {
+        "day_clustered_LB": 0.0289,
+        "day_clusters": 7,
+        "region_day_LB": 0.0463,
+        "region_day_clusters": 45,
+        "note": "temporal caveat unchanged \u2014 all clusters within one calendar week (july 2-8); region-day recovers SPATIAL independence only, LODO-by-week still impossible."
+      },
       "lodo_by_week": {
         "dropped_week": null,
         "lb_without_dominant": null,
@@ -16,9 +23,9 @@
         "note": "SINGLE-WINDOW: <2 weeks with \u22652 day-clusters \u2014 LODO-by-week IMPOSSIBLE; the edge is one consecutive-day window (regime-correlated), uncertifiable until disjoint weeks accrue"
       },
       "time_split": {
-        "early_LB": -0.0368,
-        "late_LB": 0.103,
-        "split_at": "on-july-6"
+        "early_LB": -0.1099,
+        "late_LB": 0.0359,
+        "split_at": "on-july-2"
       },
       "bonferroni": {
         "alpha_adj": 0.0167,
@@ -50,6 +57,13 @@
       "n_picks": 171,
       "day_clusters": 6,
       "base_objective_LB": 0.0915,
+      "clustering_bracket": {
+        "day_clustered_LB": 0.0915,
+        "day_clusters": 6,
+        "region_day_LB": 0.0884,
+        "region_day_clusters": 36,
+        "note": "temporal caveat unchanged \u2014 all clusters within one calendar week (july 2-8); region-day recovers SPATIAL independence only, LODO-by-week still impossible."
+      },
       "lodo_by_week": {
         "dropped_week": null,
         "lb_without_dominant": null,
@@ -57,9 +71,9 @@
         "note": "SINGLE-WINDOW: <2 weeks with \u22652 day-clusters \u2014 LODO-by-week IMPOSSIBLE; the edge is one consecutive-day window (regime-correlated), uncertifiable until disjoint weeks accrue"
       },
       "time_split": {
-        "early_LB": 0.0402,
-        "late_LB": 0.1647,
-        "split_at": "on-july-6"
+        "early_LB": -0.0179,
+        "late_LB": 0.0659,
+        "split_at": "on-july-2"
       },
       "bonferroni": {
         "alpha_adj": 0.0167,

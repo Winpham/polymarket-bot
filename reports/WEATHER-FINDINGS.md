@@ -122,3 +122,32 @@ to accrue disjoint weeks** (weather's evergreen daily flow means a real leave-on
 2–4 weeks, not a season), certify forward against the frozen gate (≥2 disjoint weeks + selection_null +
 LODO), and bring a human promotion decision only if the lower bound holds across weeks. Unlike the
 summer sports, weather can actually *answer* the transfer question — that is its whole value.
+
+---
+
+## Phase 5 — refinement: date-gap forensics + region-clustering bracket
+
+**Why the in-sample window is july 2–8 (two distinct causes, neither "missing data"):**
+1. **Starts 07-02:** weather *consensus* (≥3 wider-universe backers on one favorite bucket) did not
+   exist before july-2 — the tracked traders had not begun converging on weather. Real, not an artifact.
+2. **Caps at 07-07:** **resolution-capture lag.** july 8–13 already have 600+ *converged* picks
+   (111–153/day) but ~0 marked resolved in our DB (july 9–13 = 0 resolved). The sharps have bet and the
+   markets have (near-)resolved on Polymarket; housekeeping just hasn't captured the outcomes yet.
+   **july 8–13 is a second calendar week (w27–w28)** — the moment it resolves, weather crosses from one
+   window to TWO disjoint weeks and **LODO-by-week becomes possible.** Days away, not weeks.
+
+**Region-clustering bracket (honest independent-N).** Pure-day clustering (7) is over-conservative —
+it lumps independent continents (a Tokyo heat wave ≠ an NYC one). Clustering by (synoptic-region × day)
+recovers spatial independence (11 regions, 0 unmapped):
+
+| cell | day-clustered LB (G) | region-day LB (G) |
+|---|---|---|
+| full 0.71–0.98 | +2.9% (7) | +4.6% (45) |
+| **refined 0.71–0.90** | **+9.2% (6)** | **+8.8% (36)** |
+
+The refined cell's LB is **robust to the clustering choice (+8.8% to +9.2%)** — so it is NOT a
+spatial-correlation artifact — and at region-day granularity it **clears the 20-cluster volume floor
+(36 clusters).** The temporal caveat is unchanged: all clusters are within one week, so LODO-by-week is
+still impossible. Net: the refinement removes the *volume* doubt and the *spatial-artifact* doubt; only
+the *single-week* doubt remains, and that resolves itself as july 8–13 (already converged) finish
+resolving. This is the strongest the in-sample case can honestly get before the second week lands.

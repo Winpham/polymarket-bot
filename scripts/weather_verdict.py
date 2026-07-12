@@ -28,6 +28,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import cell_lib as C                                    # noqa: E402
 from weather_scan import fetch_weather_picks, fetch_blind_weather, day_of, city_of  # noqa: E402
+from weather_regions import region                                                  # noqa: E402
 
 SEED = 20260711
 N_PERM = 2000
@@ -92,6 +93,24 @@ def selection_null(picks, blind_universe, blind_edge, rng, n_perm=N_PERM):
 def rows_atfire(picks):
     return [{"entry": p["atfire"], "won": p["won"], "cluster": p["cluster"],
              "condition_id": p["condition_id"], "slug": p["slug"]} for p in picks]
+
+
+def clustering_bracket(picks):
+    """Independent-N bracket: pure-DAY (over-conservative — lumps independent continents) vs
+    (synoptic-region × DAY) (recovers spatial independence; may over-count temporal independence
+    within one persistent week). The true LB lies between; report both, never one inflated number."""
+    day_rows = rows_atfire(picks)
+    reg_rows = [{**r, "cluster": region(p["city"]) + "|" + p["cluster"]}
+                for r, p in zip(day_rows, picks)]
+    dl, rl = C.roi_lb(day_rows), C.roi_lb(reg_rows)
+    return {
+        "day_clustered_LB": None if (dl is None or dl.get("lb") is None) else round(dl["lb"], 4),
+        "day_clusters": None if dl is None else dl.get("G_clusters"),
+        "region_day_LB": None if (rl is None or rl.get("lb") is None) else round(rl["lb"], 4),
+        "region_day_clusters": None if rl is None else rl.get("G_clusters"),
+        "note": "temporal caveat unchanged — all clusters within one calendar week (july 2-8); "
+                "region-day recovers SPATIAL independence only, LODO-by-week still impossible.",
+    }
 
 
 def lodo_week(picks):
@@ -205,7 +224,8 @@ def assess(picks, label, blind_edge, blind_universe, champ_daily, rng, m):
     }
     return {
         "label": label, "n_picks": len(picks), "day_clusters": len({p["cluster"] for p in picks}),
-        "base_objective_LB": base_lb, "lodo_by_week": lo, "time_split": ts, "bonferroni": bf,
+        "base_objective_LB": base_lb, "clustering_bracket": clustering_bracket(picks),
+        "lodo_by_week": lo, "time_split": ts, "bonferroni": bf,
         "selection_null_FORECAST_CO_READING": sn,
         "champion_day_correlation": corr,
         "battery": passes,
