@@ -27,6 +27,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import cell_lib as C                                    # noqa: E402
+import weather_scan as W                                                            # noqa: E402
 from weather_scan import fetch_weather_picks, fetch_blind_weather, day_of, city_of  # noqa: E402
 from weather_regions import region                                                  # noqa: E402
 
@@ -176,7 +177,7 @@ def fetch_blind_universe():
     rows = C.q(f"""
     SELECT COALESCE(initial_mean_price,mean_price) e, outcome_won, slug, first_detected_at::date
     FROM consensus_signals
-    WHERE strategy='_blind' AND resolved AND outcome_won IS NOT NULL AND slug ~ 'highest-temperature'
+    WHERE strategy='_blind' AND resolved AND outcome_won IS NOT NULL AND slug ~ '{W.FAMILY}'
       AND COALESCE(initial_mean_price,mean_price) BETWEEN 0.71 AND 0.98;
     """)
     out = []
@@ -235,7 +236,10 @@ def assess(picks, label, blind_edge, blind_universe, champ_daily, rng, m):
     }
 
 
-def build():
+def build(family="highest-temperature", label="WEATHER"):
+    """Run the full battery on ONE family. Each evergreen branch certifies on its OWN gate —
+    its own picks, its own blind baseline, its own LODO-by-week — never carried by a sibling."""
+    W.set_family(family)
     picks = fetch_weather_picks()
     blind_by_band = fetch_blind_weather()
     blind_edge = {b: e for b, (e, _n) in blind_by_band.items()}
@@ -245,14 +249,15 @@ def build():
     refined = [p for p in picks if 0.71 <= p["atfire"] < 0.90]   # a-priori: drop dead 0.90+ chalk
     M = 3
     return {
-        "as_of": "2026-07-11", "run": "weather edge refinement — phase 3 (anti-overfit battery)",
+        "as_of": "2026-07-12", "family": family,
+        "run": "evergreen portfolio — per-family anti-overfit battery",
         "cluster_unit": "resolution DAY (conservative — also lumps weather-independent global cities)",
         "M_cells": M,
         "candidates": {
-            "WEATHER_0.71-0.98": assess(picks, "WEATHER_0.71-0.98", blind_edge, blind_universe,
-                                        champ_daily, rng, M),
-            "WEATHER_0.71-0.90_refined": assess(refined, "WEATHER_0.71-0.90_refined", blind_edge,
-                                                blind_universe, champ_daily, rng, M),
+            f"{label}_0.71-0.98": assess(picks, f"{label}_0.71-0.98", blind_edge, blind_universe,
+                                         champ_daily, rng, M),
+            f"{label}_0.71-0.90_refined": assess(refined, f"{label}_0.71-0.90_refined", blind_edge,
+                                                 blind_universe, champ_daily, rng, M),
         },
     }
 
@@ -274,10 +279,17 @@ def selftest():
 def main():
     if "--selftest" in sys.argv:
         raise SystemExit(selftest())
-    rep = build()
-    (Path(__file__).resolve().parent.parent / "reports" / "WEATHER-VERDICT.json").write_text(
+    # Per-family battery: each evergreen branch is judged on its OWN gate.
+    fam = "highest-temperature"
+    label, out = "WEATHER", "WEATHER-VERDICT.json"
+    if "--family" in sys.argv:
+        fam = sys.argv[sys.argv.index("--family") + 1]
+    if fam == "lowest-temperature":
+        label, out = "WEATHER_LOW", "WEATHER-LOW-VERDICT.json"
+    rep = build(fam, label)
+    (Path(__file__).resolve().parent.parent / "reports" / out).write_text(
         json.dumps(rep, indent=2))
-    print("wrote WEATHER-VERDICT.json\n")
+    print(f"wrote {out}  (family={fam})\n")
     for name, v in rep["candidates"].items():
         if "battery" not in v:
             print(f"  {name}: {v['verdict']}"); continue

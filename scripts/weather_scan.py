@@ -34,8 +34,22 @@ import cell_lib as C                                    # noqa: E402
 
 WIDE_CUTOFF = 250
 LO, HI = 0.71, 0.98
-_CITY = re.compile(r"highest-temperature-in-([a-z-]+?)-on-")
+# Both weather families share the slug shape `<family>-in-<city>-on-<day>`.
+_CITY = re.compile(r"(?:highest|lowest)-temperature-in-([a-z-]+?)-on-")
+# The market FAMILY under measurement (slug regex). Set via set_family(); defaults to the
+# incumbent highest-temperature branch so every existing caller behaves EXACTLY as before.
+FAMILY = "highest-temperature"
 _DAY = re.compile(r"(on-[a-z]+-\d+)")
+
+
+def set_family(regex):
+    """Point the instrument at ONE evergreen market family (e.g. 'lowest-temperature').
+
+    Each family is a SEPARATE branch with its own book, its own optimization and its own frozen
+    gate — never a blended `temperature` filter, because high- and low-temperature markets have
+    different mechanisms (the casual crowd prices highs about right but MIS-prices lows)."""
+    global FAMILY
+    FAMILY = regex
 
 
 def city_of(slug):
@@ -49,6 +63,7 @@ def day_of(slug):
 
 
 def fetch_weather_picks():
+    """Family-scoped (see set_family): wider-universe convergence on THIS family's favorites."""
     """Wider-universe (rank<=250) weather-favorite convergence (>=3 one-sided backers, band, resolved),
     joined to the `_blind` at-fire mid for the SAME (condition,outcome). One row per (condition,outcome)."""
     rows = C.q(f"""
@@ -56,7 +71,7 @@ def fetch_weather_picks():
       SELECT f.condition_id, f.outcome_index, LOWER(f.wallet) w, MIN(ft.rank) rank, AVG(f.price) px,
              MIN(f.ts) ts, MAX(f.slug) slug, BOOL_OR(f.resolved) rz, BOOL_OR(f.outcome_won) won
       FROM trader_fills f JOIN followed_traders ft ON ft.proxy_wallet=f.wallet
-      WHERE f.side='BUY' AND f.ts>='{C.GO_LIVE}' AND ft.rank<={WIDE_CUTOFF} AND f.slug ~ 'highest-temperature'
+      WHERE f.side='BUY' AND f.ts>='{C.GO_LIVE}' AND ft.rank<={WIDE_CUTOFF} AND f.slug ~ '{FAMILY}'
       GROUP BY 1,2,3),
     e1 AS (SELECT e.* FROM e WHERE NOT EXISTS
       (SELECT 1 FROM e x WHERE x.condition_id=e.condition_id AND x.w=e.w AND x.outcome_index<>e.outcome_index)),
@@ -91,7 +106,7 @@ def fetch_blind_weather():
     rows = C.q(f"""
     SELECT COALESCE(initial_mean_price, mean_price) e, outcome_won
     FROM consensus_signals
-    WHERE strategy='_blind' AND resolved AND outcome_won IS NOT NULL AND slug ~ 'highest-temperature'
+    WHERE strategy='_blind' AND resolved AND outcome_won IS NOT NULL AND slug ~ '{FAMILY}'
       AND COALESCE(initial_mean_price, mean_price) BETWEEN {LO} AND {HI};
     """)
     agg = defaultdict(lambda: [0.0, 0])
