@@ -264,3 +264,67 @@ full drain is still running), so the candidate RANKING is provisional — the bl
 is under-resolved, which can move `selection_null`. The realizable collapse above is NOT affected: it is
 measured on `consensus_signals`, whose resolution was never starved. Re-run `evergreen_discovery.py`
 after the drain completes to finalize the screen.
+
+---
+
+# PART III — RETRACTION: the "dies at the ask" verdict was my own measurement error
+
+**Part II §7 claimed no family outside the champion is profitable, on the strength of realizable LBs
+like `mlb −57.1%`. That claim is WITHDRAWN. It was an artifact of two errors, both mine.**
+
+1. **Population mismatch.** The `+18.8% @ sharps' fill` came from wider-universe (rank≤250) convergence
+   picks in `trader_fills`; the `−57.1% @ ask` came from the champion arm's signals in
+   `consensus_signals`. Different picks. Not a before/after.
+2. **Fatal: I filtered the band ON `entry_ask`.** That is the D4-corrupted column (lagged,
+   loser-tilted, deep-chalk-skewed). Filtering on a corrupt column bakes the corruption into the
+   **sample selection** — far more damaging than a biased value, because it changes *which picks are in
+   the test*, not just their price.
+
+## What the copier actually pays (same picks, decomposed)
+
+`ask − sharp_px = drift + spread`, where **drift** = the market moved after the sharps bought (we are
+late) and **spread** = we cross the book.
+
+| | n | drift | spread | **total** |
+|---|---|---|---|---|
+| pooled (0.71–0.90) | 1,351 | **−0.08¢** | **+1.22¢** | **+1.14¢** |
+| sharps were RIGHT (won) | 1,226 | −0.36¢ | | **+0.91¢** |
+| sharps were WRONG (lost) | 85 | +3.54¢ | | +3.76¢ |
+
+**Copying costs about a cent — ~1.4% of a 0.80 stake. It is NOT what kills an edge of ~+12pp.**
+And **drift ≈ 0: the market does NOT run away from us.** We are not being outrun.
+
+## Corrected read (clean sharp-fill picks, charged the measured cost)
+
+Several families now SURVIVE LODO-by-week at the copier price: fifwc **+6.6%** (24 clusters, 4 weeks —
+the best-powered cell on the board), weather-high +12.3%, ucl +12.7%, will +11.7%, col +10.8%,
+wta +8.7%.
+
+## …but this is NOT a green light, and the tell is right there
+
+`mlb` and `atp` come out with a **NEGATIVE copier cost (−2.6¢, −3.8¢)** — "we buy cheaper than the
+sharps," i.e. free money. That does not exist. It is the D4-corrupt `entry_ask` population leaking into
+the cost estimate. **Every cost number on this page still derives from the one column we know is
+broken.**
+
+**HONEST STATUS: the realizable question is currently UNANSWERABLE at trustworthy precision.** Not
+"negative" (Part II's error), and not "positive" (this page's temptation). The single column that
+measures what WE pay was being captured wrong until commit e74f4e7, and it has not yet accrued clean
+data.
+
+**This is now blocked on time, not on analysis.** Let the fixed decision-time lane accrue ~1–2 weeks of
+clean asks, then re-run. Do not act on any realizable number produced before then — including the
+flattering ones on this page.
+
+## What this changes about the LEVER (answers "how do we get the sharps' fill?")
+
+- **Speed is NOT the lever.** drift ≈ 0 means we are not losing to latency; being faster buys ~nothing.
+  This independently agrees with the weather-deepen run (corr(lag, drift) small ⇒ capture-at-detection
+  not worth building). **Do not build a faster capture path.**
+- **The whole cost is the SPREAD (~1.2¢)** — we pay it because we CROSS to the ask. The only way to get
+  the sharps' price is to **not cross**: post a passive limit at/near the mid.
+- **But that is not free, and it has already been tested.** A passive limit introduces NON-FILL risk,
+  and non-fill is adversely selected: you miss the winners (whose price runs away) and fill the losers
+  (whose price sits there waiting for you). `project-polymarket-maker-capacity` measured maker-copy as
+  **thin / adverse / EDGE ≈ 0**. Any revival must confront that head-on with a fill simulation
+  (`maker_fill_sim.py` exists), NOT by assuming the mid is achievable.
