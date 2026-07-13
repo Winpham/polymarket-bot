@@ -84,6 +84,28 @@ pub struct CopyTradingConfig {
     #[config(env = "SOFT_MARKET_RANK_CUTOFF", default = 250)]
     pub soft_market_rank_cutoff: i32,
 
+    /// Register the DEEP-POOL twin arms (`weather_fav_wide`, `weather_fav_liq_wide`) —
+    /// the deep-universe run's one experiment (2026-07-13). Each twin is identical to its
+    /// incumbent except that it draws backers from rank ≤ `wide_pool_rank_cutoff` (1000)
+    /// instead of ≤ `soft_market_rank_cutoff` (250).
+    ///
+    /// It runs ALONGSIDE the incumbent, never replacing it: the incumbent weather arm is
+    /// accruing a forward record toward its own frozen gate, and raising ITS cutoff would
+    /// contaminate that record and destroy the comparison. Two arms on the same markets,
+    /// differing in exactly one axis, is the only way to read pool width honestly.
+    ///
+    /// Requires `TRACK_DEPTH ≥ 1000` to mean anything (the deep ranks must be captured
+    /// before they can back anything). Default FALSE ⇒ no extra book is loaded or scored
+    /// ⇒ the live path is byte-for-byte unchanged. SHADOW-ONLY (alerting=false); promotes
+    /// nothing.
+    #[config(env = "CONSENSUS_WIDE_POOL_ARM", default = false)]
+    pub consensus_wide_pool_arm: bool,
+
+    /// Backer-pool rank cutoff for the `_wide` twins ONLY (read only when
+    /// `consensus_wide_pool_arm` is on). Never affects the incumbent arms or the live feed.
+    #[config(env = "WIDE_POOL_RANK_CUTOFF", default = 1000)]
+    pub wide_pool_rank_cutoff: i32,
+
     /// Weather detection arm (Generalize-the-Band run, 2026-07-11). When ON, the
     /// consensus cycle scores a SEPARATE daily-temperature book assembled from the
     /// WIDER eligibility set (reusing `soft_market_rank_cutoff`) — recovering the

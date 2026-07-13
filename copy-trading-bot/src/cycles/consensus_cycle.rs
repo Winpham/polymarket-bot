@@ -444,13 +444,24 @@ pub async fn consensus_cycle(
         let enabled = match family.key {
             "weather" => cfg.consensus_weather_arm,
             "weather_low" => cfg.consensus_weather_low_arm,
+            // The deep-pool twin: same markets as `weather`, backers drawn from rank
+            // ≤1000 instead of ≤250. Its own flag, so it can never come up by accident.
+            "weather_wide" => cfg.consensus_wide_pool_arm,
             _ => false, // a family with no flag wired is OFF — never silently live
         };
         if !enabled {
             continue;
         }
+        // The ONE axis a `_wide` twin varies. Everything downstream — band, convergence
+        // bar, scoring, gate — is shared, so any divergence between the twin and its
+        // incumbent is attributable to pool width and nothing else.
+        let rank_cutoff = if family.wide_pool {
+            cfg.wide_pool_rank_cutoff
+        } else {
+            cfg.soft_market_rank_cutoff
+        };
         let window = portfolio
-            .load_family_window_votes(window_start, cfg.soft_market_rank_cutoff, family.slug_regex)
+            .load_family_window_votes(window_start, rank_cutoff, family.slug_regex)
             .await
             .unwrap_or_default();
         if window.is_empty() {

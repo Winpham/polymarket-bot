@@ -842,6 +842,15 @@ pub struct MarketFamily {
     pub key: &'static str,
     /// Postgres regex selecting this family's markets from the vote window.
     pub slug_regex: &'static str,
+    /// Draw backers from the WIDE pool (`WIDE_POOL_RANK_CUTOFF`, default rank ≤1000)
+    /// instead of the incumbent `SOFT_MARKET_RANK_CUTOFF` (250).
+    ///
+    /// This is the ONE axis a `_wide` twin varies: same markets, same band, same
+    /// convergence bar, same params — only the backer pool differs. That is what makes
+    /// it a clean read on pool width rather than a new strategy, and it is why the twin
+    /// runs ALONGSIDE its incumbent rather than replacing it (raising the incumbent's
+    /// own cutoff would contaminate the forward record it is accruing toward its gate).
+    pub wide_pool: bool,
     /// Arm names. Held as `&'static str` (not built from `key` at call time) because
     /// `market_family_arms` runs EVERY consensus cycle and `StrategyDef::name` is
     /// `&'static str` — formatting them per call would leak two strings per cycle for
@@ -857,8 +866,35 @@ pub struct MarketFamily {
 pub const WEATHER_HIGH: MarketFamily = MarketFamily {
     key: "weather",
     slug_regex: "highest-temperature",
+    wide_pool: false,
     fav_arm: "weather_fav",
     fav_liq_arm: "weather_fav_liq",
+};
+
+/// The DEEP-POOL twin of [`WEATHER_HIGH`] (deep-universe run, 2026-07-13).
+///
+/// Identical in every respect except the backer pool: rank ≤ `WIDE_POOL_RANK_CUTOFF`
+/// (1000) instead of ≤250. It exists to answer, forward and at realizable entry, the
+/// question the depth-1000 universe was built for:
+///
+/// > **Does a wider pool of mediocre-globally-ranked specialists make the arm better,
+/// > or just noisier?**
+///
+/// The prior cuts both ways, which is why it must be measured rather than assumed.
+/// FOR: forecast specialists sit at median global rank ~170 *because* they specialise,
+/// so rank 250 is an arbitrary wall and the 251–1000 band should hold more of them.
+/// AGAINST: the weather run already found that a ≥3-backer consensus earns ~0 over ONE
+/// sharp (B3 +0.14pp) — if the edge lives in a handful of genuine forecasters, widening
+/// the pool adds dilution, not signal, and this twin should LOSE.
+///
+/// Runs alongside the incumbent on the same markets, so the two are directly comparable
+/// day-for-day. Shadow-only, alerting off, promotes nothing.
+pub const WEATHER_HIGH_WIDE: MarketFamily = MarketFamily {
+    key: "weather_wide",
+    slug_regex: "highest-temperature",
+    wide_pool: true,
+    fav_arm: "weather_fav_wide",
+    fav_liq_arm: "weather_fav_liq_wide",
 };
 
 /// The lowest-temperature sibling — a SEPARATE arm, not a widened weather filter.
@@ -867,12 +903,13 @@ pub const WEATHER_HIGH: MarketFamily = MarketFamily {
 pub const WEATHER_LOW: MarketFamily = MarketFamily {
     key: "weather_low",
     slug_regex: "lowest-temperature",
+    wide_pool: false,
     fav_arm: "weather_low_fav",
     fav_liq_arm: "weather_low_fav_liq",
 };
 
 /// Every evergreen family the cycle can register, each behind its own flag.
-pub const MARKET_FAMILIES: [MarketFamily; 2] = [WEATHER_HIGH, WEATHER_LOW];
+pub const MARKET_FAMILIES: [MarketFamily; 3] = [WEATHER_HIGH, WEATHER_LOW, WEATHER_HIGH_WIDE];
 
 /// Build one family's shadow arms. Uniform by construction, so adding an evergreen
 /// branch is a `MarketFamily` entry + a flag — no copy-paste drift between branches.
@@ -1545,6 +1582,32 @@ mod tests {
         cold.is_sports = false;
         assert_eq!(score_market(&cold, now, &arms[0].params).len(), 0,
                    "weather_fav skips the sub-0.71 efficient band");
+    }
+
+    #[test]
+    fn wide_twin_differs_from_its_incumbent_in_name_only() {
+        // THE validity condition of the deep-pool experiment. The twin exists to isolate
+        // ONE variable — the backer pool (rank ≤1000 vs ≤250, applied at book-load time,
+        // not here). If any OTHER field drifts apart, the twin stops being a read on pool
+        // width and silently becomes a different strategy, and the comparison is junk.
+        let base = ConsensusParams::default();
+        let incumbent = market_family_arms(&base, &WEATHER_HIGH);
+        let twin = market_family_arms(&base, &WEATHER_HIGH_WIDE);
+
+        assert_eq!(incumbent.len(), twin.len());
+        for (inc, wide) in incumbent.iter().zip(twin.iter()) {
+            assert_eq!(
+                inc.params, wide.params,
+                "twin must share the incumbent's params EXACTLY — same band, same \
+                 convergence bar. Only the backer pool may differ."
+            );
+            assert!(!wide.alerting, "the twin is shadow-only; it must never push");
+            assert_ne!(inc.name, wide.name, "the twin needs its own name to be scored separately");
+        }
+        // Same markets, so the comparison is day-for-day on identical events.
+        assert_eq!(WEATHER_HIGH.slug_regex, WEATHER_HIGH_WIDE.slug_regex);
+        // And the pool flag is the one thing that IS different (checked at compile time).
+        const { assert!(!WEATHER_HIGH.wide_pool && WEATHER_HIGH_WIDE.wide_pool) };
     }
 
     #[test]
