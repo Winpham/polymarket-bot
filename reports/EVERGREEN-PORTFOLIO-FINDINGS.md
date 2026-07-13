@@ -328,3 +328,72 @@ flattering ones on this page.
   (whose price sits there waiting for you). `project-polymarket-maker-capacity` measured maker-copy as
   **thin / adverse / EDGE ≈ 0**. Any revival must confront that head-on with a fill simulation
   (`maker_fill_sim.py` exists), NOT by assuming the mid is achievable.
+
+---
+
+# PART IV — CAPACITY: how much can we tail before we eat the edge?
+
+## D5 — we have NEVER recorded book depth (a fifth gap)
+
+`common/src/data/models.rs::BookLevel` deserializes only `price` — **the `size` field is DROPPED at the
+type level** — so `fetch_best_ask` keeps the best ask PRICE and throws the available SIZE away.
+`clob_price_tape` stores best_bid/best_ask prices with no sizes (`last_size` is a trade size, not resting
+depth). So "how much can we put on a signal" has been structurally unanswerable, which is why SIZE has
+stood as the one explicitly UNPROVEN limit. Measured LIVE instead (`capacity_scan.py`, `--selftest`
+green): pull the real `/book` for open converged markets and walk the ask ladder.
+
+## The weather slippage curve (33 live books, band 0.71–0.90)
+
+Net edge per $1 = gross selection edge (~+12pp) − spread (−1.2¢) − slippage(S). **A median hides the bad
+half, so the column that decides a SAFE size is p90 — the bad-book case you must survive.**
+
+| stake/signal | slip p50 | slip p90 | net @p50 | **net @p90** | fillable (p10) |
+|---|---|---|---|---|---|
+| $25 | 0.07¢ | 1.24¢ | 10.7% | **9.6%** | 100% |
+| **$50** | 0.52¢ | 2.23¢ | 10.3% | **8.6%** | 100% |
+| $100 | 1.16¢ | 5.64¢ | 9.6% | **5.2%** | 100% |
+| $250 | 2.92¢ | 9.52¢ | 7.9% | **1.3%** | 100% |
+| $500 | 5.00¢ | 11.65¢ | 5.8% | **−0.8%** | 100% |
+| $1,000 | 7.57¢ | 15.20¢ | 3.2% | **−4.4%** | **56%** |
+| $2,500+ | 9.08¢ | 16.66¢ | 1.7% | −5.9% | **22%** |
+
+Champion honest floor = **+5.6%**.
+
+**Slippage overtakes the spread almost immediately** — at $100 the median slip (1.16¢) already rivals the
+whole spread (1.2¢), and by $250 it is 3–8× it. **The book, not the spread, is the binding constraint.**
+
+## The recommendation (with the leeway asked for)
+
+- **$50/signal — comfortable.** Even the p90 bad book leaves **+8.6%** net, a full 3pp above the champion
+  floor, 100% fillable. This is the size to run.
+- **$100/signal — practical ceiling.** Median +9.6%, but p90 falls to **+5.2%**, i.e. the worst ~10% of
+  books earn *below* the floor. Acceptable only if you accept those signals earn ~nothing.
+- **$250 — hard stop.** p90 is +1.3%: you are betting on book quality, not on the edge.
+- **Never ≥$500.** p90 goes negative, and past ~$1,000 the book cannot even fill you (56% → 22%).
+
+**Day-level exposure is the number that actually matters.** The correlated unit for weather is the
+RESOLUTION DAY (one heat dome resolves ~20 cities together — the same clustering the whole gate is built
+on). ~20 signals/day × $50 ≈ **$1,000/day, and that is ONE correlated bet, not twenty.** Size the day,
+never the signal — consistent with `project-polymarket-correlated-risk` (size the GAME) and the
+⅛-Kelly cap.
+
+## Three honest limits on this number
+
+1. **It is an UPPER BOUND.** Walking a snapshot book charges today's resting liquidity. It does NOT model
+   market impact, makers pulling quotes when they see size, refill, or other copiers racing us. **Real
+   capacity is ≤ this, never more.** The $50 recommendation deliberately sits ~1/20th of the depth that
+   exists, which is the margin that absorbs all of that.
+2. **The +12pp gross edge is the SHARPS'-fill number.** Its realizable version is still pending clean
+   `entry_ask` data (see Part III retraction). Every net figure above moves 1:1 with it: if the true edge
+   is 9pp not 12pp, subtract 3pp from every cell — and $100/signal then fails at p90.
+3. **The sports books look bottomless and I do not trust it.** `fifwc` shows ~0¢ slippage even at
+   $10,000 — but on only **8** open books (`atp`/`wta`: n=1). Most sports markets in-band were already
+   closed at scan time. Deep World Cup books are plausible, but n=8 is not a capacity claim. Re-scan
+   during a live sports window before sizing anything there.
+
+## The fix worth making (needs a human: it touches schema)
+
+**Capture ask SIZE alongside `entry_ask`.** `BookLevel` should keep `size`, and the signal should record
+the depth available at the ask (and 1–2 levels up). That turns capacity from a live-scan estimate into an
+accruing, per-signal measurement — and it is the only way to know that our own tailing has started moving
+the price. Requires a migration ⇒ **flagged, not done.**

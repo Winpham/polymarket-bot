@@ -1,0 +1,251 @@
+{
+  "as_of": "2026-07-12",
+  "band": [
+    0.71,
+    0.9
+  ],
+  "gross_edge_assumed": 0.12,
+  "caveat": "UPPER BOUND \u2014 snapshot depth only; no market impact, refill, or copier race.",
+  "families": {
+    "highest-temperature": {
+      "open_markets": 32,
+      "curve": {
+        "25": {
+          "slippage": 0.0032,
+          "fillable": 1.0,
+          "net_edge": 0.1048,
+          "verdict": "comfortable"
+        },
+        "50": {
+          "slippage": 0.007,
+          "fillable": 1.0,
+          "net_edge": 0.101,
+          "verdict": "comfortable"
+        },
+        "100": {
+          "slippage": 0.0207,
+          "fillable": 1.0,
+          "net_edge": 0.0873,
+          "verdict": "comfortable"
+        },
+        "250": {
+          "slippage": 0.0401,
+          "fillable": 1.0,
+          "net_edge": 0.0679,
+          "verdict": "thinning"
+        },
+        "500": {
+          "slippage": 0.0607,
+          "fillable": 1.0,
+          "net_edge": 0.0473,
+          "verdict": "MARGINAL"
+        },
+        "1000": {
+          "slippage": 0.0821,
+          "fillable": 1.0,
+          "net_edge": 0.0259,
+          "verdict": "MARGINAL"
+        },
+        "2500": {
+          "slippage": 0.0942,
+          "fillable": 0.793,
+          "net_edge": 0.0138,
+          "verdict": "EDGE GONE"
+        },
+        "5000": {
+          "slippage": 0.0993,
+          "fillable": 0.397,
+          "net_edge": 0.0087,
+          "verdict": "EDGE GONE"
+        },
+        "10000": {
+          "slippage": 0.0993,
+          "fillable": 0.198,
+          "net_edge": 0.0087,
+          "verdict": "EDGE GONE"
+        }
+      }
+    },
+    "fifwc": {
+      "open_markets": 8,
+      "curve": {
+        "25": {
+          "slippage": 0.0,
+          "fillable": 1.0,
+          "net_edge": 0.108,
+          "verdict": "comfortable"
+        },
+        "50": {
+          "slippage": 0.0,
+          "fillable": 1.0,
+          "net_edge": 0.108,
+          "verdict": "comfortable"
+        },
+        "100": {
+          "slippage": 0.0,
+          "fillable": 1.0,
+          "net_edge": 0.108,
+          "verdict": "comfortable"
+        },
+        "250": {
+          "slippage": 0.0,
+          "fillable": 1.0,
+          "net_edge": 0.108,
+          "verdict": "comfortable"
+        },
+        "500": {
+          "slippage": 0.0,
+          "fillable": 1.0,
+          "net_edge": 0.108,
+          "verdict": "comfortable"
+        },
+        "1000": {
+          "slippage": 0.0,
+          "fillable": 1.0,
+          "net_edge": 0.108,
+          "verdict": "comfortable"
+        },
+        "2500": {
+          "slippage": 0.0,
+          "fillable": 1.0,
+          "net_edge": 0.108,
+          "verdict": "comfortable"
+        },
+        "5000": {
+          "slippage": 0.0,
+          "fillable": 1.0,
+          "net_edge": 0.108,
+          "verdict": "comfortable"
+        },
+        "10000": {
+          "slippage": 0.0018,
+          "fillable": 1.0,
+          "net_edge": 0.1062,
+          "verdict": "comfortable"
+        }
+      }
+    },
+    "mlb": {
+      "open_markets": 0,
+      "verdict": "no open book to measure"
+    },
+    "atp": {
+      "open_markets": 1,
+      "curve": {
+        "25": {
+          "slippage": 0.0,
+          "fillable": 1.0,
+          "net_edge": 0.108,
+          "verdict": "comfortable"
+        },
+        "50": {
+          "slippage": 0.0,
+          "fillable": 1.0,
+          "net_edge": 0.108,
+          "verdict": "comfortable"
+        },
+        "100": {
+          "slippage": 0.0,
+          "fillable": 1.0,
+          "net_edge": 0.108,
+          "verdict": "comfortable"
+        },
+        "250": {
+          "slippage": 0.0,
+          "fillable": 1.0,
+          "net_edge": 0.108,
+          "verdict": "comfortable"
+        },
+        "500": {
+          "slippage": 0.0,
+          "fillable": 1.0,
+          "net_edge": 0.108,
+          "verdict": "comfortable"
+        },
+        "1000": {
+          "slippage": 0.0,
+          "fillable": 1.0,
+          "net_edge": 0.108,
+          "verdict": "comfortable"
+        },
+        "2500": {
+          "slippage": 0.0,
+          "fillable": 1.0,
+          "net_edge": 0.108,
+          "verdict": "comfortable"
+        },
+        "5000": {
+          "slippage": 0.0,
+          "fillable": 1.0,
+          "net_edge": 0.108,
+          "verdict": "comfortable"
+        },
+        "10000": {
+          "slippage": 0.0052,
+          "fillable": 1.0,
+          "net_edge": 0.1028,
+          "verdict": "comfortable"
+        }
+      }
+    },
+    "wta": {
+      "open_markets": 1,
+      "curve": {
+        "25": {
+          "slippage": 0.0,
+          "fillable": 1.0,
+          "net_edge": 0.108,
+          "verdict": "comfortable"
+        },
+        "50": {
+          "slippage": 0.0,
+          "fillable": 1.0,
+          "net_edge": 0.108,
+          "verdict": "comfortable"
+        },
+        "100": {
+          "slippage": 0.0,
+          "fillable": 1.0,
+          "net_edge": 0.108,
+          "verdict": "comfortable"
+        },
+        "250": {
+          "slippage": 0.0,
+          "fillable": 1.0,
+          "net_edge": 0.108,
+          "verdict": "comfortable"
+        },
+        "500": {
+          "slippage": 0.0011,
+          "fillable": 1.0,
+          "net_edge": 0.1069,
+          "verdict": "comfortable"
+        },
+        "1000": {
+          "slippage": 0.0055,
+          "fillable": 1.0,
+          "net_edge": 0.1025,
+          "verdict": "comfortable"
+        },
+        "2500": {
+          "slippage": 0.0109,
+          "fillable": 1.0,
+          "net_edge": 0.0971,
+          "verdict": "comfortable"
+        },
+        "5000": {
+          "slippage": 0.02,
+          "fillable": 1.0,
+          "net_edge": 0.088,
+          "verdict": "comfortable"
+        },
+        "10000": {
+          "slippage": 0.0279,
+          "fillable": 1.0,
+          "net_edge": 0.0801,
+          "verdict": "comfortable"
+        }
+      }
+    }
+  }
+}
