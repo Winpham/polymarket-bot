@@ -1,0 +1,46 @@
+{
+  "family": "atp",
+  "n": 7,
+  "curve": {
+    "1": {
+      "n": 7,
+      "mean": 0.0014,
+      "p50": 0.0,
+      "p90": 0.01,
+      "cost_if_won": 0.0014,
+      "cost_if_lost": null
+    },
+    "5": {
+      "n": 6,
+      "mean": 0.045,
+      "p50": 0.05,
+      "p90": 0.13,
+      "cost_if_won": 0.045,
+      "cost_if_lost": null
+    },
+    "15": {
+      "n": 6,
+      "mean": 0.0867,
+      "p50": 0.13,
+      "p90": 0.19,
+      "cost_if_won": 0.0867,
+      "cost_if_lost": null
+    },
+    "30": {
+      "n": 4,
+      "mean": 0.14,
+      "p50": 0.13,
+      "p90": 0.31,
+      "cost_if_won": 0.14,
+      "cost_if_lost": null
+    },
+    "60": {
+      "n": 5,
+      "mean": 0.1778,
+      "p50": 0.13,
+      "p90": 0.36,
+      "cost_if_won": 0.1778,
+      "cost_if_lost": null
+    }
+  }
+}
