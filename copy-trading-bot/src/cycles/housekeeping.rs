@@ -283,8 +283,48 @@ pub async fn housekeeping_cycle(
                                 }
                             } else {
                                 tokio::time::sleep(Duration::from_millis(80)).await;
-                                match crate::data::models::fetch_best_ask(http, tid).await {
+                                // SIZE-AWARE capture (mig 043, CAPTURE_BOOK_DEPTH, default OFF).
+                                // `entry_ask` is only the TOUCH — the price an infinitesimal stake
+                                // gets. The cert-band weather book holds a median ~$54 within 1c of
+                                // it, so a forward record booked at the touch OVERSTATES P&L at any
+                                // size we would really trade. When on, ONE `/book` call yields both
+                                // the touch (identical to `fetch_best_ask`) and the VWAP a taker of
+                                // `book_fill_stake_usd` would actually pay — no extra HTTP, and the
+                                // flag-off path below is byte-identical to before.
+                                let fill = if cfg.capture_book_depth {
+                                    crate::data::models::fetch_book_fill(
+                                        http,
+                                        tid,
+                                        cfg.book_fill_stake_usd,
+                                    )
+                                    .await
+                                    .ok()
+                                    .flatten()
+                                } else {
+                                    None
+                                };
+                                let ask_res = match fill {
+                                    Some(f) => Ok(Some(f.best_ask)),
+                                    None if cfg.capture_book_depth => Ok(None),
+                                    None => crate::data::models::fetch_best_ask(http, tid).await,
+                                };
+                                match ask_res {
                                     Ok(Some(ask)) => {
+                                        if let Some(f) = fill
+                                            && let Err(e) = portfolio
+                                                .set_entry_vwap(
+                                                    sig.id,
+                                                    f.vwap,
+                                                    cfg.book_fill_stake_usd,
+                                                    f.filled_usd,
+                                                    f.depth_1c_usd,
+                                                )
+                                                .await
+                                        {
+                                            tracing::warn!(
+                                                err = %e, signal_id = sig.id, "set_entry_vwap failed"
+                                            );
+                                        }
                                         match portfolio
                                             .set_entry_ask_decision(sig.id, ask, mid)
                                             .await

@@ -544,6 +544,23 @@ pub struct CopyTradingConfig {
     #[config(env = "CAPTURE_ENTRY_ASK", default = false)]
     pub capture_entry_ask: bool,
 
+    /// Capture the SIZE-AWARE executable entry (mig 043): walk the live ask ladder for a real
+    /// `book_fill_stake_usd` and record the VWAP a taker would actually pay, plus how much the book
+    /// could actually absorb. `entry_ask` is only the TOUCH — the price an infinitesimal stake gets;
+    /// the cert-band weather book holds a median ~$54 within 1c of it, so a forward record booked at
+    /// the touch overstates P&L at every size we would really trade. Reuses the SAME `/book` response
+    /// the ask capture already fetches (no extra HTTP). Default OFF; pure measurement — no incumbent
+    /// read path uses these columns, so every arm and the honest-P&L ledger stay byte-identical.
+    #[config(env = "CAPTURE_BOOK_DEPTH", default = false)]
+    pub capture_book_depth: bool,
+
+    /// The stake (USD) the size-aware entry is priced for. This is the size we would actually trade,
+    /// NOT a cap on anything — it only decides what `entry_vwap` means. The measured cert-band
+    /// capacity ceiling is ~$250/signal (LB decays with stake); $100 is the measured sweet spot
+    /// (LB +9.0%, LODO +7.8%, 100% fills).
+    #[config(env = "BOOK_FILL_STAKE_USD", default = 100.0)]
+    pub book_fill_stake_usd: f64,
+
     /// Max LAGGED book-ask captures per housekeeping cycle (bounds the extra
     /// `/book` fetch load for the already-open backlog; uncaptured signals settle
     /// on later cycles).

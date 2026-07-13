@@ -335,6 +335,11 @@ impl ClobMarket {
 struct BookLevel {
     #[serde(default)]
     price: String,
+    /// Resting size in SHARES at `price`. Needed to walk the ladder for a real
+    /// stake (`book_fill`); `fetch_best_ask` ignores it, so its behaviour is
+    /// unchanged. `serde(default)` keeps the old /book shape parseable.
+    #[serde(default)]
+    size: String,
 }
 
 #[derive(Debug, Clone, Deserialize, Default)]
@@ -366,6 +371,85 @@ fn best_ask_price(book: &ClobBook) -> Option<f64> {
         .filter_map(|l| l.price.parse::<f64>().ok())
         .filter(|p| *p > 0.0 && *p <= 1.0)
         .min_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal))
+}
+
+/// What a taker of a REAL stake would actually pay, walking the live ask ladder.
+///
+/// `entry_ask` (the touch) is what a taker pays only for an infinitesimal stake. The cert-band weather
+/// book holds a median ~$54 within 1c of the touch, so any stake we would actually trade WALKS the
+/// ladder and pays a volume-weighted price strictly worse than the touch. Booking a forward record at
+/// the touch would overstate P&L at every size that matters — this is the honest substitute.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct BookFill {
+    /// The touch — best (lowest) executable ask. Identical to `fetch_best_ask`, so ONE `/book` call
+    /// can serve both the ask capture and the size-aware capture (no extra HTTP).
+    pub best_ask: f64,
+    /// Volume-weighted average price actually paid for `filled_usd`.
+    pub vwap: f64,
+    /// Dollars actually fillable. `< stake` ⇒ the book could not absorb the stake.
+    pub filled_usd: f64,
+    /// Dollars resting within 1c of the touch (the thin-book size diagnostic).
+    pub depth_1c_usd: f64,
+}
+
+/// Walk the ask ladder buying `stake_usd` of notional. Pure + unit-testable: the /book shape contract
+/// lives in one place. `None` on an empty/unusable book. Levels may arrive in any order and any level
+/// with an unparseable price/size or a price outside (0,1] is ignored (same filter as `best_ask_price`).
+fn book_fill(book: &ClobBook, stake_usd: f64) -> Option<BookFill> {
+    if stake_usd <= 0.0 {
+        return None;
+    }
+    let mut levels: Vec<(f64, f64)> = book
+        .asks
+        .iter()
+        .filter_map(|l| {
+            let p = l.price.parse::<f64>().ok()?;
+            let s = l.size.parse::<f64>().ok()?;
+            (p > 0.0 && p <= 1.0 && s > 0.0).then_some((p, s))
+        })
+        .collect();
+    if levels.is_empty() {
+        return None;
+    }
+    levels.sort_by(|a, b| a.0.partial_cmp(&b.0).unwrap_or(std::cmp::Ordering::Equal));
+    let touch = levels[0].0;
+    let depth_1c_usd = levels
+        .iter()
+        .filter(|(p, _)| *p <= touch + 0.01 + 1e-9)
+        .map(|(p, s)| p * s)
+        .sum();
+
+    let (mut spent, mut shares) = (0.0f64, 0.0f64);
+    for (p, s) in &levels {
+        let remaining = stake_usd - spent;
+        if remaining <= 1e-9 {
+            break;
+        }
+        let take = (p * s).min(remaining);
+        spent += take;
+        shares += take / p;
+    }
+    (shares > 0.0).then(|| BookFill {
+        best_ask: touch,
+        vwap: spent / shares,
+        filled_usd: spent,
+        depth_1c_usd,
+    })
+}
+
+/// Fetch the live book and price a real `stake_usd` against it. Best-effort sibling of
+/// [`fetch_best_ask`] (same endpoint, same failure semantics: `Ok(None)` on an unusable book).
+pub async fn fetch_book_fill(
+    http: &reqwest::Client,
+    token_id: &str,
+    stake_usd: f64,
+) -> Result<Option<BookFill>> {
+    let url = format!("{CLOB_API}/book?token_id={token_id}");
+    let resp = http.get(&url).send().await?;
+    let text = resp.text().await?;
+    let book: ClobBook = serde_json::from_str(&text)
+        .with_context(|| format!("failed to parse CLOB book token={token_id}"))?;
+    Ok(book_fill(&book, stake_usd))
 }
 
 /// Fetch the CLOB market for a `condition_id`. Robust resolution + live price.
@@ -572,5 +656,94 @@ mod consensus_resolution_tests {
         } else {
             eprintln!("set POLY_PROBE_TOKEN=<open token_id> to probe a real ask");
         }
+    }
+}
+
+#[cfg(test)]
+mod book_fill_tests {
+    use super::{book_fill, BookLevel, ClobBook};
+
+    fn book(levels: &[(&str, &str)]) -> ClobBook {
+        ClobBook {
+            asks: levels
+                .iter()
+                .map(|(p, s)| BookLevel {
+                    price: (*p).into(),
+                    size: (*s).into(),
+                })
+                .collect(),
+        }
+    }
+
+    #[test]
+    fn small_stake_gets_the_touch() {
+        // $80 against 100 shares @0.80 ($80 of notional) — fills entirely at the touch.
+        let f = book_fill(&book(&[("0.80", "100"), ("0.85", "100")]), 80.0).unwrap();
+        assert!((f.vwap - 0.80).abs() < 1e-9, "vwap {}", f.vwap);
+        assert!((f.filled_usd - 80.0).abs() < 1e-9);
+    }
+
+    #[test]
+    fn big_stake_walks_the_ladder_and_pays_worse_than_the_touch() {
+        // $160: takes all $80 @0.80, then $80 @0.90 → VWAP strictly between the two.
+        let f = book_fill(&book(&[("0.80", "100"), ("0.90", "100")]), 160.0).unwrap();
+        assert!((f.filled_usd - 160.0).abs() < 1e-6);
+        assert!(f.vwap > 0.80 && f.vwap < 0.90, "vwap {} must sit between levels", f.vwap);
+    }
+
+    #[test]
+    fn thin_book_partially_fills_and_never_overstates() {
+        // Only $80 of notional exists; asking for $1000 must fill $80, NOT pretend it filled 1000.
+        let f = book_fill(&book(&[("0.80", "100")]), 1000.0).unwrap();
+        assert!((f.filled_usd - 80.0).abs() < 1e-9, "filled {}", f.filled_usd);
+        assert!((f.vwap - 0.80).abs() < 1e-9);
+    }
+
+    #[test]
+    fn depth_1c_counts_only_levels_within_a_cent_of_the_touch() {
+        // touch 0.80 → 0.80 and 0.81 count ($80 + $40.5); 0.95 does not.
+        let f = book_fill(&book(&[("0.80", "100"), ("0.81", "50"), ("0.95", "100")]), 10.0).unwrap();
+        assert!((f.depth_1c_usd - (80.0 + 0.81 * 50.0)).abs() < 1e-6, "depth {}", f.depth_1c_usd);
+    }
+
+    #[test]
+    fn unsorted_levels_and_junk_are_handled() {
+        // Levels out of order + an unparseable price + an out-of-range price + zero size.
+        let f = book_fill(
+            &book(&[
+                ("0.90", "100"),
+                ("abc", "100"),
+                ("1.40", "100"),
+                ("0.80", "100"),
+                ("0.82", "0"),
+            ]),
+            80.0,
+        )
+        .unwrap();
+        assert!((f.vwap - 0.80).abs() < 1e-9, "must find the true touch, got {}", f.vwap);
+    }
+
+    #[test]
+    fn empty_or_nonpositive_stake_is_none() {
+        assert!(book_fill(&book(&[]), 100.0).is_none());
+        assert!(book_fill(&book(&[("0.80", "100")]), 0.0).is_none());
+    }
+}
+
+#[cfg(test)]
+mod book_fill_touch_tests {
+    use super::{book_fill, BookLevel, ClobBook};
+
+    #[test]
+    fn best_ask_matches_the_touch_so_one_fetch_serves_both_paths() {
+        let b = ClobBook {
+            asks: vec![
+                BookLevel { price: "0.90".into(), size: "100".into() },
+                BookLevel { price: "0.80".into(), size: "100".into() },
+            ],
+        };
+        let f = book_fill(&b, 10.0).unwrap();
+        assert!((f.best_ask - 0.80).abs() < 1e-9, "best_ask {}", f.best_ask);
+        assert!((f.vwap - 0.80).abs() < 1e-9, "small stake vwap == touch");
     }
 }

@@ -590,6 +590,42 @@ impl PgPortfolio {
         Ok(res.rows_affected() > 0)
     }
 
+    /// Record the SIZE-AWARE executable entry: what a taker of a real `stake` would actually have
+    /// paid, walking the live ask ladder at decision time (mig 043).
+    ///
+    /// `entry_ask` is the TOUCH — the price only an infinitesimal stake gets. The cert-band weather
+    /// book holds a median ~$54 within 1c of the touch, so any stake we would really trade walks the
+    /// ladder and pays a strictly worse VWAP; a forward record booked at the touch OVERSTATES P&L at
+    /// every size that matters. This column is the honest substitute.
+    ///
+    /// Set-once + unresolved-guarded (identical discipline to `set_entry_ask_decision`, so it can
+    /// never be back-filled with post-hoc knowledge). Pure MEASUREMENT: no incumbent read path touches
+    /// these columns, so every existing arm and the honest-P&L ledger stay byte-identical.
+    pub async fn set_entry_vwap(
+        &self,
+        signal_id: i32,
+        vwap: f64,
+        stake: f64,
+        filled: f64,
+        depth_1c: f64,
+    ) -> Result<bool> {
+        let res = sqlx::query(
+            "UPDATE consensus_signals \
+             SET entry_vwap = $2, entry_vwap_stake = $3, entry_vwap_filled = $4, \
+                 entry_book_depth_1c = $5 \
+             WHERE id = $1 AND entry_vwap IS NULL AND resolved = FALSE",
+        )
+        .bind(signal_id)
+        .bind(vwap)
+        .bind(stake)
+        .bind(filled)
+        .bind(depth_1c)
+        .execute(&self.pool)
+        .await
+        .context("set_entry_vwap")?;
+        Ok(res.rows_affected() > 0)
+    }
+
     /// The full trajectory of a signal — its "stock chart": consensus state +
     /// live price over time. Used by `/signal` and CLV/drift analysis.
     pub async fn consensus_trajectory(&self, signal_id: i32) -> Result<Vec<ConsensusSnapshot>> {
