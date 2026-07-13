@@ -1,0 +1,192 @@
+{
+  "as_of": "2026-07-13",
+  "run": "weather capitalize \u2014 SLIPPAGE (executable edge vs stake)",
+  "n_live_book_shapes": 59,
+  "measured_half_spread": {
+    "median": 0.015,
+    "mean": 0.0201
+  },
+  "method": "walk the REAL measured ask ladder for $S; outcomes are the real resolved picks; entry is the VWAP a taker actually gets. Day-clustered cluster-robust LB + LODO.",
+  "consensus_arm": {
+    "cell": "weather_fav consensus (>=3)",
+    "n_picks": 485,
+    "curve": [
+      {
+        "stake_usd": 10,
+        "mean_entry_vwap": 0.8341,
+        "mean_filled_usd": 10.0,
+        "fill_ratio": 1.0,
+        "frac_partially_unfilled": 0.0,
+        "roi_turn_LB": 0.1246,
+        "roi_turn_point": 0.1386,
+        "lodo_held_out_LB": 0.1069,
+        "clears_champion_floor": true,
+        "expected_gross_per_day_usd": 54.92
+      },
+      {
+        "stake_usd": 25,
+        "mean_entry_vwap": 0.8396,
+        "mean_filled_usd": 25.0,
+        "fill_ratio": 1.0,
+        "frac_partially_unfilled": 0.0,
+        "roi_turn_LB": 0.1177,
+        "roi_turn_point": 0.1315,
+        "lodo_held_out_LB": 0.1002,
+        "clears_champion_floor": true,
+        "expected_gross_per_day_usd": 129.79
+      },
+      {
+        "stake_usd": 50,
+        "mean_entry_vwap": 0.846,
+        "mean_filled_usd": 50.0,
+        "fill_ratio": 1.0,
+        "frac_partially_unfilled": 0.0,
+        "roi_turn_LB": 0.1098,
+        "roi_turn_point": 0.1232,
+        "lodo_held_out_LB": 0.0927,
+        "clears_champion_floor": true,
+        "expected_gross_per_day_usd": 241.99
+      },
+      {
+        "stake_usd": 100,
+        "mean_entry_vwap": 0.8558,
+        "mean_filled_usd": 100.0,
+        "fill_ratio": 1.0,
+        "frac_partially_unfilled": 0.0,
+        "roi_turn_LB": 0.0965,
+        "roi_turn_point": 0.11,
+        "lodo_held_out_LB": 0.0799,
+        "clears_champion_floor": true,
+        "expected_gross_per_day_usd": 425.29
+      },
+      {
+        "stake_usd": 250,
+        "mean_entry_vwap": 0.8768,
+        "mean_filled_usd": 248.79,
+        "fill_ratio": 0.995,
+        "frac_partially_unfilled": 0.039,
+        "roi_turn_LB": 0.0696,
+        "roi_turn_point": 0.0826,
+        "lodo_held_out_LB": 0.0512,
+        "clears_champion_floor": true,
+        "expected_gross_per_day_usd": 763.55
+      },
+      {
+        "stake_usd": 500,
+        "mean_entry_vwap": 0.892,
+        "mean_filled_usd": 481.37,
+        "fill_ratio": 0.963,
+        "frac_partially_unfilled": 0.092,
+        "roi_turn_LB": 0.0543,
+        "roi_turn_point": 0.0641,
+        "lodo_held_out_LB": 0.0416,
+        "clears_champion_floor": false,
+        "expected_gross_per_day_usd": 1152.44
+      },
+      {
+        "stake_usd": 1000,
+        "mean_entry_vwap": 0.9069,
+        "mean_filled_usd": 867.36,
+        "fill_ratio": 0.867,
+        "frac_partially_unfilled": 0.342,
+        "roi_turn_LB": 0.0373,
+        "roi_turn_point": 0.0493,
+        "lodo_held_out_LB": 0.0163,
+        "clears_champion_floor": false,
+        "expected_gross_per_day_usd": 1425.1
+      }
+    ]
+  },
+  "BLIND_BAND_rule": {
+    "cell": "blind band (1+ sharp favorite) \u2014 the recommended form",
+    "n_picks": 683,
+    "curve": [
+      {
+        "stake_usd": 10,
+        "mean_entry_vwap": 0.8354,
+        "mean_filled_usd": 10.0,
+        "fill_ratio": 1.0,
+        "frac_partially_unfilled": 0.0,
+        "roi_turn_LB": 0.1185,
+        "roi_turn_point": 0.1332,
+        "lodo_held_out_LB": 0.1091,
+        "clears_champion_floor": true,
+        "expected_gross_per_day_usd": 62.25
+      },
+      {
+        "stake_usd": 25,
+        "mean_entry_vwap": 0.841,
+        "mean_filled_usd": 25.0,
+        "fill_ratio": 1.0,
+        "frac_partially_unfilled": 0.0,
+        "roi_turn_LB": 0.1104,
+        "roi_turn_point": 0.1259,
+        "lodo_held_out_LB": 0.0999,
+        "clears_champion_floor": true,
+        "expected_gross_per_day_usd": 145.04
+      },
+      {
+        "stake_usd": 50,
+        "mean_entry_vwap": 0.847,
+        "mean_filled_usd": 50.0,
+        "fill_ratio": 1.0,
+        "frac_partially_unfilled": 0.0,
+        "roi_turn_LB": 0.1023,
+        "roi_turn_point": 0.1177,
+        "lodo_held_out_LB": 0.0921,
+        "clears_champion_floor": true,
+        "expected_gross_per_day_usd": 268.74
+      },
+      {
+        "stake_usd": 100,
+        "mean_entry_vwap": 0.8569,
+        "mean_filled_usd": 100.0,
+        "fill_ratio": 1.0,
+        "frac_partially_unfilled": 0.0,
+        "roi_turn_LB": 0.0904,
+        "roi_turn_point": 0.1058,
+        "lodo_held_out_LB": 0.0778,
+        "clears_champion_floor": true,
+        "expected_gross_per_day_usd": 475.01
+      },
+      {
+        "stake_usd": 250,
+        "mean_entry_vwap": 0.8785,
+        "mean_filled_usd": 248.81,
+        "fill_ratio": 0.995,
+        "frac_partially_unfilled": 0.036,
+        "roi_turn_LB": 0.0637,
+        "roi_turn_point": 0.0784,
+        "lodo_held_out_LB": 0.0519,
+        "clears_champion_floor": true,
+        "expected_gross_per_day_usd": 832.12
+      },
+      {
+        "stake_usd": 500,
+        "mean_entry_vwap": 0.8958,
+        "mean_filled_usd": 480.27,
+        "fill_ratio": 0.961,
+        "frac_partially_unfilled": 0.101,
+        "roi_turn_LB": 0.0396,
+        "roi_turn_point": 0.056,
+        "lodo_held_out_LB": 0.0276,
+        "clears_champion_floor": false,
+        "expected_gross_per_day_usd": 1000.46
+      },
+      {
+        "stake_usd": 1000,
+        "mean_entry_vwap": 0.9108,
+        "mean_filled_usd": 858.13,
+        "fill_ratio": 0.858,
+        "frac_partially_unfilled": 0.385,
+        "roi_turn_LB": 0.0225,
+        "roi_turn_point": 0.0386,
+        "lodo_held_out_LB": 0.0199,
+        "clears_champion_floor": false,
+        "expected_gross_per_day_usd": 1013.44
+      }
+    ]
+  },
+  "champion_floor": 0.056,
+  "read": "the stake at which the LB stops clearing the champion floor IS the capacity ceiling. Beyond it, weather is not executable at that size \u2014 regardless of the headline edge."
+}
