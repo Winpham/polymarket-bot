@@ -27,21 +27,37 @@ This was already known — `fetch_full_history` (the backfill lane) carries the 
 DO work, verified live 2026-07-03"*. The consensus poll — the primary lane — was never
 fixed.
 
-**Why it hid for so long:** at 1-min cadence, the newest 100 events happen to cover the
-last minute, so steady-state capture limped along and looked fine. It collapses exactly
-where nobody was looking — **first-sight backfill** (48h window), plus any restart,
-deploy, or outage gap.
+### Blast radius — corrected against the live DB (read this, not the first draft)
 
-**Blast radius, measured against real 48h history** (32 wallets, ranks 1–1000):
+My first draft of this report claimed the bug had destroyed 96.8% of first-sight history
+and implied prior research sat on corrupted capture. **I checked against the production
+database, and that is wrong. The archive is intact.** The correction:
 
-| | events |
-|---|---|
-| True 48h history | 50,887 |
-| What the old poll could capture | 1,622 |
-| **Silently lost** | **49,265 (96.8%)** |
+**What is true in isolation:** if the poll were the *only* ingestion path, it would lose
+96.8% of a busy wallet's 48h history (measured: 32 wallets, ranks 1–1000, 50,887 true
+events vs the 1,622 the old poll could return).
 
-The loss is **concentrated in the active traders** — dormant wallets lost nothing, busy
-ones lost 90–99.7%. It destroyed history precisely for the wallets that carry signal.
+**Why that did not happen in practice — two things rescue it:**
+
+1. **Steady state was never lossy.** `/activity` returns one event per *fill*, and even
+   the busiest wallet in the universe generates only ~8 events/min. At 1-min cadence the
+   newest-100 page reaches back ~12 minutes — comfortably more than the delta. Verified
+   against the live DB over the last 6h: **0% missing** on the rank-1 HFT wallet, a
+   rank-131 deep wallet, and a rank-71 wallet.
+2. **The `backfill` mode (separate binary mode) uses the CORRECT params** and has been
+   run. `trader_fills` holds 2.7M rows going back to 2022 across all three bands.
+
+**So the real exposure is narrower, and it is still worth fixing:**
+
+- **Any gap > ~12 min permanently loses the busiest wallets' trades.** Deploys, restarts,
+  crashes. The cursor advances to `now` regardless, so the hole never heals.
+- **First sight of a new wallet** is only rescued by someone *remembering to manually run
+  the backfill mode* — precisely the wrong thing to depend on when onboarding 800 new
+  wallets at once.
+- **Cadence stretch at depth 1000** widens the delta, which widens the hole.
+
+The fix makes the poll self-healing and removes the dependence on a manual step. That is
+its real value — not a catastrophe averted.
 
 > This is the same defect class as D1–D4: **a bounded budget plus a bad order is
 > starvation.** Here the budget was an unadvertised 100-row page and the order was
@@ -138,6 +154,7 @@ capture hole).
 - **Backfilled history is now real, and much larger.** `trader_fills` will grow
   substantially once wallets actually backfill (123k events in a single onboarding
   cycle). Worth a look at retention/pruning before the flip.
-- **Every prior result computed on pre-fix capture rests on ~3% of the busy wallets'
-  history.** I would not silently re-baseline anything on the new data without checking
-  which conclusions were capture-limited.
+- ~~Every prior result rests on ~3% of the busy wallets' history.~~ **Retracted** — see
+  the corrected blast-radius section. The `trader_fills` archive is intact (2.7M rows,
+  back to 2022, via the correct-params `backfill` mode). Prior conclusions stand on their
+  own merits; this bug does not impeach them.
