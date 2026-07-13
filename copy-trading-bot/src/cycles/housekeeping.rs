@@ -82,14 +82,41 @@ pub async fn housekeeping_cycle(
         .await
         .unwrap_or_default();
 
+    // ORDER MATTERS — it decides who gets the scarce decision-time ask budget.
+    //
+    // A DECISION-TIME (`first_price`) ask capture is only possible on a signal's FIRST housekeeping
+    // pass; miss it and that signal can never yield anything but a LAGGED ask. The per-cycle budget is
+    // small (`ENTRY_ASK_DECISION_MAX_PER_CYCLE`, default 40) while the ask-less backlog is huge (3,637
+    // measured on prod 2026-07-12). `unresolved_consensus_signals` has no ORDER BY and this map used
+    // to be a HashMap, so `all_conds` came out in effectively RANDOM order: a fresh signal had a ~1-in-90
+    // chance of being reached per cycle, and by the time it WAS captured, hours had passed.
+    //
+    // The measured damage (this is not hypothetical):
+    //   - captured asks averaged a 173-MINUTE lag; only 30% landed inside 15 min
+    //   - the lagged lane is LOSER-TILTED: raw edge -1.04% vs +1.71% for decision-time captures
+    //     (by the time we look, a winner has drifted toward 1.0 and its ask is gone; what is still
+    //      sitting there at a buyable ask is disproportionately what went on to LOSE)
+    //   - and it skews the captured band toward deep chalk (69% of the weather arm's asks landed at
+    //     >=0.90, the band already known to be dead) for the same reason
+    // Since `entry_ask` is the ONLY basis the frozen gates accept, this quietly biased every forward
+    // certification NEGATIVE and into the wrong band.
+    //
+    // So: iterate FRESH-FIRST and deterministically, preferring signals that still need an ask. This is
+    // ordering only — it changes nothing about what is captured or how, just who gets the budget while
+    // a decision-time capture is still POSSIBLE. Resolution is unaffected (every condition is still
+    // visited; only the order changes).
+    let mut order: Vec<&_> = unresolved.iter().filter(|s| !s.condition_id.is_empty()).collect();
+    order.sort_by(|a, b| ask_capture_priority(a.entry_ask, a.first_detected_at,
+                                              b.entry_ask, b.first_detected_at));
+
     let mut by_cond: std::collections::HashMap<&str, Vec<&_>> = std::collections::HashMap::new();
-    for sig in &unresolved {
-        if !sig.condition_id.is_empty() {
-            by_cond
-                .entry(sig.condition_id.as_str())
-                .or_default()
-                .push(sig);
+    let mut cond_order: Vec<&str> = Vec::new();
+    for sig in order {
+        let entry = by_cond.entry(sig.condition_id.as_str());
+        if matches!(entry, std::collections::hash_map::Entry::Vacant(_)) {
+            cond_order.push(sig.condition_id.as_str());
         }
+        entry.or_default().push(sig);
     }
 
     // INDEPENDENT unresolved source (the survivorship fix): trader_fills on
@@ -106,7 +133,9 @@ pub async fn housekeeping_cycle(
         )
         .await
         .unwrap_or_default();
-    let mut all_conds: Vec<String> = by_cond.keys().map(|c| c.to_string()).collect();
+    // Fresh-first (see above), NOT HashMap key order — the decision-time ask budget is spent in this
+    // order, so a random order silently forfeits every decision-time capture.
+    let mut all_conds: Vec<String> = cond_order.iter().map(|c| c.to_string()).collect();
     {
         let known: std::collections::HashSet<&str> = by_cond.keys().copied().collect();
         for c in &tf_conds {
@@ -377,5 +406,78 @@ fn bet_roi(pnl: f64, cost: f64, entry_fee: f64) -> f64 {
         pnl / total_invested * 100.0
     } else {
         0.0
+    }
+}
+
+/// Priority for spending the scarce decision-time `entry_ask` budget.
+///
+/// A DECISION-TIME capture is only possible on a signal's first housekeeping pass; miss that window
+/// and the signal can only ever yield a LAGGED ask. Order therefore decides which signals can be
+/// measured honestly at all:
+///   1. signals still AWAITING an ask (an already-captured ask is set-once — budget spent on it is
+///      wasted);
+///   2. then NEWEST-detected first (the only ones still inside the decision-time window).
+///
+/// Before this, the iteration order came from a `HashMap`'s keys — effectively random over a 3,637-deep
+/// ask-less backlog against a 40/cycle budget, so fresh signals were almost never reached in time. The
+/// captured asks that resulted averaged a 173-minute lag and were LOSER-TILTED (raw edge -1.04% vs
+/// +1.71% for decision-time captures), because a winner's favourite drifts toward 1.0 and stops being
+/// buyable while a loser sits there at a buyable ask. Since `entry_ask` is the only basis the frozen
+/// gates accept, that silently biased every forward certification negative and toward deep chalk.
+fn ask_capture_priority(
+    a_ask: Option<f64>,
+    a_at: chrono::DateTime<Utc>,
+    b_ask: Option<f64>,
+    b_at: chrono::DateTime<Utc>,
+) -> std::cmp::Ordering {
+    a_ask
+        .is_some()
+        .cmp(&b_ask.is_some())
+        .then(b_at.cmp(&a_at))
+}
+
+#[cfg(test)]
+mod ask_capture_priority_tests {
+    use super::ask_capture_priority;
+    use chrono::{Duration, Utc};
+    use std::cmp::Ordering;
+
+    #[test]
+    fn signals_awaiting_an_ask_outrank_ones_that_already_have_one() {
+        let t = Utc::now();
+        // An already-captured ask is set-once: budget spent on it buys nothing.
+        assert_eq!(ask_capture_priority(None, t, Some(0.8), t), Ordering::Less);
+        assert_eq!(ask_capture_priority(Some(0.8), t, None, t), Ordering::Greater);
+    }
+
+    #[test]
+    fn among_ask_less_signals_the_freshest_wins_the_decision_window() {
+        let now = Utc::now();
+        let old = now - Duration::hours(3);
+        // Fresh-first: only a fresh signal can still yield a DECISION-TIME (unbiased) capture.
+        assert_eq!(ask_capture_priority(None, now, None, old), Ordering::Less);
+        assert_eq!(ask_capture_priority(None, old, None, now), Ordering::Greater);
+    }
+
+    #[test]
+    fn a_full_sort_puts_fresh_ask_less_signals_first_and_captured_ones_last() {
+        let now = Utc::now();
+        let mk = |ask: Option<f64>, mins: i64| (ask, now - Duration::minutes(mins));
+        // Deliberately adversarial input order — a stale ask-less signal and an already-captured
+        // FRESH one both try to jump the queue ahead of the fresh ask-less signal.
+        let mut v = [
+            mk(Some(0.9), 1),   // fresh but already captured -> must sink
+            mk(None, 240),      // ask-less but stale         -> middle
+            mk(None, 2),        // fresh AND ask-less         -> must win
+            mk(Some(0.7), 300), // captured + stale           -> last
+        ];
+        v.sort_by(|a, b| ask_capture_priority(a.0, a.1, b.0, b.1));
+        assert_eq!(v[0].0, None, "the freshest ask-less signal must get the budget first");
+        assert_eq!(v[0].1, now - Duration::minutes(2));
+        assert_eq!(v[1].0, None, "the stale ask-less signal comes next");
+        assert!(v[2].0.is_some() && v[3].0.is_some(), "already-captured signals sink to the back");
+        // The invariant that matters: with a budget of 1, the ONE capture goes to a fresh ask-less
+        // signal — i.e. a decision-time capture is actually possible.
+        assert_eq!(v[0].0, None);
     }
 }

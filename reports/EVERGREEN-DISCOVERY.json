@@ -1,0 +1,1138 @@
+{
+  "as_of": "2026-07-12",
+  "run": "evergreen discovery \u2014 families outside the known champion, on the DRAINED substrate",
+  "since": "2026-06-15",
+  "m_families_tested": 14,
+  "substrate_note": "Run AFTER the resolver backfill. Before it, the resolved trader_fills subset was ~5x enriched in consensus-firing markets (89.6% vs 18.0%) \u2014 every prior family scan read that biased subset.",
+  "families": {
+    "?": {
+      "family": "?",
+      "copyable": true,
+      "picks_cert_band": 1,
+      "days": 1,
+      "weeks": [
+        "2026-W27"
+      ],
+      "verdict": "POWER-STARVED (<20 picks in the certification band) \u2014 not ranked"
+    },
+    "atp": {
+      "family": "atp",
+      "copyable": true,
+      "picks_cert_band": 85,
+      "days": 14,
+      "weeks": [
+        "2026-W27",
+        "2026-W28"
+      ],
+      "sharp_fill": {
+        "point": 0.1334,
+        "lb": 0.0574,
+        "boot_lb": 0.0706,
+        "clusters": 14,
+        "meaning": "DIRECTIONAL CEILING (the sharps' own fill) \u2014 NOT a price we can buy at"
+      },
+      "bonferroni": {
+        "m_families_tested": 14,
+        "note": "LB read at alpha/m; a family that only clears at alpha is NOT a find"
+      },
+      "lodo_by_week": {
+        "weeks": [
+          "2026-W27",
+          "2026-W28"
+        ],
+        "possible": true,
+        "per_week": {
+          "2026-W27": {
+            "n_in_week": 40,
+            "days_in_week": 7,
+            "lb_this_week_alone": -0.0616,
+            "point_this_week_alone": 0.0441,
+            "lb_without_this_week": 0.0944
+          },
+          "2026-W28": {
+            "n_in_week": 45,
+            "days_in_week": 7,
+            "lb_this_week_alone": 0.0944,
+            "point_this_week_alone": 0.2128,
+            "lb_without_this_week": -0.0616
+          }
+        },
+        "min_lb_across_folds": -0.0616,
+        "survives_lodo_by_week": false,
+        "verdict": "FAILS \u2014 the edge does not survive dropping a week (single-regime streak)"
+      },
+      "selection_null": {
+        "p_emp": 0.0005,
+        "n_perm": 2000,
+        "real_lb": 0.0574,
+        "n_matched": 79,
+        "n_real": 85,
+        "passes_p01": true,
+        "verdict": "PASSES \u2014 convergence selects better than a random weather favorite at the same band x day"
+      },
+      "survives_battery": false,
+      "verdict": "FAILS the battery \u2014 does not survive one of {LB>0, leave-one-week-out, selection_null}"
+    },
+    "bkfibaqas": {
+      "family": "bkfibaqas",
+      "copyable": true,
+      "picks_cert_band": 1,
+      "days": 1,
+      "weeks": [
+        "2026-W28"
+      ],
+      "verdict": "POWER-STARVED (<20 picks in the certification band) \u2014 not ranked"
+    },
+    "bkfibaqeu": {
+      "family": "bkfibaqeu",
+      "copyable": true,
+      "picks_cert_band": 1,
+      "days": 1,
+      "weeks": [
+        "2026-W28"
+      ],
+      "verdict": "POWER-STARVED (<20 picks in the certification band) \u2014 not ranked"
+    },
+    "bra": {
+      "family": "bra",
+      "copyable": true,
+      "picks_cert_band": 13,
+      "days": 5,
+      "weeks": [
+        "2026-W27",
+        "2026-W28"
+      ],
+      "verdict": "POWER-STARVED (<20 picks in the certification band) \u2014 not ranked"
+    },
+    "chi": {
+      "family": "chi",
+      "copyable": true,
+      "picks_cert_band": 16,
+      "days": 6,
+      "weeks": [
+        "2026-W27",
+        "2026-W28"
+      ],
+      "verdict": "POWER-STARVED (<20 picks in the certification band) \u2014 not ranked"
+    },
+    "col": {
+      "family": "col",
+      "copyable": true,
+      "picks_cert_band": 55,
+      "days": 5,
+      "weeks": [
+        "2026-W27",
+        "2026-W28"
+      ],
+      "sharp_fill": {
+        "point": 0.1772,
+        "lb": 0.109,
+        "boot_lb": 0.1474,
+        "clusters": 5,
+        "meaning": "DIRECTIONAL CEILING (the sharps' own fill) \u2014 NOT a price we can buy at"
+      },
+      "bonferroni": {
+        "m_families_tested": 14,
+        "note": "LB read at alpha/m; a family that only clears at alpha is NOT a find"
+      },
+      "lodo_by_week": {
+        "weeks": [
+          "2026-W27",
+          "2026-W28"
+        ],
+        "possible": true,
+        "per_week": {
+          "2026-W27": {
+            "n_in_week": 1,
+            "days_in_week": 1,
+            "lb_this_week_alone": null,
+            "point_this_week_alone": null,
+            "lb_without_this_week": 0.098
+          },
+          "2026-W28": {
+            "n_in_week": 54,
+            "days_in_week": 4,
+            "lb_this_week_alone": 0.098,
+            "point_this_week_alone": 0.1771,
+            "lb_without_this_week": null
+          }
+        },
+        "min_lb_across_folds": 0.098,
+        "survives_lodo_by_week": true,
+        "verdict": "SURVIVES \u2014 LB stays >0 with any single week removed"
+      },
+      "selection_null": {
+        "p_emp": 0.0005,
+        "n_perm": 2000,
+        "real_lb": 0.109,
+        "n_matched": 50,
+        "n_real": 55,
+        "passes_p01": true,
+        "verdict": "PASSES \u2014 convergence selects better than a random weather favorite at the same band x day"
+      },
+      "survives_battery": true,
+      "verdict": "CANDIDATE \u2014 survives LB + leave-one-week-out + belief-blind null at the SHARPS' fill. Realizable price UNMEASURED (no captured asks): needs a default-off shadow arm to start capturing entry_ask before any profit claim.",
+      "captured_asks": 887
+    },
+    "crictblast": {
+      "family": "crictblast",
+      "copyable": true,
+      "picks_cert_band": 1,
+      "days": 1,
+      "weeks": [
+        "2026-W27"
+      ],
+      "verdict": "POWER-STARVED (<20 picks in the certification band) \u2014 not ranked"
+    },
+    "crypto-level": {
+      "family": "crypto-level",
+      "copyable": true,
+      "picks_cert_band": 15,
+      "days": 8,
+      "weeks": [
+        "2026-W25",
+        "2026-W26",
+        "2026-W27",
+        "2026-W28"
+      ],
+      "verdict": "POWER-STARVED (<20 picks in the certification band) \u2014 not ranked"
+    },
+    "crypto-updown": {
+      "family": "crypto-updown",
+      "copyable": false,
+      "picks_cert_band": 2,
+      "days": 2,
+      "weeks": [
+        "2026-W27",
+        "2026-W28"
+      ],
+      "verdict": "KILLED BY THE COPYABILITY GATE \u2014 market life (~5 min) is shorter than our ~15-min detect+capture lag. Unbuyable at any edge. NOT measured (a number here would only tempt us)."
+    },
+    "cs": {
+      "family": "cs",
+      "copyable": true,
+      "picks_cert_band": 13,
+      "days": 8,
+      "weeks": [
+        "2026-W27",
+        "2026-W28"
+      ],
+      "verdict": "POWER-STARVED (<20 picks in the certification band) \u2014 not ranked"
+    },
+    "donald": {
+      "family": "donald",
+      "copyable": true,
+      "picks_cert_band": 2,
+      "days": 1,
+      "weeks": [
+        "2026-W27"
+      ],
+      "verdict": "POWER-STARVED (<20 picks in the certification band) \u2014 not ranked"
+    },
+    "dota": {
+      "family": "dota",
+      "copyable": true,
+      "picks_cert_band": 26,
+      "days": 5,
+      "weeks": [
+        "2026-W28"
+      ],
+      "sharp_fill": {
+        "point": 0.2155,
+        "lb": 0.1511,
+        "boot_lb": 0.1744,
+        "clusters": 5,
+        "meaning": "DIRECTIONAL CEILING (the sharps' own fill) \u2014 NOT a price we can buy at"
+      },
+      "bonferroni": {
+        "m_families_tested": 14,
+        "note": "LB read at alpha/m; a family that only clears at alpha is NOT a find"
+      },
+      "lodo_by_week": {
+        "weeks": [
+          "2026-W28"
+        ],
+        "possible": false,
+        "verdict": "IMPOSSIBLE \u2014 single window (cannot distinguish a strategy from one regime)"
+      },
+      "selection_null": {
+        "p_emp": 0.0005,
+        "n_perm": 2000,
+        "real_lb": 0.1511,
+        "n_matched": 21,
+        "n_real": 26,
+        "passes_p01": true,
+        "verdict": "PASSES \u2014 convergence selects better than a random weather favorite at the same band x day"
+      },
+      "survives_battery": false,
+      "verdict": "FAILS the battery \u2014 does not survive one of {LB>0, leave-one-week-out, selection_null}"
+    },
+    "elon": {
+      "family": "elon",
+      "copyable": true,
+      "picks_cert_band": 5,
+      "days": 3,
+      "weeks": [
+        "2026-W27",
+        "2026-W28"
+      ],
+      "verdict": "POWER-STARVED (<20 picks in the certification band) \u2014 not ranked"
+    },
+    "england": {
+      "family": "england",
+      "copyable": true,
+      "picks_cert_band": 1,
+      "days": 1,
+      "weeks": [
+        "2026-W27"
+      ],
+      "verdict": "POWER-STARVED (<20 picks in the certification band) \u2014 not ranked"
+    },
+    "f": {
+      "family": "f",
+      "copyable": true,
+      "picks_cert_band": 2,
+      "days": 1,
+      "weeks": [
+        "2026-W27"
+      ],
+      "verdict": "POWER-STARVED (<20 picks in the certification band) \u2014 not ranked"
+    },
+    "fifwc": {
+      "family": "fifwc",
+      "copyable": true,
+      "picks_cert_band": 434,
+      "days": 24,
+      "weeks": [
+        "2026-W25",
+        "2026-W26",
+        "2026-W27",
+        "2026-W28"
+      ],
+      "sharp_fill": {
+        "point": 0.1242,
+        "lb": 0.089,
+        "boot_lb": 0.0889,
+        "clusters": 24,
+        "meaning": "DIRECTIONAL CEILING (the sharps' own fill) \u2014 NOT a price we can buy at"
+      },
+      "bonferroni": {
+        "m_families_tested": 14,
+        "note": "LB read at alpha/m; a family that only clears at alpha is NOT a find"
+      },
+      "lodo_by_week": {
+        "weeks": [
+          "2026-W25",
+          "2026-W26",
+          "2026-W27",
+          "2026-W28"
+        ],
+        "possible": true,
+        "per_week": {
+          "2026-W25": {
+            "n_in_week": 18,
+            "days_in_week": 5,
+            "lb_this_week_alone": -0.196,
+            "point_this_week_alone": 0.0145,
+            "lb_without_this_week": 0.0927
+          },
+          "2026-W26": {
+            "n_in_week": 19,
+            "days_in_week": 5,
+            "lb_this_week_alone": -0.0061,
+            "point_this_week_alone": 0.1642,
+            "lb_without_this_week": 0.0854
+          },
+          "2026-W27": {
+            "n_in_week": 245,
+            "days_in_week": 7,
+            "lb_this_week_alone": 0.0999,
+            "point_this_week_alone": 0.1555,
+            "lb_without_this_week": 0.0454
+          },
+          "2026-W28": {
+            "n_in_week": 152,
+            "days_in_week": 7,
+            "lb_this_week_alone": 0.0371,
+            "point_this_week_alone": 0.0816,
+            "lb_without_this_week": 0.1025
+          }
+        },
+        "min_lb_across_folds": 0.0454,
+        "survives_lodo_by_week": true,
+        "verdict": "SURVIVES \u2014 LB stays >0 with any single week removed"
+      },
+      "selection_null": {
+        "p_emp": 0.0005,
+        "n_perm": 2000,
+        "real_lb": 0.089,
+        "n_matched": 333,
+        "n_real": 434,
+        "passes_p01": true,
+        "verdict": "PASSES \u2014 convergence selects better than a random weather favorite at the same band x day"
+      },
+      "survives_battery": true,
+      "verdict": "CANDIDATE \u2014 survives LB + leave-one-week-out + belief-blind null at the SHARPS' fill. Realizable price UNMEASURED (no captured asks): needs a default-off shadow arm to start capturing entry_ask before any profit claim.",
+      "captured_asks": 4464
+    },
+    "gpt": {
+      "family": "gpt",
+      "copyable": true,
+      "picks_cert_band": 0,
+      "days": 0,
+      "weeks": [],
+      "verdict": "POWER-STARVED (<20 picks in the certification band) \u2014 not ranked"
+    },
+    "israel": {
+      "family": "israel",
+      "copyable": true,
+      "picks_cert_band": 0,
+      "days": 0,
+      "weeks": [],
+      "verdict": "POWER-STARVED (<20 picks in the certification band) \u2014 not ranked"
+    },
+    "itf": {
+      "family": "itf",
+      "copyable": true,
+      "picks_cert_band": 57,
+      "days": 10,
+      "weeks": [
+        "2026-W27",
+        "2026-W28"
+      ],
+      "sharp_fill": {
+        "point": 0.185,
+        "lb": 0.1315,
+        "boot_lb": 0.146,
+        "clusters": 10,
+        "meaning": "DIRECTIONAL CEILING (the sharps' own fill) \u2014 NOT a price we can buy at"
+      },
+      "bonferroni": {
+        "m_families_tested": 14,
+        "note": "LB read at alpha/m; a family that only clears at alpha is NOT a find"
+      },
+      "lodo_by_week": {
+        "weeks": [
+          "2026-W27",
+          "2026-W28"
+        ],
+        "possible": true,
+        "per_week": {
+          "2026-W27": {
+            "n_in_week": 14,
+            "days_in_week": 4,
+            "lb_this_week_alone": -0.0417,
+            "point_this_week_alone": 0.1372,
+            "lb_without_this_week": 0.132
+          },
+          "2026-W28": {
+            "n_in_week": 43,
+            "days_in_week": 6,
+            "lb_this_week_alone": 0.132,
+            "point_this_week_alone": 0.2006,
+            "lb_without_this_week": -0.0417
+          }
+        },
+        "min_lb_across_folds": -0.0417,
+        "survives_lodo_by_week": false,
+        "verdict": "FAILS \u2014 the edge does not survive dropping a week (single-regime streak)"
+      },
+      "selection_null": {
+        "p_emp": 0.0005,
+        "n_perm": 2000,
+        "real_lb": 0.1315,
+        "n_matched": 56,
+        "n_real": 57,
+        "passes_p01": true,
+        "verdict": "PASSES \u2014 convergence selects better than a random weather favorite at the same band x day"
+      },
+      "survives_battery": false,
+      "verdict": "FAILS the battery \u2014 does not survive one of {LB>0, leave-one-week-out, selection_null}"
+    },
+    "kbo": {
+      "family": "kbo",
+      "copyable": true,
+      "picks_cert_band": 1,
+      "days": 1,
+      "weeks": [
+        "2026-W27"
+      ],
+      "verdict": "POWER-STARVED (<20 picks in the certification band) \u2014 not ranked"
+    },
+    "kor": {
+      "family": "kor",
+      "copyable": true,
+      "picks_cert_band": 14,
+      "days": 8,
+      "weeks": [
+        "2026-W27",
+        "2026-W28"
+      ],
+      "verdict": "POWER-STARVED (<20 picks in the certification band) \u2014 not ranked"
+    },
+    "lol": {
+      "family": "lol",
+      "copyable": true,
+      "picks_cert_band": 26,
+      "days": 8,
+      "weeks": [
+        "2026-W27",
+        "2026-W28"
+      ],
+      "sharp_fill": {
+        "point": 0.1589,
+        "lb": 0.0662,
+        "boot_lb": 0.0934,
+        "clusters": 8,
+        "meaning": "DIRECTIONAL CEILING (the sharps' own fill) \u2014 NOT a price we can buy at"
+      },
+      "bonferroni": {
+        "m_families_tested": 14,
+        "note": "LB read at alpha/m; a family that only clears at alpha is NOT a find"
+      },
+      "lodo_by_week": {
+        "weeks": [
+          "2026-W27",
+          "2026-W28"
+        ],
+        "possible": true,
+        "per_week": {
+          "2026-W27": {
+            "n_in_week": 17,
+            "days_in_week": 4,
+            "lb_this_week_alone": 0.0552,
+            "point_this_week_alone": 0.163,
+            "lb_without_this_week": -0.148
+          },
+          "2026-W28": {
+            "n_in_week": 9,
+            "days_in_week": 4,
+            "lb_this_week_alone": -0.148,
+            "point_this_week_alone": 0.1513,
+            "lb_without_this_week": 0.0552
+          }
+        },
+        "min_lb_across_folds": -0.148,
+        "survives_lodo_by_week": false,
+        "verdict": "FAILS \u2014 the edge does not survive dropping a week (single-regime streak)"
+      },
+      "selection_null": {
+        "p_emp": 0.0005,
+        "n_perm": 2000,
+        "real_lb": 0.0662,
+        "n_matched": 13,
+        "n_real": 26,
+        "passes_p01": true,
+        "verdict": "PASSES \u2014 convergence selects better than a random weather favorite at the same band x day"
+      },
+      "survives_battery": false,
+      "verdict": "FAILS the battery \u2014 does not survive one of {LB>0, leave-one-week-out, selection_null}"
+    },
+    "mar": {
+      "family": "mar",
+      "copyable": true,
+      "picks_cert_band": 14,
+      "days": 3,
+      "weeks": [
+        "2026-W27"
+      ],
+      "verdict": "POWER-STARVED (<20 picks in the certification band) \u2014 not ranked"
+    },
+    "mlb": {
+      "family": "mlb",
+      "copyable": true,
+      "picks_cert_band": 51,
+      "days": 14,
+      "weeks": [
+        "2026-W27",
+        "2026-W28"
+      ],
+      "sharp_fill": {
+        "point": 0.2615,
+        "lb": 0.1878,
+        "boot_lb": 0.186,
+        "clusters": 14,
+        "meaning": "DIRECTIONAL CEILING (the sharps' own fill) \u2014 NOT a price we can buy at"
+      },
+      "bonferroni": {
+        "m_families_tested": 14,
+        "note": "LB read at alpha/m; a family that only clears at alpha is NOT a find"
+      },
+      "lodo_by_week": {
+        "weeks": [
+          "2026-W27",
+          "2026-W28"
+        ],
+        "possible": true,
+        "per_week": {
+          "2026-W27": {
+            "n_in_week": 24,
+            "days_in_week": 7,
+            "lb_this_week_alone": 0.1721,
+            "point_this_week_alone": 0.2794,
+            "lb_without_this_week": 0.1182
+          },
+          "2026-W28": {
+            "n_in_week": 27,
+            "days_in_week": 7,
+            "lb_this_week_alone": 0.1182,
+            "point_this_week_alone": 0.2456,
+            "lb_without_this_week": 0.1721
+          }
+        },
+        "min_lb_across_folds": 0.1182,
+        "survives_lodo_by_week": true,
+        "verdict": "SURVIVES \u2014 LB stays >0 with any single week removed"
+      },
+      "selection_null": {
+        "p_emp": 0.001,
+        "n_perm": 2000,
+        "real_lb": 0.1878,
+        "n_matched": 50,
+        "n_real": 51,
+        "passes_p01": true,
+        "verdict": "PASSES \u2014 convergence selects better than a random weather favorite at the same band x day"
+      },
+      "survives_battery": true,
+      "verdict": "CANDIDATE \u2014 survives LB + leave-one-week-out + belief-blind null at the SHARPS' fill. Realizable price UNMEASURED (no captured asks): needs a default-off shadow arm to start capturing entry_ask before any profit claim.",
+      "captured_asks": 1017
+    },
+    "nbasl": {
+      "family": "nbasl",
+      "copyable": true,
+      "picks_cert_band": 2,
+      "days": 1,
+      "weeks": [
+        "2026-W28"
+      ],
+      "verdict": "POWER-STARVED (<20 picks in the certification band) \u2014 not ranked"
+    },
+    "no": {
+      "family": "no",
+      "copyable": true,
+      "picks_cert_band": 0,
+      "days": 0,
+      "weeks": [],
+      "verdict": "POWER-STARVED (<20 picks in the certification band) \u2014 not ranked"
+    },
+    "nor": {
+      "family": "nor",
+      "copyable": true,
+      "picks_cert_band": 14,
+      "days": 3,
+      "weeks": [
+        "2026-W28"
+      ],
+      "verdict": "POWER-STARVED (<20 picks in the certification band) \u2014 not ranked"
+    },
+    "nwsl": {
+      "family": "nwsl",
+      "copyable": true,
+      "picks_cert_band": 6,
+      "days": 4,
+      "weeks": [
+        "2026-W27",
+        "2026-W28"
+      ],
+      "verdict": "POWER-STARVED (<20 picks in the certification band) \u2014 not ranked"
+    },
+    "strait": {
+      "family": "strait",
+      "copyable": true,
+      "picks_cert_band": 0,
+      "days": 0,
+      "weeks": [],
+      "verdict": "POWER-STARVED (<20 picks in the certification band) \u2014 not ranked"
+    },
+    "swe": {
+      "family": "swe",
+      "copyable": true,
+      "picks_cert_band": 21,
+      "days": 7,
+      "weeks": [
+        "2026-W27",
+        "2026-W28"
+      ],
+      "sharp_fill": {
+        "point": 0.159,
+        "lb": 0.0658,
+        "boot_lb": 0.0803,
+        "clusters": 7,
+        "meaning": "DIRECTIONAL CEILING (the sharps' own fill) \u2014 NOT a price we can buy at"
+      },
+      "bonferroni": {
+        "m_families_tested": 14,
+        "note": "LB read at alpha/m; a family that only clears at alpha is NOT a find"
+      },
+      "lodo_by_week": {
+        "weeks": [
+          "2026-W27",
+          "2026-W28"
+        ],
+        "possible": true,
+        "per_week": {
+          "2026-W27": {
+            "n_in_week": 7,
+            "days_in_week": 2,
+            "lb_this_week_alone": 0.1333,
+            "point_this_week_alone": 0.2075,
+            "lb_without_this_week": -0.0021
+          },
+          "2026-W28": {
+            "n_in_week": 14,
+            "days_in_week": 5,
+            "lb_this_week_alone": -0.0021,
+            "point_this_week_alone": 0.1347,
+            "lb_without_this_week": 0.1333
+          }
+        },
+        "min_lb_across_folds": -0.0021,
+        "survives_lodo_by_week": false,
+        "verdict": "FAILS \u2014 the edge does not survive dropping a week (single-regime streak)"
+      },
+      "selection_null": {
+        "p_emp": 0.1159,
+        "n_perm": 2000,
+        "real_lb": 0.0658,
+        "n_matched": 21,
+        "n_real": 21,
+        "passes_p01": false,
+        "verdict": "FAILS \u2014 no better than a random weather favorite (forecast-co-reading / composition)"
+      },
+      "survives_battery": false,
+      "verdict": "FAILS the battery \u2014 does not survive one of {LB>0, leave-one-week-out, selection_null}"
+    },
+    "ucl": {
+      "family": "ucl",
+      "copyable": true,
+      "picks_cert_band": 31,
+      "days": 4,
+      "weeks": [
+        "2026-W27",
+        "2026-W28"
+      ],
+      "sharp_fill": {
+        "point": 0.195,
+        "lb": 0.1426,
+        "boot_lb": 0.1556,
+        "clusters": 4,
+        "meaning": "DIRECTIONAL CEILING (the sharps' own fill) \u2014 NOT a price we can buy at"
+      },
+      "bonferroni": {
+        "m_families_tested": 14,
+        "note": "LB read at alpha/m; a family that only clears at alpha is NOT a find"
+      },
+      "lodo_by_week": {
+        "weeks": [
+          "2026-W27",
+          "2026-W28"
+        ],
+        "possible": true,
+        "per_week": {
+          "2026-W27": {
+            "n_in_week": 3,
+            "days_in_week": 1,
+            "lb_this_week_alone": null,
+            "point_this_week_alone": 0.2006,
+            "lb_without_this_week": 0.1183
+          },
+          "2026-W28": {
+            "n_in_week": 28,
+            "days_in_week": 3,
+            "lb_this_week_alone": 0.1183,
+            "point_this_week_alone": 0.1944,
+            "lb_without_this_week": null
+          }
+        },
+        "min_lb_across_folds": 0.1183,
+        "survives_lodo_by_week": true,
+        "verdict": "SURVIVES \u2014 LB stays >0 with any single week removed"
+      },
+      "selection_null": {
+        "p_emp": 0.0005,
+        "n_perm": 2000,
+        "real_lb": 0.1426,
+        "n_matched": 26,
+        "n_real": 31,
+        "passes_p01": true,
+        "verdict": "PASSES \u2014 convergence selects better than a random weather favorite at the same band x day"
+      },
+      "survives_battery": true,
+      "verdict": "CANDIDATE \u2014 survives LB + leave-one-week-out + belief-blind null at the SHARPS' fill. Realizable price UNMEASURED (no captured asks): needs a default-off shadow arm to start capturing entry_ask before any profit claim.",
+      "captured_asks": 136
+    },
+    "uel": {
+      "family": "uel",
+      "copyable": true,
+      "picks_cert_band": 18,
+      "days": 4,
+      "weeks": [
+        "2026-W28"
+      ],
+      "verdict": "POWER-STARVED (<20 picks in the certification band) \u2014 not ranked"
+    },
+    "ufc": {
+      "family": "ufc",
+      "copyable": true,
+      "picks_cert_band": 8,
+      "days": 5,
+      "weeks": [
+        "2026-W25",
+        "2026-W26",
+        "2026-W28"
+      ],
+      "verdict": "POWER-STARVED (<20 picks in the certification band) \u2014 not ranked"
+    },
+    "us": {
+      "family": "us",
+      "copyable": true,
+      "picks_cert_band": 0,
+      "days": 0,
+      "weeks": [],
+      "verdict": "POWER-STARVED (<20 picks in the certification band) \u2014 not ranked"
+    },
+    "val": {
+      "family": "val",
+      "copyable": true,
+      "picks_cert_band": 8,
+      "days": 7,
+      "weeks": [
+        "2026-W25",
+        "2026-W27",
+        "2026-W28"
+      ],
+      "verdict": "POWER-STARVED (<20 picks in the certification band) \u2014 not ranked"
+    },
+    "weather-high": {
+      "family": "weather-high",
+      "copyable": true,
+      "picks_cert_band": 571,
+      "days": 11,
+      "weeks": [
+        "2026-W27",
+        "2026-W28"
+      ],
+      "sharp_fill": {
+        "point": 0.1448,
+        "lb": 0.1238,
+        "boot_lb": 0.1245,
+        "clusters": 11,
+        "meaning": "DIRECTIONAL CEILING (the sharps' own fill) \u2014 NOT a price we can buy at"
+      },
+      "bonferroni": {
+        "m_families_tested": 14,
+        "note": "LB read at alpha/m; a family that only clears at alpha is NOT a find"
+      },
+      "lodo_by_week": {
+        "weeks": [
+          "2026-W27",
+          "2026-W28"
+        ],
+        "possible": true,
+        "per_week": {
+          "2026-W27": {
+            "n_in_week": 303,
+            "days_in_week": 5,
+            "lb_this_week_alone": 0.0924,
+            "point_this_week_alone": 0.1309,
+            "lb_without_this_week": 0.1317
+          },
+          "2026-W28": {
+            "n_in_week": 268,
+            "days_in_week": 6,
+            "lb_this_week_alone": 0.1317,
+            "point_this_week_alone": 0.1606,
+            "lb_without_this_week": 0.0924
+          }
+        },
+        "min_lb_across_folds": 0.0924,
+        "survives_lodo_by_week": true,
+        "verdict": "SURVIVES \u2014 LB stays >0 with any single week removed"
+      },
+      "selection_null": {
+        "p_emp": 0.0005,
+        "n_perm": 2000,
+        "real_lb": 0.1238,
+        "n_matched": 317,
+        "n_real": 571,
+        "passes_p01": true,
+        "verdict": "PASSES \u2014 convergence selects better than a random weather favorite at the same band x day"
+      },
+      "survives_battery": true,
+      "verdict": "CANDIDATE \u2014 survives LB + leave-one-week-out + belief-blind null at the SHARPS' fill. Realizable price UNMEASURED (no captured asks): needs a default-off shadow arm to start capturing entry_ask before any profit claim.",
+      "captured_asks": 89
+    },
+    "weather-low": {
+      "family": "weather-low",
+      "copyable": true,
+      "picks_cert_band": 59,
+      "days": 9,
+      "weeks": [
+        "2026-W27",
+        "2026-W28"
+      ],
+      "sharp_fill": {
+        "point": 0.0961,
+        "lb": -0.0352,
+        "boot_lb": -0.0203,
+        "clusters": 9,
+        "meaning": "DIRECTIONAL CEILING (the sharps' own fill) \u2014 NOT a price we can buy at"
+      },
+      "bonferroni": {
+        "m_families_tested": 14,
+        "note": "LB read at alpha/m; a family that only clears at alpha is NOT a find"
+      },
+      "lodo_by_week": {
+        "weeks": [
+          "2026-W27",
+          "2026-W28"
+        ],
+        "possible": true,
+        "per_week": {
+          "2026-W27": {
+            "n_in_week": 40,
+            "days_in_week": 4,
+            "lb_this_week_alone": 0.018,
+            "point_this_week_alone": 0.1565,
+            "lb_without_this_week": -0.3589
+          },
+          "2026-W28": {
+            "n_in_week": 19,
+            "days_in_week": 5,
+            "lb_this_week_alone": -0.3589,
+            "point_this_week_alone": -0.0312,
+            "lb_without_this_week": 0.018
+          }
+        },
+        "min_lb_across_folds": -0.3589,
+        "survives_lodo_by_week": false,
+        "verdict": "FAILS \u2014 the edge does not survive dropping a week (single-regime streak)"
+      },
+      "selection_null": {
+        "p_emp": 0.0085,
+        "n_perm": 2000,
+        "real_lb": -0.0352,
+        "n_matched": 32,
+        "n_real": 59,
+        "passes_p01": true,
+        "verdict": "PASSES \u2014 convergence selects better than a random weather favorite at the same band x day"
+      },
+      "survives_battery": false,
+      "verdict": "FAILS the battery \u2014 does not survive one of {LB>0, leave-one-week-out, selection_null}"
+    },
+    "white": {
+      "family": "white",
+      "copyable": true,
+      "picks_cert_band": 1,
+      "days": 1,
+      "weeks": [
+        "2026-W27"
+      ],
+      "verdict": "POWER-STARVED (<20 picks in the certification band) \u2014 not ranked"
+    },
+    "will": {
+      "family": "will",
+      "copyable": true,
+      "picks_cert_band": 51,
+      "days": 11,
+      "weeks": [
+        "2026-W25",
+        "2026-W26",
+        "2026-W27",
+        "2026-W28"
+      ],
+      "sharp_fill": {
+        "point": 0.1833,
+        "lb": 0.1325,
+        "boot_lb": 0.1447,
+        "clusters": 11,
+        "meaning": "DIRECTIONAL CEILING (the sharps' own fill) \u2014 NOT a price we can buy at"
+      },
+      "bonferroni": {
+        "m_families_tested": 14,
+        "note": "LB read at alpha/m; a family that only clears at alpha is NOT a find"
+      },
+      "lodo_by_week": {
+        "weeks": [
+          "2026-W25",
+          "2026-W26",
+          "2026-W27",
+          "2026-W28"
+        ],
+        "possible": true,
+        "per_week": {
+          "2026-W25": {
+            "n_in_week": 1,
+            "days_in_week": 1,
+            "lb_this_week_alone": null,
+            "point_this_week_alone": null,
+            "lb_without_this_week": 0.1316
+          },
+          "2026-W26": {
+            "n_in_week": 3,
+            "days_in_week": 2,
+            "lb_this_week_alone": 0.1842,
+            "point_this_week_alone": 0.2008,
+            "lb_without_this_week": 0.1263
+          },
+          "2026-W27": {
+            "n_in_week": 45,
+            "days_in_week": 6,
+            "lb_this_week_alone": 0.1157,
+            "point_this_week_alone": 0.1818,
+            "lb_without_this_week": 0.1272
+          },
+          "2026-W28": {
+            "n_in_week": 2,
+            "days_in_week": 2,
+            "lb_this_week_alone": -0.4592,
+            "point_this_week_alone": 0.2157,
+            "lb_without_this_week": 0.1276
+          }
+        },
+        "min_lb_across_folds": 0.1263,
+        "survives_lodo_by_week": true,
+        "verdict": "SURVIVES \u2014 LB stays >0 with any single week removed"
+      },
+      "selection_null": {
+        "p_emp": null,
+        "n_matched": 19,
+        "n_real": 51,
+        "verdict": "INDETERMINATE \u2014 the blind universe is too thin to build a matched placebo (the arm picks nearly everything the sharps touched, so there is little left to draw a placebo FROM)"
+      },
+      "survives_battery": false,
+      "verdict": "FAILS the battery \u2014 does not survive one of {LB>0, leave-one-week-out, selection_null}"
+    },
+    "wnba": {
+      "family": "wnba",
+      "copyable": true,
+      "picks_cert_band": 20,
+      "days": 12,
+      "weeks": [
+        "2026-W26",
+        "2026-W27",
+        "2026-W28"
+      ],
+      "sharp_fill": {
+        "point": 0.1879,
+        "lb": 0.0262,
+        "boot_lb": 0.0271,
+        "clusters": 12,
+        "meaning": "DIRECTIONAL CEILING (the sharps' own fill) \u2014 NOT a price we can buy at"
+      },
+      "bonferroni": {
+        "m_families_tested": 14,
+        "note": "LB read at alpha/m; a family that only clears at alpha is NOT a find"
+      },
+      "lodo_by_week": {
+        "weeks": [
+          "2026-W26",
+          "2026-W27",
+          "2026-W28"
+        ],
+        "possible": true,
+        "per_week": {
+          "2026-W26": {
+            "n_in_week": 1,
+            "days_in_week": 1,
+            "lb_this_week_alone": null,
+            "point_this_week_alone": null,
+            "lb_without_this_week": 0.0128
+          },
+          "2026-W27": {
+            "n_in_week": 8,
+            "days_in_week": 5,
+            "lb_this_week_alone": -0.1584,
+            "point_this_week_alone": 0.178,
+            "lb_without_this_week": -0.0329
+          },
+          "2026-W28": {
+            "n_in_week": 11,
+            "days_in_week": 6,
+            "lb_this_week_alone": -0.0703,
+            "point_this_week_alone": 0.1905,
+            "lb_without_this_week": -0.0929
+          }
+        },
+        "min_lb_across_folds": -0.0929,
+        "survives_lodo_by_week": false,
+        "verdict": "FAILS \u2014 the edge does not survive dropping a week (single-regime streak)"
+      },
+      "selection_null": {
+        "p_emp": null,
+        "n_matched": 7,
+        "n_real": 20,
+        "verdict": "INDETERMINATE \u2014 the blind universe is too thin to build a matched placebo (the arm picks nearly everything the sharps touched, so there is little left to draw a placebo FROM)"
+      },
+      "survives_battery": false,
+      "verdict": "FAILS the battery \u2014 does not survive one of {LB>0, leave-one-week-out, selection_null}"
+    },
+    "world": {
+      "family": "world",
+      "copyable": true,
+      "picks_cert_band": 0,
+      "days": 0,
+      "weeks": [],
+      "verdict": "POWER-STARVED (<20 picks in the certification band) \u2014 not ranked"
+    },
+    "wta": {
+      "family": "wta",
+      "copyable": true,
+      "picks_cert_band": 48,
+      "days": 13,
+      "weeks": [
+        "2026-W27",
+        "2026-W28"
+      ],
+      "sharp_fill": {
+        "point": 0.1817,
+        "lb": 0.1114,
+        "boot_lb": 0.1102,
+        "clusters": 13,
+        "meaning": "DIRECTIONAL CEILING (the sharps' own fill) \u2014 NOT a price we can buy at"
+      },
+      "bonferroni": {
+        "m_families_tested": 14,
+        "note": "LB read at alpha/m; a family that only clears at alpha is NOT a find"
+      },
+      "lodo_by_week": {
+        "weeks": [
+          "2026-W27",
+          "2026-W28"
+        ],
+        "possible": true,
+        "per_week": {
+          "2026-W27": {
+            "n_in_week": 20,
+            "days_in_week": 6,
+            "lb_this_week_alone": 0.0502,
+            "point_this_week_alone": 0.168,
+            "lb_without_this_week": 0.0805
+          },
+          "2026-W28": {
+            "n_in_week": 28,
+            "days_in_week": 7,
+            "lb_this_week_alone": 0.0805,
+            "point_this_week_alone": 0.1915,
+            "lb_without_this_week": 0.0502
+          }
+        },
+        "min_lb_across_folds": 0.0502,
+        "survives_lodo_by_week": true,
+        "verdict": "SURVIVES \u2014 LB stays >0 with any single week removed"
+      },
+      "selection_null": {
+        "p_emp": 0.0005,
+        "n_perm": 2000,
+        "real_lb": 0.1114,
+        "n_matched": 42,
+        "n_real": 48,
+        "passes_p01": true,
+        "verdict": "PASSES \u2014 convergence selects better than a random weather favorite at the same band x day"
+      },
+      "survives_battery": true,
+      "verdict": "CANDIDATE \u2014 survives LB + leave-one-week-out + belief-blind null at the SHARPS' fill. Realizable price UNMEASURED (no captured asks): needs a default-off shadow arm to start capturing entry_ask before any profit claim.",
+      "captured_asks": 363
+    }
+  }
+}
