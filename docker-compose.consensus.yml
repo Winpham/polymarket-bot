@@ -63,6 +63,12 @@ services:
       CAPTURE_ENTRY_ASK: ${CAPTURE_ENTRY_ASK:-false}          # capture real CLOB best-ask (else mid+haircut)
       ENTRY_ASK_MAX_PER_CYCLE: ${ENTRY_ASK_MAX_PER_CYCLE:-40} # cap LAGGED backlog book-ask fetches/cycle
       ENTRY_ASK_DECISION_MAX_PER_CYCLE: ${ENTRY_ASK_DECISION_MAX_PER_CYCLE:-40} # cap DECISION-TIME (first-price) fetches/cycle
+      # AT-FIRE ask capture (mig 041). The ONLY lane that can yield a fire-time ask: the
+      # housekeeping lane (D4) is floored at ~19 min by its own 5-min loop, so no ordering
+      # fix there can ever beat it. Writes entry_ask_fire* ALONGSIDE entry_ask (never over
+      # it) so the bias is a MEASUREMENT, not an argument. BACKFILL IS IMPOSSIBLE.
+      CAPTURE_ENTRY_ASK_AT_FIRE: ${CAPTURE_ENTRY_ASK_AT_FIRE:-false} # capture executable ask AT the instant a signal fires
+      ENTRY_ASK_FIRE_MAX_PER_CYCLE: ${ENTRY_ASK_FIRE_MAX_PER_CYCLE:-25} # cap AT-FIRE book fetches/cycle (newly-inserted signals only)
       REALIZED_DECISION_LAG_SECS: ${REALIZED_DECISION_LAG_SECS:-900.0} # entry_ask_at−first_detected_at ≤ this ⇒ decision-time (realized ROI)
       LEDGER_STRATEGIES: ${LEDGER_STRATEGIES:-}               # paper ledger scope (empty = all non-blind)
       HONEST_DIGEST: ${HONEST_DIGEST:-false}                  # opt-in phone digest (material-change only)
