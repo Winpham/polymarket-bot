@@ -173,7 +173,56 @@ and shows no skill over blind on 39 picks. Money-saving: do **not** widen into c
 
 ---
 
-## ⚠️ REALIZABLE-BASIS CORRECTION (applies to ALL numbers above)
+## ⚠️⚠️ CORRECTION #2 — the "+1.87¢ haircut" was WRONG, and it was my error
+
+The realizable basis below (entry = `sharp_fill + 1.87¢`) is **too pessimistic and double-counts**.
+Measured properly off the CLOB price history on the cert band (0.71–0.90, n=485):
+
+| quantity | value |
+|---|---|
+| mid @ `ts0` | 0.8119 |
+| **SHARP's own fill** | **0.8500** (they are **TAKERS** — they cross and chase, +3.81¢ over mid; 65% pay above mid) |
+| mid @ `ts0` + 30 min | 0.8165 (**drift is only +0.46¢** over half an hour) |
+| **OUR ask @ +30 min** (mid + 1.22¢ spread) | **0.8287** |
+| **our ask − sharp fill** | **−2.13¢ — we pay LESS than the sharps** |
+
+**Three compounding errors produced the bogus +1.87¢:**
+1. The 38 live captures are **deep-chalk-skewed** (avg ask 0.912) — a different population from the
+   0.71–0.90 cert band.
+2. They come from the `entry_ask` column, which the parallel Evergreen-Portfolio run has since shown to
+   be **LOSER-TILTED / biased** (their defect D4). It is not a trustworthy price source.
+3. I then charged `sharp_fill + 1.87¢`, which **double-counts the spread the sharps already paid**.
+
+**Edge-decay curve after the sharps fire (cert band, ROI-turn at the ask):**
+
+| delay | 0m | 2m | 10m | 30m | 60m | 120m |
+|---|---|---|---|---|---|---|
+| ROI-turn @ ask | +15.08% | +15.14% | +14.85% | **+14.45%** | +14.09% | +13.98% |
+
+**Drift ≈ 0. SPEED IS NOT THE LEVER** (independently confirmed by the parallel run). Being 30 minutes
+late costs ~0.6pp; capture-at-detection would recover ~0.6pp. **WS1's "do not build capture-at-detection"
+verdict STANDS** — now on a proper decay curve rather than a weak in-window correlation.
+
+**The entire copier cost is the SPREAD (~1.1–1.2¢).** Corrected realizable objective, and the sensitivity
+to the one genuinely-unknown number (the cert-band spread), entry = mid@(ts0+30m) + spread:
+
+| cert-band spread | entry | **ROI-turn LB** | **LODO held-out** | vs champ floor +5.6% |
+|---|---|---|---|---|
+| 1.2¢ (measured) | 0.8287 | **+13.5%** | **+11.7%** | PASS |
+| 2¢ | 0.8365 | +12.4% | +10.7% | PASS |
+| 4¢ | 0.8564 | +9.8% | +8.1% | PASS |
+| 6¢ | 0.8762 | +7.3% | +5.7% | PASS (break-even vs champion) |
+| 8¢ | 0.8956 | +5.0% | +3.4% | marginal |
+
+**So the corrected realizable LB is +13.5% (LODO +11.7%), not the +7.9%/+6.5% reported below**, and the
+edge only stops clearing the champion floor if the true cert-band spread is **≥ ~6¢** — 5× the measured
+value. **The price question is therefore close to settled; the open question is SIZE** (`weather_fav_liq`
+= 0 captures), not price. B2 (measure the spread on the cert band from clean, unbiased asks) remains the
+one thing to nail — and per D4 the current `entry_ask` column cannot supply it.
+
+---
+
+## REALIZABLE-BASIS CORRECTION #1 — SUPERSEDED BY CORRECTION #2 ABOVE (kept for the audit trail)
 
 Surfaced by the WS3 cross-check and it changes the headline. **The at-fire mid is NOT a copier's price:**
 
