@@ -64,7 +64,12 @@ class WeatherClob:
         try:
             d = self._get(f"{CLOB}/markets/{condition_id}")
         except Exception:
-            return {"winner": None, "tokens": {}, "closed": False, "err": True}
+            # NEGATIVE-CACHE the failure. Many weather conds 404 on /markets; without this they were
+            # re-fetched on EVERY run (~2.4k retries/run), which is what made the first WS2 pass slow.
+            res = {"winner": None, "tokens": {}, "closed": False, "err": True}
+            self.cache["markets"][condition_id] = res
+            self._maybe_flush()
+            return res
         toks = {}
         winner = None
         for i, t in enumerate(d.get("tokens", [])):

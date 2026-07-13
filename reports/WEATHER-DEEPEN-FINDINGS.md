@@ -101,3 +101,43 @@ corrected proxy basis (+13.8% LODO)** — materially *better* than the contamina
 it is **not a demonstrable consensus-copy edge** (null fails on the clean basis) and its copyable
 component is bounded by the executable spread + entry-timing, which only the forward captured-ask gate
 resolves. Necessary disjoint-week evidence: **passed.** Sufficient frozen PASS: **still forward.**
+
+---
+
+## WS2 — Weather-specialist discovery (`reports/WEATHER-SPECIALISTS.json`)
+
+**The user's insight is CONFIRMED — and it does not buy us an edge.**
+
+Discovered weather specialists directly from the weather trade feed (data-api `/trades`, bounded to the
+weather book our sharps already touch — 6,178 conds, no global poll), ranked belief-blind on a TRAIN
+week (w26) and required to hold on the disjoint TEST week (w27), Bonferroni over the # screened.
+
+**Confirmed — global rank IS the wrong filter for a niche:**
+- **5,321 distinct wallets trade weather.** Our followed set holds **75 — ALL rank≤250, ZERO beyond.**
+- **Every one of the 75 disjoint-week-HELD specialists is beyond-250 / unfollowed.** The people who
+  actually trade this niche are structurally invisible to a global-leaderboard voter set.
+
+**But widening to them does NOT earn an arm:**
+
+| quantity | value |
+|---|---|
+| held specialists' pooled TEST **raw** edge | **+9.89pp** |
+| pooled TEST **skill-over-blind** | **+2.09pp** |
+| fraction of their edge that is just the BLIND band | **78.9%** |
+| blind band edge (the thing they're riding) | +18.6pp @0.71–0.82 · +8.1pp @0.82–0.90 · +3.2pp @0.90–0.98 |
+| wallets screened (Bonferroni M) | **1,507** |
+
+**~79% of a "specialist's" weather edge is simply the blind mid-favorite BAND mispricing.** The +2.09pp
+residual is *selected-on-train* (survivorship) out of **1,507** screened — nowhere near
+Bonferroni-significant, and exactly what you'd expect by construction when a persistent band edge makes
+train-winners look like test-winners. Widening the voter set adds **signal VOLUME, not per-dollar LB**.
+
+**This converges with WS4 from the opposite direction.** WS4: the ≥3-backer **consensus** adds no skill
+over a single sharp. WS2: the **traders** add ~no skill over the blind band. Two independent tests, one
+conclusion: **the weather edge is a PRICE-BAND property, not a trader/consensus property. Follow the
+BAND, not the people.**
+
+**Action: do NOT build a specialist voter arm.** (Also consistent with the settled refutations —
+past-PnL rank refuted 5 ways, naive widening withdrawn.) If weather is pursued, the honest form is a
+**blind mid-favorite weather rule (0.71–0.90)** — which still must clear the forward executable-ask gate
+(WS1: +1.87¢ haircut vs the sharp fill; thin books; `weather_fav_liq` fires 0).

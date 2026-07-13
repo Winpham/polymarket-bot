@@ -34,17 +34,19 @@ WIDE_CUTOFF = 250
 LO, HI = 0.71, 0.98
 
 
-def _fetch_convergence_rows(min_backers=3):
+def _fetch_convergence_rows(min_backers=3, slug_pat="highest-temperature"):
     """Wider-universe weather convergence, NO resolution filter, with the convergence epoch ts0 and
     the `_blind` mid where it exists (for the validation cross-check only). min_backers=3 = the arm's
     consensus selection; min_backers=1 = the blind weather-favorite POOL (the selection_null universe,
-    graded on the SAME CLOB at-fire basis so the forecast-co-reading test is basis-consistent)."""
+    graded on the SAME CLOB at-fire basis so the forecast-co-reading test is basis-consistent).
+    slug_pat defaults to the daily HIGH-temp book (WS4 behaviour byte-identical); WS3 passes other
+    recurring-niche patterns to reuse the exact same objective + CLOB grading."""
     return C.q(f"""
     WITH e AS (
       SELECT f.condition_id, f.outcome_index, LOWER(f.wallet) w, MIN(ft.rank) rank, AVG(f.price) px,
              MIN(f.ts) ts, MAX(f.slug) slug
       FROM trader_fills f JOIN followed_traders ft ON ft.proxy_wallet=f.wallet
-      WHERE f.side='BUY' AND f.ts>='{C.GO_LIVE}' AND ft.rank<={WIDE_CUTOFF} AND f.slug ~ 'highest-temperature'
+      WHERE f.side='BUY' AND f.ts>='{C.GO_LIVE}' AND ft.rank<={WIDE_CUTOFF} AND f.slug ~ '{slug_pat}'
       GROUP BY 1,2,3),
     e1 AS (SELECT e.* FROM e WHERE NOT EXISTS
       (SELECT 1 FROM e x WHERE x.condition_id=e.condition_id AND x.w=e.w AND x.outcome_index<>e.outcome_index)),
@@ -63,8 +65,8 @@ def _fetch_convergence_rows(min_backers=3):
     """)
 
 
-def grade(offline=False, verbose=False, min_backers=3):
-    rows = _fetch_convergence_rows(min_backers)
+def grade(offline=False, verbose=False, min_backers=3, slug_pat="highest-temperature"):
+    rows = _fetch_convergence_rows(min_backers, slug_pat)
     wc = WeatherClob(offline=offline)
     picks, stats = [], {"total": 0, "open_dropped": 0, "no_mid_dropped": 0, "out_of_band": 0,
                         "blind_cross_n": 0, "blind_cross_abs_err": 0.0}
