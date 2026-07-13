@@ -369,7 +369,14 @@ async fn refresh_universe(
     universe: &Arc<RwLock<Universe>>,
     version: &Arc<AtomicU64>,
 ) -> Result<usize> {
-    let pairs = portfolio.tracked_tape_assets(cfg.live_tape_lookback_hours).await?;
+    // Cap the universe at what the reader pool can actually cover. Past this the tail is
+    // simply not subscribed (see the warning below), so the LIMIT is not a restriction —
+    // it just makes the drop happen in a defined ORDER (our open signals first) instead of
+    // arbitrarily.
+    let capacity = (cfg.live_tape_max_subs.max(1) * cfg.live_tape_max_conns.max(1)) as i64;
+    let pairs = portfolio
+        .price_tape_universe(cfg.live_tape_lookback_hours, capacity)
+        .await?;
     let mut tokens = Vec::new();
     let mut meta = HashMap::new();
     // resolve condition_id (unique) once; map each wanted outcome to its token

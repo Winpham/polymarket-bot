@@ -75,6 +75,12 @@ pub struct ConsensusAlertState {
     pub id: i32,
     pub last_alert_tier: Option<String>,
     pub last_alert_net: Option<i32>,
+    /// True iff THIS upsert inserted the row (rather than updating an existing
+    /// one) — i.e. this call is the signal's FIRE moment. Postgres exposes it via
+    /// the system column `xmax`, which is 0 only on a fresh insert. This is the
+    /// trigger for at-fire ask capture (mig 041): the one instant the executable
+    /// book still reflects what a copier would actually have paid.
+    pub inserted: bool,
 }
 
 /// One fill atom in the rolling consensus vote window (migration 025). Used both
@@ -294,7 +300,7 @@ impl PgPortfolio {
                tier             = EXCLUDED.tier, \
                backers          = EXCLUDED.backers, \
                last_updated_at  = NOW() \
-             RETURNING id, last_alert_tier, last_alert_net",
+             RETURNING id, last_alert_tier, last_alert_net, (xmax = 0) AS inserted",
         )
         .bind(&s.strategy)
         .bind(&s.condition_id)
@@ -587,6 +593,38 @@ impl PgPortfolio {
         .execute(&self.pool)
         .await
         .context("set_entry_ask_decision")?;
+        Ok(res.rows_affected() > 0)
+    }
+
+    /// Record the executable ask captured AT FIRE — the instant the signal was
+    /// inserted by the consensus cycle (migration 041).
+    ///
+    /// `mid` MUST be a true CLOB mid `(bid+ask)/2` from the same `/book` response
+    /// as `ask` (`BookTop::mid`), never the consensus vote-mean — that confusion is
+    /// capture-defect D2. The honest execution haircut is then `ask - mid`.
+    ///
+    /// Set-once and resolved-guarded, exactly like [`Self::set_entry_ask_decision`]:
+    /// a retry can never overwrite the original fire price, and a signal that already
+    /// resolved is never back-filled with a post-hoc book. Returns whether a row was
+    /// actually written. Best-effort — the caller ignores failures and the column
+    /// stays NULL, leaving every existing `entry_ask` query untouched.
+    pub async fn set_entry_ask_fire(
+        &self,
+        signal_id: i32,
+        ask: f64,
+        mid: Option<f64>,
+    ) -> Result<bool> {
+        let res = sqlx::query(
+            "UPDATE consensus_signals \
+             SET entry_ask_fire = $2, entry_ask_fire_at = NOW(), entry_ask_fire_mid = $3 \
+             WHERE id = $1 AND entry_ask_fire IS NULL AND resolved = FALSE",
+        )
+        .bind(signal_id)
+        .bind(ask)
+        .bind(mid)
+        .execute(&self.pool)
+        .await
+        .context("set_entry_ask_fire")?;
         Ok(res.rows_affected() > 0)
     }
 
@@ -1638,6 +1676,68 @@ impl PgPortfolio {
         .fetch_all(&self.pool)
         .await
         .context("tracked_tape_assets")?;
+        Ok(rows)
+    }
+
+    /// The PRICE-tape universe: what the `live_tape` loop subscribes to in order to
+    /// record a top-of-book curve. Distinct from `tracked_tape_assets` (which stays the
+    /// FILL-tape universe for `live_fills` — there, tracked traders' assets are exactly
+    /// the right set).
+    ///
+    /// WHY THIS EXISTS. The price tape used to reuse `tracked_tape_assets`, and that was
+    /// wrong twice over:
+    ///
+    ///  1. `AND is_sports` meant the tape could not contain a single non-sports row.
+    ///     Measured on prod 2026-07-13: of the 583 distinct non-sports (weather)
+    ///     conditions we have fired a signal on, ZERO appear in `clob_price_tape`. The
+    ///     weather arm — the one arm whose edge survives LODO — was accruing no price
+    ///     curve at all.
+    ///  2. It selected the markets TRACKED TRADERS FILLED, not the markets WE SIGNALLED.
+    ///     Those sets are mostly disjoint, and only the second is the one we need a price
+    ///     for: an entry ask, a basis, a trajectory are all properties of OUR signal.
+    ///
+    /// And it silently exceeded capacity. The pool covers `max_subs × max_conns` tokens
+    /// (200 × 8 = 1600 by default) and the tracked-fill universe measured 2,507 at a 6h
+    /// lookback — ~900 tokens past the end of the pool, dropped from the TAIL with only a
+    /// warning. Simply deleting the `is_sports` predicate would have taken it to 9,965 and
+    /// made the coverage hole six times worse.
+    ///
+    /// So: our OPEN SIGNALS FIRST (297 on prod — comfortably inside the pool), then the
+    /// tracked-fill assets to fill whatever capacity remains, and a hard `LIMIT` so the
+    /// set can never run off the end of the pool again. `_`-prefixed strategies (the
+    /// `_blind` placebo arm, 33.9k signals) are excluded — they are never traded and would
+    /// swamp the pool. Ordering is what makes the cap safe: what gets dropped when the
+    /// universe is over capacity is now the least important thing, not an arbitrary tail.
+    pub async fn price_tape_universe(
+        &self,
+        lookback_hours: i64,
+        limit: i64,
+    ) -> Result<Vec<(String, i32)>> {
+        let rows: Vec<(String, i32)> = sqlx::query_as(
+            "WITH sigs AS ( \
+               SELECT DISTINCT condition_id, outcome_index, 0 AS prio \
+                 FROM consensus_signals \
+                WHERE NOT resolved AND condition_id <> '' \
+                  AND strategy NOT LIKE '\\_%' \
+             ), fills AS ( \
+               SELECT DISTINCT condition_id, outcome_index, 1 AS prio \
+                 FROM trader_fills \
+                WHERE ts > now() - ($1::text || ' hours')::interval \
+                  AND condition_id IS NOT NULL \
+                  AND wallet IN (SELECT lower(proxy_wallet) FROM followed_traders) \
+             ), u AS ( \
+               SELECT DISTINCT ON (condition_id, outcome_index) condition_id, outcome_index, prio \
+                 FROM (SELECT * FROM sigs UNION ALL SELECT * FROM fills) x \
+                ORDER BY condition_id, outcome_index, prio \
+             ) \
+             SELECT condition_id, outcome_index FROM u ORDER BY prio, condition_id, outcome_index \
+             LIMIT $2",
+        )
+        .bind(lookback_hours.to_string())
+        .bind(limit)
+        .fetch_all(&self.pool)
+        .await
+        .context("price_tape_universe")?;
         Ok(rows)
     }
 

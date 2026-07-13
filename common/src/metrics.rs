@@ -287,6 +287,32 @@ pub fn record_entry_ask_fetch_failed() {
     counter!("consensus_entry_ask_fetch_failed_total").increment(1);
 }
 
+/// Record an AT-FIRE ask capture (migration 041) — taken inside the consensus
+/// cycle at the instant the signal was inserted, NOT on a later housekeeping pass.
+///
+/// `haircut` is the honest execution cost `entry_ask_fire − true_mid`, both from the
+/// SAME `/book` response (`BookTop::mid`); it is `None` on a one-sided book, where a
+/// mid is undefined and we refuse to fake one (defect D2).
+///
+/// `lag_secs` (`entry_ask_fire_at − first_detected_at`) is the whole point of this
+/// metric: it should sit in SECONDS, not the ~10-15 MINUTES the housekeeping capture
+/// runs at. Watch it — if this histogram drifts upward, the selection bias this fix
+/// exists to kill is creeping back in.
+pub fn record_entry_ask_fire_capture(haircut: Option<f64>, lag_secs: f64) {
+    counter!("consensus_entry_ask_fire_captured_total").increment(1);
+    if let Some(h) = haircut {
+        histogram!("consensus_entry_ask_fire_haircut").record(h);
+    }
+    histogram!("consensus_entry_ask_fire_lag_seconds").record(lag_secs.max(0.0));
+}
+
+/// Record that at-fire capture hit its per-cycle budget. These signals are NOT
+/// retried on a later cycle (a late capture would reintroduce the bias), so this
+/// counter is a real coverage loss — surfaced rather than silently truncated.
+pub fn record_entry_ask_fire_capped() {
+    counter!("consensus_entry_ask_fire_capped_total").increment(1);
+}
+
 /// Record that entry-ask capture hit its per-cycle budget (`decision` vs lagged),
 /// so remaining signals settle on later cycles. Surfaces silent truncation.
 pub fn record_entry_ask_capped(decision: bool) {
