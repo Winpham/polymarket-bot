@@ -435,3 +435,66 @@ book: take only what it gives within a 1¢ budget. Selection is finished — thr
    A slippage-aware sizer must be **measured**, not assumed.
 3. The frozen gate still requires `entry_ask`-captured θ over **≥2 disjoint FORWARD weeks**. Unmet —
    but the clock is now running for the first time.
+
+---
+
+# PART III — THE MIRAGE TEST (real-money prep, 2026-07-13)
+
+The frozen `GO-LIVE-PREREG` names one risk as the thing that would actually lose real money (**G3**):
+*is this favourite-longshot bias rather than alpha?* Its stated blocker was that the only historical
+price source was unvalidated. **Both blockers are now cleared:**
+
+| integrity check | result | gate | status |
+|---|---|---|---|
+| historical price source (`basis_validate.py`) | MAE **0.0080** vs clean captured mids (median 0.0000, n=67) | ≤3¢ | ✅ |
+| token-index mapping (CLOB `tokens[]` == our `outcome_index`) | **100.00%**, n=**9,302** | 100% | ✅ |
+| grader survivorship | dropped win 94.1% vs kept 95.8% (+0.3pp) | no lift | ✅ |
+
+The suspected "token-index mapping bug" **does not exist**. The `prices-history` rejection (MAE 22¢) was
+measured against the **pre-fix, loser-tilted ask lane** — a corrupt yardstick, not a broken instrument.
+
+## The test: a NEUTRAL-REFERENCE blind pool
+
+Price the favorite **12h before the market's own resolution** — no sharp, no `ts0`, no consensus. This
+kills the B5 entry-timing bias outright. Full clean July sample (n=433, 12 days):
+
+| basis | edge | ROI-turn LB |
+|---|---|---|
+| MID (untradeable) | **+1.72pp** | **−2.77%** |
+| realizable ask (+1.5¢) | −0.31% | **−4.51%** |
+| ask (+3.0¢) | −2.06% | **−6.18%** |
+
+**ALL WEATHER FAVORITES ARE FAIRLY PRICED.** They win **82.9%** at a price of **81.2%**. After the
+spread the blind band is **NEGATIVE**.
+
+> ⚠️ **A self-inflicted bug nearly produced the opposite answer.** An early run used
+> `WeatherClob(offline=True)` and `mid_at()` cached an **empty history** on every failed fetch — 296
+> poisoned entries — which silently DROPPED those markets from later samples and returned **+10.0pp**.
+> The clean full sample returns **+1.72pp**. The cache is purged and the code hardened so a failed
+> fetch can never write an empty history again. *Two samples of the same population disagreeing by 8pp
+> is exactly the instability that must stop a real-money decision.*
+
+## What this REVERSES — and it would have cost money
+
+| | edge |
+|---|---|
+| ALL weather favorites (neutral, no sharp) — price 0.812 | win **82.9%** → **+1.7pp (FAIR)** |
+| **SHARP-SELECTED** favorites — price 0.816 | win **95.2%** → **+13.6pp** |
+| **value of the sharps' selection** | **+12.3pp of win rate** |
+
+1. **The MIRAGE is REFUTED.** The edge is *not* favourite-longshot bias — the band is fairly priced.
+2. **The edge IS the sharps' pick.** It lives entirely in *which* favorite a sharp buys.
+3. **My earlier recommendation — "follow the BAND, not the people" — is WRONG and is hereby RETRACTED.**
+   A blind band rule would have traded a **fairly-priced** market and **bled the spread**. WS2/WS5's
+   "implement as the blind band rule" must NOT be built.
+4. This **restores** the parallel run's null (p=0.0005 vs a random-favourite pool): sharps *do* beat
+   random favorites. My p≈0.5 result stands but means something narrower than I said: you need **ONE**
+   sharp, not three. **One sharp is essential; a second and third add nothing.**
+
+**Correct strategy: follow ONE sharp into a 0.71–0.90 weather favorite.**
+
+## What is STILL unproven (and it is the whole ballgame)
+
+The +12.3pp is measured at a **modelled** entry (reconstructed mid + assumed spread). **We have never
+captured what we actually pay** — `entry_vwap` has ZERO rows, and we have **never placed an order**.
+G1/G2/G5 remain RED. The edge being *real* does not make it *capturable*.

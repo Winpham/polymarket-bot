@@ -92,7 +92,10 @@ class WeatherClob:
                 resp = self._get(f"{CLOB}/prices-history?market={token_id}&interval=max&fidelity=1")
                 h = [[int(x["t"]), float(x["p"])] for x in resp.get("history", [])]
             except Exception:
-                h = []
+                # NEVER cache an empty history on a FAILED/offline fetch. Doing so poisons the cache:
+                # mid_at() then returns None forever and the market is SILENTLY DROPPED from every
+                # later sample — a selection bias we would have introduced ourselves. (Bit us once.)
+                return None
             self.cache["hist"][token_id] = h
             self._maybe_flush()
         if not h:
