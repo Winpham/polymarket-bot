@@ -9,3 +9,18 @@ portfolio_state.json
 # stalls the deploy. Keep them out of the image build entirely.
 wt/
 dogfood-tmp/
+
+# Nightly pg_dumps. NOT optional — this line is why prod survives a deploy.
+#
+# On 2026-07-13 these were still in the build context: 5.2 GB of dumps made the
+# transfer 4.87 GB, and pushing that onto a disk with 134 MB free threw an I/O
+# error mid-build, wedged the Docker daemon, and took prod down. The VM's ext4
+# journal had already aborted the day before for the same underlying reason (the
+# nightly dump filling the disk). The dumps are pure BUILD-IRRELEVANT payload —
+# the image never reads them.
+backups/
+
+# Local Parquet archive (hot/cold split) — same story: bulk data the image never
+# reads, and it grows without bound.
+archive/
+*.parquet

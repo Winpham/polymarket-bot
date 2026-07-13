@@ -16,6 +16,11 @@ services:
       POSTGRES_PASSWORD: bot
     volumes:
       - pgdata:/var/lib/postgresql/data
+    # Bind to LOOPBACK ONLY (127.0.0.1, never 0.0.0.0) so host-side research tooling —
+    # DuckDB, the archiver, pandas — can reach the forward record directly instead of
+    # shelling through `docker exec psql`. Not reachable from the network.
+    ports:
+      - "127.0.0.1:5432:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U bot -d polymarket"]
       interval: 5s
