@@ -203,3 +203,74 @@ statement this run can make — and it is *not* a certification.
    ≈0 over blind).
 4. **Frozen-gate floors UNMET**: 11 day-clusters < the 20 volume floor, and the `entry_ask`-captured θ
    over ≥2 disjoint **FORWARD** weeks has not accrued (captures began 2026-07-12) ⇒ **INDETERMINATE**.
+
+---
+
+## WS5 — Harden as a standalone strategy + prereg addendum
+
+**No executor staged.** The frozen gate did NOT clear (the `entry_ask`-captured θ over ≥2 disjoint
+FORWARD weeks and the 20-day-cluster volume floor are both unmet), so per the brief nothing is staged
+and nothing is promoted. **No Rust, no migration, no `.env`, no compose changed** (verified
+`git diff main...HEAD`): the arm and every incumbent are byte-identical.
+
+### The B3 test — does the consensus arm earn its existence? **No.**
+
+At the REALIZABLE ask, on the 0.71–0.90 cert band:
+
+| rule | n | point | LB | day-clusters |
+|---|---|---|---|---|
+| `weather_fav` consensus (≥3 backers) | 485 | +9.01% | +7.92% | 11 |
+| **BLIND band rule** (any 1+ sharp favorite) | **683** | **+8.88%** | +7.64% | **13** |
+| **consensus − blind band** | | **+0.14pp** | | |
+
+**The ≥3-backer consensus requirement earns +0.14pp — i.e. nothing** — while *costing* 30% of the
+signals and 2 day-clusters. **Three independent tests now converge on the same conclusion:**
+
+1. WS4 `selection_null`: consensus vs single-sharp → **p ≈ 0.5** (no skill).
+2. WS2 specialists: pooled skill-over-blind **+2.1pp**, ~79% of their edge is the band; not
+   Bonferroni-significant over 1,507 screened.
+3. WS5 B3: consensus θ − blind-band θ = **+0.14pp**.
+
+> **The weather edge is a mid-favorite PRICE-BAND property. It is not a consensus edge, not a
+> copy-trading edge, and not a "find the skilled specialist" edge. Follow the BAND, not the people.**
+
+### Prereg addendum (`PREREG_20260712T192000Z_weather_ADDENDUM.md`) — ADDS floors, loosens none
+
+- **B1 realizable basis mandatory** — θ only at the captured executable `entry_ask`; mid/sharp-fill are
+  proxy/ceiling diagnostics that may never certify. Report `entry_ask` coverage % every time.
+- **B2 band-specific spread floor** — the ask premium must be measured **on the 0.71–0.90 cert band**
+  (≥100 captures, ≥2 disjoint weeks). The current +1.87¢ comes from 38 **deep-chalk-skewed** captures
+  (avg ask 0.912) and does NOT certify the cert band. Until met: **INDETERMINATE — SPREAD UNMEASURED**.
+- **B3 beat-the-blind-band floor** — the consensus arm must beat the blind 0.71–0.90 band rule at the
+  realizable ask, LB on the *difference* > 0, or it is RETIRED as a consensus arm. *(Exploratory read
+  today: +0.14pp — it does not.)*
+- **B4 size/fillability floor** — `weather_fav_liq` must capture ≥20 resolved signals with realizable
+  θ > 0. If the edge exists only where the book can't absorb a stake, weather is **NOT BANKABLE**.
+- **B5 entry-timing guard** — no mid-/`ts0`-anchored number may certify (it is anchored to a *sharp's*
+  entry, not ours).
+
+### Reported blocker (NOT fixed here — needs a separate, coordinated run)
+
+`trader_fill_unresolved_conditions` selects `ORDER BY MIN(ts)` (**oldest-first FIFO**), capped at
+`TRADER_FILLS_RESOLVE_PER_CYCLE=200`/cycle against a **~42,000-condition backlog** ⇒ recent weather is
+**head-of-line blocked** (week-2: ~648 converged picks, ~45 graded). This will **throttle the forward
+gate itself**. Worked around read-only here via `weather_clob.py`. A real fix (newest-first / dual lane
+/ negative-cache the permanently-unresolvable) touches `trader_fills` resolution — `feat/maker-copy-g3`
+territory, possibly a migration — so it is **reported, not attempted**, per the run's guardrails.
+
+---
+
+## Bottom line
+
+**Weather `weather_fav` 0.71–0.90 reaches +7.9% realizable LB (+6.5% on the held-out week under a real
+LODO-by-week) — above the champion's +5.6% honest floor.** That is the strongest honest claim available,
+and it is **not a certification**: the spread that produced it is measured on the wrong band, the size is
+unproven (`weather_fav_liq` = 0 captures), the volume floor is unmet (11 < 20 clusters), and the forward
+`entry_ask` gate has not accrued.
+
+**The most valuable finding is not the number — it is that the framing was wrong.** Weather is not a
+consensus/copy edge; it is a **blind mid-favorite band mispricing**. Three independent tests agree. The
+consensus machinery, the specialist discovery, and the wider voter set all add **~0** per dollar. If
+weather is pursued, the honest instrument is a **blind 0.71–0.90 weather-favorite rule** — simpler,
+higher-volume — and it must earn its own prereg + forward gate at the executable ask, where the thin-book
+spread and the unproven size are the only questions that still matter.
