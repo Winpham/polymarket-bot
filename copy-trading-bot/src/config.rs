@@ -97,6 +97,18 @@ pub struct CopyTradingConfig {
     #[config(env = "CONSENSUS_WEATHER_ARM", default = false)]
     pub consensus_weather_arm: bool,
 
+    /// Register the LOWEST-temperature shadow arms (`weather_low_fav`,
+    /// `weather_low_fav_liq`) — the low-temperature branch of the evergreen portfolio.
+    /// A SEPARATE arm from `weather_fav`, not a widened weather filter: high- and
+    /// low-temperature markets behave differently (the casual crowd prices hot favorites
+    /// about right but MIS-prices cold ones, so the sharps' skill-over-blind is much
+    /// larger on lows — and the book is much thinner). Blending them would average away
+    /// that mechanism; each certifies on its own frozen gate or is retired.
+    /// Default FALSE ⇒ no low-temperature book is loaded/scored ⇒ the live path is
+    /// byte-for-byte unchanged. SHADOW-ONLY (alerting=false); promotes nothing.
+    #[config(env = "CONSENSUS_WEATHER_LOW_ARM", default = false)]
+    pub consensus_weather_low_arm: bool,
+
     /// Comma-separated inclusive upper rank bounds defining the cohort BANDS the
     /// deep-pool observatory slices/groups by (see `scanner::cohort`). The first
     /// band is the trusted top cohort — keep its bound aligned with
@@ -308,6 +320,16 @@ pub struct CopyTradingConfig {
     /// load; markets that don't fit settle on later cycles).
     #[config(env = "TRADER_FILLS_RESOLVE_PER_CYCLE", default = 200)]
     pub trader_fills_resolve_per_cycle: i64,
+
+    /// Recency lane for the `trader_fills` resolver (days). Conditions whose latest
+    /// fill lands inside this window get the bulk of the per-cycle budget, so a deep
+    /// backlog of never-resolvable markets (delisted 2022 markets; 2028-election
+    /// markets that don't settle for years) can no longer head-of-line-block the
+    /// oldest-first queue and starve every recent market — the defect that froze the
+    /// resolution ledger through 2026-07-12. The remaining budget still sweeps the
+    /// global backlog oldest-first, so nothing is permanently abandoned.
+    #[config(env = "TRADER_FILLS_RESOLVE_RECENT_DAYS", default = 30)]
+    pub trader_fills_resolve_recent_days: i64,
 
     /// Retention (days) for the durable `trader_fills` archive. Default 0 =
     /// keep-all (the archive is the point); set > 0 to prune older fills. The

@@ -1,6 +1,7 @@
 {
-  "as_of": "2026-07-11",
-  "run": "weather edge refinement \u2014 phase 3 (anti-overfit battery)",
+  "as_of": "2026-07-12",
+  "family": "highest-temperature",
+  "run": "evergreen portfolio \u2014 per-family anti-overfit battery",
   "cluster_unit": "resolution DAY (conservative \u2014 also lumps weather-independent global cities)",
   "M_cells": 3,
   "candidates": {
@@ -23,9 +24,9 @@
         "note": "SINGLE-WINDOW: <2 weeks with \u22652 day-clusters \u2014 LODO-by-week IMPOSSIBLE; the edge is one consecutive-day window (regime-correlated), uncertifiable until disjoint weeks accrue"
       },
       "time_split": {
-        "early_LB": -0.1099,
-        "late_LB": 0.0359,
-        "split_at": "on-july-2"
+        "early_LB": 0.0187,
+        "late_LB": -0.0688,
+        "split_at": "on-july-7"
       },
       "bonferroni": {
         "alpha_adj": 0.0167,
@@ -71,9 +72,9 @@
         "note": "SINGLE-WINDOW: <2 weeks with \u22652 day-clusters \u2014 LODO-by-week IMPOSSIBLE; the edge is one consecutive-day window (regime-correlated), uncertifiable until disjoint weeks accrue"
       },
       "time_split": {
-        "early_LB": -0.0179,
-        "late_LB": 0.0659,
-        "split_at": "on-july-2"
+        "early_LB": 0.0659,
+        "late_LB": -0.0179,
+        "split_at": "on-july-7"
       },
       "bonferroni": {
         "alpha_adj": 0.0167,

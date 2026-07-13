@@ -1,0 +1,178 @@
+{
+  "as_of": "2026-07-12",
+  "run": "evergreen per-market-type arm portfolio",
+  "cluster_unit": "resolution DAY (cross-city same-day temperature is correlated)",
+  "cert_band": [
+    0.71,
+    0.9
+  ],
+  "champion_honest_floor": 0.056,
+  "bases": {
+    "sharp_fill": "backers' own mean fill \u2014 DIRECTIONAL CEILING, not buyable",
+    "copier_ask": "sharp fill + MEASURED copier haircut from the live arm's captured asks"
+  },
+  "arms": {
+    "weather": {
+      "family": "weather",
+      "picks_capture_band": 1087,
+      "picks_cert_band": 571,
+      "days": 11,
+      "weeks": [
+        "2026-W27",
+        "2026-W28"
+      ],
+      "copier_cost_measured": {
+        "n": 85,
+        "haircut_vs_sharp": 0.0165,
+        "haircut_sd": 0.1015,
+        "spread_ask_minus_mid": 0.0109
+      },
+      "sharp_fill_basis": {
+        "point": 0.1448,
+        "lb": 0.1238,
+        "day_clusters": 11,
+        "meaning": "DIRECTIONAL CEILING \u2014 the sharps' own fill. Nobody else can buy at this price."
+      },
+      "lodo_by_week_sharp_basis": {
+        "weeks": [
+          "2026-W27",
+          "2026-W28"
+        ],
+        "possible": true,
+        "per_week": {
+          "2026-W27": {
+            "n_in_week": 303,
+            "days_in_week": 5,
+            "lb_this_week_alone": 0.0924,
+            "point_this_week_alone": 0.1309,
+            "lb_without_this_week": 0.1317
+          },
+          "2026-W28": {
+            "n_in_week": 268,
+            "days_in_week": 6,
+            "lb_this_week_alone": 0.1317,
+            "point_this_week_alone": 0.1606,
+            "lb_without_this_week": 0.0924
+          }
+        },
+        "min_lb_across_folds": 0.0924,
+        "survives_lodo_by_week": true,
+        "verdict": "SURVIVES \u2014 LB stays >0 with any single week removed"
+      },
+      "selection_null": {
+        "p_emp": 0.0005,
+        "n_perm": 2000,
+        "real_lb": 0.1238,
+        "n_matched": 317,
+        "n_real": 571,
+        "passes_p01": true,
+        "verdict": "PASSES \u2014 convergence selects better than a random weather favorite at the same band x day"
+      },
+      "copier_ask_basis": {
+        "haircut_charged": 0.0165,
+        "point": 0.1222,
+        "lb": 0.1016,
+        "boot_lb": 0.1038,
+        "day_clusters": 11,
+        "meaning": "REALIZABLE \u2014 the sharps' fill plus the haircut a copier actually paid (measured)."
+      },
+      "lodo_by_week_copier_basis": {
+        "weeks": [
+          "2026-W27",
+          "2026-W28"
+        ],
+        "possible": true,
+        "per_week": {
+          "2026-W27": {
+            "n_in_week": 303,
+            "days_in_week": 5,
+            "lb_this_week_alone": 0.0709,
+            "point_this_week_alone": 0.1086,
+            "lb_without_this_week": 0.1094
+          },
+          "2026-W28": {
+            "n_in_week": 268,
+            "days_in_week": 6,
+            "lb_this_week_alone": 0.1094,
+            "point_this_week_alone": 0.1376,
+            "lb_without_this_week": 0.0709
+          }
+        },
+        "min_lb_across_folds": 0.0709,
+        "survives_lodo_by_week": true,
+        "verdict": "SURVIVES \u2014 LB stays >0 with any single week removed"
+      }
+    },
+    "weather_low": {
+      "family": "weather_low",
+      "picks_capture_band": 104,
+      "picks_cert_band": 59,
+      "days": 9,
+      "weeks": [
+        "2026-W27",
+        "2026-W28"
+      ],
+      "copier_cost_measured": {
+        "n": 0,
+        "haircut_vs_sharp": null,
+        "spread_ask_minus_mid": null,
+        "note": "NO captured asks yet \u2014 the copier's price for this family is UNMEASURED"
+      },
+      "sharp_fill_basis": {
+        "point": 0.0961,
+        "lb": -0.0352,
+        "day_clusters": 9,
+        "meaning": "DIRECTIONAL CEILING \u2014 the sharps' own fill. Nobody else can buy at this price."
+      },
+      "lodo_by_week_sharp_basis": {
+        "weeks": [
+          "2026-W27",
+          "2026-W28"
+        ],
+        "possible": true,
+        "per_week": {
+          "2026-W27": {
+            "n_in_week": 40,
+            "days_in_week": 4,
+            "lb_this_week_alone": 0.018,
+            "point_this_week_alone": 0.1565,
+            "lb_without_this_week": -0.3589
+          },
+          "2026-W28": {
+            "n_in_week": 19,
+            "days_in_week": 5,
+            "lb_this_week_alone": -0.3589,
+            "point_this_week_alone": -0.0312,
+            "lb_without_this_week": 0.018
+          }
+        },
+        "min_lb_across_folds": -0.3589,
+        "survives_lodo_by_week": false,
+        "verdict": "FAILS \u2014 the edge does not survive dropping a week (single-regime streak)"
+      },
+      "selection_null": {
+        "p_emp": 0.0085,
+        "n_perm": 2000,
+        "real_lb": -0.0352,
+        "n_matched": 32,
+        "n_real": 59,
+        "passes_p01": true,
+        "verdict": "PASSES \u2014 convergence selects better than a random weather favorite at the same band x day"
+      },
+      "copier_ask_basis": {
+        "verdict": "UNMEASURED \u2014 no captured asks for this family yet"
+      }
+    }
+  },
+  "diversification": {
+    "common_days": 9,
+    "corr": -0.168,
+    "low_correlated": true,
+    "verdict": "INDICATIVE ONLY \u2014 too few common days to rely on"
+  },
+  "portfolio": {
+    "days": 11,
+    "mean_daily_roi": 0.087,
+    "note": "A portfolio number is only meaningful once EACH arm independently certifies. It is reported for completeness, never to rescue an arm that failed its own gate."
+  }
+}

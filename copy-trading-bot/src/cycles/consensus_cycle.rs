@@ -428,31 +428,46 @@ pub async fn consensus_cycle(
         }
     }
 
-    // Weather detection arm (Generalize-the-Band run, 2026-07-11): score a SEPARATE
-    // daily-temperature book from the WIDER-eligibility vote set — recovering the
-    // forecast-specialist backers (rank 41–250) the rank-40 gate excludes, so the live
-    // `favorite` arm fires on weather zero times. Its whole purpose is to START the
-    // realizable entry_ask capture weather has never had (no weather ask/tape exists in
-    // history ⇒ the copyable edge is unmeasurable without it). Default-OFF ⇒ no extra DB
-    // load or scoring ⇒ the live path is byte-identical; the incumbent `book_vec` is untouched.
-    if cfg.consensus_weather_arm {
-        let weather_window = portfolio
-            .load_weather_window_votes(window_start, cfg.soft_market_rank_cutoff)
+    // Evergreen per-market-type arms (Evergreen-Portfolio run, 2026-07-12). Each family
+    // scores a SEPARATE book assembled from the WIDER-eligibility vote set — recovering the
+    // specialist backers (rank 41–250) the rank-40 gate excludes, which is why the live
+    // `favorite` arm fires on these markets zero times. Their purpose is to START the
+    // realizable entry_ask capture these venues have never had (no ask/tape exists in
+    // history ⇒ the copyable edge is unmeasurable without it).
+    //
+    // One branch PER market type, each behind its OWN flag and certified against its OWN
+    // frozen gate — high- and low-temperature markets behave differently (the casual crowd
+    // prices highs about right but MIS-prices lows), so blending them would average away the
+    // mechanism that makes them worth holding together. A family that is off costs no DB load
+    // and no scoring ⇒ the live path stays byte-identical; the incumbent `book_vec` is untouched.
+    for family in crate::scanner::consensus::MARKET_FAMILIES.iter() {
+        let enabled = match family.key {
+            "weather" => cfg.consensus_weather_arm,
+            "weather_low" => cfg.consensus_weather_low_arm,
+            _ => false, // a family with no flag wired is OFF — never silently live
+        };
+        if !enabled {
+            continue;
+        }
+        let window = portfolio
+            .load_family_window_votes(window_start, cfg.soft_market_rank_cutoff, family.slug_regex)
             .await
             .unwrap_or_default();
-        if !weather_window.is_empty() {
-            let base = params_from_cfg(cfg);
-            let weather_books = books_from_window_votes(&weather_window, trust);
-            let weather_strats = crate::scanner::consensus::weather_market_arms(&base);
-            let weather_sigs = score_all_strategies(&weather_books, now, &weather_strats);
-            tracing::info!(
-                weather_votes = weather_window.len(),
-                weather_books = weather_books.len(),
-                weather_signals = weather_sigs.len(),
-                "Weather arm scored (shadow, daily-temperature wider-eligibility book)"
-            );
-            signals.extend(weather_sigs);
+        if window.is_empty() {
+            continue;
         }
+        let base = params_from_cfg(cfg);
+        let books = books_from_window_votes(&window, trust);
+        let strats = crate::scanner::consensus::market_family_arms(&base, family);
+        let sigs = score_all_strategies(&books, now, &strats);
+        tracing::info!(
+            family = family.key,
+            family_votes = window.len(),
+            family_books = books.len(),
+            family_signals = sigs.len(),
+            "Evergreen family arm scored (shadow, wider-eligibility book)"
+        );
+        signals.extend(sigs);
     }
 
     // Enricher seam: silent cross-check arms re-emit `strict` picks under new

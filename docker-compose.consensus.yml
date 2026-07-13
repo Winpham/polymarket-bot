@@ -96,7 +96,15 @@ services:
       #     backers the rank-40 gate excludes. Both SILENT (alerting=false); starts the
       #     realizable entry_ask capture weather has never had. OFF ⇒ byte-identical. ---
       CONSENSUS_WEATHER_ARM: ${CONSENSUS_WEATHER_ARM:-false}  # enable the weather shadow arm (paper capture)
+      # Lowest-temperature sibling arm. STAGED OFF and RECOMMENDED OFF: it FAILED its own frozen gate
+      # (leave-one-week-out collapses it — min fold LB -35.9% on 59 picks / 9 days, pooled LB -3.5%),
+      # so per the run's own rule it is RETIRED, not carried on hope. The knob exists only so the
+      # decision to re-open it is deliberate and human. See reports/EVERGREEN-PORTFOLIO-FINDINGS.md.
+      CONSENSUS_WEATHER_LOW_ARM: ${CONSENSUS_WEATHER_LOW_ARM:-false}
       SOFT_MARKET_RANK_CUTOFF: ${SOFT_MARKET_RANK_CUTOFF:-250} # wider eligibility cutoff for weather/soft arms
+      # Recency lane for the trader_fills resolver (days). Guards against the head-of-line blocking
+      # that froze the resolution ledger for every recent market through 2026-07-12.
+      TRADER_FILLS_RESOLVE_RECENT_DAYS: ${TRADER_FILLS_RESOLVE_RECENT_DAYS:-30}
       # --- dense early-life capture (decay Phase 0): sub-5-min trajectory for
       #     fresh actionable signals; OFF = loop never spawned. ---
       DENSE_CAPTURE: ${DENSE_CAPTURE:-false}
