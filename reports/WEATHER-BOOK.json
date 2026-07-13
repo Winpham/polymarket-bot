@@ -1,0 +1,163 @@
+{
+  "as_of": "2026-07-12",
+  "run": "weather capitalize \u2014 LIVE BOOK (B2 spread + B4 size)",
+  "cert_band": [
+    0.71,
+    0.9
+  ],
+  "n_open_cert_band_books": 12,
+  "SPREAD": {
+    "median": 0.0565,
+    "mean": 0.0521,
+    "p25": 0.04,
+    "p75": 0.07,
+    "min": 0.007,
+    "max": 0.125
+  },
+  "HALF_SPREAD_ask_minus_mid": {
+    "median": 0.0282,
+    "mean": 0.026,
+    "note": "THIS is what a taker pays over mid \u2014 the number the realizable LB is a function of."
+  },
+  "DEPTH_usd": {
+    "median_at_touch": 20.2,
+    "median_within_1c": 54.26,
+    "median_within_2c": 78.7,
+    "frac_books_under_100usd_within_1c": 0.667
+  },
+  "prior_estimate_used_by_this_run": 0.0122,
+  "books": [
+    {
+      "slug": "highest-temperature-in-taipei-on-july-13-2026-35c",
+      "mid": 0.8945,
+      "best_bid": 0.832,
+      "best_ask": 0.957,
+      "spread": 0.125,
+      "half_spread_ask_minus_mid": 0.0625,
+      "depth_at_touch_usd": 7.66,
+      "depth_within_1c_usd": 157.11,
+      "depth_within_2c_usd": 542.44
+    },
+    {
+      "slug": "highest-temperature-in-warsaw-on-july-13-2026-24c",
+      "mid": 0.86,
+      "best_bid": 0.82,
+      "best_ask": 0.9,
+      "spread": 0.08,
+      "half_spread_ask_minus_mid": 0.04,
+      "depth_at_touch_usd": 79.36,
+      "depth_within_1c_usd": 114.24,
+      "depth_within_2c_usd": 200.0
+    },
+    {
+      "slug": "highest-temperature-in-seattle-on-july-13-2026-76-77f",
+      "mid": 0.745,
+      "best_bid": 0.71,
+      "best_ask": 0.78,
+      "spread": 0.07,
+      "half_spread_ask_minus_mid": 0.035,
+      "depth_at_touch_usd": 80.63,
+      "depth_within_1c_usd": 80.63,
+      "depth_within_2c_usd": 80.63
+    },
+    {
+      "slug": "highest-temperature-in-tel-aviv-on-july-14-2026-33c",
+      "mid": 0.87,
+      "best_bid": 0.84,
+      "best_ask": 0.9,
+      "spread": 0.06,
+      "half_spread_ask_minus_mid": 0.03,
+      "depth_at_touch_usd": 9.0,
+      "depth_within_1c_usd": 31.75,
+      "depth_within_2c_usd": 89.13
+    },
+    {
+      "slug": "highest-temperature-in-kuala-lumpur-on-july-13-2026-32c",
+      "mid": 0.88,
+      "best_bid": 0.85,
+      "best_ask": 0.91,
+      "spread": 0.06,
+      "half_spread_ask_minus_mid": 0.03,
+      "depth_at_touch_usd": 30.33,
+      "depth_within_1c_usd": 162.35,
+      "depth_within_2c_usd": 162.35
+    },
+    {
+      "slug": "highest-temperature-in-lucknow-on-july-13-2026-36c",
+      "mid": 0.77,
+      "best_bid": 0.74,
+      "best_ask": 0.8,
+      "spread": 0.06,
+      "half_spread_ask_minus_mid": 0.03,
+      "depth_at_touch_usd": 4.05,
+      "depth_within_1c_usd": 4.05,
+      "depth_within_2c_usd": 4.05
+    },
+    {
+      "slug": "highest-temperature-in-seoul-on-july-13-2026-31c",
+      "mid": 0.8175,
+      "best_bid": 0.791,
+      "best_ask": 0.844,
+      "spread": 0.053,
+      "half_spread_ask_minus_mid": 0.0265,
+      "depth_at_touch_usd": 29.51,
+      "depth_within_1c_usd": 76.77,
+      "depth_within_2c_usd": 76.77
+    },
+    {
+      "slug": "highest-temperature-in-dallas-on-july-13-2026-86-87f",
+      "mid": 0.715,
+      "best_bid": 0.69,
+      "best_ask": 0.74,
+      "spread": 0.05,
+      "half_spread_ask_minus_mid": 0.025,
+      "depth_at_touch_usd": 11.38,
+      "depth_within_1c_usd": 11.38,
+      "depth_within_2c_usd": 11.38
+    },
+    {
+      "slug": "highest-temperature-in-chicago-on-july-14-2026-100-101f",
+      "mid": 0.89,
+      "best_bid": 0.87,
+      "best_ask": 0.91,
+      "spread": 0.04,
+      "half_spread_ask_minus_mid": 0.02,
+      "depth_at_touch_usd": 29.02,
+      "depth_within_1c_usd": 29.02,
+      "depth_within_2c_usd": 29.02
+    },
+    {
+      "slug": "highest-temperature-in-amsterdam-on-july-14-2026-28c",
+      "mid": 0.725,
+      "best_bid": 0.72,
+      "best_ask": 0.73,
+      "spread": 0.01,
+      "half_spread_ask_minus_mid": 0.005,
+      "depth_at_touch_usd": 3.65,
+      "depth_within_1c_usd": 3.65,
+      "depth_within_2c_usd": 15.48
+    },
+    {
+      "slug": "highest-temperature-in-lucknow-on-july-13-2026-38c",
+      "mid": 0.775,
+      "best_bid": 0.77,
+      "best_ask": 0.78,
+      "spread": 0.01,
+      "half_spread_ask_minus_mid": 0.005,
+      "depth_at_touch_usd": 6.24,
+      "depth_within_1c_usd": 18.09,
+      "depth_within_2c_usd": 54.29
+    },
+    {
+      "slug": "highest-temperature-in-hong-kong-on-july-14-2026-31c",
+      "mid": 0.8645,
+      "best_bid": 0.861,
+      "best_ask": 0.868,
+      "spread": 0.007,
+      "half_spread_ask_minus_mid": 0.0035,
+      "depth_at_touch_usd": 117.18,
+      "depth_within_1c_usd": 117.18,
+      "depth_within_2c_usd": 241.04
+    }
+  ]
+}

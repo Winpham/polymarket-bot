@@ -1,0 +1,16 @@
+{
+  "as_of": "2026-07-12",
+  "run": "weather capitalize \u2014 basis validation (contradiction resolved)",
+  "strategy_yardstick": "favorite",
+  "fresh_lane_max_min": 15,
+  "n": 67,
+  "mean_capture_lag_min": 9.5,
+  "MAE_recon_vs_captured_MID": 0.008,
+  "median_recon_vs_captured_MID": 0.0,
+  "MAE_recon_vs_captured_ASK": 0.0159,
+  "median_recon_vs_captured_ASK": 0.005,
+  "accept_gate_MAE": 0.02,
+  "VERDICT": "ACCEPT \u2014 CLOB prices-history is a valid MID basis",
+  "reconciliation": "Evergreen-Portfolio's REJECT (MAE 22c) validated against the PRE-FIX ask lane, which D4 proved was ~173min late and loser-tilted \u2014 that measures the LAG, not the instrument. Against the clean fresh lane the recon is exact.",
+  "limit": "prices-history carries NO book, so it gives the MID only. The SPREAD (ask-mid) must come from a real order book or clean captured asks \u2014 it is NOT reconstructable."
+}

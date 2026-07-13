@@ -350,3 +350,88 @@ entry timing is the edge and we are bounded by how fast we can follow (+1.87¢, 
 Either way the remaining gates are the same and they are **empirical, not analytical**: the cert-band
 spread (B2), the fillable size (B4 — `weather_fav_liq` is still 0), and ≥2 disjoint **forward** weeks of
 captured `entry_ask`. The arm is live and accruing them. **Nothing is promoted; nothing is armed.**
+
+---
+
+# PART II — CAPITALIZE RUN (adversarial-first), 2026-07-13
+
+## Attack 1 — the cross-branch contradiction (RESOLVED in this run's favour)
+
+Evergreen-Portfolio built the same CLOB `prices-history` reconstruction and **REJECTED it** ("MAE 22¢
+vs the real captured mid; history has NO copyable price basis"). If true, every number in Part I dies.
+
+**They validated against a corrupt yardstick.** Their comparison used the PRE-FIX ask lane, which their
+own defect D4 proved was captured **~173 min late and loser-tilted**. Comparing a decision-time
+reconstruction to a price captured hours later measures the LAG, not the instrument.
+
+Validated instead against the **clean fresh (≤15 min) decision-time lane** (`basis_validate.py`, n=67):
+
+| | MAE | median |
+|---|---|---|
+| recon vs captured **MID** | **0.0080** | **0.0000** |
+| recon vs captured **ASK** | 0.0159 | 0.0050 |
+
+**ACCEPT: CLOB prices-history IS a valid MID basis.** (And the recon-vs-ask gap independently
+reproduces a ~1.2–1.6¢ spread from a wholly different source.) **Limit: it carries NO book — the SPREAD
+and the SIZE are not reconstructable from history.** That sent me to the live book.
+
+Also confirmed the decay curve is not a stale-tick artifact: **0/485** picks have zero new ticks in the
+30-min window (median 3 ticks). Drift really is ≈0.
+
+## Attack 2 — the SPREAD (B2). It was wrong, but it does not kill the edge.
+
+Part I used a **1.22¢** spread taken from 38 captures averaging **0.912 — deep chalk**, where books are
+tight. The cert band (0.71–0.90) is exactly where weather books are thin. Measured on **live** cert-band
+books (two snapshots, n=15 and n=12):
+
+| | weather 0.71–0.90 | champion 0.71–0.98 (n=80) |
+|---|---|---|
+| **half-spread (taker cost over mid)** | **2.8–3.5¢** | **1.5¢** |
+| full spread (median) | 5.7–7.0¢ | — |
+
+So the true cost is **~2× my assumption and ~2× the champion's**. Plugging the measured 3¢ into the
+sensitivity table: **LB +11.1%, LODO held-out +9.4%** — *still* clearing the champion's +5.6% floor.
+**The spread does NOT kill weather.**
+
+## Attack 3 — the SIZE (B4). This is what binds, and it is structural.
+
+| depth within 1¢ of the touch | weather | champion |
+|---|---|---|
+| median | **$54** | **$427** |
+| mean | $54 | $15,151 |
+| books < $100 | 67–80% | 19% |
+| **books > $1,000** | **0%** | **35%** |
+
+Weather's book is ~**8× thinner** at the median and has **no right tail at all**. `weather_fav_liq`
+capturing 0 was not a bug — it was the market telling us the truth.
+
+## The capacity model (turnover = signals/day × fillable $ within 1¢)
+
+| | signals/day | $/signal | turnover/day | ROI-turn LB | **gross/day** |
+|---|---|---|---|---|---|
+| **champion** | 25.3 | $427 | $10,803 | +5.6% | **~$605** |
+| **weather (blind band)** | 52.5 | $54 | $2,835 | +11.1% | **~$314** |
+| weather (consensus arm) | 44.1 | $54 | $2,381 | +11.1% | ~$264 |
+
+## VERDICT — can weather reach champion level?
+
+**No — and it never can.** Not because the edge is worse (**per dollar it is ~2× better**: LB +11.1%,
+LODO +9.4% vs the champion's +5.6% floor) but because **the book physically isn't there**. Weather is a
+**capacity-capped satellite**, delivering ~**50% of the champion's dollar output on ~26% of its
+turnover**. Run it *alongside* the champion — do not try to scale it *into* the champion's role.
+
+**Implement it as the BLIND BAND rule, not the consensus arm.** B3: consensus adds **+0.14pp** (nothing)
+while *costing* signals. The blind band gives **52.5 sigs/day vs 44.1 (+19% capacity)** at the same edge,
+and needs no consensus machinery.
+
+**The real engineering is a SLIPPAGE-AWARE SIZER, not a better selector.** The binding constraint is the
+book: take only what it gives within a 1¢ budget. Selection is finished — three tests say so.
+
+## Still NOT certified (do not deploy money)
+
+1. Spread/depth rest on **2 snapshots (n=12–15)**. The clean-ask lane (D4 fix **deployed 2026-07-12,
+   `1e199a5`**) now accrues the real number — re-run before any money.
+2. Depth is the **instantaneous** resting book; eating it moves the price, so realized ROI < modeled.
+   A slippage-aware sizer must be **measured**, not assumed.
+3. The frozen gate still requires `entry_ask`-captured θ over **≥2 disjoint FORWARD weeks**. Unmet —
+   but the clock is now running for the first time.

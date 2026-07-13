@@ -1,0 +1,58 @@
+{
+  "as_of": "2026-07-13",
+  "run": "weather capitalize \u2014 CAPACITY vs the champion (the decisive comparison)",
+  "question": "can weather be brought to at least the champion's level?",
+  "measured_live_books": {
+    "champion_sports_fav_0.71_0.98": {
+      "half_spread": 0.015,
+      "depth_1c_median": 427,
+      "depth_1c_mean": 15151,
+      "sigs_per_day": 25.3,
+      "roi_turn_LB": 0.056,
+      "frac_books_over_1k": 0.35,
+      "n_books": 80
+    },
+    "weather_0.71_0.90": {
+      "half_spread": 0.03,
+      "depth_1c_median": 54,
+      "depth_1c_mean": 54,
+      "sigs_per_day_consensus": 44.1,
+      "sigs_per_day_blind_band": 52.5,
+      "roi_turn_LB_at_3c": 0.1108,
+      "roi_turn_LODO_at_3c": 0.0936,
+      "frac_books_over_1k": 0.0,
+      "n_books": "12-15 (two snapshots)"
+    },
+    "read": "weather's spread is ~2x the champion's and its book is ~8x thinner at the median; the champion has a fat right tail (mean $15k, 35% of books >$1k) that weather ENTIRELY LACKS (0% >$1k). The book is the binding constraint, not the edge."
+  },
+  "capacity_model": {
+    "champion": {
+      "turnover_per_day_usd": 10803,
+      "gross_per_day_usd_at_LB": 605,
+      "roi_turn_LB": 0.056
+    },
+    "weather_blind_band": {
+      "turnover_per_day_usd": 2835,
+      "gross_per_day_usd_at_LB": 314,
+      "roi_turn_LB": 0.1108
+    },
+    "weather_consensus": {
+      "turnover_per_day_usd": 2381,
+      "gross_per_day_usd_at_LB": 264,
+      "roi_turn_LB": 0.1108
+    },
+    "basis": "turnover = signals/day x fillable $ within 1c of the touch; gross = turnover x ROI-turn LB"
+  },
+  "VERDICT": {
+    "can_weather_reach_champion_level": "NO \u2014 not on CAPACITY, and it never can. The book physically isn't there (~$54/signal vs ~$427, 0% of weather books hold >$1k vs 35% of the champion's).",
+    "but": "weather's PER-DOLLAR edge is ~2x the champion's (LB +11.1% at the measured 3c half-spread, LODO held-out +9.4%, vs the champion's +5.6% floor). So it delivers ~50% of the champion's dollar output on only ~26% of its turnover.",
+    "therefore": "weather is a CAPACITY-CAPPED SATELLITE SLEEVE, not a champion replacement. Run it ALONGSIDE the champion (low-correlated, stably positive daily) for roughly +50% on total output \u2014 do not try to scale it INTO the champion's role.",
+    "implement_as": "the BLIND BAND rule, NOT the consensus arm: B3 showed consensus adds +0.14pp (i.e. nothing) while COSTING signals. Blind band gives 52.5 sigs/day vs 44.1 \u2014 ~19% more capacity at the same edge, and it is simpler (no consensus machinery).",
+    "the_real_engineering": "the binding constraint is the BOOK, so the work is a SLIPPAGE-AWARE SIZER (take only what the book gives within a 1c budget), NOT a better selector. Selection is done."
+  },
+  "NOT_YET_CERTIFIED": [
+    "spread/depth rest on 2 snapshots (n=12-15 open cert-band books) \u2014 thin. The clean-ask forward lane (D4 fix deployed 2026-07-12) now accrues the real number; re-run before any money.",
+    "depth is the INSTANTANEOUS resting book. Eating it moves the price, so realized ROI < modeled. A slippage-aware sizer must be measured, not assumed.",
+    "the frozen gate still requires entry_ask-captured theta over >=2 disjoint FORWARD weeks. Unmet."
+  ]
+}
