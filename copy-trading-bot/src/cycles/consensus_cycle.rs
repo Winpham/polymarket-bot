@@ -513,6 +513,10 @@ pub async fn consensus_cycle(
     // Forward 29-feature snapshots for every strict-fired market (default-OFF; the
     // `market_resid` training source). Collected inside the loop, flushed once.
     let mut feature_logs: Vec<NewMarketFeatureLog> = Vec::new();
+    // At-fire ask capture budget (migration 041). Only NEWLY-INSERTED signals are
+    // eligible, so this rarely binds; it exists so a burst slate can't stall alerts.
+    let mut fire_asks_captured = 0usize;
+    let mut fire_capped = false;
     for sig in &signals {
         // Upsert EVERY strategy's signal for forward edge tracking.
         let new = to_new_signal(sig, &atoms);
@@ -523,6 +527,34 @@ pub async fn consensus_cycle(
                 continue;
             }
         };
+
+        // --- AT-FIRE executable-ask capture (mig 041, flag CAPTURE_ENTRY_ASK_AT_FIRE,
+        // default OFF ⇒ live path byte-identical). STRATEGY-HANDOFF §4.
+        //
+        // `state.inserted` is the fire instant — the ONE moment the book still shows
+        // what a copier would actually have paid. The existing CAPTURE_ENTRY_ASK runs
+        // on the first housekeeping pass (~10-15 min later), by which time fast chalk
+        // has already resolved and never gets an ask, tilting the ask-priced sample
+        // toward losers (~7pt pessimistic). Capturing here prices fast and slow alike.
+        //
+        // Deliberately NOT retried when over budget or on a failed fetch: a late
+        // capture is exactly the bias we are removing, so we would rather have an
+        // honest NULL than a silently-lagged price. Writes only `entry_ask_fire*`;
+        // `entry_ask` and every query reading it are untouched (non-regressive).
+        if cfg.capture_entry_ask_at_fire && state.inserted {
+            if fire_asks_captured >= cfg.entry_ask_fire_max_per_cycle {
+                if !std::mem::replace(&mut fire_capped, true) {
+                    crate::metrics::record_entry_ask_fire_capped();
+                    tracing::info!(
+                        budget = cfg.entry_ask_fire_max_per_cycle,
+                        "at-fire ask capture hit per-cycle budget; overflow signals are NOT retried (a late capture would reintroduce the bias)"
+                    );
+                }
+            } else {
+                fire_asks_captured += 1;
+                capture_entry_ask_at_fire(http, portfolio, sig, state.id).await;
+            }
+        }
 
         // Durable feature capture (forward, survivorship-free) — strict rows only,
         // when enabled and the YES-oriented features were pre-fetched this cycle.
@@ -651,6 +683,81 @@ pub async fn consensus_cycle(
         "Consensus cycle complete"
     );
     Ok(())
+}
+
+/// Capture the executable ask AT FIRE for a just-inserted signal (migration 041).
+///
+/// This is the fix for STRATEGY-HANDOFF §4. The pre-existing `CAPTURE_ENTRY_ASK` path
+/// captures on the first HOUSEKEEPING pass, ~10-15 min after a signal fires — but fast
+/// -resolving chalk (the winners) resolves before that pass and never gets an ask at
+/// all. The ask-priced sample is therefore loser-tilted (85% win rate among captured vs
+/// 98% among uncaptured), making every realizable number read ~7pts pessimistic. Pricing
+/// at the fire instant is the only way fast and slow picks both get a representative ask.
+///
+/// Two bounded fetches: `/markets` for the outcome's CLOB token, then ONE `/book` for
+/// both sides of top-of-book — so the ask and the mid come from the SAME response and
+/// the recorded haircut `ask − mid` is real. (Capture-defect D2 was recording the
+/// consensus vote-mean as the "mid"; a one-sided book yields `None` here rather than a
+/// faked mid.)
+///
+/// Best-effort and fail-open: every failure path just leaves `entry_ask_fire` NULL. It
+/// never returns an error, never blocks, and never touches the alert path or the legacy
+/// `entry_ask` column — so arming this flag cannot regress the live engine.
+async fn capture_entry_ask_at_fire(
+    http: &reqwest::Client,
+    portfolio: &PgPortfolio,
+    sig: &ConsensusSignal,
+    signal_id: i32,
+) {
+    let t0 = std::time::Instant::now();
+
+    let market = match crate::data::models::fetch_clob_market(http, &sig.condition_id).await {
+        Ok(m) => m,
+        Err(e) => {
+            crate::metrics::record_entry_ask_fetch_failed();
+            tracing::warn!(err = %e, cond = %sig.condition_id, "at-fire capture: fetch_clob_market failed");
+            return;
+        }
+    };
+    let Some(token_id) = market.outcome_token_id(sig.outcome_index) else {
+        tracing::debug!(
+            cond = %sig.condition_id, outcome = sig.outcome_index,
+            "at-fire capture: no CLOB token for outcome"
+        );
+        return;
+    };
+
+    let top = match crate::data::models::fetch_book_top(http, token_id).await {
+        Ok(t) => t,
+        Err(e) => {
+            crate::metrics::record_entry_ask_fetch_failed();
+            tracing::warn!(err = %e, signal_id, "at-fire capture: fetch_book_top failed");
+            return;
+        }
+    };
+    // An empty ask side means nothing is executable right now — an honest NULL, not a
+    // guess. NOT retried later: a lagged price is the bias this exists to remove.
+    let Some(ask) = top.best_ask else {
+        tracing::debug!(signal_id, "at-fire capture: empty ask side; leaving NULL");
+        return;
+    };
+    let mid = top.mid();
+
+    match portfolio.set_entry_ask_fire(signal_id, ask, mid).await {
+        Ok(true) => {
+            let lag = t0.elapsed().as_secs_f64();
+            crate::metrics::record_entry_ask_fire_capture(mid.map(|m| ask - m), lag);
+            tracing::info!(
+                signal_id, strategy = %sig.strategy, ask, mid = ?mid,
+                haircut = ?mid.map(|m| ask - m), lag_secs = lag,
+                "at-fire ask captured"
+            );
+        }
+        // Set-once guard already fired (or the signal resolved between insert and
+        // capture) — nothing to do.
+        Ok(false) => {}
+        Err(e) => tracing::warn!(err = %e, signal_id, "set_entry_ask_fire failed"),
+    }
 }
 
 /// Display name for a trader (username, else short wallet) — matches the legacy

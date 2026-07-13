@@ -564,6 +564,32 @@ pub struct CopyTradingConfig {
     #[config(env = "ENTRY_ASK_DECISION_MAX_PER_CYCLE", default = 40)]
     pub entry_ask_decision_max_per_cycle: usize,
 
+    /// Capture the executable best ask AT FIRE — inside the consensus cycle, the
+    /// instant a signal is first inserted (migration 041; STRATEGY-HANDOFF §4).
+    ///
+    /// This is the fix for the capture-selection bias: `CAPTURE_ENTRY_ASK` above
+    /// fires on the first HOUSEKEEPING pass (~10-15 min later), by which point
+    /// fast-resolving chalk winners have already resolved and never get an ask —
+    /// so the ask-priced sample is loser-tilted and every realizable number reads
+    /// ~7pts pessimistic. Capturing at fire prices fast and slow picks alike.
+    ///
+    /// Default OFF ⇒ the live consensus path is byte-identical until armed. When on,
+    /// it costs up to 2 bounded `/book`+`/markets` fetches per NEWLY-INSERTED signal
+    /// (never for re-scored existing ones), capped by `ENTRY_ASK_FIRE_MAX_PER_CYCLE`.
+    /// Writes only the `entry_ask_fire*` columns — `entry_ask` and every query that
+    /// reads it are untouched, so arming this can regress nothing.
+    #[config(env = "CAPTURE_ENTRY_ASK_AT_FIRE", default = false)]
+    pub capture_entry_ask_at_fire: bool,
+
+    /// Max at-fire ask captures per consensus cycle. Bounds the added latency in the
+    /// hot ~2-min loop: only newly-inserted signals are eligible, which is a handful
+    /// per cycle in steady state, so this rarely binds — it exists so a burst (e.g. a
+    /// big slate firing at once) can never stall the alert path. Overflow signals are
+    /// simply not fire-captured (they are NOT retried later — a late capture would
+    /// reintroduce the very bias this fixes).
+    #[config(env = "ENTRY_ASK_FIRE_MAX_PER_CYCLE", default = 25)]
+    pub entry_ask_fire_max_per_cycle: usize,
+
     /// Max seconds between first detection and ask capture for a capture to count
     /// toward the REALIZED (vs blended) honest ROI (`entry_ask_at − first_detected_at
     /// ≤ this`). A housekeeping pass over the whole open backlog is ~10-15 min (120ms/
