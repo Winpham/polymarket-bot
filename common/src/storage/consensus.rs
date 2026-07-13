@@ -1155,6 +1155,69 @@ impl PgPortfolio {
         Ok(res.rows_affected())
     }
 
+    /// The family markets to harvest: distinct `condition_id`s matching `slug_regex` that
+    /// anyone we already capture has traded since `since`.
+    ///
+    /// Our ranked whales are the SCOUTS here — they reveal which markets exist. The harvest
+    /// then recovers every OTHER participant in those markets, which is the population the
+    /// volume-sorted leaderboard structurally hides. Enumerating markets from our own fills
+    /// (rather than from a market index) keeps the sweep pinned to venues we actually care
+    /// about, and bounds its cost.
+    ///
+    /// Newest-first and capped, so a lookback that suddenly widens cannot turn one sweep into
+    /// an unbounded fan-out.
+    pub async fn recent_family_markets(
+        &self,
+        slug_regex: &str,
+        since: DateTime<Utc>,
+        limit: i64,
+    ) -> Result<Vec<String>> {
+        let rows: Vec<(String,)> = sqlx::query_as(
+            "SELECT condition_id FROM trader_fills \
+             WHERE slug ~* $1 AND ts >= $2 \
+             GROUP BY condition_id \
+             ORDER BY MAX(ts) DESC \
+             LIMIT $3",
+        )
+        .bind(slug_regex)
+        .bind(since)
+        .bind(limit)
+        .fetch_all(&self.pool)
+        .await
+        .context("recent_family_markets")?;
+        Ok(rows.into_iter().map(|(c,)| c).collect())
+    }
+
+    /// Record wallets discovered by the market-side harvest.
+    ///
+    /// Three properties this MUST hold, each of which is a way the harvest could otherwise
+    /// wreck the live system:
+    ///
+    /// 1. `consensus_eligible = FALSE` — the column DEFAULTS TO TRUE, so an insert that
+    ///    forgot it would hand a vote to 4 000 strangers. Discovery is not trust.
+    /// 2. `active = FALSE` — `get_active_traders()` drives the per-cycle wallet poll, so an
+    ///    active harvest wallet would join it. 4 000 wallets × 1/min ≈ 167 req/s, four times
+    ///    the measured API ceiling. Harvested wallets are profiled from market-side fills;
+    ///    they are never polled individually until they EARN it.
+    /// 3. `ON CONFLICT DO NOTHING` — a harvested wallet may already be a ranked leaderboard
+    ///    trader. Never downgrade an existing row's rank/eligibility/active on rediscovery.
+    pub async fn upsert_harvested_wallets(&self, wallets: &[String]) -> Result<u64> {
+        if wallets.is_empty() {
+            return Ok(0);
+        }
+        let res = sqlx::query(
+            "INSERT INTO followed_traders \
+               (proxy_wallet, source, active, consensus_eligible, earned_eligible) \
+             SELECT w, 'harvest', FALSE, FALSE, FALSE FROM UNNEST($1::text[]) AS t(w) \
+             ON CONFLICT (proxy_wallet) DO NOTHING",
+        )
+        .bind(wallets)
+        .execute(&self.pool)
+        .await
+        .context("upsert_harvested_wallets")?;
+        Ok(res.rows_affected())
+    }
+
     /// Append a batch of fill atoms to the rolling window (UNNEST batch insert).
     /// Re-seen atoms (same trader+market+outcome+ts+price) are dropped.
     pub async fn insert_window_votes(&self, votes: &[WindowVote]) -> Result<u64> {
@@ -2101,6 +2164,13 @@ impl PgPortfolio {
     /// router_verify A4 measured 245 inactive wallets with 0 fills after
     /// `last_seen_on_lb`).
     ///
+    /// EXCLUDES `source = 'harvest'`. Harvested wallets are `active = FALSE` by design and
+    /// accumulate market-side fills, so they would otherwise sail through the `≥100 band
+    /// fills` predicate below and be dragged into this wallet-side poll — thousands of
+    /// them, at four times the API's measured ceiling. This lane exists to un-bias the
+    /// scorecard for wallets that were once TRACKED and got dropped; a harvested wallet was
+    /// never tracked, so it has no scorecard to un-bias.
+    ///
     /// A wallet qualifies when it is `active = FALSE` AND scorecard-eligible — the
     /// pool the scorecard reads: it has EVER appeared in `router_followset`, OR it
     /// holds ≥100 BUY fills in the entry band 0.45 ≤ price < 0.90 over the trailing
@@ -2126,7 +2196,7 @@ impl PgPortfolio {
                              NOW() - INTERVAL '2 days') AS since \
              FROM followed_traders ft \
              JOIN eligible e ON e.wallet = lower(ft.proxy_wallet) \
-             WHERE ft.active = FALSE",
+             WHERE ft.active = FALSE AND ft.source <> 'harvest'",
         )
         .fetch_all(&self.pool)
         .await

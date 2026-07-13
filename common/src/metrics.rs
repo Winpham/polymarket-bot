@@ -191,6 +191,16 @@ static DATA_API_429: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64
 
 /// Record a data-api HTTP 429 (rate-limited). The scale gate (Phase 5) only
 /// widens the tracked universe / cadence once this rate is ≈ 0.
+/// One market-side harvest sweep: markets swept, wallets newly discovered, wallets seen.
+/// `new_wallets` trending to zero means the family's trader population is fully enumerated —
+/// the discovery lane has converged and is now just keeping the profiles fresh.
+pub fn record_market_harvest(markets: u64, new_wallets: u64, wallets_seen: u64) {
+    counter!("market_harvest_sweeps_total").increment(1);
+    counter!("market_harvest_new_wallets_total").increment(new_wallets);
+    gauge!("market_harvest_markets_swept").set(markets as f64);
+    gauge!("market_harvest_wallets_seen").set(wallets_seen as f64);
+}
+
 pub fn record_data_api_429() {
     counter!("consensus_data_api_429_total").increment(1);
     DATA_API_429.fetch_add(1, std::sync::atomic::Ordering::Relaxed);

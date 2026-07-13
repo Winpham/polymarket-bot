@@ -222,6 +222,40 @@ pub async fn run_live(cfg: Arc<CopyTradingConfig>) -> Result<()> {
         }
     });
 
+    // Market-side discovery (deep-universe run) — flag-gated: never spawned when off, so the
+    // live path is byte-identical. Harvests the traders the volume-sorted leaderboard cannot
+    // show us. Writes fills + inactive wallet rows ONLY; it can never move a live signal.
+    if cfg.market_harvest {
+        let mh_portfolio = Arc::clone(&portfolio);
+        let mh_cfg = Arc::clone(&cfg);
+        let mh_monitor = CopyTraderMonitor::new(
+            reqwest::Client::builder()
+                .timeout(Duration::from_secs(15))
+                .build()
+                .expect("failed to build market-harvest HTTP client"),
+        );
+        tokio::spawn(async move {
+            tracing::info!(
+                interval_mins = mh_cfg.market_harvest_interval_mins,
+                lookback_hours = mh_cfg.market_harvest_lookback_hours,
+                max_markets = mh_cfg.market_harvest_max_markets,
+                families = %mh_cfg.market_harvest_slug_regex,
+                "Market-side discovery ON (harvest → profile → earn; never auto-trusted)"
+            );
+            loop {
+                if let Err(e) =
+                    cycles::market_harvest::harvest_tick(&mh_portfolio, &mh_monitor, &mh_cfg).await
+                {
+                    tracing::warn!(err = %e, "market harvest tick failed");
+                }
+                tokio::time::sleep(Duration::from_secs(
+                    mh_cfg.market_harvest_interval_mins.max(5) * 60,
+                ))
+                .await;
+            }
+        });
+    }
+
     // Dense early-life capture (decay Phase 0) — flag-gated: never spawned
     // when off, so the live path is byte-identical. Best-effort, bounded.
     if cfg.dense_capture {

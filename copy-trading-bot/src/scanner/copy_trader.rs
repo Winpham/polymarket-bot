@@ -164,6 +164,42 @@ pub struct TraderTrade {
     pub event_slug: Option<String>,
 }
 
+/// One row of `/trades?market=…` — a trade by ANY wallet in a given market.
+///
+/// The market-side twin of [`ActivityEvent`] (which is wallet-side). Same trade, keyed
+/// the other way round, and that inversion is the entire point of the harvest lane:
+/// `/activity?user=` can only tell you about wallets you already know, whereas
+/// `/trades?market=` enumerates EVERY participant in a market you care about — including
+/// the ones no leaderboard will ever show you.
+#[derive(Debug, Clone, Deserialize)]
+struct MarketTrade {
+    #[serde(rename = "proxyWallet")]
+    proxy_wallet: Option<String>,
+    #[serde(rename = "conditionId")]
+    condition_id: Option<String>,
+    slug: Option<String>,
+    side: Option<String>,
+    price: Option<f64>,
+    /// SHARES, not USD — unlike `/activity`'s `usdcSize`. USD = size × price.
+    size: Option<f64>,
+    #[serde(rename = "transactionHash")]
+    tx_hash: Option<String>,
+    timestamp: Option<i64>,
+    #[serde(rename = "outcomeIndex")]
+    outcome_index: Option<i32>,
+    outcome: Option<String>,
+    title: Option<String>,
+    #[serde(rename = "eventSlug")]
+    event_slug: Option<String>,
+}
+
+/// A trade harvested market-side, carrying the wallet that made it.
+#[derive(Debug, Clone)]
+pub struct HarvestedTrade {
+    pub wallet: String,
+    pub trade: TraderTrade,
+}
+
 /// A trade detected from a followed trader, ready for downstream filtering.
 #[derive(Debug, Clone)]
 pub struct DetectedTrade {
@@ -595,6 +631,36 @@ fn return_rank_str(_rank: usize) -> &'static str {
 
 /// Convert raw deserialized activity events into `TraderTrade`s, dropping any
 /// entries that are missing mandatory fields.
+/// Map one `/trades` row onto the shared [`TraderTrade`] shape, so a harvested trade goes
+/// through the SAME `trade_to_fill` → `insert_trader_fills` path as a polled one and lands
+/// byte-identical (same frozen sport/bet_type classification, same ON CONFLICT dedup).
+///
+/// Drops rows missing anything the fill needs. Note `size` is SHARES here (the `/activity`
+/// endpoint reports `usdcSize`), so USD is `size × price` — getting this wrong would silently
+/// mis-scale every harvested wallet's stake and corrupt the very profiles we are mining.
+fn market_trade_to_harvested(r: MarketTrade) -> Option<HarvestedTrade> {
+    let wallet = r.proxy_wallet?.to_lowercase();
+    let price = r.price?;
+    let size_shares = r.size?;
+    let ts = DateTime::from_timestamp(r.timestamp?, 0)?;
+    Some(HarvestedTrade {
+        wallet,
+        trade: TraderTrade {
+            slug: r.slug?,
+            condition_id: r.condition_id?,
+            side: r.side?,
+            price,
+            size_usd: size_shares * price,
+            tx_hash: r.tx_hash,
+            timestamp: ts,
+            outcome_index: r.outcome_index,
+            outcome: r.outcome,
+            title: r.title,
+            event_slug: r.event_slug.filter(|s| !s.is_empty()),
+        },
+    })
+}
+
 fn parse_activity_events(events: Vec<ActivityEvent>) -> Vec<TraderTrade> {
     events
         .into_iter()
@@ -833,6 +899,76 @@ impl CopyTraderMonitor {
         })
     }
 
+    /// Harvest EVERY trade in one market — by every wallet, not just the ones we follow.
+    ///
+    /// This is the discovery primitive the deep-universe run exists for. The leaderboard
+    /// sorts by absolute PnL, which is a bankroll-and-volume sort: measured on our own
+    /// pool, `corr(rank, ROI) = -0.05` — rank says essentially NOTHING about efficiency.
+    /// So an efficient, low-volume specialist may never appear on it at ANY depth, and
+    /// widening the rank cutoff cannot find them. Measured: of the 4,341 wallets trading
+    /// recent weather markets, our depth-1000 leaderboard pool contained 50 (1.2%).
+    ///
+    /// Enumerating from the MARKET side inverts that: it costs O(markets) instead of
+    /// O(wallets) — one sweep of the ~450 daily weather+esports markets reaches the whole
+    /// population, where polling those wallets individually would need ~167 req/s and blow
+    /// the API budget outright.
+    ///
+    /// Pages `offset` 0..[`ACTIVITY_MAX_OFFSET`] (the same server ceiling as `/activity`).
+    /// A market busier than that is truncated at the ceiling — logged, not silent.
+    pub async fn harvest_market_trades(&self, condition_id: &str) -> Result<Vec<HarvestedTrade>> {
+        let mut out: Vec<HarvestedTrade> = Vec::new();
+        let mut offset = 0usize;
+
+        loop {
+            let url = format!(
+                "{DATA_API}/trades?market={condition_id}&limit={ACTIVITY_PAGE_SIZE}&offset={offset}"
+            );
+            let resp = self
+                .http
+                .get(&url)
+                .timeout(REQUEST_TIMEOUT)
+                .send()
+                .await
+                .context("market trades request failed")?;
+
+            if resp.status() == reqwest::StatusCode::TOO_MANY_REQUESTS {
+                crate::metrics::record_data_api_429();
+                return Err(anyhow::anyhow!("data-api 429 on /trades for {condition_id}"));
+            }
+
+            let rows: Vec<MarketTrade> = resp
+                .error_for_status()
+                .context("market trades returned non-2xx")?
+                .json()
+                .await
+                .context("market trades JSON parse failed")?;
+
+            let got = rows.len();
+            for r in rows {
+                if let Some(h) = market_trade_to_harvested(r) {
+                    out.push(h);
+                }
+            }
+
+            if got < ACTIVITY_PAGE_SIZE {
+                break;
+            }
+            offset += ACTIVITY_PAGE_SIZE;
+            if offset > ACTIVITY_MAX_OFFSET {
+                tracing::warn!(
+                    condition_id,
+                    trades = out.len(),
+                    "Market busier than the /trades offset ceiling — oldest trades in this \
+                     market are unreachable and were NOT harvested"
+                );
+                break;
+            }
+            tokio::time::sleep(LEADERBOARD_PAGE_DELAY).await;
+        }
+
+        Ok(out)
+    }
+
     /// Fetch a wallet's COMPLETE reachable trade history via **offset pagination**
     /// (`limit=500`, `offset` 0..10_000) — the correct params (`startTs` is silently
     /// ignored by the data-api; `offset`/`limit=500` and `start`/`end` DO work,
@@ -1042,6 +1178,52 @@ impl CopyTraderMonitor {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Real `/trades?market=` row shape, captured live 2026-07-13.
+    const MARKET_TRADE_JSON: &str = r#"[{
+      "proxyWallet":"0x06AE9A98783712FB490e9500481c67c3655af059",
+      "side":"BUY",
+      "conditionId":"0x507b6ff91651f4305eb0891afc31c44bb2b236997410f93afbbf4eaf9233b1c7",
+      "size":10.0,
+      "price":0.77,
+      "timestamp":1783959212,
+      "title":"Highest temperature in Tokyo",
+      "slug":"highest-temperature-in-tokyo-on-july-13",
+      "eventSlug":"",
+      "outcome":"Yes",
+      "outcomeIndex":0,
+      "transactionHash":"0xd872e371968dc1ae75425a2138701a5c8566865e"
+    }]"#;
+
+    #[test]
+    fn harvested_trade_converts_shares_to_usd() {
+        // `/trades` reports SIZE IN SHARES; `/activity` reports `usdcSize` in DOLLARS.
+        // Treating one as the other would silently mis-scale every harvested wallet's stake
+        // and corrupt the very profiles the harvest exists to build. 10 shares @ $0.77 = $7.70.
+        let rows: Vec<MarketTrade> =
+            serde_json::from_str(MARKET_TRADE_JSON).expect("fixture must parse");
+        let h = market_trade_to_harvested(rows.into_iter().next().unwrap()).expect("maps");
+        assert!(
+            (h.trade.size_usd - 7.70).abs() < 1e-6,
+            "size_usd must be shares × price (got {})",
+            h.trade.size_usd
+        );
+        assert_eq!(h.wallet, h.wallet.to_lowercase(), "wallet is lowercased for join keys");
+        assert_eq!(h.trade.outcome_index, Some(0));
+        assert_eq!(h.trade.side, "BUY");
+        // Empty eventSlug is normalised away rather than stored as "".
+        assert_eq!(h.trade.event_slug, None);
+    }
+
+    #[test]
+    fn harvested_trade_without_a_wallet_is_dropped() {
+        // A row we cannot attribute is useless to a per-wallet profile — drop it rather than
+        // inventing an owner.
+        let json = r#"[{"side":"BUY","price":0.5,"size":1.0,"timestamp":1783959212,
+                        "conditionId":"0xabc","slug":"s","outcomeIndex":0}]"#;
+        let rows: Vec<MarketTrade> = serde_json::from_str(json).unwrap();
+        assert!(market_trade_to_harvested(rows.into_iter().next().unwrap()).is_none());
+    }
 
     // Real API response shape captured 2026-03-15
     const ACTIVITY_JSON: &str = r#"[

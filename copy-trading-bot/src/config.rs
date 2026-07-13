@@ -84,6 +84,43 @@ pub struct CopyTradingConfig {
     #[config(env = "SOFT_MARKET_RANK_CUTOFF", default = 250)]
     pub soft_market_rank_cutoff: i32,
 
+    /// Market-side discovery sweep (deep-universe run, 2026-07-13). Harvests EVERY trader in
+    /// the family markets we care about via `/trades?market=`, rather than only the ones the
+    /// volume-sorted leaderboard happens to surface — which, measured, is 1.2% of the weather
+    /// population (50 of 4 341). Rank is a volume sort: `corr(rank, ROI) = -0.05`, so an
+    /// efficient low-volume specialist is invisible to it at ANY depth.
+    ///
+    /// Discovered wallets are written `active = FALSE, consensus_eligible = FALSE`: profiled
+    /// from their market-side fills, never polled individually, never backing a signal until
+    /// they earn it through the copyability gate.
+    ///
+    /// Default FALSE ⇒ the task is never spawned ⇒ the live path is byte-identical.
+    #[config(env = "MARKET_HARVEST", default = false)]
+    pub market_harvest: bool,
+
+    /// Minutes between harvest sweeps. This lane feeds DISCOVERY and PROFILING, not signal
+    /// latency (the qualified set is polled wallet-side for that), so it runs hourly rather
+    /// than on the 1-minute consensus tick.
+    #[config(env = "MARKET_HARVEST_INTERVAL_MINS", default = 60)]
+    pub market_harvest_interval_mins: u64,
+
+    /// How far back to look for family markets to sweep.
+    #[config(env = "MARKET_HARVEST_LOOKBACK_HOURS", default = 48)]
+    pub market_harvest_lookback_hours: i64,
+
+    /// Hard cap on markets per sweep — the bound that stops a widened lookback from turning
+    /// one sweep into an unbounded fan-out.
+    #[config(env = "MARKET_HARVEST_MAX_MARKETS", default = 800)]
+    pub market_harvest_max_markets: i64,
+
+    /// Postgres regex (case-insensitive) selecting which market families to harvest. Defaults
+    /// to the two cells with a known specialist mechanism: temperature and esports.
+    #[config(
+        env = "MARKET_HARVEST_SLUG_REGEX",
+        default = "temperature|counter-strike|league-of-legends|dota"
+    )]
+    pub market_harvest_slug_regex: String,
+
     /// Weather detection arm (Generalize-the-Band run, 2026-07-11). When ON, the
     /// consensus cycle scores a SEPARATE daily-temperature book assembled from the
     /// WIDER eligibility set (reusing `soft_market_rank_cutoff`) — recovering the

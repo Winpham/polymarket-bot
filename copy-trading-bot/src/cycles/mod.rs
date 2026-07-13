@@ -8,6 +8,7 @@ pub mod hot_lane;
 pub mod housekeeping;
 pub mod live_fills;
 pub mod live_tape;
+pub mod market_harvest;
 
 pub use capture_dropped::capture_dropped_tick;
 pub use consensus_cycle::consensus_cycle;
