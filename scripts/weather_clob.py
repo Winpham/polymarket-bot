@@ -57,9 +57,11 @@ class WeatherClob:
             return json.loads(r.read().decode())
 
     def outcome(self, condition_id):
-        """{'winner': oi|None, 'tokens': {oi: token_id}, 'closed': bool}. Cached. winner=None if open."""
+        """{'winner': oi|None, 'tokens': {oi: token_id}, 'closed': bool, 'end_iso': str}. Cached.
+        winner=None if open. `end_iso` (the market's own resolution time) is what lets a NEUTRAL
+        reference price be taken at a fixed LEAD before resolution — with no sharp anchoring."""
         c = self.cache["markets"].get(condition_id)
-        if c is not None:
+        if c is not None and ("end_iso" in c or c.get("err")):
             return c
         try:
             d = self._get(f"{CLOB}/markets/{condition_id}")
@@ -76,7 +78,8 @@ class WeatherClob:
             toks[str(i)] = t.get("token_id")
             if t.get("winner") is True:
                 winner = i
-        res = {"winner": winner, "tokens": toks, "closed": bool(d.get("closed"))}
+        res = {"winner": winner, "tokens": toks, "closed": bool(d.get("closed")),
+               "end_iso": d.get("end_date_iso") or d.get("end_date") or ""}
         self.cache["markets"][condition_id] = res
         self._maybe_flush()
         return res
@@ -112,7 +115,8 @@ class WeatherClob:
 def selftest():
     ok = True
     wc = WeatherClob(cache_path="/tmp/_wc_selftest.json", offline=True)
-    wc.cache["markets"]["cond"] = {"winner": 1, "tokens": {"0": "a", "1": "b"}, "closed": True}
+    wc.cache["markets"]["cond"] = {"winner": 1, "tokens": {"0": "a", "1": "b"}, "closed": True,
+                                   "end_iso": "2026-07-13T00:00:00Z"}
     wc.cache["hist"]["b"] = [[100, 0.5], [200, 0.8], [300, 0.9]]
     if wc.outcome("cond")["winner"] != 1:
         print("FAIL outcome"); ok = False
