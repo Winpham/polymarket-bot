@@ -174,3 +174,93 @@ running, and which the resolver fix makes durable. Weather's daily flow means th
   a market price in weather, it is worth checking whether any other report leans on the same column.
 - The 945 still-open weather conditions settle within ~2 days; re-run `evergreen_portfolio.py` then for
   a third week and a genuinely powered LODO.
+
+---
+
+# PART II — Audit sweep + discovery outside the known champion (2026-07-12, same run)
+
+## 5. D3 — the survivorship bias the resolver was BUILT to prevent was in force the whole time
+
+The independent `trader_fills` resolver exists for one reason, stated in its own code comment:
+resolving only consensus conditions "would leave those fills perpetually unresolved and bias every
+trust profile toward markets that happened to fire consensus." **That resolver was 100% starved (D1),
+so the bias it was written to prevent has been in force across every analysis built on `trader_fills`.**
+
+Measured (2026-06-01 → 07-08, BUY conditions):
+
+| market fired a consensus signal? | conditions | resolution coverage |
+|---|---|---|
+| **yes** | 18,361 | **89.6%** |
+| **no**  | 23,613 | **18.0%** |
+
+The resolved subset is **~5× enriched in consensus-firing markets**. Every `trader_fills`-based
+number — earned-trust slice scores, trader profiles, blind baselines, family/cell scans — has been
+reading that skewed subset. A full-backlog drain is running; the durable fix (recency lane) means the
+pipeline self-heals going forward.
+
+## 6. D4 — the decision-time `entry_ask` lane was starved (SAME defect class, third instance)
+
+`entry_ask` is the **only basis the frozen gates accept**, and it was being captured wrong.
+
+A decision-time (`first_price`) capture is only possible on a signal's FIRST housekeeping pass. The
+budget is 40/cycle; the ask-less backlog is 3,637. And `unresolved_consensus_signals` has no `ORDER BY`
+while `all_conds` was built from a **HashMap's keys** — so the order was effectively **random**: a fresh
+signal had ~1-in-90 odds of being reached per cycle.
+
+| lane | n | avg lag | win rate | raw edge |
+|---|---|---|---|---|
+| decision-time (≤15 min) | 445 | 9.9 min | 0.834 | **+1.71%** |
+| **LAGGED (>15 min)** | 1,029 | **173.4 min** | 0.794 | **−1.04%** |
+
+**The lagged lane is loser-tilted by 2.75pp.** The mechanism is mechanical, not mysterious: a winner's
+favourite drifts toward 1.0 and stops being buyable, so what is still sitting at a buyable ask hours
+later is disproportionately what went on to **lose**. The same lag skews the captured band toward deep
+chalk — **69% of the weather arm's asks (59/85) landed at ≥0.90, the band already known to be dead**,
+vs only 22 in the 0.71–0.90 certification band.
+
+**Consequence: the weather arm was accruing data that could never have certified it**, no matter how long
+it ran — biased negative and concentrated in the wrong band. Fixed by spending the budget FRESH-FIRST
+(`ask_capture_priority`, unit-tested). This also explains why a naive realizable read of the discovered
+families looked catastrophic (mlb −32.7% LB at ask): it was reading the loser-tilted lane.
+
+**This is now three instances of one defect class: a scarce per-cycle budget spent in an order that
+never reaches the items that need it.** Worth a standing check on every bounded queue in the system.
+
+## 7. Discovery — is there a profitable market family OUTSIDE what we know? (No.)
+
+`evergreen_discovery.py` runs the full battery over every family the sharps bet, with the
+**copyability gate FIRST** — because a fat edge on an unbuyable market is this project's most seductive
+artifact.
+
+**The gate immediately earned its place.** A naive family scan reports `btc` (+21.7%) and `eth` (+21.7%)
+as the two fattest edges on the board. They are `btc-updown-5m-*` — **FIVE-MINUTE markets**, gone long
+before a follower could fill. A regex written for `up-or-down` silently misses `updown`, so the known
+crypto siren re-entered the table disguised as two new families. Killed structurally, never measured.
+
+Six families then survived LB + leave-one-week-out + belief-blind null **at the sharps' fill**:
+mlb (+18.8%), ucl (+14.3%), weather-high (+12.4%), wta (+11.1%), col (+10.9%), fifwc (+8.9%).
+
+**All of them die at the price we can actually pay.** Measured on the clean decision-time capture lane:
+
+| family | LB @ sharps' fill | **LB @ real captured ask** |
+|---|---|---|
+| mlb | +18.8% | **−57.1%** |
+| atp | +5.7% | **−30.2%** |
+| fifwc | +8.9% | **−9.6%** |
+| wta | +11.1% | **−4.8%** |
+| col | +10.9% | +21.6% — but **single window** (n=30) |
+
+Pooled realizable edge on the clean lane is **+1.71% raw**, which reproduces the established finding
+(`project-polymarket-exec-policy`): *the edge is in the FILL, not the pick.* The selection is genuinely
+skilled (the nulls pass, LODO passes) and it is **entirely consumed by the spread**.
+
+**Answer to "are there profitable markets outside what we know": on this evidence, no.** Every candidate
+is either uncopyable by construction (5-minute crypto), already the champion's own book, or +EV only at
+a price nobody but the sharps gets. That is a negative result, and it is the correct one — the value is
+that it is now measured on a substrate whose two biggest lies have been fixed.
+
+**Caveat, stated plainly:** the discovery screen ran on the *pre-drain* `trader_fills` substrate (the
+full drain is still running), so the candidate RANKING is provisional — the blind universe in particular
+is under-resolved, which can move `selection_null`. The realizable collapse above is NOT affected: it is
+measured on `consensus_signals`, whose resolution was never starved. Re-run `evergreen_discovery.py`
+after the drain completes to finalize the screen.
