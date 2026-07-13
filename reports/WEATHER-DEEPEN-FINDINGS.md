@@ -231,8 +231,27 @@ signals and 2 day-clusters. **Three independent tests now converge on the same c
    Bonferroni-significant over 1,507 screened.
 3. WS5 B3: consensus θ − blind-band θ = **+0.14pp**.
 
-> **The weather edge is a mid-favorite PRICE-BAND property. It is not a consensus edge, not a
-> copy-trading edge, and not a "find the skilled specialist" edge. Follow the BAND, not the people.**
+> **The ≥3-backer CONSENSUS requirement earns nothing. ONE sharp is as good as three.**
+
+### ⚠️ Precision correction — what the null does and does NOT establish
+
+The "BLIND band rule" above is **`any 1+ tracked-sharp weather favorite`** — it still requires **one**
+sharp to have bought (their first-buy time is what anchors `ts0`). So the three tests establish:
+
+- **SETTLED:** the **≥3-backer consensus** adds ~nothing over **a single tracked sharp's** weather
+  favorite (null p≈0.5; B3 +0.14pp), and *discovered specialists* add ~nothing over that same pool
+  (+2.1pp, not Bonferroni-significant). **You need one sharp, not three, and not a "better" sharp.**
+- **NOT SETTLED:** whether you need a sharp **at all** — i.e. whether a *truly* blind rule (buy every
+  0.71–0.90 weather favorite, no sharp involvement, priced at a neutral reference time) captures the
+  same edge. This run could not test it cleanly: phase-3's truly-blind null (p=0.0065) ran on the
+  **lag-contaminated** `_blind` mid basis, and a clean version needs a **neutral-reference-priced**
+  favorite pool (not anchored to a sharp's entry — see B5, the entry-timing guard).
+
+**This is the single most valuable open question left**, because the two branches imply different
+products: if a sharp is *not* needed, weather is a standalone market-inefficiency rule (no copy-trading
+infrastructure required); if a sharp *is* needed, the sharp's entry timing is doing the work and the
+copyable edge is bounded by how fast we can follow (WS1: +1.87¢ ask premium, ~29 min behind). **Next
+build: the neutral-reference truly-blind weather-favorite pool.**
 
 ### Prereg addendum (`PREREG_20260712T192000Z_weather_ADDENDUM.md`) — ADDS floors, loosens none
 
@@ -268,9 +287,17 @@ and it is **not a certification**: the spread that produced it is measured on th
 unproven (`weather_fav_liq` = 0 captures), the volume floor is unmet (11 < 20 clusters), and the forward
 `entry_ask` gate has not accrued.
 
-**The most valuable finding is not the number — it is that the framing was wrong.** Weather is not a
-consensus/copy edge; it is a **blind mid-favorite band mispricing**. Three independent tests agree. The
-consensus machinery, the specialist discovery, and the wider voter set all add **~0** per dollar. If
-weather is pursued, the honest instrument is a **blind 0.71–0.90 weather-favorite rule** — simpler,
-higher-volume — and it must earn its own prereg + forward gate at the executable ask, where the thin-book
-spread and the unproven size are the only questions that still matter.
+**The most valuable finding is not the number — it is that the framing was wrong.** The **consensus**
+machinery, the **specialist discovery**, and the **wider voter set** each add **~0 per dollar** (three
+independent tests). **One sharp is as good as three, and a "better" sharp is no better.** What is doing
+the work is the **mid-favorite weather band** (0.71–0.90), not the crowd on it.
+
+**The one question that decides the product is still open:** do you need a sharp *at all*? A clean,
+neutral-reference truly-blind pool was **not** testable this run (phase-3's blind null was
+lag-contaminated; a `ts0`-anchored pool is entry-timing-biased — B5). If **no** → weather is a
+standalone market-inefficiency rule needing no copy-trading infrastructure. If **yes** → the sharp's
+entry timing is the edge and we are bounded by how fast we can follow (+1.87¢, ~29 min behind).
+
+Either way the remaining gates are the same and they are **empirical, not analytical**: the cert-band
+spread (B2), the fillable size (B4 — `weather_fav_liq` is still 0), and ≥2 disjoint **forward** weeks of
+captured `entry_ask`. The arm is live and accruing them. **Nothing is promoted; nothing is armed.**
