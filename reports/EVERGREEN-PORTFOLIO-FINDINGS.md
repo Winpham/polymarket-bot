@@ -397,3 +397,90 @@ never the signal — consistent with `project-polymarket-correlated-risk` (size 
 the depth available at the ask (and 1–2 levels up). That turns capacity from a live-scan estimate into an
 accruing, per-signal measurement — and it is the only way to know that our own tailing has started moving
 the price. Requires a migration ⇒ **flagged, not done.**
+
+---
+
+# PART V — LATENCY: what it costs, and where it actually is
+
+## The cost of delay (measured, not assumed) — `latency_cost.py`
+
+From `clob_price_tape`, the ACTUAL best_ask a follower would pay at t0 (the 3rd backer's fill = the
+convergence instant) and at each horizon after:
+
+| wait | fifwc | atp |
+|---|---|---|
+| **1 min** | **+0.45¢** | **+0.14¢** |
+| 5 min | +2.87¢ | +4.50¢ |
+| **15 min** | **+7.75¢** | **+8.67¢** |
+| 60 min | — | +17.78¢ |
+
+Benchmarks: the whole spread we cross is **1.2¢**; slippage at $50/signal is **2.2¢** (p90).
+
+**In sports, latency is the DOMINANT cost** — at 15 min it is 6–7× the spread and 4× the slippage. And
+the shape is the actionable part: **at 1 minute it is ~0.1–0.5¢, essentially free.** All the damage is
+in the 1→15 min window.
+
+This CORRECTS the Part III read ("drift ≈ 0 ⇒ speed is not the lever"). That was measured mid-vs-fill on
+a weather-heavy, hours-lagged population. Both are true, and the mechanism is coherent:
+- **weather:** daily markets, no in-play events ⇒ price barely moves ⇒ latency cheap, **the BOOK binds**.
+- **sports:** in-play markets ⇒ price moves violently (goals) ⇒ **LATENCY binds**, and it is very likely
+  WHY sports selection edges evaporate for a follower.
+
+## Where the delay actually is (and a false alarm I caught)
+
+**First, a retraction-in-progress I did NOT ship.** A naive measurement said detect latency was
+**8.6h (sports) / 19.4h (weather)**. Both were MY artifact: `favorite` fires on rank≤40 but I computed the
+convergence instant over rank≤250 (different sets), and `weather_fav` only went live 07-12 so it
+*back-detected* days-old convergences at startup. Measuring only convergences that happened AFTER the arm
+was already running, on its own rank universe:
+
+| | value | cost on the curve |
+|---|---|---|
+| **detect p50** | **1.6 min** | ~0.5¢ — fine |
+| **detect p90** | **94 min** | ~10–18¢ — brutal |
+| **ask-capture p50** | **74.8 min** | (measurement only) |
+
+**So the premise "our capture is 10–15 min" is half right, and the half that matters is the opposite of
+what it looks like: the MEDIAN detect is already fast (1.6 min). The loss is in the TAIL (p90 = 94 min)
+and in the ask-capture path (p50 = 75 min).** Optimizing the median would buy nothing; killing the tail
+is worth ~10¢ on the affected signals.
+
+## The fast path is ALREADY BUILT — and switched off
+
+`LIVE_FILLS` (migration 040, `cycles/live_fills.rs`) observes Polymarket `OrderFilled` logs on Polygon
+and writes tracked-wallet fills at **~1–5s** fill→row, versus the poller's ~90s median. Its gate already
+PASSED (`reports/F2_CONSTANTS.md`: address_match 100%, decode + price/size reconstruct, 3-layer dedup).
+
+**It has never run:** `LIVE_FILLS=false`, and all 705,564 fills carry `source=NULL` (poller). Also
+`LIVE_FILLS_TO_CONSENSUS=false` — so even enabled, live fills would not feed consensus votes.
+
+Current ingestion: 1,287 followed traders polled at `CONSENSUS_MAX_CONCURRENCY=8`, cycle 1 min. A full
+sweep cannot complete inside the cycle, which is exactly the shape that produces a **long tail** with a
+fast median — matching the measured p50 1.6 min / p90 94 min.
+
+## D6 — we cannot measure our own ingestion latency
+
+`trader_fills` has **no ingestion timestamp**: only `ts` (the fill time, from the API) and `live_seen_at`
+(populated for `source='live_onchain'` only — i.e. never, since LIVE_FILLS is off). So fill→row latency
+is invisible by construction, which is why this has never been characterised. **You cannot optimise what
+you cannot measure.** A `seen_at DEFAULT now()` on every fill row is the cheapest instrument in this
+whole system (needs a migration ⇒ flagged, not done).
+
+## The plan (in cost order — do NOT start with the median)
+
+1. **Instrument first (D6).** `seen_at` on every fill row ⇒ fill→row latency becomes measurable, and the
+   tail becomes attributable. Everything below is guesswork without it.
+2. **Enable `LIVE_FILLS`** (already built, gate already passed; needs `LIVE_FILLS_RPC_HTTP`). Expected:
+   fill→row 90s ⇒ 1–5s, and — more importantly — it removes the sweep-rate ceiling that CREATES the tail.
+   Then `LIVE_FILLS_TO_CONSENSUS` so live fills actually vote. **Both are `.env` changes ⇒ human's call.**
+3. **Verify the D4 ask-capture fix** (fresh-first ordering, commit e74f4e7) drops ask-capture p50 from
+   75 min toward the decision-time window. Already merged into this branch; needs a deploy + a week.
+4. **Only then** consider a hot order path. At detect p50 1.6 min the median already costs ~0.5¢; there
+   is no case for shaving it further until the tail is dead.
+
+## The tape does not cover weather
+
+`clob_price_tape` has **ZERO** weather rows (it covers fifwc/mlb/atp/wta/cs/... heavily). The live tape's
+subscription set excludes our own live arm's family, so **weather's latency cost cannot be measured at
+all** — the one family we actually run. Fixing the subscription set is a precondition for ever certifying
+weather's realizable price.
