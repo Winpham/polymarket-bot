@@ -341,6 +341,30 @@ struct BookLevel {
 struct ClobBook {
     #[serde(default)]
     asks: Vec<BookLevel>,
+    #[serde(default)]
+    bids: Vec<BookLevel>,
+}
+
+/// Top-of-book snapshot: both sides from ONE `/book` response, so the mid is a
+/// REAL mid `(bid+ask)/2` observed at a single instant — not the consensus
+/// mean-price proxy. (Capture-defect D2: the historical "at-fire mid" was never
+/// a mid; it was the vote-mean, which understated the true copier cost by
+/// ~1.65¢. Anything recording an execution haircut must use THIS.)
+#[derive(Debug, Clone, Copy)]
+pub struct BookTop {
+    pub best_bid: Option<f64>,
+    pub best_ask: Option<f64>,
+}
+
+impl BookTop {
+    /// The true CLOB mid, when BOTH sides are present. `None` on a one-sided or
+    /// empty book — deliberately not faked from a single side.
+    pub fn mid(&self) -> Option<f64> {
+        match (self.best_bid, self.best_ask) {
+            (Some(b), Some(a)) => Some((b + a) / 2.0),
+            _ => None,
+        }
+    }
 }
 
 /// Fetch the best (lowest) executable ASK for a token from the CLOB `/book`
@@ -366,6 +390,30 @@ fn best_ask_price(book: &ClobBook) -> Option<f64> {
         .filter_map(|l| l.price.parse::<f64>().ok())
         .filter(|p| *p > 0.0 && *p <= 1.0)
         .min_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal))
+}
+
+/// The best (highest) bid a seller could hit — mirror of [`best_ask_price`].
+fn best_bid_price(book: &ClobBook) -> Option<f64> {
+    book.bids
+        .iter()
+        .filter_map(|l| l.price.parse::<f64>().ok())
+        .filter(|p| *p > 0.0 && *p <= 1.0)
+        .max_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal))
+}
+
+/// Fetch BOTH sides of top-of-book in one `/book` call, so the ask and the mid
+/// are from the SAME instant (a two-call ask-then-mid would drift). This is the
+/// capture primitive for at-fire entry pricing — see [`BookTop`] / defect D2.
+pub async fn fetch_book_top(http: &reqwest::Client, token_id: &str) -> Result<BookTop> {
+    let url = format!("{CLOB_API}/book?token_id={token_id}");
+    let resp = http.get(&url).send().await?;
+    let text = resp.text().await?;
+    let book: ClobBook = serde_json::from_str(&text)
+        .with_context(|| format!("failed to parse CLOB book token={token_id}"))?;
+    Ok(BookTop {
+        best_bid: best_bid_price(&book),
+        best_ask: best_ask_price(&book),
+    })
 }
 
 /// Fetch the CLOB market for a `condition_id`. Robust resolution + live price.
@@ -537,6 +585,90 @@ mod consensus_resolution_tests {
         // A price of exactly 1.0 is a valid (certain) ask.
         let one: ClobBook = serde_json::from_str(r#"{"asks":[{"price":"1"}]}"#).unwrap();
         assert_eq!(best_ask_price(&one), Some(1.0));
+    }
+
+    // --- At-fire capture: bid side + TRUE mid contract (migration 042, defect D2) ---
+
+    #[test]
+    fn best_bid_selects_highest_valid_and_rejects_junk() {
+        use super::{ClobBook, best_bid_price};
+        // Best bid for a SELLER is the HIGHEST offer — the mirror of best_ask.
+        let book: ClobBook = serde_json::from_str(
+            r#"{"bids":[{"price":"0.80"},{"price":"0.88"},{"price":"0.85"}]}"#,
+        )
+        .unwrap();
+        assert_eq!(best_bid_price(&book), Some(0.88));
+
+        // Empty / missing bids → None (no mid can be formed).
+        let empty: ClobBook = serde_json::from_str(r#"{"bids":[]}"#).unwrap();
+        assert_eq!(best_bid_price(&empty), None);
+        let missing: ClobBook = serde_json::from_str(r#"{}"#).unwrap();
+        assert_eq!(best_bid_price(&missing), None);
+
+        // Out-of-range / unparseable levels ignored; lone valid one wins.
+        let junk: ClobBook = serde_json::from_str(
+            r#"{"bids":[{"price":"0"},{"price":"1.5"},{"price":"abc"},{"price":"0.42"}]}"#,
+        )
+        .unwrap();
+        assert_eq!(best_bid_price(&junk), Some(0.42));
+    }
+
+    #[test]
+    fn book_top_mid_is_a_real_mid_and_is_never_faked_from_one_side() {
+        use super::{BookTop, ClobBook, best_ask_price, best_bid_price};
+
+        // Two-sided book → mid is the TRUE (bid+ask)/2, and the honest execution
+        // haircut a copier pays is ask − mid (here 0.90 − 0.89 = 1c), NOT a guess.
+        let book: ClobBook =
+            serde_json::from_str(r#"{"asks":[{"price":"0.90"}],"bids":[{"price":"0.88"}]}"#)
+                .unwrap();
+        let top = BookTop {
+            best_bid: best_bid_price(&book),
+            best_ask: best_ask_price(&book),
+        };
+        assert_eq!(top.best_ask, Some(0.90));
+        let mid = top.mid().expect("two-sided book has a mid");
+        assert!((mid - 0.89).abs() < 1e-9, "mid must be (0.88+0.90)/2");
+        assert!(
+            (top.best_ask.unwrap() - mid - 0.01).abs() < 1e-9,
+            "haircut = ask - mid"
+        );
+
+        // ONE-SIDED books yield NO mid. This is the point of defect D2: the old
+        // "at-fire mid" was the consensus vote-mean, which is not a mid at all and
+        // understated true copier cost by ~1.65c. We refuse to invent one — an
+        // honest None beats a plausible fake.
+        let ask_only: ClobBook = serde_json::from_str(r#"{"asks":[{"price":"0.90"}]}"#).unwrap();
+        let top = BookTop {
+            best_bid: best_bid_price(&ask_only),
+            best_ask: best_ask_price(&ask_only),
+        };
+        assert_eq!(top.best_ask, Some(0.90), "ask still captured");
+        assert_eq!(
+            top.mid(),
+            None,
+            "must NOT fabricate a mid from the ask alone"
+        );
+
+        let bid_only: ClobBook = serde_json::from_str(r#"{"bids":[{"price":"0.88"}]}"#).unwrap();
+        let top = BookTop {
+            best_bid: best_bid_price(&bid_only),
+            best_ask: best_ask_price(&bid_only),
+        };
+        assert_eq!(
+            top.mid(),
+            None,
+            "must NOT fabricate a mid from the bid alone"
+        );
+
+        // Empty book → nothing at all.
+        let empty: ClobBook = serde_json::from_str(r#"{}"#).unwrap();
+        let top = BookTop {
+            best_bid: best_bid_price(&empty),
+            best_ask: best_ask_price(&empty),
+        };
+        assert_eq!(top.best_ask, None);
+        assert_eq!(top.mid(), None);
     }
 
     /// Live probe against the real CLOB `/book` endpoint — confirms the shape

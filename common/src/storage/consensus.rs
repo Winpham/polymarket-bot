@@ -75,6 +75,12 @@ pub struct ConsensusAlertState {
     pub id: i32,
     pub last_alert_tier: Option<String>,
     pub last_alert_net: Option<i32>,
+    /// True iff THIS upsert inserted the row (rather than updating an existing
+    /// one) — i.e. this call is the signal's FIRE moment. Postgres exposes it via
+    /// the system column `xmax`, which is 0 only on a fresh insert. This is the
+    /// trigger for at-fire ask capture (mig 042): the one instant the executable
+    /// book still reflects what a copier would actually have paid.
+    pub inserted: bool,
 }
 
 /// One fill atom in the rolling consensus vote window (migration 025). Used both
@@ -294,7 +300,7 @@ impl PgPortfolio {
                tier             = EXCLUDED.tier, \
                backers          = EXCLUDED.backers, \
                last_updated_at  = NOW() \
-             RETURNING id, last_alert_tier, last_alert_net",
+             RETURNING id, last_alert_tier, last_alert_net, (xmax = 0) AS inserted",
         )
         .bind(&s.strategy)
         .bind(&s.condition_id)
@@ -587,6 +593,38 @@ impl PgPortfolio {
         .execute(&self.pool)
         .await
         .context("set_entry_ask_decision")?;
+        Ok(res.rows_affected() > 0)
+    }
+
+    /// Record the executable ask captured AT FIRE — the instant the signal was
+    /// inserted by the consensus cycle (migration 042).
+    ///
+    /// `mid` MUST be a true CLOB mid `(bid+ask)/2` from the same `/book` response
+    /// as `ask` (`BookTop::mid`), never the consensus vote-mean — that confusion is
+    /// capture-defect D2. The honest execution haircut is then `ask - mid`.
+    ///
+    /// Set-once and resolved-guarded, exactly like [`Self::set_entry_ask_decision`]:
+    /// a retry can never overwrite the original fire price, and a signal that already
+    /// resolved is never back-filled with a post-hoc book. Returns whether a row was
+    /// actually written. Best-effort — the caller ignores failures and the column
+    /// stays NULL, leaving every existing `entry_ask` query untouched.
+    pub async fn set_entry_ask_fire(
+        &self,
+        signal_id: i32,
+        ask: f64,
+        mid: Option<f64>,
+    ) -> Result<bool> {
+        let res = sqlx::query(
+            "UPDATE consensus_signals \
+             SET entry_ask_fire = $2, entry_ask_fire_at = NOW(), entry_ask_fire_mid = $3 \
+             WHERE id = $1 AND entry_ask_fire IS NULL AND resolved = FALSE",
+        )
+        .bind(signal_id)
+        .bind(ask)
+        .bind(mid)
+        .execute(&self.pool)
+        .await
+        .context("set_entry_ask_fire")?;
         Ok(res.rows_affected() > 0)
     }
 
