@@ -79,11 +79,26 @@ the ask, but unbiased by resolution speed:
 
 (Bootstrap 2000× resample of matches: point +8.0%, mean +8.0%, 5th‑pct LB +4.9–5.2%. Steady.)
 
-**(b) REALIZABLE‑ASK basis — original 11‑day cut** (`entry_ask`, the price you'd actually pay): pooled **+11.3%,
-LB +6.7%** on 118 matches. ⚠️ This looks *higher* than (a) only because the captured‑ask subset is **selection‑
-biased** (§4): fast‑resolving chalk winners never get an ask, so the ask‑priced sample is the harder, loss‑prone
-one — win rate 85% captured vs 98% uncaptured. Neither basis is the truth yet; **the fix in §4 is what makes an
-honest realizable number possible.** Until then, treat (a) as the optimistic bound and expect the real figure below it.
+**(b) REALIZABLE‑ASK basis — ⛔ DO NOT USE `entry_ask` FOR ANYTHING.** The column is **corrupt** (capture‑defect
+D4). Measured live on 2026‑07‑12 (`scripts/atfire_bias.py`): housekeeping capture prices only **172/399 (43%)** of
+in‑band signals, and the ones it prices **win 87.8% vs 96.5% for the ones it misses — a +8.7pp selection gap**.
+Median capture lag **1,300s (~22 min)**, max **2.5 days**. It systematically misses the fast‑resolving winners.
+
+The danger is not just a biased *value* — it is that **filtering a band on `entry_ask` bakes the corruption into
+SAMPLE SELECTION**, changing which picks are even in the test. That error produced, and then forced the retraction
+of, the "edge dies at the ask" verdict (see `RETRACT(part II)`, commit df2dc04).
+
+**What the corrected decomposition actually says:** on the SAME picks, the copier pays **~1.14¢** (drift −0.08¢,
+spread +1.22¢) ≈ **1.4% of stake** — *not* enough to kill a ~+12pp edge. **Drift ≈ 0: the market does NOT run away
+from us, so SPEED is not the lever — the entire cost is the spread we pay by CROSSING to the ask.**
+
+So the honest expectation is roughly **basis (a) minus ~1.4%**, not the low single digits the corrupt column
+implied. But every cost number still derives from the broken column, so **the realizable question is UNANSWERABLE
+at trustworthy precision until clean asks accrue** (~1–2 weeks). Two fixes now feed that, and they are complementary:
+- `e74f4e7` — housekeeping iterates **fresh‑first**, so the scarce decision‑time budget reaches signals that can
+  still yield a decision‑time capture (a mitigation *within* the housekeeping lane).
+- **mig 042 / `CAPTURE_ENTRY_ASK_AT_FIRE`** — captures the ask at the **fire instant** in `consensus_cycle.rs`,
+  independent of the housekeeping backlog entirely. This is the §4 fix. **Not yet armed.**
 
 ### What to REALISTICALLY expect running it forward for a month
 - **ROI‑on‑turnover: ~+3%** (honest range −2% to +8%), **not** the +8–11% in‑sample — discounted for selection
