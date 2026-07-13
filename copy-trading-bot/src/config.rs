@@ -309,6 +309,16 @@ pub struct CopyTradingConfig {
     #[config(env = "TRADER_FILLS_RESOLVE_PER_CYCLE", default = 200)]
     pub trader_fills_resolve_per_cycle: i64,
 
+    /// Recency lane for the `trader_fills` resolver (days). Conditions whose latest
+    /// fill lands inside this window get the bulk of the per-cycle budget, so a deep
+    /// backlog of never-resolvable markets (delisted 2022 markets; 2028-election
+    /// markets that don't settle for years) can no longer head-of-line-block the
+    /// oldest-first queue and starve every recent market — the defect that froze the
+    /// resolution ledger through 2026-07-12. The remaining budget still sweeps the
+    /// global backlog oldest-first, so nothing is permanently abandoned.
+    #[config(env = "TRADER_FILLS_RESOLVE_RECENT_DAYS", default = 30)]
+    pub trader_fills_resolve_recent_days: i64,
+
     /// Retention (days) for the durable `trader_fills` archive. Default 0 =
     /// keep-all (the archive is the point); set > 0 to prune older fills. The
     /// daily pg_dump backup covers durability regardless.

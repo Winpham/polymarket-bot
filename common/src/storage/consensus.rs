@@ -1696,28 +1696,76 @@ impl PgPortfolio {
     // --- Resolution ledger (Phase 1) ---
 
     /// Distinct `condition_id`s with unresolved BUY fills older than `min_age`,
-    /// oldest-first, capped at `cap`. This is the INDEPENDENT unresolved source:
-    /// it surfaces markets a trader bet that may never have triggered a consensus
-    /// signal, so resolving only consensus conditions would never settle them and
-    /// profiles would be biased toward markets that happened to fire consensus
+    /// capped at `cap`. This is the INDEPENDENT unresolved source: it surfaces
+    /// markets a trader bet that may never have triggered a consensus signal, so
+    /// resolving only consensus conditions would never settle them and profiles
+    /// would be biased toward markets that happened to fire consensus
     /// (survivorship). Housekeeping UNIONs this into its resolution set.
+    ///
+    /// # Two lanes — why this is not a plain oldest-first FIFO
+    ///
+    /// It used to be `ORDER BY MIN(ts) LIMIT cap`, and that **permanently starved
+    /// every recent market** (measured 2026-07-12). A condition that fails to
+    /// resolve stays `resolved = FALSE`, so it returns to the head of the queue on
+    /// the very next cycle — forever. And the head is full of conditions that can
+    /// NEVER resolve: delisted 2022 markets, and long-dated OPEN markets
+    /// (`will-*-win-the-2028-*-presidential-nomination`) that do not settle for
+    /// YEARS. Result: all 200/200 budget slots went to conditions older than
+    /// 2026-06-01, the newest condition ever reached was 2026-04-12, and 4,153
+    /// resolvable weather conditions sat untouched — head-of-line blocking that
+    /// silently froze the resolution ledger the certification gates depend on.
+    ///
+    /// So the budget is split, and **the total stays `cap`** (no extra CLOB load):
+    /// - **recency lane** (majority): conditions whose LATEST fill is within
+    ///   `recent_window` — oldest-first *inside* the window, so recent markets are
+    ///   always reachable and settle promptly no matter how deep the backlog.
+    /// - **backlog lane** (a fixed minority share): the legacy global oldest-first
+    ///   sweep, so nothing is permanently abandoned and a genuinely-stale market
+    ///   that becomes resolvable still gets picked up.
+    ///
+    /// Un-resolvable conditions can therefore waste at most the backlog lane, never
+    /// the whole budget. Both lanes honour `min_age`; the UNION de-dupes overlap.
     pub async fn trader_fill_unresolved_conditions(
         &self,
         min_age: chrono::Duration,
         cap: i64,
+        recent_window: chrono::Duration,
     ) -> Result<Vec<String>> {
+        let (recent_cap, backlog_cap) = Self::resolve_lane_budget(cap);
         let rows: Vec<(String,)> = sqlx::query_as(
-            "SELECT condition_id FROM trader_fills \
-             WHERE resolved = FALSE AND side = 'BUY' \
-               AND ts < NOW() - make_interval(secs => $1) \
-             GROUP BY condition_id ORDER BY MIN(ts) LIMIT $2",
+            "( SELECT condition_id FROM trader_fills \
+                WHERE resolved = FALSE AND side = 'BUY' \
+                  AND ts < NOW() - make_interval(secs => $1) \
+                GROUP BY condition_id \
+                HAVING MAX(ts) >= NOW() - make_interval(secs => $2) \
+                ORDER BY MIN(ts) LIMIT $3 ) \
+             UNION \
+             ( SELECT condition_id FROM trader_fills \
+                WHERE resolved = FALSE AND side = 'BUY' \
+                  AND ts < NOW() - make_interval(secs => $1) \
+                GROUP BY condition_id ORDER BY MIN(ts) LIMIT $4 )",
         )
         .bind(min_age.num_seconds() as f64)
-        .bind(cap)
+        .bind(recent_window.num_seconds() as f64)
+        .bind(recent_cap)
+        .bind(backlog_cap)
         .fetch_all(&self.pool)
         .await
         .context("trader_fill_unresolved_conditions")?;
         Ok(rows.into_iter().map(|(c,)| c).collect())
+    }
+
+    /// Split a per-cycle resolution budget into (recency lane, backlog lane).
+    /// The backlog lane gets 1/5th (rounded down, but at least 1 whenever the
+    /// budget allows) so a starved backlog can still drain, while the recency lane
+    /// keeps the bulk and can never be crowded out. Sums to exactly `cap`, so the
+    /// CLOB fetch load is unchanged from the single-lane version.
+    fn resolve_lane_budget(cap: i64) -> (i64, i64) {
+        if cap <= 1 {
+            return (cap.max(0), 0);
+        }
+        let backlog = (cap / 5).max(1);
+        (cap - backlog, backlog)
     }
 
     /// Resolve every unresolved fill on `condition_id` against the winning token
@@ -3071,7 +3119,7 @@ mod trader_fills_it {
 
         // Both conds appear in the independent unresolved source (min_age 0).
         let conds = pf
-            .trader_fill_unresolved_conditions(chrono::Duration::zero(), 100)
+            .trader_fill_unresolved_conditions(chrono::Duration::zero(), 100, chrono::Duration::days(30))
             .await
             .unwrap();
         assert!(conds.contains(&c_win.to_string()) && conds.contains(&c_void.to_string()));
@@ -3112,7 +3160,7 @@ mod trader_fills_it {
 
         // Void market: never resolved → still in the unresolved source.
         let still: Vec<String> = pf
-            .trader_fill_unresolved_conditions(chrono::Duration::zero(), 100)
+            .trader_fill_unresolved_conditions(chrono::Duration::zero(), 100, chrono::Duration::days(30))
             .await
             .unwrap();
         assert!(
@@ -4272,5 +4320,50 @@ mod dense_capture_it {
                 .unwrap();
         assert_eq!(n2, 0, "FK cascade removed the trajectory");
         println!("dense_capture_it: candidates dedupe + insert + cascade — OK");
+    }
+}
+
+#[cfg(test)]
+mod resolve_lane_budget_tests {
+    //! The resolution-budget split (DB-free). Guards the head-of-line-blocking fix:
+    //! a backlog of never-resolvable markets must never consume the whole per-cycle
+    //! budget again, and the split must not increase CLOB fetch load.
+    use super::PgPortfolio;
+
+    #[test]
+    fn lanes_sum_to_cap_and_never_exceed_it() {
+        // Load invariant: the two lanes together fetch EXACTLY the old single-lane
+        // budget — the fix costs zero extra CLOB calls.
+        for cap in [0i64, 1, 2, 5, 10, 200, 1000] {
+            let (recent, backlog) = PgPortfolio::resolve_lane_budget(cap);
+            assert_eq!(recent + backlog, cap.max(0), "lanes must sum to cap (cap={cap})");
+            assert!(recent >= 0 && backlog >= 0, "no negative lane (cap={cap})");
+        }
+    }
+
+    #[test]
+    fn recency_lane_keeps_the_majority_so_recent_markets_cannot_be_starved() {
+        // The defect: 200/200 slots went to pre-June conditions. The recency lane must
+        // hold the bulk of the budget at the production cap so that can't recur.
+        let (recent, backlog) = PgPortfolio::resolve_lane_budget(200);
+        assert_eq!((recent, backlog), (160, 40));
+        assert!(recent > backlog, "recency lane must dominate");
+    }
+
+    #[test]
+    fn backlog_lane_is_always_funded_so_stale_markets_are_never_abandoned() {
+        // The converse failure: starving the backlog entirely would permanently
+        // abandon old markets that later become resolvable.
+        for cap in [2i64, 5, 10, 200] {
+            let (_, backlog) = PgPortfolio::resolve_lane_budget(cap);
+            assert!(backlog >= 1, "backlog lane must get >=1 slot (cap={cap})");
+        }
+    }
+
+    #[test]
+    fn degenerate_caps_do_not_panic_or_go_negative() {
+        assert_eq!(PgPortfolio::resolve_lane_budget(1), (1, 0));
+        assert_eq!(PgPortfolio::resolve_lane_budget(0), (0, 0));
+        assert_eq!(PgPortfolio::resolve_lane_budget(-5), (0, 0));
     }
 }

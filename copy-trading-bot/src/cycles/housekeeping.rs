@@ -102,6 +102,7 @@ pub async fn housekeeping_cycle(
         .trader_fill_unresolved_conditions(
             chrono::Duration::hours(6),
             cfg.trader_fills_resolve_per_cycle,
+            chrono::Duration::days(cfg.trader_fills_resolve_recent_days),
         )
         .await
         .unwrap_or_default();
