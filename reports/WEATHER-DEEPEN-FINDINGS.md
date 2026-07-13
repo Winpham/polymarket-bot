@@ -141,3 +141,65 @@ BAND, not the people.**
 past-PnL rank refuted 5 ways, naive widening withdrawn.) If weather is pursued, the honest form is a
 **blind mid-favorite weather rule (0.71–0.90)** — which still must clear the forward executable-ask gate
 (WS1: +1.87¢ haircut vs the sharp fill; thin books; `weather_fav_liq` fires 0).
+
+---
+
+## WS3 — Evergreen niche scan (`reports/EVERGREEN-SCAN.json`)
+
+**Is there a SECOND evergreen niche? No.** Wider-universe (rank≤250) ≥3-backer FAVORITE-band
+(0.71–0.98) convergence per recurring family:
+
+| niche | conv picks | days | verdict |
+|---|---|---|---|
+| weather-hightemp | 1155 | 12 | the incumbent cell |
+| **weather-lowtemp** | **117** | 11 | only other niche with convergence — *same* daily-temperature mechanism |
+| weather-precip | 0 | 0 | no favorite convergence (too thin) |
+| weather-wind | 0 | 0 | no favorite convergence |
+| **crypto-updown** | **0** | 0 | **daily crypto up/down generates ZERO** — they are ~coinflips, no 0.71–0.98 favorite exists to harvest |
+| crypto-threshold | 3 | 2 | negligible |
+
+**Daily crypto up/down — the most-touted "evergreen" — produces no favorite convergence at all**, because
+those markets are coinflips: there is no mispriced favorite band to buy. (Consistent with the settled
+softness map: crypto/other/econ never fire.) Precip/wind are too thin.
+
+**weather-lowtemp graded (CLOB basis, 39 picks / 10 day-clusters / 2 weeks):** full 0.71–0.98 LB
+**−1.9%** (skill-over-blind −1.25pp); refined 0.71–0.90 LB +5.3% (skill ≈ **−0.1pp**), n=39 →
+**INDETERMINATE (severely under-powered)** and *no skill over blind*. It is not a second edge; it is the
+same band mechanism with less data.
+
+**WS3 verdict: there is no second evergreen complement.** The only other recurring venue with any
+favorite convergence is lowest-temperature, which is mechanistically the same daily-temperature market
+and shows no skill over blind on 39 picks. Money-saving: do **not** widen into crypto/precip/wind.
+
+---
+
+## ⚠️ REALIZABLE-BASIS CORRECTION (applies to ALL numbers above)
+
+Surfaced by the WS3 cross-check and it changes the headline. **The at-fire mid is NOT a copier's price:**
+
+- the CLOB-at-`ts0` mid sits **1.65¢ BELOW what the sharps actually paid** (mean `atfire − sharp_fill`
+  = −0.0165 over 860 picks), and
+- WS1 measured the executable `entry_ask` at **+1.87¢ ABOVE the sharp fill**.
+- ⇒ a real copier pays **≈ 3.5¢ more** than the at-fire-mid basis implies. Every mid-basis LB is optimistic.
+
+**The objective at the price a copier actually pays** (entry = sharp_fill + 1.87¢), day-clustered:
+
+| cell | at-fire mid (optimistic) | sharp fill (ceiling) | **REALIZABLE ask** | **REALIZABLE LODO** (held-out wk) |
+|---|---|---|---|---|
+| WEATHER 0.71–0.98 | +9.5% | +7.1% | **+4.9%** | +5.7% |
+| **WEATHER 0.71–0.90** | +15.5% | +10.3% | **+7.9%** | **+6.5%** |
+
+**Weather `weather_fav` 0.71–0.90 clears the champion's +5.6% honest floor at a REALIZABLE price
+(+7.9% LB) and still clears it on the held-out week under LODO (+6.5%).** That is the strongest honest
+statement this run can make — and it is *not* a certification.
+
+**Why it is NOT certified (all four still bind):**
+1. The **+1.87¢ ask premium is measured on 38 captures skewed to deep chalk** (avg ask 0.912). The
+   0.71–0.90 cert band may have a **wider** spread (thinner books at mid prices) — if so the realizable
+   LB shrinks. Forward captured-ask accrual **on the cert band** is the only thing that settles it.
+2. **SIZE is unproven** — `weather_fav_liq` (≥$1k liquidity) has captured **0**. A fat % on unfillable
+   size is not a strategy.
+3. **It is not a consensus edge.** Follow the BAND, not the people (WS4 null p≈0.5 + WS2 specialists
+   ≈0 over blind).
+4. **Frozen-gate floors UNMET**: 11 day-clusters < the 20 volume floor, and the `entry_ask`-captured θ
+   over ≥2 disjoint **FORWARD** weeks has not accrued (captures began 2026-07-12) ⇒ **INDETERMINATE**.

@@ -1,0 +1,99 @@
+{
+  "as_of": "2026-07-12",
+  "run": "weather deepen \u2014 WS3 (evergreen niche scan)",
+  "objective": "day-clustered cluster-robust realizable ROI-turn (CLOB at-fire mid), belief-blind",
+  "conv_floor_to_grade": 30,
+  "taxonomy": {
+    "weather-hightemp": {
+      "pattern": "highest-temperature",
+      "conv_picks": 1155,
+      "conv_days": 12,
+      "gradeable": true
+    },
+    "weather-lowtemp": {
+      "pattern": "lowest-temperature",
+      "conv_picks": 117,
+      "conv_days": 11,
+      "gradeable": true
+    },
+    "weather-precip": {
+      "pattern": "rain|precipitation|snow",
+      "conv_picks": 0,
+      "conv_days": 0,
+      "gradeable": false
+    },
+    "weather-wind": {
+      "pattern": "wind-speed|wind-in",
+      "conv_picks": 0,
+      "conv_days": 0,
+      "gradeable": false
+    },
+    "crypto-updown": {
+      "pattern": "up-or-down",
+      "conv_picks": 0,
+      "conv_days": 0,
+      "gradeable": false
+    },
+    "crypto-threshold": {
+      "pattern": "(bitcoin|ethereum|solana|xrp|dogecoin).*(above|below|reach|hit|dip-to)",
+      "conv_picks": 3,
+      "conv_days": 2,
+      "gradeable": false
+    }
+  },
+  "graded_niches": {
+    "weather-hightemp": {
+      "niche": "weather-hightemp",
+      "graded": 860,
+      "day_clusters": 11,
+      "weeks": {
+        "w26": 6,
+        "w27": 5
+      },
+      "full_0.71-0.98": {
+        "LB": 0.0949,
+        "skill_over_blind": 0.001,
+        "n": 860
+      },
+      "refined_0.71-0.90": {
+        "LB": 0.1551,
+        "skill_over_blind": 0.003,
+        "n": 485,
+        "lodo_by_week": {
+          "dropped_week": "w26",
+          "n_weeks": 2,
+          "lb_without_dominant": 0.1379,
+          "days_left": 5
+        }
+      },
+      "verdict": "INDETERMINATE (power) \u2014 day-clusters<20"
+    },
+    "weather-lowtemp": {
+      "niche": "weather-lowtemp",
+      "graded": 39,
+      "day_clusters": 10,
+      "weeks": {
+        "w26": 5,
+        "w27": 5
+      },
+      "full_0.71-0.98": {
+        "LB": -0.0189,
+        "skill_over_blind": -0.0125,
+        "n": 39
+      },
+      "refined_0.71-0.90": {
+        "LB": 0.0528,
+        "skill_over_blind": -0.0013,
+        "n": 18,
+        "lodo_by_week": {
+          "dropped_week": "w26",
+          "n_weeks": 2,
+          "lb_without_dominant": 0.1694,
+          "days_left": 4
+        }
+      },
+      "verdict": "INDETERMINATE (power) \u2014 day-clusters<20"
+    }
+  },
+  "verdict_note": "Only niches clearing the convergence floor are CLOB-graded; the rest have no wider-universe favorite convergence to harvest (coinflips / too thin). See per-niche verdict; a niche is a real complement only if its realizable belief-blind LB clears the same bar weather is held to over \u22652 disjoint weeks."
+}

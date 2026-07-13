@@ -4,12 +4,12 @@
   "basis": "at-fire mid RECONSTRUCTED from CLOB prices-history at convergence ts0 (uniform across weeks); PROXY basis, NOT captured entry_ask (w27/w28 predate live capture).",
   "grading": {
     "source": "CLOB /markets winner (bounded to weather conds), read-only",
-    "total": 1159,
-    "open_dropped": 125,
+    "total": 1155,
+    "open_dropped": 121,
     "no_mid_dropped": 0,
     "out_of_band": 174,
     "blind_cross_n": 351,
-    "blind_cross_abs_err": 26.23569896147682,
+    "blind_cross_abs_err": 26.235698961476807,
     "graded": 860,
     "blind_cross_mae": 0.0747,
     "clob_fetches": 0,
@@ -36,6 +36,76 @@
       "finding": "the CLOB-at-ts0 reconstruction AGREES with `_blind` to 0.97c when `_blind` was captured promptly (<=30min), but 424/433 (98%) in-sample `_blind` mids were captured >30min late (often DAYS \u2014 housekeeping lag), landing near resolution (0.2, 0.55...). So the CLOB-at-ts0 mid is the CORRECT at-fire basis; the in-sample `_blind` basis was lag-contaminated and COMPRESSED the edge toward 0. The 7.5c aggregate MAE is that contamination, not recon error."
     }
   },
+  "HEADLINE_realizable": {
+    "why": "the at-fire mid is NOT a copier's price: the CLOB-at-ts0 mid sits 1.65c BELOW the sharps' own fill, and WS1 measured the executable entry_ask at +1.87c ABOVE that fill \u2014 so a copier pays ~3.5c more than the mid basis implies. THIS block is the objective at the price a copier actually pays.",
+    "cells": [
+      {
+        "label": "WEATHER_0.71-0.98",
+        "n": 860,
+        "basis_ladder": {
+          "atfire_mid_OPTIMISTIC": {
+            "point": 0.1088,
+            "LB": 0.0949,
+            "G": 11
+          },
+          "sharp_fill_CEILING": {
+            "point": 0.0825,
+            "LB": 0.0707,
+            "G": 11
+          },
+          "REALIZABLE_ask_sharp_plus_187bp": {
+            "point": 0.0604,
+            "LB": 0.049,
+            "G": 11
+          }
+        },
+        "REALIZABLE_lodo_by_week": {
+          "dropped_week": "w26",
+          "point": 0.0757,
+          "LB": 0.057,
+          "G": 5
+        },
+        "clears_champion_floor_5.6pct": false,
+        "lodo_clears_champion_floor": true
+      },
+      {
+        "label": "WEATHER_0.71-0.90_refined",
+        "n": 485,
+        "basis_ladder": {
+          "atfire_mid_OPTIMISTIC": {
+            "point": 0.1692,
+            "LB": 0.1551,
+            "G": 11
+          },
+          "sharp_fill_CEILING": {
+            "point": 0.1139,
+            "LB": 0.1027,
+            "G": 11
+          },
+          "REALIZABLE_ask_sharp_plus_187bp": {
+            "point": 0.0901,
+            "LB": 0.0792,
+            "G": 11
+          }
+        },
+        "REALIZABLE_lodo_by_week": {
+          "dropped_week": "w26",
+          "point": 0.092,
+          "LB": 0.0646,
+          "G": 5
+        },
+        "clears_champion_floor_5.6pct": true,
+        "lodo_clears_champion_floor": true
+      }
+    ],
+    "champion_floor": 0.056,
+    "caveats": [
+      "the +1.87c ask premium is measured on only 38 captures SKEWED TO DEEP CHALK (avg ask 0.912). The 0.71-0.90 cert band may have a WIDER spread (thinner books at mid prices) \u2014 if so the realizable LB shrinks. Forward captured-ask accrual ON THE CERT BAND is the only thing that settles this.",
+      "SIZE is unproven: weather_fav_liq ($1k-liquidity twin) has captured 0 \u2014 a fat % on unfillable size is NOT a strategy.",
+      "NOT a consensus edge: the null (p~0.5) and WS2 (specialists add ~0 over blind) both say the edge is the mid-favorite BAND, so the implementable rule is 'buy the band', not 'copy the consensus'.",
+      "volume floor UNMET (11 day-clusters < 20) and the frozen gate's entry_ask-captured forward \u03b8 over \u22652 disjoint FORWARD weeks is UNMET (captures began 2026-07-12) \u21d2 INDETERMINATE, not certified, regardless of point value."
+    ]
+  },
   "M_cells": 3,
   "candidates": {
     "WEATHER_0.71-0.98": {
@@ -57,9 +127,9 @@
         "days_left": 5
       },
       "time_split": {
-        "early_LB": 0.078,
-        "late_LB": 0.1114,
-        "split_at": "on-july-7"
+        "early_LB": 0.0796,
+        "late_LB": 0.0989,
+        "split_at": "on-july-3"
       },
       "bonferroni": {
         "alpha_adj": 0.0167,
@@ -68,7 +138,7 @@
       },
       "selection_null_FORECAST_CO_READING": {
         "observed_surplus": 0.009,
-        "p_emp": 0.4803,
+        "p_emp": 0.4818,
         "draws": 2000,
         "pass_p01": false,
         "note": null
@@ -105,9 +175,9 @@
         "days_left": 5
       },
       "time_split": {
-        "early_LB": 0.147,
-        "late_LB": 0.1442,
-        "split_at": "on-july-7"
+        "early_LB": 0.1443,
+        "late_LB": 0.1464,
+        "split_at": "on-july-3"
       },
       "bonferroni": {
         "alpha_adj": 0.0167,
@@ -116,7 +186,7 @@
       },
       "selection_null_FORECAST_CO_READING": {
         "observed_surplus": 0.0108,
-        "p_emp": 0.5277,
+        "p_emp": 0.5152,
         "draws": 2000,
         "pass_p01": false,
         "note": null

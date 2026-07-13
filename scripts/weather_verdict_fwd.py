@@ -60,11 +60,61 @@ def _clob_blind(offline=False):
     return items, blind_edge, len(items)
 
 
+# WS1-measured executable premium: captured entry_ask − the sharps' own fill (mean of 38 live
+# weather_fav captures). A copier does NOT get the at-fire mid — validated: the CLOB-at-ts0 mid sits
+# 1.65c BELOW what the sharps actually paid, so the mid basis is OPTIMISTIC by ~3.5c vs the real ask.
+ASK_OVER_SHARP = 0.0187
+CHAMP_FLOOR = 0.056          # the champion favorite 0.71-0.98 honest cluster-robust LB
+
+
+def _rows(picks, basis):
+    out = []
+    for p in picks:
+        if basis == "atfire":
+            e = p["atfire"]                                   # optimistic proxy
+        elif basis == "sharp":
+            e = p["sharp_fill"]                               # directional ceiling, NEVER the objective
+        else:
+            e = min(p["sharp_fill"] + ASK_OVER_SHARP, 0.999)  # REALIZABLE copier ask
+        out.append({"entry": e, "won": p["won"], "cluster": p["cluster"],
+                    "condition_id": p["condition_id"], "slug": p["slug"]})
+    return out
+
+
+def realizable(picks, label):
+    """THE objective, at the price a COPIER actually pays. Reports the three-basis ladder + LODO."""
+    from collections import defaultdict
+    def lb(ps, basis):
+        r = C.roi_lb(_rows(ps, basis))
+        if not r or r.get("lb") is None:
+            return {"point": None, "LB": None}
+        return {"point": round(r["point"], 4), "LB": round(r["lb"], 4), "G": r.get("G_clusters")}
+    by_week = defaultdict(list)
+    for p in picks:
+        by_week[V.week_of(p["cluster"])].append(p)
+    dom = max(by_week, key=lambda w: len({p["cluster"] for p in by_week[w]})) if by_week else None
+    rest = [p for p in picks if V.week_of(p["cluster"]) != dom]
+    r_lb = lb(picks, "realizable")
+    lodo = lb(rest, "realizable") if rest else {"point": None, "LB": None}
+    return {
+        "label": label, "n": len(picks),
+        "basis_ladder": {
+            "atfire_mid_OPTIMISTIC": lb(picks, "atfire"),
+            "sharp_fill_CEILING": lb(picks, "sharp"),
+            "REALIZABLE_ask_sharp_plus_%dbp" % int(ASK_OVER_SHARP * 10000): r_lb,
+        },
+        "REALIZABLE_lodo_by_week": {"dropped_week": dom, **lodo},
+        "clears_champion_floor_5.6pct": (r_lb["LB"] is not None and r_lb["LB"] > CHAMP_FLOOR),
+        "lodo_clears_champion_floor": (lodo["LB"] is not None and lodo["LB"] > CHAMP_FLOOR),
+    }
+
+
 def build(offline=False):
     picks, gstats = grade(offline=offline)
     blind_universe, blind_edge, n_blind = _clob_blind(offline=offline)
     gstats["blind_universe_clob_n"] = n_blind
     champ_daily = V.champion_daily()
+    refined_cell = [p for p in picks if 0.71 <= p["atfire"] < 0.90]
     rng = random.Random(SEED)
     refined = [p for p in picks if 0.71 <= p["atfire"] < 0.90]
     M = 3
@@ -94,6 +144,29 @@ def build(offline=False):
                            "basis; the in-sample `_blind` basis was lag-contaminated and COMPRESSED the "
                            "edge toward 0. The 7.5c aggregate MAE is that contamination, not recon error.",
             },
+        },
+        "HEADLINE_realizable": {
+            "why": "the at-fire mid is NOT a copier's price: the CLOB-at-ts0 mid sits 1.65c BELOW the "
+                   "sharps' own fill, and WS1 measured the executable entry_ask at +1.87c ABOVE that "
+                   "fill — so a copier pays ~3.5c more than the mid basis implies. THIS block is the "
+                   "objective at the price a copier actually pays.",
+            "cells": [realizable(picks, "WEATHER_0.71-0.98"),
+                      realizable(refined_cell, "WEATHER_0.71-0.90_refined")],
+            "champion_floor": CHAMP_FLOOR,
+            "caveats": [
+                "the +1.87c ask premium is measured on only 38 captures SKEWED TO DEEP CHALK (avg ask "
+                "0.912). The 0.71-0.90 cert band may have a WIDER spread (thinner books at mid prices) "
+                "— if so the realizable LB shrinks. Forward captured-ask accrual ON THE CERT BAND is "
+                "the only thing that settles this.",
+                "SIZE is unproven: weather_fav_liq ($1k-liquidity twin) has captured 0 — a fat % on "
+                "unfillable size is NOT a strategy.",
+                "NOT a consensus edge: the null (p~0.5) and WS2 (specialists add ~0 over blind) both "
+                "say the edge is the mid-favorite BAND, so the implementable rule is 'buy the band', "
+                "not 'copy the consensus'.",
+                "volume floor UNMET (11 day-clusters < 20) and the frozen gate's entry_ask-captured "
+                "forward θ over ≥2 disjoint FORWARD weeks is UNMET (captures began 2026-07-12) ⇒ "
+                "INDETERMINATE, not certified, regardless of point value.",
+            ],
         },
         "M_cells": M,
         "candidates": {
