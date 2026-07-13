@@ -540,3 +540,26 @@ a column or population I had not validated.** The three that survived audit (cop
 capacity from live books; the config facts about LIVE_FILLS) were the ones with large n or direct
 observation. **Rule going forward: no measured claim ships without (a) a placebo/control arm, (b) a
 significance test, and (c) an explicit n and dispersion.** A number without those is a hypothesis.
+
+## Applying the rule to everything still standing
+
+| claim | n | control? | verdict |
+|---|---|---|---|
+| copier cost ≈ **+1.14¢** (drift ~0, spread 1.2¢) | 1,351 | agrees with the audited latency read (~2¢) | **HOLDS** |
+| **slippage curve / capacity** ($50/signal) | 33 live books | direct observation of depth — no inference | **HOLDS** (see caveat) |
+| `weather_fav` survives LODO, **+7.1%** | 571 | `selection_null` p=0.0005 **+** leave-one-week-out | **HOLDS** |
+| resolver starvation (D1), survivorship bias (D3), loser-tilted capture (D4), no depth (D5), no `seen_at` (D6) | — | direct observation of code + config + schema | **HOLD** (facts, not inferences) |
+| ~~latency is the dominant cost~~ | 24 | **none** | **RETRACTED** |
+
+**The one soft spot in the capacity number:** `capacity_scan.py` hardcodes `GROSS_EDGE = 0.12`. The
+*slippage* column is a direct measurement and is solid; the *net edge* column inherits that assumption
+1:1. And the 12pp is the SHARPS'-fill edge, whose realizable version is still pending clean `entry_ask`
+(Part III). If the true edge is 9pp, every net figure drops 3pp and **$100/signal fails at p90 — but $50
+still clears the floor.** That margin is exactly why $50 is the recommendation.
+
+**The deepest open question is NOT latency and NOT size — it is whether we need a sharp at all.** The
+weather-deepen run's null (pool = "a favourite ONE sharp already bought") reads **p ≈ 0.5**, while this
+run's null (pool = "a random weather favourite") reads **p = 0.0005**. Both can be true, and they bracket
+the real question: if consensus adds ~nothing over a single sharp, and a single sharp adds ~nothing over
+the mid-favourite BAND, then weather is a standalone market-inefficiency rule and **the entire copy/latency
+apparatus is unnecessary**. That is the next thing to settle, and it is worth more than any latency work.
