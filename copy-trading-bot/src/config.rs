@@ -97,6 +97,18 @@ pub struct CopyTradingConfig {
     #[config(env = "CONSENSUS_WEATHER_ARM", default = false)]
     pub consensus_weather_arm: bool,
 
+    /// Register the LOWEST-temperature shadow arms (`weather_low_fav`,
+    /// `weather_low_fav_liq`) — the low-temperature branch of the evergreen portfolio.
+    /// A SEPARATE arm from `weather_fav`, not a widened weather filter: high- and
+    /// low-temperature markets behave differently (the casual crowd prices hot favorites
+    /// about right but MIS-prices cold ones, so the sharps' skill-over-blind is much
+    /// larger on lows — and the book is much thinner). Blending them would average away
+    /// that mechanism; each certifies on its own frozen gate or is retired.
+    /// Default FALSE ⇒ no low-temperature book is loaded/scored ⇒ the live path is
+    /// byte-for-byte unchanged. SHADOW-ONLY (alerting=false); promotes nothing.
+    #[config(env = "CONSENSUS_WEATHER_LOW_ARM", default = false)]
+    pub consensus_weather_low_arm: bool,
+
     /// Comma-separated inclusive upper rank bounds defining the cohort BANDS the
     /// deep-pool observatory slices/groups by (see `scanner::cohort`). The first
     /// band is the trusted top cohort — keep its bound aligned with

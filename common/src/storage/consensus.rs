@@ -1287,18 +1287,26 @@ impl PgPortfolio {
         Ok(rows)
     }
 
-    /// Wider-eligibility vote window for the WEATHER shadow arm (Generalize-the-Band
-    /// run, 2026-07-11). Exact mirror of `load_soft_window_votes` but scoped to daily
-    /// temperature markets (`slug ~ 'highest-temperature'`) instead of esports. The
-    /// live `favorite` arm fired on weather ZERO times because its forecast-specialist
+    /// Wider-eligibility vote window for ONE evergreen market FAMILY, scoped by a slug
+    /// regex (Evergreen-Portfolio run, 2026-07-12). Generalizes `load_weather_window_votes`
+    /// so each evergreen market type is its own separately-certified branch rather than one
+    /// blended arm — high-temperature and low-temperature markets behave DIFFERENTLY (the
+    /// casual crowd prices highs about right but MIS-prices lows), so they must be optimized
+    /// and certified independently.
+    ///
+    /// Exact mirror of `load_soft_window_votes` but scoped by `slug_regex` instead of esports.
+    /// The live `favorite` arm fires on these markets ZERO times because their specialist
     /// backers sit at rank 41–250, past the rank-40 `consensus_eligible` gate — the same
-    /// conversion gap diagnosed for esports. Same wider eligibility JOIN (rank ≤ cutoff
-    /// OR consensus_eligible/earned); the incumbent eligible-only book is untouched, so
-    /// every existing arm is byte-identical. Read ONLY when `consensus_weather_arm` is on.
-    pub async fn load_weather_window_votes(
+    /// conversion gap diagnosed for esports. Same wider eligibility JOIN (rank ≤ cutoff OR
+    /// consensus_eligible/earned); the incumbent eligible-only book is untouched, so every
+    /// existing arm stays byte-identical. Read ONLY when that family's flag is on.
+    ///
+    /// `slug_regex` is a trusted compile-time constant from [`MarketFamily`], never user input.
+    pub async fn load_family_window_votes(
         &self,
         since: DateTime<Utc>,
         rank_cutoff: i32,
+        slug_regex: &str,
     ) -> Result<Vec<WindowVote>> {
         let rows: Vec<WindowVote> = sqlx::query_as(
             "SELECT cw.trader_wallet, cw.name, cw.rank, cw.pnl, cw.quality, cw.condition_id, \
@@ -1307,15 +1315,29 @@ impl PgPortfolio {
              FROM consensus_vote_window cw \
              JOIN followed_traders ft ON LOWER(ft.proxy_wallet) = cw.trader_wallet \
              WHERE cw.ts >= $1 \
-               AND cw.slug ~ 'highest-temperature' \
+               AND cw.slug ~ $3 \
                AND (ft.rank <= $2 OR ft.consensus_eligible OR ft.earned_eligible)",
         )
         .bind(since)
         .bind(rank_cutoff)
+        .bind(slug_regex)
         .fetch_all(&self.pool)
         .await
-        .context("load_weather_window_votes")?;
+        .context("load_family_window_votes")?;
         Ok(rows)
+    }
+
+    /// The incumbent WEATHER (highest-temperature) window — now a thin wrapper over
+    /// [`Self::load_family_window_votes`]. Behaviour is unchanged: same regex, same
+    /// eligibility JOIN, same rows. Kept as a named entry point so the LIVE arm's call
+    /// site is provably identical after the family refactor.
+    pub async fn load_weather_window_votes(
+        &self,
+        since: DateTime<Utc>,
+        rank_cutoff: i32,
+    ) -> Result<Vec<WindowVote>> {
+        self.load_family_window_votes(since, rank_cutoff, "highest-temperature")
+            .await
     }
 
     /// Record an EARNED promotion: flip `earned_eligible` on for the given tracked

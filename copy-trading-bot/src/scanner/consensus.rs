@@ -150,7 +150,10 @@ pub enum WeightMode {
 /// Tunable thresholds for the scorer. Defaults mirror `CONSENSUS-ENGINE-PLAN.md`.
 /// The last four fields are additive portfolio knobs whose defaults are no-ops,
 /// so `ConsensusParams::default()` is behaviorally identical to the original.
-#[derive(Debug, Clone)]
+// PartialEq is derive-only (no behavioural effect): it lets the family refactor assert
+// the LIVE weather arm's params are byte-identical to the pre-refactor definitions as a
+// WHOLE STRUCT, so a future field can't drift unnoticed past a field-by-field check.
+#[derive(Debug, Clone, PartialEq)]
 pub struct ConsensusParams {
     /// Minimum number of distinct one-sided backers required.
     pub min_backers: usize,
@@ -805,9 +808,86 @@ pub fn soft_market_arms(base: &ConsensusParams) -> Vec<StrategyDef> {
 ///   `weather_fav`     — champion favorite band, wider-eligibility weather book.
 ///   `weather_fav_liq` — same + the $1k at-fire liquidity floor (thin-book spread screen).
 pub fn weather_market_arms(base: &ConsensusParams) -> Vec<StrategyDef> {
+    market_family_arms(base, &WEATHER_HIGH)
+}
+
+/// One evergreen market TYPE that gets its own independently-certified branch
+/// (Evergreen-Portfolio run, 2026-07-12).
+///
+/// # Why a portfolio of per-type arms, not one blended arm
+///
+/// High-temperature and low-temperature daily markets are siblings that behave
+/// DIFFERENTLY, so blending them into one `temperature` filter would average away
+/// the very thing that makes them worth holding together. On the at-fire-mid
+/// (realizable-proxy) basis, day-clustered, band 0.71–0.90:
+///   - HIGH-temp: the casual crowd prices hot favorites about right (blind favorite
+///     ≈ +2%), and the sharps' selection adds skill on top. The workhorse.
+///   - LOW-temp: the casual crowd MIS-prices cold favorites (blind favorite is
+///     NEGATIVE), so the sharps' skill-over-blind is much larger — a distinct,
+///     higher-skill, but far THINNER mechanism.
+/// They therefore want different eligibility, different convergence bars, and their
+/// OWN gates. An arm that cannot clear its own gate over ≥2 disjoint weeks is
+/// RETIRED, never carried by a sibling.
+///
+/// Each family is default-OFF behind its own flag and PROMOTES nothing; the frozen
+/// per-arm prereg is the arbiter. `slug_regex` is a compile-time constant (it reaches
+/// SQL as a bound parameter, never interpolation).
+pub struct MarketFamily {
+    /// Human key for logs/reports (e.g. `weather`, `weather_low`).
+    pub key: &'static str,
+    /// Postgres regex selecting this family's markets from the vote window.
+    pub slug_regex: &'static str,
+    /// Arm names. Held as `&'static str` (not built from `key` at call time) because
+    /// `market_family_arms` runs EVERY consensus cycle and `StrategyDef::name` is
+    /// `&'static str` — formatting them per call would leak two strings per cycle for
+    /// the life of the daemon.
+    pub fav_arm: &'static str,
+    pub fav_liq_arm: &'static str,
+}
+
+/// The incumbent LIVE weather family (highest-temperature). Behaviour frozen: the
+/// arms it generates are byte-identical to the hand-written `weather_market_arms`
+/// that shipped in `feat/weather-fav` — asserted by
+/// `weather_arms_are_byte_identical_after_family_refactor`.
+pub const WEATHER_HIGH: MarketFamily = MarketFamily {
+    key: "weather",
+    slug_regex: "highest-temperature",
+    fav_arm: "weather_fav",
+    fav_liq_arm: "weather_fav_liq",
+};
+
+/// The lowest-temperature sibling — a SEPARATE arm, not a widened weather filter.
+/// Distinct mechanism (casual crowd mis-prices cold favorites ⇒ larger skill-over-blind),
+/// distinct book depth (much thinner), so it certifies on its own gate or not at all.
+pub const WEATHER_LOW: MarketFamily = MarketFamily {
+    key: "weather_low",
+    slug_regex: "lowest-temperature",
+    fav_arm: "weather_low_fav",
+    fav_liq_arm: "weather_low_fav_liq",
+};
+
+/// Every evergreen family the cycle can register, each behind its own flag.
+pub const MARKET_FAMILIES: [MarketFamily; 2] = [WEATHER_HIGH, WEATHER_LOW];
+
+/// Build one family's shadow arms. Uniform by construction, so adding an evergreen
+/// branch is a `MarketFamily` entry + a flag — no copy-paste drift between branches.
+///
+/// Both arms are silent (`alerting: false`) and derive from `base`, so the live
+/// portfolio and every incumbent arm stay byte-identical when the family is off. The
+/// band stays the validated champion 0.71–0.98 (0.65–0.71 is efficient coin-flips) and
+/// the convergence bar stays `min_backers` (3) — never "bet every hot forecast".
+///
+/// CAPTURE broad (0.71–0.98), CERTIFY narrow (0.71–0.90). Deep chalk 0.90–0.98 is dead
+/// in BOTH weather families (the win-rate trap: efficiently priced, earns ~0/$), but the
+/// arm still captures it forward — that is free data confirming it really is dead, and
+/// narrowing the arm on one week of evidence would throw it away. The prereg, not the
+/// arm, is where the certification band is enforced.
+///   `{prefix}_fav`     — champion favorite band, wider-eligibility family book.
+///   `{prefix}_fav_liq` — same + the $1k at-fire liquidity floor (thin-book spread screen).
+pub fn market_family_arms(base: &ConsensusParams, family: &MarketFamily) -> Vec<StrategyDef> {
     vec![
         StrategyDef {
-            name: "weather_fav",
+            name: family.fav_arm,
             params: ConsensusParams {
                 price_band: Some((0.71, 0.98)),
                 sports_mode: SportsMode::Include,
@@ -816,7 +896,7 @@ pub fn weather_market_arms(base: &ConsensusParams) -> Vec<StrategyDef> {
             alerting: false,
         },
         StrategyDef {
-            name: "weather_fav_liq",
+            name: family.fav_liq_arm,
             params: ConsensusParams {
                 price_band: Some((0.71, 0.98)),
                 sports_mode: SportsMode::Include,
@@ -1460,6 +1540,117 @@ mod tests {
         cold.is_sports = false;
         assert_eq!(score_market(&cold, now, &arms[0].params).len(), 0,
                    "weather_fav skips the sub-0.71 efficient band");
+    }
+
+    #[test]
+    fn weather_arms_are_byte_identical_after_family_refactor() {
+        // THE load-bearing guarantee of the family refactor (WS2): the LIVE, already-
+        // enabled weather arm must be bit-for-bit what it was before the factory existed.
+        // We assert the generated arms field-by-field against the ORIGINAL hand-written
+        // definitions (inlined here as the frozen reference, so this test still fails if
+        // someone "improves" the factory's defaults).
+        let base = ConsensusParams::default();
+        let reference = vec![
+            StrategyDef {
+                name: "weather_fav",
+                params: ConsensusParams {
+                    price_band: Some((0.71, 0.98)),
+                    sports_mode: SportsMode::Include,
+                    ..base.clone()
+                },
+                alerting: false,
+            },
+            StrategyDef {
+                name: "weather_fav_liq",
+                params: ConsensusParams {
+                    price_band: Some((0.71, 0.98)),
+                    sports_mode: SportsMode::Include,
+                    min_total_usd: 1000.0,
+                    ..base.clone()
+                },
+                alerting: false,
+            },
+        ];
+        let generated = market_family_arms(&base, &WEATHER_HIGH);
+        assert_eq!(generated.len(), reference.len());
+        for (g, r) in generated.iter().zip(reference.iter()) {
+            assert_eq!(g.name, r.name, "arm name drifted");
+            assert_eq!(g.alerting, r.alerting, "{} alerting drifted", r.name);
+            assert_eq!(g.params, r.params, "{} params drifted from the live arm", r.name);
+        }
+        // The public entry point the cycle actually calls resolves to the same thing.
+        let via_public = weather_market_arms(&base);
+        for (g, r) in via_public.iter().zip(reference.iter()) {
+            assert_eq!(g.name, r.name);
+            assert_eq!(g.params, r.params);
+            assert_eq!(g.alerting, r.alerting);
+        }
+    }
+
+    #[test]
+    fn weather_low_arms_shape_isolation_and_firing() {
+        // The low-temperature branch is its OWN arm, not a widened weather filter: its
+        // own names (no upsert collision), its own book (lowest-temperature regex), silent,
+        // and absent from the incumbent portfolio. Same band/convergence contract as its
+        // sibling — the branches differ in the BOOK they score and the GATE they certify
+        // against, never in unaudited param drift.
+        let base = ConsensusParams::default();
+        let arms = market_family_arms(&base, &WEATHER_LOW);
+        let names: Vec<&str> = arms.iter().map(|d| d.name).collect();
+        assert_eq!(names, vec!["weather_low_fav", "weather_low_fav_liq"]);
+        assert_eq!(WEATHER_LOW.slug_regex, "lowest-temperature");
+        assert_ne!(WEATHER_LOW.slug_regex, WEATHER_HIGH.slug_regex,
+                   "the two weather branches must read DISJOINT books");
+        for a in &arms {
+            assert!(!a.alerting, "{} must be silent (shadow-only)", a.name);
+            assert_eq!(a.params.price_band, Some((0.71, 0.98)), "{} captures the broad band", a.name);
+            assert_eq!(a.params.sports_mode, SportsMode::Include, "{} scores nonsport weather", a.name);
+            assert_eq!(a.params.min_backers, base.min_backers, "{} keeps convergence bar", a.name);
+        }
+        assert_eq!(arms[0].params.min_total_usd, 0.0, "weather_low_fav = no liquidity floor");
+        assert_eq!(arms[1].params.min_total_usd, 1000.0, "weather_low_fav_liq = $1k floor");
+
+        // Isolation: absent from the incumbent portfolio AND from the sibling weather arms.
+        let portfolio = default_portfolio(&base);
+        let sibling: Vec<&str> = weather_market_arms(&base).iter().map(|d| d.name).collect();
+        for n in &names {
+            assert!(!portfolio.iter().any(|d| &d.name == n),
+                    "weather_low arm {n} must NOT be in the incumbent portfolio");
+            assert!(!sibling.contains(n), "weather_low arm {n} must not collide with weather_fav");
+        }
+        // Every family in the registry has unique arm names (no silent upsert collision).
+        let all: Vec<&str> = MARKET_FAMILIES
+            .iter()
+            .flat_map(|f| [f.fav_arm, f.fav_liq_arm])
+            .collect();
+        let uniq: std::collections::HashSet<&&str> = all.iter().collect();
+        assert_eq!(all.len(), uniq.len(), "family arm names must be unique across the registry");
+
+        // Fires on a 3-deep one-sided NONSPORT cold-favorite book in band...
+        let now = Utc::now();
+        let mut coldbook = book_with(
+            now,
+            vec![
+                (0, "la", Some(150), 0.80, 5),
+                (0, "lb", Some(180), 0.81, 5),
+                (0, "lc", Some(210), 0.79, 5),
+            ],
+        );
+        coldbook.is_sports = false;
+        assert_eq!(score_market(&coldbook, now, &arms[0].params).len(), 1,
+                   "weather_low_fav fires on 3 deep-ranked one-sided nonsport favorites in band");
+        // ...and skips the sub-0.71 efficient band, exactly like its sibling.
+        let mut lowband = book_with(
+            now,
+            vec![
+                (0, "la", Some(150), 0.68, 5),
+                (0, "lb", Some(180), 0.68, 5),
+                (0, "lc", Some(210), 0.68, 5),
+            ],
+        );
+        lowband.is_sports = false;
+        assert_eq!(score_market(&lowband, now, &arms[0].params).len(), 0,
+                   "weather_low_fav skips the sub-0.71 efficient band");
     }
 
     #[test]
