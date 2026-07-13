@@ -34,6 +34,37 @@ const LEADERBOARD_PAGE_SIZE: usize = 50;
 /// Politeness delay between successive leaderboard pages so a deep (top-500) fetch
 /// paces itself instead of bursting 10 back-to-back GETs into the data-api.
 const LEADERBOARD_PAGE_DELAY: Duration = Duration::from_millis(150);
+/// Max leaderboard pages fetched concurrently. Depth 1000 = 20 pages; at 4 concurrent
+/// the refresh is ~5 round-trips deep instead of 20 sequential ones, while staying far
+/// under the measured data-api ceiling (2026-07-13: ~38 req/s sustained, 0 × 429).
+const LEADERBOARD_PAGE_CONCURRENCY: usize = 4;
+/// Retries per leaderboard page before the whole period is abandoned.
+const LEADERBOARD_PAGE_RETRIES: usize = 3;
+/// Page size for `/activity`. The server caps `limit` at 1000 (verified 2026-07-13:
+/// `limit=2000` returns 1000) and — critically — DEFAULTS to 100 when `limit` is
+/// omitted, which is what silently truncated every backfill before this.
+const ACTIVITY_PAGE_SIZE: usize = 500;
+/// Hard server-side offset ceiling on `/activity` (verified 2026-07-13: `offset=3500`
+/// returns `400 {"error":"max historical activity offset of 3000 exceeded"}`). With
+/// [`ACTIVITY_PAGE_SIZE`] that makes **3 500 events the most any single `(start, end)`
+/// window can yield**. A window denser than that is not reachable by paging further —
+/// it has to be NARROWED. That is why the poll drains a bounded time window and halves
+/// the span rather than just walking `offset` forever.
+const ACTIVITY_MAX_OFFSET: usize = 3000;
+/// Pages per window: offsets 0, 500 … 3000.
+const ACTIVITY_MAX_PAGES: usize = ACTIVITY_MAX_OFFSET / ACTIVITY_PAGE_SIZE + 1;
+/// Retries per `/activity` page. The data-api times out sporadically under a
+/// depth-1000 fan-out; without this a transient blip needlessly costs a page.
+const ACTIVITY_PAGE_RETRIES: usize = 2;
+/// Widest span one poll will try to cover in a single cycle. A first-sight wallet
+/// (48h of backfill) is therefore drained over several cycles, 6h at a time, instead
+/// of in one burst — which is what keeps onboarding 800 new deep-pool wallets from
+/// stampeding the data-api.
+const ACTIVITY_WINDOW_SECS: i64 = 6 * 3600;
+/// Stop halving the span here. A window this narrow holding >3 500 events is beyond
+/// what the API will serve at all; we record it as an honest capture gap rather than
+/// re-poll it forever.
+const ACTIVITY_MIN_WINDOW_SECS: i64 = 300;
 /// Number of traders shown per period section in the inline leaderboard reply.
 const LEADERBOARD_SECTION_LIMIT: usize = 5;
 
@@ -150,6 +181,17 @@ pub struct DetectedTrade {
 pub struct PollResult {
     pub trades: Vec<TraderTrade>,
     pub raw_count: usize,
+    /// `true` when the poll covered all the way to `now`. `false` when it covered only
+    /// a leading window of `[since, now]` — the rest drains on later cycles.
+    pub complete: bool,
+    /// The instant through which this poll achieved COMPLETE coverage: every event in
+    /// `[since, covered_through]` was read. This — not the newest event's timestamp —
+    /// is the only safe cursor target, and it is a property of the WINDOW, so it holds
+    /// even when the window turned out to be empty.
+    ///
+    /// `None` means nothing could be covered (the first page failed); the cursor must
+    /// then stay put and the range is retried next cycle.
+    pub covered_through: Option<DateTime<Utc>>,
 }
 
 /// Display-ready representation of a single leaderboard entry.
@@ -393,34 +435,79 @@ pub async fn fetch_leaderboard_paged(
     depth: usize,
 ) -> Result<Vec<LeaderboardRaw>> {
     let depth = depth.max(1);
-    let mut rows: Vec<LeaderboardRaw> = Vec::with_capacity(depth);
-    let mut offset = 0usize;
-    let mut pages = 0usize;
+    // Every offset is known up front (`depth` is the target), so the pages are an
+    // independent fan-out rather than a chain: at depth 1000 that is 20 pages, which
+    // sequentially cost 20 × (latency + 150ms). A page past the board end simply
+    // comes back empty and merges to nothing.
+    let n_pages = depth.div_ceil(LEADERBOARD_PAGE_SIZE);
+    let sem = Arc::new(Semaphore::new(LEADERBOARD_PAGE_CONCURRENCY));
 
-    while rows.len() < depth {
-        if offset > 0 {
-            tokio::time::sleep(LEADERBOARD_PAGE_DELAY).await;
+    let fetches = (0..n_pages).map(|p| {
+        let sem = Arc::clone(&sem);
+        let offset = p * LEADERBOARD_PAGE_SIZE;
+        async move {
+            let _permit = sem.acquire_owned().await;
+            let page = fetch_leaderboard_page_retrying(http, time_period, offset).await;
+            (offset, page)
         }
-        let page = fetch_leaderboard_page(http, time_period, offset).await?;
-        let got = page.len();
+    });
+    let results = join_all(fetches).await;
+
+    // A page that failed every retry is NOT tolerated: silently dropping it would
+    // hand back a universe with a rank-shaped hole in it, and the deep pool exists
+    // precisely to be an unbiased net. Abort, leave the universe as-is, retry next
+    // refresh (the caller logs and skips the period).
+    let mut rows: Vec<LeaderboardRaw> = Vec::with_capacity(depth);
+    for (offset, page) in results {
+        let page = page.with_context(|| {
+            format!(
+                "leaderboard page offset={offset} failed after {LEADERBOARD_PAGE_RETRIES} retries"
+            )
+        })?;
         rows.extend(page);
-        pages += 1;
-        // Board end: a short (or empty) page means no deeper ranks exist.
-        if got < LEADERBOARD_PAGE_SIZE {
-            break;
-        }
-        offset += LEADERBOARD_PAGE_SIZE;
     }
 
     let merged = merge_leaderboard_pages(rows, depth);
     tracing::info!(
         period = %time_period,
         depth,
-        pages,
+        pages = n_pages,
         fetched = merged.len(),
         "Leaderboard paged fetch"
     );
     Ok(merged)
+}
+
+/// One leaderboard page, retried through the transient failures that a 20-page ×
+/// 4-period refresh makes near-certain: at ~80 requests a refresh, a 1%-per-request
+/// failure rate fails ~55% of refreshes if a single bad page is fatal.
+///
+/// Backoff is exponential and spread by offset, so 20 pages that all get 429'd do
+/// not retry in lockstep and re-burst the same spike.
+async fn fetch_leaderboard_page_retrying(
+    http: &Client,
+    time_period: &str,
+    offset: usize,
+) -> Result<Vec<LeaderboardRaw>> {
+    let mut last_err = None;
+    for attempt in 0..=LEADERBOARD_PAGE_RETRIES {
+        if attempt > 0 {
+            let backoff = LEADERBOARD_PAGE_DELAY * (1 << attempt)
+                + Duration::from_millis((offset % 7) as u64 * 20);
+            tokio::time::sleep(backoff).await;
+        }
+        match fetch_leaderboard_page(http, time_period, offset).await {
+            Ok(page) => return Ok(page),
+            Err(e) => {
+                tracing::debug!(
+                    period = %time_period, offset, attempt,
+                    err = %e, "Leaderboard page failed; retrying"
+                );
+                last_err = Some(e);
+            }
+        }
+    }
+    Err(last_err.unwrap_or_else(|| anyhow::anyhow!("leaderboard page offset={offset} failed")))
 }
 
 /// Format a slice of [`LeaderboardDisplay`] entries as a single period section
@@ -554,61 +641,196 @@ impl CopyTraderMonitor {
         Self { http }
     }
 
-    /// Fetch recent trade activity for `wallet` since `since`.
+    /// One page of `/activity` over the window `[start, end]`, retried through the
+    /// transient timeouts the data-api throws under a depth-1000 fan-out.
     ///
-    /// Returns BOTH sides (BUY and SELL) — `parse_activity_events` no longer
-    /// filters by side; downstream consumers (consensus window vs durable
-    /// ledger) decide what they keep. `raw_count` is the raw page length, used
-    /// for gap detection. The data-api ignores `startTs` and returns a hard
-    /// 100-row newest page, so a full page is a gap signal, not history.
+    /// Note the parameter names: `start`/`end`/`offset`/`limit` are the ones the server
+    /// actually honours. The long-standing `startTs` this poll used before is silently
+    /// IGNORED (verified live 2026-07-13, and already known to `fetch_full_history`) —
+    /// which is why the "incremental" poll was really re-reading the newest 100 events
+    /// every cycle and losing everything older on first sight.
     ///
-    /// A 429 is surfaced as `Err` (after recording the metric) so the caller
-    /// does not advance its cursor and re-fetches the gap next cycle.
+    /// A 429 is NOT retried here: it is the one signal that means "back off", so it
+    /// propagates immediately and the caller leaves the cursor where it was.
+    async fn fetch_activity_page(
+        &self,
+        wallet: &str,
+        start_ts: i64,
+        end_ts: i64,
+        offset: usize,
+    ) -> Result<Vec<ActivityEvent>> {
+        debug_assert!(
+            offset <= ACTIVITY_MAX_OFFSET,
+            "offset past the server ceiling"
+        );
+        let url = format!(
+            "{DATA_API}/activity?user={wallet}&type=TRADE&start={start_ts}&end={end_ts}\
+             &limit={ACTIVITY_PAGE_SIZE}&offset={offset}"
+        );
+
+        let mut last_err = None;
+        for attempt in 0..=ACTIVITY_PAGE_RETRIES {
+            if attempt > 0 {
+                tokio::time::sleep(Duration::from_millis(200 << attempt)).await;
+            }
+
+            let resp = match self.http.get(&url).timeout(REQUEST_TIMEOUT).send().await {
+                Ok(r) => r,
+                Err(e) => {
+                    last_err = Some(anyhow::Error::new(e).context("activity request failed"));
+                    continue;
+                }
+            };
+
+            // Capture the status BEFORE `error_for_status` (which discards it). A 429
+            // must surface as Err so the cursor is not advanced, and is counted for the
+            // scale gate.
+            if resp.status() == reqwest::StatusCode::TOO_MANY_REQUESTS {
+                crate::metrics::record_data_api_429();
+                return Err(anyhow::anyhow!("data-api 429 (rate-limited) for {wallet}"));
+            }
+
+            match resp.error_for_status() {
+                Ok(r) => match r.json::<Vec<ActivityEvent>>().await {
+                    Ok(events) => return Ok(events),
+                    Err(e) => {
+                        last_err = Some(anyhow::Error::new(e).context("activity JSON parse failed"))
+                    }
+                },
+                Err(e) => {
+                    last_err = Some(anyhow::Error::new(e).context("activity returned non-2xx"))
+                }
+            }
+        }
+        Err(last_err.unwrap_or_else(|| anyhow::anyhow!("activity page offset={offset} failed")))
+    }
+
+    /// Read EVERY event in `[start_ts, end_ts]`, or report that the window is too dense
+    /// to be read at all.
+    ///
+    /// Pages newest→oldest on `offset` until a short page (the window is exhausted).
+    /// `Ok(None)` means the [`ACTIVITY_MAX_OFFSET`] ceiling was reached with events
+    /// still unread: the window holds more than 3 500 events and the server will not
+    /// page past that, so the caller must narrow it rather than page on.
+    async fn drain_activity_window(
+        &self,
+        wallet: &str,
+        start_ts: i64,
+        end_ts: i64,
+    ) -> Result<Option<Vec<ActivityEvent>>> {
+        let mut events: Vec<ActivityEvent> = Vec::new();
+        for page in 0..ACTIVITY_MAX_PAGES {
+            let offset = page * ACTIVITY_PAGE_SIZE;
+            let batch = self
+                .fetch_activity_page(wallet, start_ts, end_ts, offset)
+                .await?;
+            let got = batch.len();
+            events.extend(batch);
+            // Short page ⇒ nothing left in this window: it is fully covered.
+            if got < ACTIVITY_PAGE_SIZE {
+                return Ok(Some(events));
+            }
+        }
+        // Ran out of reachable offsets with the window still producing full pages.
+        Ok(None)
+    }
+
+    /// Fetch trade activity for `wallet` since `since`, covering a bounded window
+    /// COMPLETELY rather than skimming the newest page of it.
+    ///
+    /// Returns BOTH sides (BUY and SELL) — `parse_activity_events` no longer filters by
+    /// side; downstream consumers (consensus window vs durable ledger) decide what they
+    /// keep.
+    ///
+    /// The contract that matters is [`PollResult::covered_through`]: every event in
+    /// `[since, covered_through]` has been read, so that instant — and nothing later —
+    /// is a safe cursor. A wallet with more history than one poll's budget is drained
+    /// across successive cycles, 6h at a time, and never skipped.
+    ///
+    /// A 429 surfaces as `Err` (after recording the metric) so the caller does not
+    /// advance its cursor and re-fetches the range next cycle.
     #[tracing::instrument(skip(self), fields(wallet = %wallet))]
     pub async fn poll_trader_activity(
         &self,
         wallet: &str,
         since: DateTime<Utc>,
     ) -> Result<PollResult> {
-        let since_ts = since.timestamp();
-        let url = format!("{DATA_API}/activity?user={wallet}&type=TRADE&startTs={since_ts}",);
-
-        let resp = self
-            .http
-            .get(&url)
-            .timeout(REQUEST_TIMEOUT)
-            .send()
-            .await
-            .context("activity request failed")?;
-
-        // Capture the status BEFORE `error_for_status` (which discards it). A
-        // 429 must surface as Err so the cursor is not advanced (data is lost
-        // forever if we skip past a full page), and is counted for the scale gate.
-        let status = resp.status();
-        if status == reqwest::StatusCode::TOO_MANY_REQUESTS {
-            crate::metrics::record_data_api_429();
-            return Err(anyhow::anyhow!("data-api 429 (rate-limited) for {wallet}"));
+        let now = Utc::now();
+        if since >= now {
+            return Ok(PollResult {
+                trades: Vec::new(),
+                raw_count: 0,
+                complete: true,
+                covered_through: Some(now),
+            });
         }
 
-        let events: Vec<ActivityEvent> = resp
-            .error_for_status()
-            .context("activity returned non-2xx")?
-            .json()
-            .await
-            .context("activity JSON parse failed")?;
+        // Cover at most ACTIVITY_WINDOW_SECS per poll. Steady state (cursor ~1 min old)
+        // this is just [since, now] in a single page; a first-sight wallet backfills 6h
+        // per cycle instead of trying to inhale 48h at once.
+        let full_span = (now - since).num_seconds();
+        let mut span = full_span.min(ACTIVITY_WINDOW_SECS);
+
+        let (events, end) = loop {
+            let end = (since + chrono::Duration::seconds(span)).min(now);
+            match self
+                .drain_activity_window(wallet, since.timestamp(), end.timestamp())
+                .await?
+            {
+                Some(events) => break (events, end),
+                None if span / 2 >= ACTIVITY_MIN_WINDOW_SECS => {
+                    // >3 500 events in this window and the server will not page deeper.
+                    // Halve the span and try again: a narrower window holds fewer events.
+                    span /= 2;
+                    tracing::debug!(
+                        wallet = %wallet, span,
+                        "Activity window too dense to page; halving"
+                    );
+                }
+                None => {
+                    // Even the minimum window is denser than the API will serve. We
+                    // cannot read it, and re-polling it forever would wedge this wallet
+                    // and starve every other one behind it. Take the newest 3 500 events
+                    // we CAN see, advance past the window, and record the hole loudly —
+                    // an unreadable range is a fact to surface, not to hide.
+                    crate::metrics::record_activity_window_unreadable();
+                    tracing::warn!(
+                        wallet = %wallet,
+                        window_secs = span,
+                        "Activity window exceeds the server's 3 500-event page ceiling even at \
+                         the minimum span — CAPTURE GAP: the oldest events in this window are \
+                         unreachable and are being skipped"
+                    );
+                    let end = (since + chrono::Duration::seconds(span)).min(now);
+                    let partial = self
+                        .fetch_activity_page(wallet, since.timestamp(), end.timestamp(), 0)
+                        .await
+                        .unwrap_or_default();
+                    break (partial, end);
+                }
+            }
+        };
 
         let raw_count = events.len();
         let trades: Vec<TraderTrade> = parse_activity_events(events);
+        let complete = end >= now;
 
         tracing::info!(
             wallet = %wallet,
             since = %since.format("%Y-%m-%d %H:%M"),
+            covered_through = %end.format("%Y-%m-%d %H:%M"),
             raw_events = raw_count,
             parsed_trades = trades.len(),
+            complete,
             "Trader activity fetched"
         );
 
-        Ok(PollResult { trades, raw_count })
+        Ok(PollResult {
+            trades,
+            raw_count,
+            complete,
+            covered_through: Some(end),
+        })
     }
 
     /// Fetch a wallet's COMPLETE reachable trade history via **offset pagination**

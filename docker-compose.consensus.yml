@@ -76,6 +76,10 @@ services:
       TRACK_DEPTH: ${TRACK_DEPTH:-40}                          # >50 paginates; deep ranks captured+profiled, not voting
       TRACK_CONSENSUS_RANK_CUTOFF: ${TRACK_CONSENSUS_RANK_CUTOFF:-40} # rank ≤ this votes; deeper is candidate-only
       TRACK_COHORT_BANDS: ${TRACK_COHORT_BANDS:-40,100,250,500}       # observatory rank bands (display/filter only)
+      # Poll fan-out width. Depth 1000 needs ~1000 polls inside the 1-min cycle: at the
+      # old cap of 8 that is ~54s (overruns once a poll costs >1 page); at 24 it is
+      # 25-31s with 0 × 429 sustained (measured 2026-07-13). Scale with TRACK_DEPTH.
+      CONSENSUS_MAX_CONCURRENCY: ${CONSENSUS_MAX_CONCURRENCY:-24}
       # --- winner alerting (D10): which strategies push, and whether their
       #     WATCH-tier (net=3) fires push too. Defaults = incumbent behavior. ---
       CONSENSUS_ALERT_STRATEGIES: ${CONSENSUS_ALERT_STRATEGIES:-}   # empty = built-in flags (strict only)

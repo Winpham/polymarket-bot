@@ -20,6 +20,11 @@ use crate::storage::postgres::PgPortfolio;
 /// single `limit`-capped call. Mirrors the server-side page size.
 const PAGED_FETCH_THRESHOLD: usize = 50;
 
+/// Traders per batched upsert statement. Postgres binds 7 arrays per row-set, so a
+/// 500-row chunk is well inside the 65 535-parameter limit while keeping one
+/// depth-1000 refresh to a couple of round-trips.
+const UPSERT_CHUNK: usize = 500;
+
 /// Union of a trader across periods, keeping the best (lowest) rank.
 struct Merged {
     raw: LeaderboardRaw,
@@ -84,24 +89,29 @@ pub async fn refresh_universe(
         return Ok((0, 0));
     }
 
-    let mut upserted = 0usize;
-    for m in merged.values() {
-        // Belief-blind provenance: rank ≤ cutoff ⇒ votes in consensus; deeper ⇒
-        // captured/profiled candidate only (consensus_eligible = FALSE).
-        let consensus_eligible = m.raw.rank <= cfg.track_consensus_rank_cutoff;
-        let up = LeaderboardTraderUpsert {
+    // Belief-blind provenance: rank ≤ cutoff ⇒ votes in consensus; deeper ⇒
+    // captured/profiled candidate only (consensus_eligible = FALSE).
+    let rows: Vec<LeaderboardTraderUpsert> = merged
+        .values()
+        .map(|m| LeaderboardTraderUpsert {
             wallet: m.raw.wallet.clone(),
             username: m.raw.username.clone(),
             rank: Some(m.raw.rank),
             pnl: Some(m.raw.pnl),
             volume: Some(m.raw.volume),
             periods: m.periods.join(","),
-            consensus_eligible,
-        };
-        match portfolio.upsert_tracked_trader(&up).await {
-            Ok(()) => upserted += 1,
+            consensus_eligible: m.raw.rank <= cfg.track_consensus_rank_cutoff,
+        })
+        .collect();
+
+    // One statement per chunk instead of one round-trip per trader: a depth-1000
+    // refresh was 1 000 sequential awaits.
+    let mut upserted = 0usize;
+    for chunk in rows.chunks(UPSERT_CHUNK) {
+        match portfolio.upsert_tracked_traders(chunk).await {
+            Ok(_) => upserted += chunk.len(),
             Err(e) => {
-                tracing::warn!(wallet = %m.raw.wallet, err = %e, "upsert_tracked_trader failed")
+                tracing::warn!(chunk = chunk.len(), err = %e, "upsert_tracked_traders failed")
             }
         }
     }

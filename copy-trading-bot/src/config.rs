@@ -302,8 +302,15 @@ pub struct CopyTradingConfig {
     /// Max concurrent data-api `/activity` polls in the consensus fan-out. The
     /// poll fan-out is otherwise an unbounded `join_all` burst; this Semaphore
     /// caps it so widening the tracked universe can't spike the data-api into
-    /// 429s. Raise only after the 429 rate (Phase 5 board metric) stays ≈ 0.
-    #[config(env = "CONSENSUS_MAX_CONCURRENCY", default = 8)]
+    /// 429s.
+    ///
+    /// Raised 8 → 24 for the depth-1000 universe (2026-07-13 scale gate). At 8 the
+    /// measured throughput is ~18.6 req/s, so 1 000 wallets need ~54s — which does
+    /// not fit inside a 60s cycle once a poll can cost more than one page. At 24 the
+    /// same 1 000 wallets finish in 25–31s at ~38 req/s, and three back-to-back
+    /// sustained cycles returned ZERO 429s (a burst to concurrency 32 also stayed
+    /// clean, so 24 keeps real headroom rather than sitting on the ceiling).
+    #[config(env = "CONSENSUS_MAX_CONCURRENCY", default = 24)]
     pub consensus_max_concurrency: usize,
 
     /// Build consensus books from the durable `trader_fills` archive instead of

@@ -196,6 +196,29 @@ pub fn record_data_api_429() {
     DATA_API_429.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
 }
 
+/// Record the ingest fan-out of one consensus cycle: how long the poll of the whole
+/// tracked universe took, how many wallets it covered, and how many of those polls
+/// hit the `/activity` page bound (so their tail drains on a later cycle).
+///
+/// The scale gate for a deep universe reads off these three: the driver loop sleeps
+/// AFTER the cycle, so a fan-out that outgrows the interval does not pile up tasks —
+/// it silently stretches the cadence, and the only symptom is this duration creeping
+/// toward (and past) the interval. `consensus_ingest_incomplete_polls_total` rising
+/// steadily means the page bound is throttling real capture rather than just clipping
+/// the occasional whale.
+/// An `/activity` window held more events than the server will page to (3 500) even at
+/// the minimum span, so its oldest events are unreachable and were skipped. Should sit
+/// at zero; anything else is a real capture hole and must not be silent.
+pub fn record_activity_window_unreadable() {
+    counter!("consensus_activity_window_unreadable_total").increment(1);
+}
+
+pub fn record_consensus_ingest(duration_secs: f64, wallets_polled: u64, incomplete: u64) {
+    histogram!("consensus_ingest_duration_seconds").record(duration_secs);
+    gauge!("consensus_ingest_wallets_polled").set(wallets_polled as f64);
+    counter!("consensus_ingest_incomplete_polls_total").increment(incomplete);
+}
+
 /// Total data-api 429s seen since process start (for the board's scale gate).
 pub fn data_api_429_count() -> u64 {
     DATA_API_429.load(std::sync::atomic::Ordering::Relaxed)

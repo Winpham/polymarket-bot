@@ -800,6 +800,31 @@ async fn ingest_legacy(
     (books_from_window_votes(&votes, trust), polled_ok)
 }
 
+/// The only instant a poll is allowed to move a wallet's consensus cursor to.
+///
+/// This is THE ingestion-integrity invariant, so it lives as a pure function rather
+/// than as a comment inside the fan-out: **never advance a cursor past a range you did
+/// not fully read.**
+///
+/// - `complete` — the poll covered `[since, now]`, so `now` is safe.
+/// - `!complete` — the poll covered only `[since, covered_through]`, so the cursor may
+///   reach `covered_through` and no further; the remainder drains next cycle. Stamping
+///   `now` here is precisely the bug that silently destroyed ~78% of every first-sight
+///   backfill.
+/// - no `covered_through` — nothing was covered; leave the cursor alone and retry.
+///
+/// Note this keys on COVERAGE, not on the newest event seen. Those differ on an empty
+/// window: a quiet wallet yields no events, yet its window is fully covered and its
+/// cursor must still advance — otherwise every quiet wallet re-scans the same range
+/// forever.
+pub(crate) fn cursor_target(
+    complete: bool,
+    covered_through: Option<DateTime<Utc>>,
+    now: DateTime<Utc>,
+) -> Option<DateTime<Utc>> {
+    if complete { Some(now) } else { covered_through }
+}
+
 /// L1 incremental ingestion: poll only the delta since each trader's cursor
 /// (`max(cursor, window_start)`, backfilling the whole window on first run),
 /// append it to the rolling window store (dedup), stamp the cursor, prune older
@@ -816,7 +841,26 @@ async fn ingest_incremental(
     cfg: &CopyTradingConfig,
     trust: &TrustMap,
 ) -> Result<(Vec<MarketBook>, usize)> {
+    let ingest_started = std::time::Instant::now();
     let cursors = portfolio.consensus_cursors().await.unwrap_or_default();
+
+    // Staleness-fair order: hand out semaphore permits oldest-cursor-first (a wallet
+    // never polled sorts first, so newly-tracked deep ranks onboard immediately).
+    //
+    // The fan-out polls the whole universe, so in a cycle that RUNS TO COMPLETION the
+    // order is irrelevant. It decides who loses when a cycle does NOT complete — a
+    // restart, a deploy, a timeout. `get_active_traders` returns rank ASC, so under
+    // that order the same deep tail is the casualty every single time, and its capture
+    // is biased in a way nothing downstream can see. Sorting by staleness makes the
+    // loss rotate instead of concentrate. (Same defect class as D1–D4: a bounded budget
+    // plus a fixed order is starvation.)
+    let mut traders: Vec<&FollowedTrader> = traders.iter().collect();
+    traders.sort_by_key(|t| {
+        cursors
+            .get(&t.proxy_wallet)
+            .copied()
+            .unwrap_or(DateTime::<Utc>::MIN_UTC)
+    });
 
     // Bounded fan-out: a Semaphore caps concurrent data-api polls so widening
     // the tracked universe can't burst the API into 429s.
@@ -841,8 +885,20 @@ async fn ingest_incremental(
     // Per-wallet capture bookkeeping: (proxy_wallet, min_ts, max_ts, raw_count).
     let mut captures: Vec<(String, DateTime<Utc>, DateTime<Utc>, usize)> = Vec::new();
     let mut polled_ok_wallets: Vec<String> = Vec::new();
+    // Where each polled wallet's cursor may safely move to. A COMPLETE poll read
+    // everything up to now, so `now` is safe. An INCOMPLETE poll (page bound hit)
+    // read only up to `newest_ts` — moving the cursor to `now` would skip every
+    // unread event permanently, so it moves to `newest_ts` and the rest is drained
+    // next cycle. Never advance a cursor past data you have not actually read.
+    let mut cursor_targets: Vec<(String, DateTime<Utc>)> = Vec::new();
+    let mut incomplete_polls = 0usize;
     for (trader, poll) in results {
-        let PollResult { trades, raw_count } = match poll {
+        let PollResult {
+            trades,
+            raw_count,
+            complete,
+            covered_through,
+        } = match poll {
             Ok(r) => r,
             Err(e) => {
                 tracing::debug!(wallet = %trader.proxy_wallet, err = %e, "Consensus poll failed");
@@ -850,6 +906,12 @@ async fn ingest_incremental(
             }
         };
         polled_ok_wallets.push(trader.proxy_wallet.clone());
+        if !complete {
+            incomplete_polls += 1;
+        }
+        if let Some(at) = cursor_target(complete, covered_through, now) {
+            cursor_targets.push((trader.proxy_wallet.clone(), at));
+        }
         let name = trader_name(trader);
         let quality = quality_weight(trader.rank);
         let wallet_lc = trader.proxy_wallet.to_lowercase();
@@ -872,6 +934,26 @@ async fn ingest_incremental(
         }
     }
 
+    // Scale gate. The driver loop sleeps AFTER the cycle, so an ingest that outgrows
+    // the interval never queues up — it just quietly stretches the real cadence, and
+    // every downstream latency claim silently drifts with it. Say so out loud.
+    let ingest_secs = ingest_started.elapsed().as_secs_f64();
+    crate::metrics::record_consensus_ingest(
+        ingest_secs,
+        polled_ok_wallets.len() as u64,
+        incomplete_polls as u64,
+    );
+    let interval_secs = (cfg.consensus_interval_mins * 60) as f64;
+    if ingest_secs > interval_secs {
+        tracing::warn!(
+            ingest_secs,
+            interval_secs,
+            wallets = polled_ok_wallets.len(),
+            "Consensus ingest OVERRAN its interval — effective cadence is now the ingest \
+             time, not CONSENSUS_INTERVAL_MINS (raise CONSENSUS_MAX_CONCURRENCY or cut TRACK_DEPTH)"
+        );
+    }
+
     // Durable archive: persist BOTH sides (best-effort; failure never blocks the
     // consensus window). This is what makes the trader-trust profiles possible.
     let fills_inserted = match portfolio.insert_trader_fills(&fills).await {
@@ -891,12 +973,13 @@ async fn ingest_incremental(
     match portfolio.insert_window_votes(&delta).await {
         Ok(inserted) => {
             portfolio
-                .set_consensus_cursors(&polled_ok_wallets, now)
+                .set_consensus_cursors_at(&cursor_targets)
                 .await
                 .ok();
             tracing::debug!(
                 delta = delta.len(),
                 inserted,
+                incomplete_polls,
                 "Consensus window delta appended"
             );
         }
@@ -1060,7 +1143,9 @@ pub(crate) fn active_portfolio(
     // when PROVEN_ROUTER is on AND a follow-set batch has been published by the
     // re-scorer (None until then ⇒ not registered ⇒ fail-closed; Some(∅) is
     // registered but counts no votes — also fail-closed).
-    if cfg.proven_router && let Some(set) = router_set {
+    if cfg.proven_router
+        && let Some(set) = router_set
+    {
         all.push(crate::scanner::consensus::proven_router_arm(&base, set));
     }
     // Earned-trust arms are registered ONLY when CONSENSUS_TRUST_ARMS is on;
@@ -1124,7 +1209,9 @@ fn alert_sets(
 
 /// Serialize the raw vote atoms for every observed `(condition_id, outcome_index)`.
 /// Strategy-agnostic, computed once per cycle, reused across all strategies.
-pub(crate) fn atom_log(books: &[MarketBook]) -> std::collections::HashMap<(String, i32), serde_json::Value> {
+pub(crate) fn atom_log(
+    books: &[MarketBook],
+) -> std::collections::HashMap<(String, i32), serde_json::Value> {
     let mut map = std::collections::HashMap::new();
     for book in books {
         for (&oidx, votes) in &book.votes {
@@ -1263,6 +1350,74 @@ fn truncate(s: &str, max: usize) -> String {
 mod tests {
     use super::*;
     use crate::scanner::trader_trust::CellVerdict;
+
+    fn ts(secs: i64) -> DateTime<Utc> {
+        DateTime::from_timestamp(secs, 0).unwrap()
+    }
+
+    #[test]
+    fn complete_poll_advances_cursor_to_now() {
+        let now = ts(1_000);
+        assert_eq!(cursor_target(true, Some(now), now), Some(now));
+    }
+
+    #[test]
+    fn complete_but_empty_window_still_advances_to_now() {
+        // A quiet wallet returns no events, yet its window IS fully covered. The cursor
+        // must still move, or every quiet wallet re-scans the same range every cycle.
+        let now = ts(1_000);
+        assert_eq!(cursor_target(true, None, now), Some(now));
+    }
+
+    #[test]
+    fn incomplete_poll_never_advances_past_what_it_covered() {
+        // THE regression guard. The poll covered only [since, 400]; events between 400
+        // and `now` are unread. Stamping `now` skips them permanently — that exact line,
+        // combined with a `startTs` param the API silently ignored, destroyed ~78% of
+        // every first-sight backfill before 2026-07-13.
+        let now = ts(1_000);
+        let covered = ts(400);
+        let target = cursor_target(false, Some(covered), now).expect("must advance");
+        assert_eq!(target, covered);
+        assert!(
+            target < now,
+            "an incomplete poll must NEVER move the cursor to `now` — the uncovered \
+             remainder would be skipped forever"
+        );
+    }
+
+    #[test]
+    fn poll_that_covered_nothing_leaves_the_cursor_alone() {
+        assert_eq!(cursor_target(false, None, ts(1_000)), None);
+    }
+
+    #[test]
+    fn successive_bounded_windows_converge_instead_of_looping() {
+        // Liveness, the other half of the invariant: safety alone is satisfied by never
+        // advancing, which livelocks. Each bounded window must move the cursor strictly
+        // forward, so a 48h backfill drains over successive cycles and terminates.
+        let now = ts(48 * 3600);
+        let window = 6 * 3600; // ACTIVITY_WINDOW_SECS
+        let mut cursor = ts(0);
+        let mut cycles = 0;
+        while cursor < now {
+            cycles += 1;
+            assert!(cycles <= 8, "a 48h backfill must drain in 48/6 = 8 cycles");
+            let covered = ts((cursor.timestamp() + window).min(now.timestamp()));
+            let complete = covered >= now;
+            let next = cursor_target(complete, Some(covered), now).unwrap();
+            assert!(
+                next > cursor,
+                "each bounded window must make forward progress"
+            );
+            cursor = next;
+        }
+        assert_eq!(
+            cursor, now,
+            "drains to exactly `now` — no gap, no overshoot"
+        );
+        assert_eq!(cycles, 8);
+    }
 
     #[test]
     fn alert_sets_default_is_builtin_flags_and_no_watch() {
