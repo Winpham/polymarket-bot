@@ -484,3 +484,59 @@ whole system (needs a migration ⇒ flagged, not done).
 subscription set excludes our own live arm's family, so **weather's latency cost cannot be measured at
 all** — the one family we actually run. Fixing the subscription set is a precondition for ever certifying
 weather's realizable price.
+
+---
+
+# PART VI — AUDIT: Part V is RETRACTED. Latency is NOT the dominant cost.
+
+Part V claimed a 15-min delay costs **~8¢ in sports**, making latency the dominant friction and
+justifying a low-latency build. **That claim is WITHDRAWN. It does not survive its own audit.**
+
+## What broke it
+
+**1. No control.** In a live match a favourite's ask drifts toward 1.0 *as the game runs*, regardless of
+what any sharp did. So "the ask is 8¢ higher 15 min after convergence" may be nothing but generic
+favourite-drift, which would show on ANY window. The treatment must beat a placebo. It does not:
+
+| arm (15-min horizon, band-matched 0.71–0.90) | n | mean | median | p90 |
+|---|---|---|---|---|
+| **treatment** (anchored at the convergence instant) | 20 | **+2.05¢** | +1.00¢ | 16¢ |
+| **placebo** (mid-life anchor, SAME markets, no sharp involved) | 72 | −0.16¢ | **+3.00¢** | 16¢ |
+
+The placebo **median drifts MORE than the treatment median**. The mean gap is +2.22¢, on sd 9.1¢.
+
+**2. Not significant.** Permutation test (5,000 label shuffles): **p = 0.360.** The gap is
+indistinguishable from chance.
+
+**3. Not band-matched.** The original +7.75¢ restricted `sharp_px` to the band but let the *tape ask* at
+t0 fall anywhere, so it partly measured band composition, not delay.
+
+**Corrected: a 15-min delay costs +2.05¢ ± 4.0¢ (95%) — and is NOT distinguishable from generic
+favourite-drift.**
+
+## This RESOLVES the contradiction — in favour of the robust measurement
+
+Part V (+8¢, n=24) directly contradicted the Part III copier-cost decomposition (**+1.14¢ pooled,
+n=1,351**). Two independent measurements now agree at **~1–2¢**. The 8¢ was the outlier, and it was the
+one with 50× less data and no control. **The earlier "drift ≈ 0 ⇒ speed is not the lever" read was
+closer to right than the correction I made to it.**
+
+## Consequences for the greenlight
+
+- **`LIVE_FILLS` is NOT justified on edge grounds.** The most it can recover is the ~1–2¢ latency cost,
+  and that is not statistically distinguishable from zero. It remains a genuine *measurement/robustness*
+  improvement (it kills the detect tail and removes the sweep-rate ceiling), but **it is not a profit
+  lever and must not be sold as one.** Enable it for data quality if desired — not for edge.
+- **The binding constraint is still the BOOK.** Slippage at $100/signal is 2–5.6¢ and at $250 is 9.5¢
+  (p90) — i.e. size costs *multiples* of what delay costs. Part IV's capacity answer stands unchanged:
+  **$50/signal, ~$1,000/day, and the day is ONE correlated bet.**
+- **Still worth doing, cheaply:** the D6 `seen_at` instrument. It is what would let us *measure* ingestion
+  latency at all, and it is near-free. Just do not expect it to unlock profit.
+
+## The standing lesson (this is the fourth correction in one run)
+
+Every one of my four errors had the same shape: **a number computed without a control, on a small n, from
+a column or population I had not validated.** The three that survived audit (copier cost n=1,351;
+capacity from live books; the config facts about LIVE_FILLS) were the ones with large n or direct
+observation. **Rule going forward: no measured claim ships without (a) a placebo/control arm, (b) a
+significance test, and (c) an explicit n and dispersion.** A number without those is a hypothesis.
