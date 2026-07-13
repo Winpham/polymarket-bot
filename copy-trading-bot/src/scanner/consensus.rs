@@ -807,6 +807,10 @@ pub fn soft_market_arms(base: &ConsensusParams) -> Vec<StrategyDef> {
 /// convergence bar stays `min_backers` (3) — never "bet every hot forecast".
 ///   `weather_fav`     — champion favorite band, wider-eligibility weather book.
 ///   `weather_fav_liq` — same + the $1k at-fire liquidity floor (thin-book spread screen).
+/// The incumbent weather (highest-temperature) arms. Retained as the named entry point
+/// for the LIVE arm — `market_family_arms(base, &WEATHER_HIGH)` — so the byte-identity
+/// test and any caller keep a stable handle on the shipped weather branch.
+#[cfg(test)]
 pub fn weather_market_arms(base: &ConsensusParams) -> Vec<StrategyDef> {
     market_family_arms(base, &WEATHER_HIGH)
 }
@@ -825,6 +829,7 @@ pub fn weather_market_arms(base: &ConsensusParams) -> Vec<StrategyDef> {
 ///   - LOW-temp: the casual crowd MIS-prices cold favorites (blind favorite is
 ///     NEGATIVE), so the sharps' skill-over-blind is much larger — a distinct,
 ///     higher-skill, but far THINNER mechanism.
+///
 /// They therefore want different eligibility, different convergence bars, and their
 /// OWN gates. An arm that cannot clear its own gate over ≥2 disjoint weeks is
 /// RETIRED, never carried by a sibling.
@@ -1550,7 +1555,7 @@ mod tests {
         // definitions (inlined here as the frozen reference, so this test still fails if
         // someone "improves" the factory's defaults).
         let base = ConsensusParams::default();
-        let reference = vec![
+        let reference = [
             StrategyDef {
                 name: "weather_fav",
                 params: ConsensusParams {
