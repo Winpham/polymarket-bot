@@ -1073,6 +1073,88 @@ impl PgPortfolio {
         Ok(())
     }
 
+    /// Advance each wallet's consensus poll cursor to its OWN watermark.
+    ///
+    /// Unlike [`Self::set_consensus_cursors`] (which stamps one timestamp across
+    /// every wallet), this lets a poll that hit its page bound park its cursor at
+    /// the newest event it actually read. The unread remainder is then re-polled
+    /// next cycle rather than skipped forever — the invariant that keeps a bounded
+    /// poll budget lossless.
+    pub async fn set_consensus_cursors_at(
+        &self,
+        cursors: &[(String, DateTime<Utc>)],
+    ) -> Result<()> {
+        if cursors.is_empty() {
+            return Ok(());
+        }
+        let wallets: Vec<&str> = cursors.iter().map(|(w, _)| w.as_str()).collect();
+        let ats: Vec<DateTime<Utc>> = cursors.iter().map(|(_, t)| *t).collect();
+
+        sqlx::query(
+            "UPDATE followed_traders AS f SET consensus_polled_at = u.at \
+             FROM UNNEST($1::text[], $2::timestamptz[]) AS u(wallet, at) \
+             WHERE f.proxy_wallet = u.wallet",
+        )
+        .bind(&wallets)
+        .bind(&ats)
+        .execute(&self.pool)
+        .await
+        .context("set_consensus_cursors_at")?;
+        Ok(())
+    }
+
+    /// Upsert a batch of leaderboard traders in ONE round-trip (UNNEST).
+    ///
+    /// Semantically identical to calling [`Self::upsert_tracked_trader`] per row —
+    /// same ON CONFLICT clause, same manual-source protection — but a depth-1000
+    /// refresh is one statement instead of 1 000 sequential awaits. Returns the
+    /// number of rows written.
+    pub async fn upsert_tracked_traders(&self, ts: &[LeaderboardTraderUpsert]) -> Result<u64> {
+        if ts.is_empty() {
+            return Ok(0);
+        }
+        let wallet: Vec<&str> = ts.iter().map(|t| t.wallet.as_str()).collect();
+        let username: Vec<Option<&str>> = ts.iter().map(|t| t.username.as_deref()).collect();
+        let rank: Vec<Option<i32>> = ts.iter().map(|t| t.rank).collect();
+        let pnl: Vec<Option<f64>> = ts.iter().map(|t| t.pnl).collect();
+        let volume: Vec<Option<f64>> = ts.iter().map(|t| t.volume).collect();
+        let periods: Vec<&str> = ts.iter().map(|t| t.periods.as_str()).collect();
+        let eligible: Vec<bool> = ts.iter().map(|t| t.consensus_eligible).collect();
+
+        let res = sqlx::query(
+            "INSERT INTO followed_traders \
+               (proxy_wallet, username, source, rank, pnl, volume, periods, \
+                consensus_eligible, active, last_seen_on_lb) \
+             SELECT w, u, 'leaderboard', r, p, v, pe, ce, TRUE, NOW() \
+             FROM UNNEST( \
+               $1::text[], $2::text[], $3::int4[], $4::float8[], $5::float8[], \
+               $6::text[], $7::bool[]) AS t(w, u, r, p, v, pe, ce) \
+             ON CONFLICT (proxy_wallet) DO UPDATE SET \
+               username        = COALESCE(EXCLUDED.username, followed_traders.username), \
+               rank            = EXCLUDED.rank, \
+               pnl             = EXCLUDED.pnl, \
+               volume          = EXCLUDED.volume, \
+               periods         = EXCLUDED.periods, \
+               consensus_eligible = CASE \
+                 WHEN followed_traders.source = 'manual' \
+                   THEN followed_traders.consensus_eligible \
+                 ELSE EXCLUDED.consensus_eligible END, \
+               active          = TRUE, \
+               last_seen_on_lb = NOW()",
+        )
+        .bind(&wallet)
+        .bind(&username)
+        .bind(&rank)
+        .bind(&pnl)
+        .bind(&volume)
+        .bind(&periods)
+        .bind(&eligible)
+        .execute(&self.pool)
+        .await
+        .context("upsert_tracked_traders")?;
+        Ok(res.rows_affected())
+    }
+
     /// Append a batch of fill atoms to the rolling window (UNNEST batch insert).
     /// Re-seen atoms (same trader+market+outcome+ts+price) are dropped.
     pub async fn insert_window_votes(&self, votes: &[WindowVote]) -> Result<u64> {
@@ -1544,10 +1626,7 @@ impl PgPortfolio {
     /// that a *followed* trader has filled a sports pick on within `lookback_hours`.
     /// The `live_tape` refresh loop resolves each to a CLOB token_id and subscribes.
     /// Sized for the full follow-set (1000+ wallets → ~1.6k tokens at 6h).
-    pub async fn tracked_tape_assets(
-        &self,
-        lookback_hours: i64,
-    ) -> Result<Vec<(String, i32)>> {
+    pub async fn tracked_tape_assets(&self, lookback_hours: i64) -> Result<Vec<(String, i32)>> {
         let rows: Vec<(String, i32)> = sqlx::query_as(
             "SELECT DISTINCT condition_id, outcome_index \
                FROM trader_fills \
@@ -2030,9 +2109,7 @@ impl PgPortfolio {
     /// (`consensus_polled_at`, else `last_seen_on_lb`, else 2 days back) — used only
     /// to advance the poll cursor and for logging (the data-api returns the newest
     /// page regardless of `startTs`; dedup is the DB's job).
-    pub async fn scorecard_eligible_dropped_wallets(
-        &self,
-    ) -> Result<Vec<(String, DateTime<Utc>)>> {
+    pub async fn scorecard_eligible_dropped_wallets(&self) -> Result<Vec<(String, DateTime<Utc>)>> {
         let rows: Vec<(String, DateTime<Utc>)> = sqlx::query_as(
             "WITH band_fills AS ( \
                  SELECT wallet FROM trader_fills \
@@ -3141,7 +3218,11 @@ mod trader_fills_it {
 
         // Both conds appear in the independent unresolved source (min_age 0).
         let conds = pf
-            .trader_fill_unresolved_conditions(chrono::Duration::zero(), 100, chrono::Duration::days(30))
+            .trader_fill_unresolved_conditions(
+                chrono::Duration::zero(),
+                100,
+                chrono::Duration::days(30),
+            )
             .await
             .unwrap();
         assert!(conds.contains(&c_win.to_string()) && conds.contains(&c_void.to_string()));
@@ -3182,7 +3263,11 @@ mod trader_fills_it {
 
         // Void market: never resolved → still in the unresolved source.
         let still: Vec<String> = pf
-            .trader_fill_unresolved_conditions(chrono::Duration::zero(), 100, chrono::Duration::days(30))
+            .trader_fill_unresolved_conditions(
+                chrono::Duration::zero(),
+                100,
+                chrono::Duration::days(30),
+            )
             .await
             .unwrap();
         assert!(
@@ -3283,8 +3368,7 @@ mod trader_fills_it {
         }
 
         let got = pf.scorecard_eligible_dropped_wallets().await.unwrap();
-        let names: std::collections::HashSet<String> =
-            got.iter().map(|(w, _)| w.clone()).collect();
+        let names: std::collections::HashSet<String> = got.iter().map(|(w, _)| w.clone()).collect();
         assert!(
             names.contains(dropped),
             "deactivated + scorecard-eligible wallet is selected"
@@ -3300,24 +3384,26 @@ mod trader_fills_it {
 
         // The archive path itself: a NEW fill for the dropped wallet lands (dedup
         // never drops a genuinely new tx). This is the acceptance condition.
-        let before: i64 =
-            sqlx::query_scalar("SELECT COUNT(*) FROM trader_fills WHERE wallet = $1")
-                .bind(dropped)
-                .fetch_one(&pf.pool)
-                .await
-                .unwrap();
+        let before: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM trader_fills WHERE wallet = $1")
+            .bind(dropped)
+            .fetch_one(&pf.pool)
+            .await
+            .unwrap();
         let n = pf
             .insert_trader_fills(&[bandfill(dropped, 9_999)])
             .await
             .unwrap();
         assert_eq!(n, 1, "a new deactivated-wallet fill is inserted");
-        let after: i64 =
-            sqlx::query_scalar("SELECT COUNT(*) FROM trader_fills WHERE wallet = $1")
-                .bind(dropped)
-                .fetch_one(&pf.pool)
-                .await
-                .unwrap();
-        assert_eq!(after, before + 1, "deactivated-wallet fills land in the archive");
+        let after: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM trader_fills WHERE wallet = $1")
+            .bind(dropped)
+            .fetch_one(&pf.pool)
+            .await
+            .unwrap();
+        assert_eq!(
+            after,
+            before + 1,
+            "deactivated-wallet fills land in the archive"
+        );
 
         for w in [dropped, active, thin] {
             sqlx::query("DELETE FROM trader_fills WHERE wallet = $1")
@@ -4358,7 +4444,11 @@ mod resolve_lane_budget_tests {
         // budget — the fix costs zero extra CLOB calls.
         for cap in [0i64, 1, 2, 5, 10, 200, 1000] {
             let (recent, backlog) = PgPortfolio::resolve_lane_budget(cap);
-            assert_eq!(recent + backlog, cap.max(0), "lanes must sum to cap (cap={cap})");
+            assert_eq!(
+                recent + backlog,
+                cap.max(0),
+                "lanes must sum to cap (cap={cap})"
+            );
             assert!(recent >= 0 && backlog >= 0, "no negative lane (cap={cap})");
         }
     }
