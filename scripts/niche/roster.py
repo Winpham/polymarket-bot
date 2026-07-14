@@ -228,40 +228,100 @@ def certify(cells, niche, tax, floor=N_FLOOR, verbose=False):
 # wallet's market COUNT and the market/price structure. Rerun the WHOLE pipeline.
 # ---------------------------------------------------------------------------
 def perm_null(cells, niche, tax, floor, n_perm=N_PERM, seed=SEED):
-    pool = [m for (w, nz), mk in cells.items() if nz == niche for m in mk]
-    sizes = [len(mk) for (w, nz), mk in cells.items() if nz == niche and len(mk) >= floor]
-    if not sizes or not pool:
+    """Vectorised. Reproduces certify()'s arithmetic EXACTLY (lower_bound + BH-FDR +
+    lb>0), just without the Python object churn -- the pure loop was ~11 min for ONE
+    niche, which does not survive a full sweep."""
+    import numpy as np
+    # Eligible, non-MM wallets only -- the null must describe the population the gate
+    # actually judges. Records keep their PRICE BAND so the null can be band-stratified:
+    # each record is replaced by a random surplus drawn from ITS OWN band. That preserves
+    # every wallet's N and its band composition exactly, and destroys only the wallet
+    # identity -- which is the thing whose reality we are testing. An unstratified draw
+    # would let band-mix differences masquerade as skill (or hide it).
+    elig = [mk for (w, nz), mk in cells.items()
+            if nz == niche and len(mk) >= floor and not is_mm(mk)[0]]
+    if not elig:
         return [], 0
-    rng = random.Random(seed)
+    sizes = np.array([len(mk) for mk in elig], dtype=np.int64)
+    bands = np.array([min(int(m["price"] * 20), 19) for mk in elig for m in mk],
+                     dtype=np.int64)
+    pool_all = np.array([m["surplus"] for mk in elig for m in mk], dtype=np.float64)
+    # per-band pools, and the slot indices each band must fill
+    band_pool, band_slots = {}, {}
+    for b in np.unique(bands):
+        band_pool[int(b)] = pool_all[bands == b]
+        band_slots[int(b)] = np.nonzero(bands == b)[0]
+    n_comp = int(sizes.size)
+    z_mult = 1.96 + math.log(max(n_comp, 1)) ** 0.5 * 0.5
+    starts = np.concatenate([[0], np.cumsum(sizes)[:-1]])
+    total = int(sizes.sum())
+    rng = np.random.default_rng(seed)
+    q_ladder = FDR_Q * np.arange(1, n_comp + 1) / n_comp
     counts = []
     for _ in range(n_perm):
-        fake = {}
-        for i, k in enumerate(sizes):
-            fake[(f"w{i}", niche)] = [pool[rng.randrange(len(pool))] for _ in range(k)]
-        c, _, _ = certify(fake, niche, tax, floor)
-        counts.append(len(c))
+        draw = np.empty(total, dtype=np.float64)
+        for b, slots in band_slots.items():
+            p = band_pool[b]
+            draw[slots] = p[rng.integers(0, p.size, slots.size)]
+        draw -= tax
+        s1 = np.add.reduceat(draw, starts)
+        s2 = np.add.reduceat(draw * draw, starts)
+        mean = s1 / sizes
+        var = np.maximum((s2 - sizes * mean ** 2) / np.maximum(sizes - 1, 1), 0.0)
+        se = np.sqrt(var / sizes)
+        with np.errstate(divide="ignore", invalid="ignore"):
+            lb = mean - z_mult * se
+            zs = np.where(se > 0, mean / se, 0.0)
+        p = 0.5 * erfc_vec(zs / math.sqrt(2))
+        order = np.argsort(p)
+        surv = p[order] <= q_ladder
+        k = np.nonzero(surv)[0]
+        if k.size == 0:
+            counts.append(0)
+            continue
+        keep = order[:k[-1] + 1]
+        counts.append(int(np.count_nonzero(lb[keep] > 0)))
     counts.sort()
     p95 = counts[int(0.95 * len(counts))] if counts else 0
     return counts, p95
+
+
+def erfc_vec(x):
+    import numpy as np
+    from scipy.special import erfc as _e          # noqa
+    return _e(np.asarray(x))
 
 
 # ---------------------------------------------------------------------------
 # K2 -- PERSISTENCE. The make-or-break. Rank in A, measure in B.
 # ---------------------------------------------------------------------------
 def persistence(cells, niche, tax, floor=N_FLOOR_SPLIT, top_n=50):
-    """Split each wallet's markets by time at the niche median, rank on A, measure B."""
-    all_ts = sorted(m["ts"] for (w, nz), mk in cells.items() if nz == niche for m in mk)
-    if not all_ts:
+    """Rank in window A, measure the SAME wallets in disjoint later window B.
+
+    The split is assigned at the MARKET level, globally -- not per wallet. If the same
+    market could fall in A for one wallet and B for another, the two windows would share
+    resolution OUTCOMES (one coin-flip informing both sides of the split), which inflates
+    apparent persistence. Disjoint market sets make that leak impossible.
+    """
+    mkt_ts = {}
+    for (w, nz), mk in cells.items():
+        if nz != niche:
+            continue
+        for m in mk:
+            mkt_ts[m["mkt"]] = max(mkt_ts.get(m["mkt"], 0.0), m["ts"])
+    if not mkt_ts:
         return None
-    cut = all_ts[len(all_ts) // 2]
+    order = sorted(mkt_ts.values())
+    cut = order[len(order) // 2]
+    win_A = {k for k, v in mkt_ts.items() if v <= cut}   # disjoint by construction
     ab = {}
     for (w, nz), mk in cells.items():
         if nz != niche:
             continue
         if is_mm(mk)[0]:
             continue
-        A = [m for m in mk if m["ts"] <= cut]
-        B = [m for m in mk if m["ts"] > cut]
+        A = [m for m in mk if m["mkt"] in win_A]
+        B = [m for m in mk if m["mkt"] not in win_A]
         if len(A) >= floor and len(B) >= floor:
             ab[w] = (A, B)
     if len(ab) < 10:
@@ -269,11 +329,15 @@ def persistence(cells, niche, tax, floor=N_FLOOR_SPLIT, top_n=50):
     ranked = sorted(ab.items(), key=lambda kv: statistics.fmean(
         [m["surplus"] for m in kv[1][0]]), reverse=True)
     top = ranked[:min(top_n, max(1, len(ranked) // 4))]
-    # the same wallets' OUT-OF-SAMPLE (window B) copyable surplus, market-clustered
-    b_s = [m["surplus"] - tax for _, (A, B) in top for m in B]
-    mean = statistics.fmean(b_s)
-    se = statistics.stdev(b_s) / math.sqrt(len(b_s)) if len(b_s) > 1 else float("inf")
-    # rest-of-field control: everyone else's window-B surplus
+
+    # The window-B observations are (wallet, market) records, and MANY WALLETS SHARE THE
+    # SAME MARKET -- one market's resolution moves all of them together. Treating them as
+    # independent understates the SE badly (effective N is the number of distinct MARKETS,
+    # not records) and would make a null look like an edge. So the CI is a block bootstrap
+    # CLUSTERED ON THE MARKET, which is the real unit of independent information.
+    b_rec = [(m["mkt"], m["surplus"] - tax) for _, (A, B) in top for m in B]
+    mean = statistics.fmean([v for _, v in b_rec]) if b_rec else 0.0
+    lo, hi, n_clu = cluster_boot(b_rec)
     rest = [m["surplus"] - tax for w, (A, B) in ranked[len(top):] for m in B]
     rest_mean = statistics.fmean(rest) if rest else 0.0
     # rank correlation A vs B (does within-niche ranking transfer at all?)
@@ -281,8 +345,30 @@ def persistence(cells, niche, tax, floor=N_FLOOR_SPLIT, top_n=50):
     ys = [statistics.fmean([m["surplus"] for m in B]) for _, (A, B) in ranked]
     rho = spearman(xs, ys)
     return {"n_testable": len(ab), "underpowered": False, "cut": cut,
-            "top_n": len(top), "b_mean": mean, "b_se": se, "b_lb": mean - 1.96 * se,
-            "b_n_obs": len(b_s), "rest_mean": rest_mean, "rho": rho}
+            "top_n": len(top), "b_mean": mean, "b_lb": lo, "b_hi": hi,
+            "b_n_obs": len(b_rec), "b_n_markets": n_clu,
+            "rest_mean": rest_mean, "rho": rho}
+
+
+def cluster_boot(recs, n_boot=2000, seed=SEED):
+    """Block bootstrap clustered on the MARKET. recs = [(market, value)].
+    Resamples whole markets, so shared-outcome correlation is respected."""
+    import numpy as np
+    if not recs:
+        return 0.0, 0.0, 0
+    by = defaultdict(list)
+    for m, v in recs:
+        by[m].append(v)
+    keys = list(by)
+    blocks = [np.array(by[k], dtype=np.float64) for k in keys]
+    sums = np.array([b.sum() for b in blocks])
+    lens = np.array([b.size for b in blocks])
+    rng = np.random.default_rng(seed)
+    k = len(keys)
+    idx = rng.integers(0, k, (n_boot, k))
+    means = sums[idx].sum(axis=1) / np.maximum(lens[idx].sum(axis=1), 1)
+    return (float(np.percentile(means, 2.5)),
+            float(np.percentile(means, 97.5)), k)
 
 
 def spearman(x, y):
@@ -385,6 +471,36 @@ def self_test():
     return 0 if ok else 1
 
 
+def tracked_wallets():
+    """The leaderboard-sourced pool -- every wallet we have EVER known."""
+    return {r["wallet"].lower() for r in psql("SELECT DISTINCT wallet FROM trader_fills")}
+
+
+def hidden_vs_tracked(cells, niche, tax, tracked, floor=N_FLOOR):
+    """THE decision-relevant comparison: in this niche, are the wallets the leaderboard
+    structurally could not show us actually BETTER than the ones it did?
+
+    If hidden ~= tracked, the whole market-side reframe is wrong and widening the net buys
+    nothing. Reported per niche, on the same gate-eligible footing (>= N_FLOOR markets,
+    non-MM), so it is not a comparison of apples to whales."""
+    grp = {"tracked": [], "hidden": []}
+    for (w, nz), mk in cells.items():
+        if nz != niche or len(mk) < floor or is_mm(mk)[0]:
+            continue
+        mean, se, n = stats(mk, tax)
+        grp["tracked" if w.lower() in tracked else "hidden"].append(mean)
+    out = {}
+    for k, v in grp.items():
+        if not v:
+            out[k] = None
+            continue
+        v.sort()
+        out[k] = {"n": len(v), "median": v[len(v) // 2],
+                  "pct_positive": sum(1 for x in v if x > 0) / len(v),
+                  "p90": v[int(0.9 * len(v))] if len(v) > 1 else v[0]}
+    return out
+
+
 def measure_tax(niche):
     """Follower tax: how far the price has already moved by the time we could act.
     Conservative floor at 1.3c (the truth-audit measurement)."""
@@ -401,6 +517,7 @@ def main():
         sys.exit(self_test())
 
     cells = fetch()
+    tracked = tracked_wallets()
     niches = sorted({nz for (_, nz) in cells}) if not a.niche else [a.niche]
     os.makedirs(a.out, exist_ok=True)
     summary = []
@@ -412,6 +529,7 @@ def main():
         counts, p95 = perm_null(cells, nz, tax, N_FLOOR)
         null_mean = statistics.fmean(counts) if counts else 0.0
         pers = persistence(cells, nz, tax)
+        hvt = hidden_vs_tracked(cells, nz, tax, tracked)
 
         # the roster the user asked for: top-100 by copyable surplus lower bound
         roster = sorted(recs, key=lambda r: r["lb"], reverse=True)[:ROSTER_SIZE]
@@ -420,7 +538,7 @@ def main():
         row = {"niche": nz, "population": len(pop), "eligible": len(recs),
                "mm_excluded": mm_excl, "certified": len(cert),
                "null_mean": null_mean, "null_p95": p95, "beats_null": beats_null,
-               "persistence": pers, "tax": tax,
+               "persistence": pers, "tax": tax, "hidden_vs_tracked": hvt,
                "roster": [{"wallet": r["wallet"], "n_markets": r["n"],
                            "copyable_surplus": r["mean"], "lb": r["lb"],
                            "abs_advantage_net_tax": r["raw_adv"],
@@ -436,13 +554,21 @@ def main():
               f"=> {'BEATS NULL' if beats_null else 'DOES NOT BEAT NULL (noise)'}")
         if pers and not pers.get("underpowered"):
             print(f"  K2 PERSISTENCE  rank rho(A,B)  : {pers['rho']:+.3f}")
-            print(f"     top-{pers['top_n']} of A, measured in B : "
-                  f"{pers['b_mean']:+.4f} (lb {pers['b_lb']:+.4f}, n={pers['b_n_obs']})")
+            print(f"     top-{pers['top_n']} of A, measured in B : {pers['b_mean']:+.4f} "
+                  f"[95% CI {pers['b_lb']:+.4f}, {pers['b_hi']:+.4f}] "
+                  f"market-clustered on {pers['b_n_markets']} markets")
             print(f"     rest-of-field in B          : {pers['rest_mean']:+.4f}")
             print(f"     => {'PERSISTS' if pers['b_lb'] > 0 else 'DOES NOT PERSIST -- roster is noise'}")
         elif pers:
             print(f"  K2 PERSISTENCE: UNDERPOWERED (only {pers['n_testable']} wallets "
                   f"with >= {N_FLOOR_SPLIT} markets in BOTH windows)")
+        t, h = hvt.get("tracked"), hvt.get("hidden")
+        if t and h:
+            print(f"  hidden vs tracked (gate-eligible, same footing):")
+            print(f"     leaderboard-tracked  n={t['n']:<5d} median={t['median']:+.4f} "
+                  f"pos={t['pct_positive']:.0%} p90={t['p90']:+.4f}")
+            print(f"     HIDDEN (harvest-only) n={h['n']:<5d} median={h['median']:+.4f} "
+                  f"pos={h['pct_positive']:.0%} p90={h['p90']:+.4f}")
 
     with open(os.path.join(a.out, "rosters.json"), "w") as f:
         json.dump(summary, f, indent=2)
