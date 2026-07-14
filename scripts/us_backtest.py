@@ -96,8 +96,25 @@ def load_signals(con, d_from, d_to):
 
 
 def settlements(con, d_from, d_to):
-    """symbol -> settlement (0/1). Take the LAST business_date per symbol: a contract settles once,
-    and earlier rows carry the pre-settlement 0.0 default."""
+    """symbol -> TERMINAL settlement, strictly 0.0 or 1.0. A symbol that never reached a terminal
+    row is ABSENT from this map, and price_it() SKIPS it. It is never scored on a mark.
+
+    ⚠️ THE BUG THIS REPLACES (found 2026-07-14, red-team F1). The old docstring asserted:
+        "a contract settles once, and earlier rows carry the pre-settlement 0.0 default"
+    That is FALSE. Polymarket US is a CFTC DCM, and a DCM publishes a DAILY SETTLEMENT PRICE for
+    MARGINING -- so a live contract carries a fractional MARK, not an outcome. Measured on our own
+    table: 49.2% of rows are fractional, and 11.6% of SYMBOLS have a FRACTIONAL LAST ROW -- which is
+    exactly the row the old `DISTINCT ON (symbol) ... ORDER BY business_date DESC` returned.
+
+    price_it() then did  payoff = st ; gross = payoff - q ; won = payoff > 0.5.
+    ⇒ A favorite that LOST, whose last published mark was 0.85, booked as a WIN with a positive gross.
+
+    Impact, measured before the fix: 13 of 2,101 picks mis-scored -- ALL of them conservatively (an
+    unsettled contract defaults to 0.0, so the backtest called WINNERS losers). The traded cell
+    (0.90-0.95 non-WC) was UNAFFECTED: 82/42, 1 loss, +6.74% published vs +6.76% on ground truth.
+    So this fix does not move the headline -- but leaving it in would corrupt FORWARD scoring, where
+    freshly-opened contracts carry a mark far more often. See reports/US-EDGE-EVIDENCE-AUDIT.md.
+    """
     with con.cursor() as cur:
         cur.execute("""
             SELECT DISTINCT ON (symbol) symbol, settlement_price
@@ -105,7 +122,8 @@ def settlements(con, d_from, d_to):
              WHERE settlement_price IS NOT NULL
           ORDER BY symbol, business_date DESC
         """)
-        return {r[0]: float(r[1]) for r in cur.fetchall()}
+        # FAIL-CLOSED: keep ONLY terminal rows. A mark is not an outcome, and we refuse to guess.
+        return {r[0]: float(r[1]) for r in cur.fetchall() if float(r[1]) in (0.0, 1.0)}
 
 
 def map_all(con, sigs):
@@ -167,6 +185,11 @@ def attach_us_entry(mapped):
     return mapped
 
 
+# Every pick where the US terminal settlement and the intl resolution DISAGREE.
+# A non-empty list is a MAPPER ALARM, not a rounding error. Surfaced by main().
+MAPPER_DISAGREEMENTS = []
+
+
 def price_it(mapped, setl, haircut_c=0.0):
     """Apply side, settlement, the US fee — and the SPREAD HAIRCUT.
 
@@ -193,6 +216,21 @@ def price_it(mapped, setl, haircut_c=0.0):
         q = q + haircut_c / 100.0                          # ...and we pay the ASK, not the print
         if not (0.01 <= q <= 0.99):
             continue
+        # ── THE CROSS-CHECK THE BACKTEST NEVER RAN ON ITSELF (red-team F1). ────────────────
+        # `outcome_won` (the intl resolution) has been SELECTed since day one and never read.
+        # The US venue's terminal settlement and the intl resolution describe THE SAME EVENT,
+        # so they MUST agree. A disagreement is not noise -- it is one of exactly two things:
+        #   (a) a MAPPER ERROR -- we mapped the signal to the wrong US instrument, or the wrong
+        #       SIDE of the right one. This is the highest-consequence bug class in the system:
+        #       it does not lose the edge, it INVERTS it (we buy the dog at favorite prices).
+        #   (b) a settlement we do not understand.
+        # Either way it must be COUNTED and SURFACED, never silently averaged into the mean.
+        if bool(payoff > 0.5) != bool(s["outcome_won"]):
+            MAPPER_DISAGREEMENTS.append(
+                {"us_slug": s["us_slug"], "side": s["side"], "us_settlement": st,
+                 "intl_outcome_won": s["outcome_won"], "signal_id": s["id"]})
+            continue                                       # FAIL-CLOSED: do not score it.
+
         gross = payoff - q                                 # $/share
         fee = us_fees.taker_fee(q)                         # Theta*q*(1-q)
         r = dict(s)
@@ -271,6 +309,17 @@ def main():
     mapped = attach_us_entry(mapped)
     got = sum(1 for s in mapped if s["us_px"] is not None)
     print(f"with a real US print within {MAX_ENTRY_LAG_MIN}min of firing: {got:,}")
+
+    # THE MAPPER ALARM. Must never be silent. A disagreement between the US terminal settlement
+    # and the intl resolution means we mapped the wrong instrument (or the wrong SIDE of it) --
+    # the one bug class that does not lose the edge but INVERTS it.
+    if MAPPER_DISAGREEMENTS:
+        print(f"\n  !! MAPPER/SETTLEMENT DISAGREEMENTS: {len(MAPPER_DISAGREEMENTS)} picks DROPPED "
+              f"(US settlement disagrees with the intl resolution -- investigate, never average)")
+        for d in MAPPER_DISAGREEMENTS[:5]:
+            print(f"     {d['us_slug'][:46]:46} us_settle={d['us_settlement']} "
+                  f"intl_won={d['intl_outcome_won']}")
+
 
     print("\n" + "=" * 92)
     print("US BACKTEST — favorite arm at US prices, US settlement, US fees")
