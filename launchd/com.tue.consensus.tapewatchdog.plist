@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.tue.consensus.tapewatchdog</string>
+
+    <!-- Is the forward tape still moving? On 2026-07-14 Postgres was down for ~2h while
+         `docker ps` reported "healthy" and nothing noticed. The at-fire US quote capture
+         CANNOT be backfilled, so every minute of undetected outage is evidence destroyed. -->
+    <key>ProgramArguments</key>
+    <array>
+        <string>/bin/bash</string>
+        <string>-lc</string>
+        <string>$HOME/polymarket-bot/scripts/tape-watchdog.sh</string>
+    </array>
+
+    <!-- 15 min: fast enough that an outage is caught in the same hour, slow enough that a
+         healthy system never pages. A watchdog that cries wolf gets disarmed by its owner. -->
+    <key>StartInterval</key>
+    <integer>900</integer>
+
+    <key>RunAtLoad</key>
+    <true/>
+    <key>StandardOutPath</key>
+    <string>/tmp/tapewatchdog.out</string>
+    <key>StandardErrorPath</key>
+    <string>/tmp/tapewatchdog.err</string>
+</dict>
+</plist>

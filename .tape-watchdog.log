@@ -1,0 +1,5 @@
+2026-07-14 09:41:10 tape OK — all forward tapes fresh
+2026-07-14 09:41:10 TAPE STALE:
+STALE/FATAL: DATABASE UNREACHABLE -- connection to server at "127.0.0.1", port 5999 failed: Connection refused
+	Is the server running on that host and accepting TCP/IP connections?
+  (this is exactly the 2026-07-14 outage: docker ps reported 'healthy' throughout)
