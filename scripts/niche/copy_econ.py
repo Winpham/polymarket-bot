@@ -34,11 +34,18 @@ from collections import defaultdict
 
 import numpy as np
 
+# -v ON_ERROR_STOP=1 IS LOAD-BEARING: without it psql EXITS 0 ON A FAILED QUERY and returns an
+# empty CSV, so a broken query silently becomes a clean "0 rows" null result instead of a crash.
+# (Found 2026-07-14: a large IN-list exhausted the container's 64MB /dev/shm and a sibling script
+# cheerfully reported "0 signals". A null you did not earn is worse than an error.)
 PG = ["docker", "exec", "-i", "polymarket-bot-postgres-1",
-      "psql", "-U", "bot", "-d", "polymarket", "--csv", "-q"]
+      "psql", "-U", "bot", "-d", "polymarket", "--csv", "-q", "-v", "ON_ERROR_STOP=1"]
 
 # Guards: this DB serves the live bot. A runaway analysis query must die, not the server.
-GUARD = "SET work_mem='64MB'; SET statement_timeout='180s'; "
+# max_parallel_workers_per_gather=0: a parallel scan over the 15GB tape asks ~50MB of shared memory
+# per gather, against a 64MB /dev/shm. Single-threaded is slower and cannot take production down.
+GUARD = ("SET work_mem='64MB'; SET statement_timeout='180s'; "
+         "SET max_parallel_workers_per_gather=0; ")
 
 FEES = 0.03
 LAGS = [60, 300, 900, 3600, 21600]       # 1m 5m 15m 1h 6h
