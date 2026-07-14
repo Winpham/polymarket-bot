@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.tue.consensus.usquotes</string>
+
+    <!-- US-VENUE FORWARD QUOTE CAPTURE. Read-only: it maps our open international signals to
+         their US instruments, reads the public gateway's BBO, and writes us_quotes. It has no
+         API key, no wallet and no order path, and can never place a trade.
+
+         WHY IT RUNS ON A TIMER AT ALL: Polymarket US publishes NO price history — /candles,
+         /prices-history and /trades all 404, and /bbo on a settled market returns a null
+         bid/ask. There is no US price at any past moment, anywhere. So the basis that Phase D
+         must certify against exists ONLY if we are recording it as it happens. Every sweep
+         missed is basis truth that cannot be recovered later. -->
+    <key>ProgramArguments</key>
+    <array>
+        <string>/usr/bin/python3</string>
+        <string>/Users/tuepham/polymarket-bot/scripts/us_quote_capture.py</string>
+        <string>--once</string>
+    </array>
+
+    <key>StartInterval</key>
+    <integer>120</integer>
+
+    <key>RunAtLoad</key>
+    <true/>
+
+    <key>WorkingDirectory</key>
+    <string>/Users/tuepham/polymarket-bot</string>
+
+    <key>StandardOutPath</key>
+    <string>/Users/tuepham/polymarket-bot/.us_quotes.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/tuepham/polymarket-bot/.us_quotes.log</string>
+</dict>
+</plist>
