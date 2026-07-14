@@ -331,3 +331,73 @@ another 25–50% by asking.
 **So: take the small taker fee where the edge is real, tilt deep where the fee gets cheap, ask for the
 tier rebate, and do not go stand at the touch to collect $0.13/hour from people who are better at this
 than we are.**
+
+---
+
+## 9. US BACKTEST 06/29–07/14 — the arm ON the US venue (added after the fee map)
+
+**This is a real US backtest, not an intl backtest wearing a US hat.** The live identity tape only
+accrues forward, but Polymarket US is a CFTC DCM and a DCM must *publish* its tape:
+
+- **ENTRY** = the first **real US print** at/after our signal fired, from the statutory Time & Sales
+  tape (1.3–1.9M prints/day) — **plus a 0.5¢ ask haircut**, because we are the TAKER and buy at the
+  **ask**, while a print sits at the bid as often as the ask. (Median US spread = 1.0¢, measured.)
+  Omitting that haircut is exactly how an edge certifies on a print and then dies at the ask.
+- **EXIT** = the US Daily Market Report **settlement** (0.0/1.0). 102,374 rows, 100% settled.
+- **FEE** = US taker fee Θ·q·(1−q). Clustered by **EVENT** (the unit of risk is the game).
+
+### 9.1 The arm survives US fees comfortably
+
+| sample | n / events | ROI gross | **ROI net of fee** | fee drag |
+|---|---|---|---|---|
+| all mapped favorite-band | 2,098 / 381 | +17.69% | **+16.70%** [+11.36,+22.59] p=0.000 | 1.0pp = **5% of edge** |
+| favorite_v2 gates | 535 / 79 | +8.39% | +7.54% [−0.02,+15.44] p=0.051 | 10% of edge |
+| favorite_v2, non-FIFWC | 186 / 48 | +6.18% | +5.03% [−12.62,+19.50] p=0.554 | 19% of edge |
+
+Sensitivity to the haircut: print +17.60% → half-spread **+16.69%** → full-spread +15.62%. **The edge
+is not an execution artifact.** *(The fee is NOT the binding constraint — do not reshape the strategy
+around it.)*
+
+### 9.2 ROI IS NOT FLAT ACROSS THE BAND — and the World Cup was hiding it
+
+**60% of the US-mappable universe is World Cup.** Split it out and the picture inverts:
+
+| band | ALL (net) | **non-World-Cup (net)** | verdict (non-WC) |
+|---|---|---|---|
+| 0.71–0.80 | +11.56% | +7.69% [−7.76,+20.10] | no edge |
+| 0.80–0.90 | +0.64% | +5.89% [−5.26,+14.96] | no edge |
+| **0.90–0.95** | +4.28% | **+6.78%** [+3.24,+8.58] p=0.003 | **EDGE** |
+| **0.95–0.98** | **−1.74%** | **+3.87%** [+3.10,+4.19] p=0.000 | **EDGE — but see 9.3** |
+
+So the naive read ("deep end is dead, ROI −1.74%") is a **World Cup artifact**, and the naive
+*opposite* read ("tilt as deep as possible") is refuted by the tail:
+
+### 9.3 We attacked the deep-end edge. 0.95–0.98 does not survive; 0.90–0.95 does.
+
+| non-WC band | picks/events | **losses** | leave-one-event-out | **stress: flip 1 winner→loser** |
+|---|---|---|---|---|
+| 0.90–0.95 | 82 / 42 | 1 | +6.40% p=0.004 **survives** | **+5.45% [+1.22,+8.55] HOLDS** |
+| 0.95–0.98 | 49 / 18 | **0** | +3.70% survives | **+1.77% [−5.69,+4.16] DIES** |
+
+**The 0.95–0.98 CI is tight only because the sample contains ZERO upsets.** At a ~96% favorite you
+expect ~2 losses in 49 picks; we observed none. That is not a measured edge — it is **an unobserved
+tail**. One upset (−100% on that pick) collapses it to insignificance. **Do NOT concentrate into
+0.95–0.98.**
+
+**0.90–0.95 is the band that actually holds up** — it survives dropping its worst event *and* an
+injected upset.
+
+### 9.4 Verdict on "prioritize the higher-confidence / higher-p bets"
+
+**Half right, and right for the wrong reason.**
+- **Wrong reason:** fees are NOT eating the edge (5–10% of it). There is no fee emergency to solve,
+  and reshaping the arm to dodge the fee would be optimizing the smallest term.
+- **Half right:** outside the World Cup, the **only bands that certify are the deep ones** — but the
+  *deepest* (0.95–0.98) is a zero-loss sample whose edge dies on one upset. **The defensible tilt is
+  0.90–0.95, not "as deep as possible."**
+
+**STATUS: SUGGESTIVE, NOT CERTIFIED.** This is a **post-hoc slice** (4 bands × WC/non-WC = 8 cells;
+we then reported the significant ones). At 8 cells, ~0.4 false positives are expected at p<0.05.
+0.90–0.95 non-WC (p=0.003) clears a Bonferroni bar (0.05/8 = 0.00625) — *barely*. **It needs a
+PRE-REGISTERED forward test before it sizes real money.** Coverage is also only **18.2%** (11,497
+band signals → 2,098 priced): most of the arm is simply not US-actionable.
