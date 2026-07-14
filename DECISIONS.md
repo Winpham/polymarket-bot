@@ -1187,3 +1187,92 @@ ledger is on another branch).
 (03:00–05:30 ET)** flow — ITF tennis, World Cup, NPB; **MLB/NBA/politics were asleep.** US prime-time
 flow could be sharper or duller and **the maker verdict could move.** The tapes accrue irreversibly:
 **re-run `us_adverse_selection.py` after a full US trading day before any money moves.**
+
+## US AUTO-TRADER — Phase 0: the cage is sound; the EDGE is weaker than advertised and the EXIT was never designed (2026-07-14, `feat/us-autotrader`)
+
+**Context:** the run to build the real-money US execution system. Phase 0 is design-only and places zero
+orders. Deliverables: `US-EXEC-API-SEMANTICS.md` (verified API facts), `US-EXECUTOR-FORGE-DEBATES.md`
+(two opposed designs + 9 adjudications), `US-EDGE-EVIDENCE-AUDIT.md`, `US-EXECUTOR-DESIGN.md`,
+`GATE-A-PREREG.md` (FROZEN).
+
+**UV-14 — the venue's API refutes half the brief's design premises (VERIFIED on docs.polymarket.us).**
+(a) **There is NO `clOrdId`** — not on `CreateOrderRequest`, not on the canonical 23-field `Order`. The
+brief hoped US would hand us server-side idempotency intl couldn't. It does not. And the auth signature
+covers `{ts|method|path}` and **NOT the body**, so the venue **cannot dedup our retries even in
+principle**. ⇒ intl's INV-1 (single-flight per instrument, Postgres partial unique index) is **not
+optional here — it is the only mechanism we have**, and it is what *manufactures* the join key F1 denies.
+(b) **THE INVERSION:** an IOC/FOK order **never rests**, so a filled order and a never-arrived order are
+**INDISTINGUISHABLE from the order side** — `get-open-orders` is empty in both cases. intl reconciled a
+lost send by *going and finding the resting order*; **that instrument does not exist here.** ⇒ reconcile
+must read **POSITIONS and TRADES** ("did my position change?"), and specifically the position **LEDGER
+(deltas), never the snapshot** — only a delta is attributable when we may already hold the slug.
+⇒ The orphan-ORDER problem mostly **dissolves** (the real prize of the venue swap). The orphan-POSITION
+problem gets **strictly worse**. **The most dangerous object in the system is an IOC whose HTTP response
+we lost.** Good news: fees are first-class on the Order (`commissionNotionalTotalCollected`) so "never
+model the fee" is achievable; `preview_order` gives an expected fill+fee with **no side effects**; Ed25519
+over a fixed payload is a ~15-line dep (NOT intl's 3,000-line EIP-712 liability) and there is **no Rust
+SDK**. Rate limit 20 req/s. TIF is IOC/FOK — there is no literal "FAK".
+
+**UV-15 — THE EDGE IS NOT SIGNIFICANT ON THE UNIT WE ACTUALLY BET. This governs the whole rollout.**
+The certified "+6.78%, 82 picks / 42 events" is the mean over **PICKS**. The cluster budget (size the
+GAME) places **ONE order per EVENT**. Nobody had computed that number. Recomputed under the exact fcfs
+rule the executor will use: **41 events, ONE loss, +5.40%** (first/last/best-priced all agree within
+0.05pp ⇒ the red-team's "fcfs adversely selects the bottom of the band" is **REFUTED**; mean price is
+identical at 0.9216). And the 82 picks are **~2.00 per event and RESOLVE TOGETHER** — they are not 82
+bets, they are **41**. On the unit of risk: **1 loss in 41 where the market prices 3.2 ⇒ P(≤1 | the market
+is right) = 15.8%. NOT SIGNIFICANT (p≈0.16, not 0.003).** The published p=0.003 is an ROI cluster-bootstrap
+whose entire lower tail is governed by how often a **single** observation is resampled (36% of resamples
+contain ZERO losses). **US-VENUE-ECONOMICS §9.3 applied exactly this "the CI is tight only because the
+upsets haven't happened yet" critique to the 0.95–0.98 band — and never turned it on the band it
+recommended.** Two more upsets and the edge is zero. ⇒ **The arm is SUGGESTIVE. The backtest earns it ZERO
+dollars.** And the brief's "+16.70%" is a **different, World-Cup-inclusive sample** — it overstates the
+traded rule by **~3×**. **ALL SIZING USES THE LOWER BOUND.**
+
+**UV-16 — GATE A, sized honestly, needs ~115 EVENTS ≈ 6–10 WEEKS (both designers said 60–65 / 3–4 wk).**
+The forward test is a test of the **LOSS COUNT** (the sufficient statistic for a Bernoulli edge), not of
+P&L — a 1-loss-in-41 process emits almost no P&L information per day. One-sided exact binomial,
+H0: loss rate = 0.078: detecting the observed edge (0.024) needs **115 events (α=0.048, power 0.86)**;
+half the edge (0.039) needs 229; **a modest edge (0.050) is UNREACHABLE in any sane window — and that is
+pre-registered.** The post-gate event rate is **lower than 3/day and unknown** (the cap+depth gate skips),
+so the shadow rung must measure it before the calendar expectation is set. **N=115 does not move.**
+`GATE-A-PREREG.md` is FROZEN before any forward day is read; changing any frozen field **voids the gate and
+restarts the clock at zero.**
+
+**UV-17 — the DMR "settlement" is a DAILY MARK, not an outcome (real defect; the traded cell survives).**
+`us_backtest.py::settlements()` asserted "a contract settles once, and earlier rows carry the
+pre-settlement 0.0 default." **False.** A CFTC DCM publishes a daily settlement price for **margining**:
+**49.2% of DMR rows are fractional, and 11.6% of SYMBOLS have a fractional LAST row** — exactly the row it
+returned. `won = payoff > 0.5` ⇒ **a loser marked 0.85 booked as a WIN.** Measured impact: **13 of 2,101
+picks mis-scored, ALL conservatively** (an unsettled contract defaults to 0.0 ⇒ the backtest called
+*winners* losers), and **the traded cell is UNAFFECTED** (82/42, 1 loss, +6.74% published vs +6.76% on
+ground truth). **FIXED anyway** — it would corrupt FORWARD scoring, where fresh contracts carry a mark far
+more often. **BONUS: with settlement fixed to terminal-only, US settlement and intl resolution agree on
+100% of ~2,100 picks ⇒ the MAPPER validates clean against an independent source.** That was the design's
+highest-consequence bug class (a mis-map does not lose the edge — **it INVERTS it**). The alarm is now
+wired into `main()` and can never be silent again.
+
+**UV-18 — THE EXIT WAS NEVER DESIGNED, and the kill-switch cannot cut a position. DECIDED: HALT = STOP
+OPENING; WE NEVER FLATTEN.** `cancel-all` on a take-only book is a **NO-OP** — nothing rests. **The
+kill-switch's only real power is REFUSING TO SEND** ⇒ **max exposure after a halt = ONE in-flight order,
+at the per-signal cap.** Bounded, quantified, unfixable by any cancel design. **A drawdown breaker that
+cannot cut a position is a LOGGER, and must be described as one.** Flattening a 0.92 favorite means
+selling into the bid — the ~1¢ spread **plus the taker fee again ≈ 1.5% of notional per halt** — on a
++5.4%-ROI position, in a system *designed* to halt often. ⇒ **hold to settlement; `close_position` is a
+manual, human-only tool.** Two consequences that must be BUILT: (i) settlement lands at T+1 ⇒ **P&L, the
+day-stop, the drawdown latch and the loss-count detector are all BLIND for ≥1 day** ⇒ risk reads an
+**intraday mark**, the settled ledger is the **audit**; (ii) **void/postponed contracts** lock capital
+indefinitely and can never be retired by the reconciler — at ~3 events/day this happens within a month.
+
+**UV-19 — a live outage proved the brief's own Hard Rule 2 is unimplemented.** Mid-run, Postgres went down
+for ~2h (host disk exhaustion → the Docker VM filesystem went read-only). **`docker ps` reported it
+"healthy" the entire time, and NOTHING NOTICED.** GATE A's premise is "the tapes accrue; forward data is
+cheap" — **a 30-day forward window with a silent multi-hour hole in it is not a forward window.**
+⇒ **BLOCKING, before GATE A starts: a staleness watchdog (`max(us_quotes.ts) > now()−15min` ⇒ halt + page).**
+Also blocking: **the placebo pool cannot serve as a control** — it is matched on (league,date) **not
+price**, and carries **no side**, so **no ROI is computable for it**; a control that cannot produce an ROI
+means **GATE A cannot fail honestly.** Rebuild it price-matched, side-assigned, and as a FIXED cohort.
+
+**NOT DONE (honest status):** no executor code exists. Rungs 1–3 (decision engine, paper placer, cage)
+need **NO API key** — the US book is public (verified HTTP 200 unauthenticated) — so **none of the
+remaining $0 work is blocked on Tue.** **Needs Tue:** the API key (rungs 3+ only), the Accelerated Tier
+submission (UV-13), and the go-live decision after GATE A.
