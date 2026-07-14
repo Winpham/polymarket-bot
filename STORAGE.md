@@ -102,7 +102,30 @@ Each was learned by breaking it, on real data, in this order:
    match also breaks by design on the second run, because the archive legitimately
    accumulates. **Nothing is deleted until this passes; `--prune` is opt-in.**
 
-## Cloudflare R2 (needs Tue — 5 minutes, once)
+## Cloudflare R2 — DONE, verified 2026-07-13
+
+**R2 holds a verified, duplicate-free copy of the entire archive.** 948 files pushed
+byte-exactly (plain S3 PUT, MD5 checked against the returned ETag — no re-encoding in flight,
+so a parquet footer cannot be lost in transit), then read back FROM R2 and matched:
+
+| table | local | R2 | dupes |
+|---|---|---|---|
+| `trader_fills` | 1,167,045 | 1,167,045 | 0 |
+| `clob_price_tape` | 8,653,782 | 8,653,782 | 0 |
+| `consensus_vote_window` | 4,244,942 | 4,244,942 | 0 |
+
+**14.06M rows, ~407 MB, offsite.** Roughly 4% of R2's 10 GB free tier, $0 egress forever.
+
+**The backup dumps are gone (2026-07-13):** 14 of 15 deleted, **4.4 GB freed** (5.2 GB → 831 MB).
+They were proven redundant by a primary-key anti-join against live Postgres ∪ the Parquet
+archive, re-run against the current state — *including* the `router_followset` table, which has
+no `id` and was silently skipped by the first pass (519 distinct keys, 0 missing). The newest
+dump is KEPT as a `pg_restore`-able snapshot: Parquet is an archive, not a bootable database.
+
+> **Do not delete the last dump.** Every row is triply redundant (Postgres + Parquet + R2), but
+> none of those is a restorable DB image.
+
+### Original setup notes
 
 Local Parquet fixes the disk, but it is still **one laptop, one disk** — and that disk just
 proved it can take prod down. R2 makes the archive durable and off-box.
