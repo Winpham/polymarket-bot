@@ -1,0 +1,2822 @@
+[
+  {
+    "niche": "esports",
+    "population": 25442,
+    "eligible": 2216,
+    "mm_excluded": 578,
+    "certified": 20,
+    "null_mean": 13.832,
+    "null_p95": 20,
+    "beats_null": false,
+    "persistence": {
+      "n_testable": 1394,
+      "underpowered": false,
+      "cut": 1783378318.0,
+      "top_n": 50,
+      "b_mean": -0.021414234602157058,
+      "b_lb": -0.04549592832284855,
+      "b_hi": 0.00344469100383797,
+      "b_n_obs": 1035,
+      "b_n_markets": 416,
+      "rest_mean": -0.015352402340168783,
+      "rho": 0.02117732732936767
+    },
+    "tax": 0.013,
+    "hidden_vs_tracked": {
+      "tracked": {
+        "n": 183,
+        "median": -0.0022966014395326916,
+        "pct_positive": 0.4808743169398907,
+        "p90": 0.07371834099805447
+      },
+      "hidden": {
+        "n": 2033,
+        "median": -0.006092989746982412,
+        "pct_positive": 0.46138711264141663,
+        "p90": 0.08201815767306114
+      }
+    },
+    "roster": [
+      {
+        "wallet": "0x260a29b63a7d71102c3bb7d232114fcd6895eb0f",
+        "n_markets": 70,
+        "copyable_surplus": 0.22158901074340842,
+        "lb": 0.08119789315888584,
+        "abs_advantage_net_tax": 0.25547903666627086,
+        "maker_frac": 0.0,
+        "usd": 12042.389296966057
+      },
+      {
+        "wallet": "0xe16d3f2a5807999b358affd9445c3a09e45e5e30",
+        "n_markets": 117,
+        "copyable_surplus": 0.1705226585930369,
+        "lb": 0.05714889971575371,
+        "abs_advantage_net_tax": 0.20454723913750006,
+        "maker_frac": 0.0,
+        "usd": 1825220.1525217032
+      },
+      {
+        "wallet": "0x3296116fa9e728833e1d9605bd16cd0d5a00c186",
+        "n_markets": 51,
+        "copyable_surplus": 0.22116355038911667,
+        "lb": 0.05407229120972404,
+        "abs_advantage_net_tax": 0.2211034648429412,
+        "maker_frac": 0.02287581699346405,
+        "usd": 838.4115240078878
+      },
+      {
+        "wallet": "0x01956113cdbbf5cd6e2caa5ede24e64f23cc9f64",
+        "n_markets": 23,
+        "copyable_surplus": 0.08177353440907213,
+        "lb": 0.05036551408209591,
+        "abs_advantage_net_tax": 0.1441563329478261,
+        "maker_frac": 0.0,
+        "usd": 1517.9999170031372
+      },
+      {
+        "wallet": "0x476b0f069dc03644d1006ac912deb781d7b68a58",
+        "n_markets": 30,
+        "copyable_surplus": 0.1937820438856523,
+        "lb": 0.04678986741414143,
+        "abs_advantage_net_tax": 0.23734721062888886,
+        "maker_frac": 0.4722222222222222,
+        "usd": 389.54089300014317
+      },
+      {
+        "wallet": "0x3a48c75c6615a547ad5737e55df66ed99c9ae3a8",
+        "n_markets": 93,
+        "copyable_surplus": 0.1678660058999944,
+        "lb": 0.044479097374866244,
+        "abs_advantage_net_tax": 0.20876776621109092,
+        "maker_frac": 0.0,
+        "usd": 25683.265017972546
+      },
+      {
+        "wallet": "0x9c52f0c7617df14ebee80780aa3cdf2ef8b81a59",
+        "n_markets": 33,
+        "copyable_surplus": 0.18721441404559314,
+        "lb": 0.039611283922159346,
+        "abs_advantage_net_tax": 0.22794135146189162,
+        "maker_frac": 0.22517600244872973,
+        "usd": 67854.84380262317
+      },
+      {
+        "wallet": "0x5d5a68ba12cf0264ea2dab626d99abb9a71c4289",
+        "n_markets": 66,
+        "copyable_surplus": 0.19164862252470014,
+        "lb": 0.03829003753176169,
+        "abs_advantage_net_tax": 0.2219087115107622,
+        "maker_frac": 0.021101048074732287,
+        "usd": 85141.63936772937
+      },
+      {
+        "wallet": "0x6dda1c5e02c5214ae83d62d85738522bbe3e2252",
+        "n_markets": 34,
+        "copyable_surplus": 0.03882897077008099,
+        "lb": 0.03708765822262293,
+        "abs_advantage_net_tax": 0.08961791202941174,
+        "maker_frac": 0.29411764705882354,
+        "usd": 169.33600000005003
+      },
+      {
+        "wallet": "0x7a85652f35c4a1b8a1b0393e6e2fa8db82f0ff94",
+        "n_markets": 63,
+        "copyable_surplus": 0.1683900002750966,
+        "lb": 0.02921167989696405,
+        "abs_advantage_net_tax": 0.18967911928188103,
+        "maker_frac": 0.0,
+        "usd": 25944.83957958831
+      },
+      {
+        "wallet": "0xccf5f90e57188815f12b881c52144cf1cc4f42f2",
+        "n_markets": 35,
+        "copyable_surplus": 0.202904702124062,
+        "lb": 0.028323649091547082,
+        "abs_advantage_net_tax": 0.25204332907142857,
+        "maker_frac": 0.07142857142857142,
+        "usd": 3766.4204520239587
+      },
+      {
+        "wallet": "0xeeefc816924ba636c35225ab6f456898ac581644",
+        "n_markets": 29,
+        "copyable_surplus": 0.055567592009771835,
+        "lb": 0.02372898947875076,
+        "abs_advantage_net_tax": 0.1030308870448276,
+        "maker_frac": 0.0,
+        "usd": 309.03985200012056
+      },
+      {
+        "wallet": "0xe7333fa993c71a39d3b429d46ba0475c73c8f6c9",
+        "n_markets": 42,
+        "copyable_surplus": 0.18763291183410497,
+        "lb": 0.019544802852402343,
+        "abs_advantage_net_tax": 0.22792708232777778,
+        "maker_frac": 0.05952380952380952,
+        "usd": 1321.3899090142509
+      },
+      {
+        "wallet": "0xb6922543a5344586009ca5f0da17ae035fa37c83",
+        "n_markets": 21,
+        "copyable_surplus": 0.05759941320951424,
+        "lb": 0.018156447914994968,
+        "abs_advantage_net_tax": 0.10330647195714285,
+        "maker_frac": 0.047619047619047616,
+        "usd": 464.5798009969407
+      },
+      {
+        "wallet": "0x34a17aec4994e266ab2c664e8b67776dbd72af5a",
+        "n_markets": 20,
+        "copyable_surplus": 0.10198426290454524,
+        "lb": 0.012984714899262687,
+        "abs_advantage_net_tax": 0.1365,
+        "maker_frac": 0.125,
+        "usd": 98.01999999999998
+      },
+      {
+        "wallet": "0xc11c44469a75d00b86e26912482e24498c89b9b2",
+        "n_markets": 20,
+        "copyable_surplus": 0.03410012281847214,
+        "lb": 0.010669261009000085,
+        "abs_advantage_net_tax": 0.06645000154000001,
+        "maker_frac": 0.0,
+        "usd": 47.67994399988459
+      },
+      {
+        "wallet": "0xbfe093b5ccb1b1e18c49b22062be30b56f94192a",
+        "n_markets": 23,
+        "copyable_surplus": 0.015448225888200181,
+        "lb": 0.006145484275822137,
+        "abs_advantage_net_tax": 0.039085352047826094,
+        "maker_frac": 0.0,
+        "usd": 170.2597709995424
+      },
+      {
+        "wallet": "0x8604bb54df5a5ea9168775057c25a999c49d222d",
+        "n_markets": 29,
+        "copyable_surplus": 0.0045600079654239435,
+        "lb": 0.003405609587444362,
+        "abs_advantage_net_tax": 0.007344827586206915,
+        "maker_frac": 0.0,
+        "usd": 144.51870000000008
+      },
+      {
+        "wallet": "0x6f6488aa4170682febe1bc5e7a5dc8f5e1520a40",
+        "n_markets": 23,
+        "copyable_surplus": 0.010805917606828846,
+        "lb": 0.0015898562501519553,
+        "abs_advantage_net_tax": 0.021672570386956545,
+        "maker_frac": 0.0,
+        "usd": 9074.999780002661
+      },
+      {
+        "wallet": "0x3709076f188584bac67f8f1c351474df57ba82a5",
+        "n_markets": 24,
+        "copyable_surplus": 0.01478874324386887,
+        "lb": 0.0012686683761117864,
+        "abs_advantage_net_tax": 0.03286230806123739,
+        "maker_frac": 0.6499503968253968,
+        "usd": 12743.20705599315
+      },
+      {
+        "wallet": "0xad7b3fd111aef3bdf83be0ed996b8c34080a779c",
+        "n_markets": 31,
+        "copyable_surplus": 0.06340392975580421,
+        "lb": -7.397097635369887e-05,
+        "abs_advantage_net_tax": 0.10677618182903226,
+        "maker_frac": 0.016129032258064516,
+        "usd": 9032.79660696764
+      },
+      {
+        "wallet": "0x51f9122c7ed2ceb749d8d63617153e98d3ba19a0",
+        "n_markets": 111,
+        "copyable_surplus": 0.0006154967856447973,
+        "lb": -0.004009835411917012,
+        "abs_advantage_net_tax": 0.005889396277867879,
+        "maker_frac": 0.47612612612612615,
+        "usd": 60925.0942799207
+      },
+      {
+        "wallet": "0x0b2c43a04fa086467a11fffd2f3c297fb46f0ac6",
+        "n_markets": 20,
+        "copyable_surplus": 0.021580259038820646,
+        "lb": -0.004376981441152627,
+        "abs_advantage_net_tax": 0.035050000000000026,
+        "maker_frac": 0.75,
+        "usd": 114.234
+      },
+      {
+        "wallet": "0xabea6b53747fa37a41ffba067d60ee88124f4834",
+        "n_markets": 53,
+        "copyable_surplus": 0.0031311503776931264,
+        "lb": -0.004477690068910517,
+        "abs_advantage_net_tax": 0.01077479409174529,
+        "maker_frac": 0.26284067085953877,
+        "usd": 9235.530729992432
+      },
+      {
+        "wallet": "0x61020b7935b80cbf2602c3f2b2f683098d381913",
+        "n_markets": 28,
+        "copyable_surplus": 0.1812159268182192,
+        "lb": -0.004616981396332209,
+        "abs_advantage_net_tax": 0.2005969369444475,
+        "maker_frac": 0.6955841225379041,
+        "usd": 7090.440220997979
+      },
+      {
+        "wallet": "0x377a87055a61328a3bc79da993cc3bd1612a7dc7",
+        "n_markets": 39,
+        "copyable_surplus": 0.031356381038181474,
+        "lb": -0.005889718738462717,
+        "abs_advantage_net_tax": 0.05172546577777279,
+        "maker_frac": 0.562981462981463,
+        "usd": 12886.96054895616
+      },
+      {
+        "wallet": "0x9219dd565d7521e95f273b7eea68dbb08d40027c",
+        "n_markets": 53,
+        "copyable_surplus": -0.002260941062460307,
+        "lb": -0.006025163368558186,
+        "abs_advantage_net_tax": 0.001743069965880513,
+        "maker_frac": 0.43301886792452826,
+        "usd": 29105.52826994834
+      },
+      {
+        "wallet": "0xfe155bd5f660e0d2b9af6be74aa0d36dbeb480b5",
+        "n_markets": 48,
+        "copyable_surplus": -0.004140065382414908,
+        "lb": -0.0061878618795072,
+        "abs_advantage_net_tax": -0.001355245761631937,
+        "maker_frac": 0.7206597222222223,
+        "usd": 45731.4435700441
+      },
+      {
+        "wallet": "0x8548f0fae7636fc17ca6bb2cbae39cbd4fbce4c1",
+        "n_markets": 48,
+        "copyable_surplus": -0.0010274254701919086,
+        "lb": -0.0061977244780278985,
+        "abs_advantage_net_tax": 0.0031838579063293757,
+        "maker_frac": 0.32295100732600734,
+        "usd": 56906.11499808666
+      },
+      {
+        "wallet": "0xad2f5bf835fee93d6e7403a274cdc40f7a2dac6a",
+        "n_markets": 26,
+        "copyable_surplus": -0.003762562016936816,
+        "lb": -0.006669632928879868,
+        "abs_advantage_net_tax": -0.0009777423961538447,
+        "maker_frac": 0.0,
+        "usd": 34979.21677188773
+      },
+      {
+        "wallet": "0x455e565fdaa9c4d106e1aebd557b8443925af7f9",
+        "n_markets": 54,
+        "copyable_surplus": 0.009467206115889902,
+        "lb": -0.006803219012452845,
+        "abs_advantage_net_tax": 0.02243168613702626,
+        "maker_frac": 0.20626592200666274,
+        "usd": 34475.91716279668
+      },
+      {
+        "wallet": "0x340fbafe7f35e9fe6d61642d4f0ddebf5c338068",
+        "n_markets": 22,
+        "copyable_surplus": -0.004421183257146597,
+        "lb": -0.006928209069119602,
+        "abs_advantage_net_tax": -0.001636363636363626,
+        "maker_frac": 0.18181818181818182,
+        "usd": 2021.6972
+      },
+      {
+        "wallet": "0xadf08fef53c359cf58a8fd5b69c8e498b7c05dc5",
+        "n_markets": 34,
+        "copyable_surplus": 0.000666569386709099,
+        "lb": -0.008289067066512005,
+        "abs_advantage_net_tax": 0.008072794117647067,
+        "maker_frac": 0.38235294117647056,
+        "usd": 1500.5432
+      },
+      {
+        "wallet": "0x274a632f69ae4600999f6ddae1420ad2c7bfd35b",
+        "n_markets": 24,
+        "copyable_surplus": 0.1478957807188881,
+        "lb": -0.008610234999779864,
+        "abs_advantage_net_tax": 0.19445273109255948,
+        "maker_frac": 0.6607142857142857,
+        "usd": 1638.6460999997
+      },
+      {
+        "wallet": "0xf68c530927e3a73f6663757565ff1de82390d467",
+        "n_markets": 25,
+        "copyable_surplus": 0.05294965465091172,
+        "lb": -0.009437565233203576,
+        "abs_advantage_net_tax": 0.08059631947833333,
+        "maker_frac": 0.0,
+        "usd": 739.9990399923141
+      },
+      {
+        "wallet": "0xb5385ff62e596ababd68d87370fd5e7dde277a1e",
+        "n_markets": 67,
+        "copyable_surplus": 0.0015693981319892965,
+        "lb": -0.009637878926830754,
+        "abs_advantage_net_tax": 0.007427812468283593,
+        "maker_frac": 0.481592039800995,
+        "usd": 26892.438009987738
+      },
+      {
+        "wallet": "0xb2cbf3389906f0cadb8d727bc166cfcc818b2bad",
+        "n_markets": 40,
+        "copyable_surplus": -0.005996563524667034,
+        "lb": -0.009865698574686868,
+        "abs_advantage_net_tax": -0.002049980387228257,
+        "maker_frac": 0.4634633080285254,
+        "usd": 163196.15115879127
+      },
+      {
+        "wallet": "0x85630920a4199fb360724c2e07492b343cdf5e98",
+        "n_markets": 35,
+        "copyable_surplus": -0.0017478498235828852,
+        "lb": -0.010089126515290349,
+        "abs_advantage_net_tax": 0.003905252745714293,
+        "maker_frac": 0.37142857142857144,
+        "usd": 1447.9669600028003
+      },
+      {
+        "wallet": "0x330f6bf24e33d8348593bca54017ce83423791b1",
+        "n_markets": 57,
+        "copyable_surplus": 0.17184384689270468,
+        "lb": -0.011200864805637867,
+        "abs_advantage_net_tax": 0.1947192977168421,
+        "maker_frac": 0.6076023391812866,
+        "usd": 1403.2122940020115
+      },
+      {
+        "wallet": "0x9a19235df97e9b2b6551dfb27d372d8ce989ee68",
+        "n_markets": 61,
+        "copyable_surplus": -0.007347569705170888,
+        "lb": -0.012176860681193738,
+        "abs_advantage_net_tax": -0.0030637229292349685,
+        "maker_frac": 0.3950819672131148,
+        "usd": 13959.7046700043
+      },
+      {
+        "wallet": "0xff34c2cc46e7624310f3549ea355540d57a4694b",
+        "n_markets": 297,
+        "copyable_surplus": 0.05361054034246525,
+        "lb": -0.012646741173452866,
+        "abs_advantage_net_tax": 0.07468672943940009,
+        "maker_frac": 0.07932705983089448,
+        "usd": 203141.52778689432
+      },
+      {
+        "wallet": "0x138acc285e9125199b9d3b593d01ee05ef4f2a04",
+        "n_markets": 32,
+        "copyable_surplus": -0.010955747540548226,
+        "lb": -0.01362112676374855,
+        "abs_advantage_net_tax": -0.007202791655885418,
+        "maker_frac": 0.13463541666666667,
+        "usd": 9168.296582045592
+      },
+      {
+        "wallet": "0x62c30b6624cb51121cb7059b3b8853283bb6bfc9",
+        "n_markets": 237,
+        "copyable_surplus": -0.0122702758316292,
+        "lb": -0.01412516470981293,
+        "abs_advantage_net_tax": -0.009214626285053802,
+        "maker_frac": 0.6242034270723478,
+        "usd": 244780.21153980133
+      },
+      {
+        "wallet": "0x9c4db21669d5c5b48c0655761b4fedd646e6168c",
+        "n_markets": 25,
+        "copyable_surplus": 0.05814929705702845,
+        "lb": -0.014160996164457158,
+        "abs_advantage_net_tax": 0.09145908322188907,
+        "maker_frac": 0.506474580974581,
+        "usd": 33453.27069789681
+      },
+      {
+        "wallet": "0x43029c91cc6e70bf16bb5dc4690aded29e5bb736",
+        "n_markets": 22,
+        "copyable_surplus": -0.013324935074534772,
+        "lb": -0.014620219462190682,
+        "abs_advantage_net_tax": -0.010540115453751801,
+        "maker_frac": 0.5,
+        "usd": 11899.426635994998
+      },
+      {
+        "wallet": "0x6c29d1714ff597fceeb8abdc65935d2dc9ff347e",
+        "n_markets": 26,
+        "copyable_surplus": -0.005881544867596882,
+        "lb": -0.01473066834560705,
+        "abs_advantage_net_tax": -0.0010229036109767943,
+        "maker_frac": 0.4702075702075702,
+        "usd": 997.4997450009599
+      },
+      {
+        "wallet": "0x62a841369d07170ea0ae8790976d0af5f9162793",
+        "n_markets": 56,
+        "copyable_surplus": -0.013370926769443684,
+        "lb": -0.014742519374309027,
+        "abs_advantage_net_tax": -0.010586107148660715,
+        "maker_frac": 0.47023809523809523,
+        "usd": 29295.565070826793
+      },
+      {
+        "wallet": "0xbdef7776e49dc3561f6856bcff09f8d221f02493",
+        "n_markets": 20,
+        "copyable_surplus": -0.014775557745782968,
+        "lb": -0.014806564236866411,
+        "abs_advantage_net_tax": -0.011990738124999999,
+        "maker_frac": 0.775,
+        "usd": 2864.803990000001
+      },
+      {
+        "wallet": "0xb673a03ad59256d429738db008e18b9a6aa5b674",
+        "n_markets": 29,
+        "copyable_surplus": -0.014628189558714004,
+        "lb": -0.014881995207533109,
+        "abs_advantage_net_tax": -0.011843369937931034,
+        "maker_frac": 0.0,
+        "usd": 283.2899579999612
+      },
+      {
+        "wallet": "0x725e4c6190ee03f7658bb23842a8f7a0b58ab679",
+        "n_markets": 32,
+        "copyable_surplus": -0.01465981962078297,
+        "lb": -0.014909094901750061,
+        "abs_advantage_net_tax": -0.011874999999999998,
+        "maker_frac": 0.03125,
+        "usd": 1104.5838700000006
+      },
+      {
+        "wallet": "0x4af0536c830f25ef23ee6d84b6a2c3b69d617696",
+        "n_markets": 68,
+        "copyable_surplus": -0.014373054914900615,
+        "lb": -0.01512927090343642,
+        "abs_advantage_net_tax": -0.011588235294117646,
+        "maker_frac": 0.7941176470588235,
+        "usd": 679.0400000000004
+      },
+      {
+        "wallet": "0x6c8b45da3d2de8aff87a458ab44c4396b4b8ec48",
+        "n_markets": 32,
+        "copyable_surplus": -0.01401918003640797,
+        "lb": -0.015132030436825119,
+        "abs_advantage_net_tax": -0.011234360415624998,
+        "maker_frac": 0.44553571428571426,
+        "usd": 7780.8384099952855
+      },
+      {
+        "wallet": "0x5a05e30ef2ae848927c7a724b93292bf8cd14c5a",
+        "n_markets": 63,
+        "copyable_surplus": 0.026440809584739666,
+        "lb": -0.015146822972596261,
+        "abs_advantage_net_tax": 0.033763092924862695,
+        "maker_frac": 0.56972159234064,
+        "usd": 7661.264420007524
+      },
+      {
+        "wallet": "0x7ecc991edc1c9e8f2e623bd511d63429a0056c37",
+        "n_markets": 26,
+        "copyable_surplus": -0.009230784934615023,
+        "lb": -0.016299233755650195,
+        "abs_advantage_net_tax": -0.006445965313832051,
+        "maker_frac": 0.5960568318212676,
+        "usd": 499742.9661203618
+      },
+      {
+        "wallet": "0xeb4f6c2f4f38ebd2cef07bfb268ef93469e36e10",
+        "n_markets": 47,
+        "copyable_surplus": 0.09461095046119206,
+        "lb": -0.016304139681234536,
+        "abs_advantage_net_tax": 0.14439168049095744,
+        "maker_frac": 0.014184397163120567,
+        "usd": 3198.1260670117845
+      },
+      {
+        "wallet": "0xdafb193d52d7ee8dd826d67d0a07019da5f6628a",
+        "n_markets": 28,
+        "copyable_surplus": -0.011671734214235353,
+        "lb": -0.016387173029456914,
+        "abs_advantage_net_tax": -0.008886914593452382,
+        "maker_frac": 0.0,
+        "usd": 219.9363529997559
+      },
+      {
+        "wallet": "0x204e14f11a08a465479e437b0e37b7e9e0358d08",
+        "n_markets": 21,
+        "copyable_surplus": -0.0034993420990432345,
+        "lb": -0.017124606426880164,
+        "abs_advantage_net_tax": 0.0037689247977040798,
+        "maker_frac": 0.6511879515638914,
+        "usd": 183983.20099426887
+      },
+      {
+        "wallet": "0xcd3675803ac7c8242a83fd6ecdfe3d2239ae0f01",
+        "n_markets": 166,
+        "copyable_surplus": -0.011367264206435567,
+        "lb": -0.018992110243383327,
+        "abs_advantage_net_tax": -0.00751517550704975,
+        "maker_frac": 0.6743726355296971,
+        "usd": 1414408.1584733368
+      },
+      {
+        "wallet": "0x23395c3276a6788457d168da579fb5c254ceadc2",
+        "n_markets": 43,
+        "copyable_surplus": 0.004624696769396847,
+        "lb": -0.020187158317939397,
+        "abs_advantage_net_tax": 0.008110759340930244,
+        "maker_frac": 0.49512735326688817,
+        "usd": 91360.33157009524
+      },
+      {
+        "wallet": "0x165136c0307328458726cd65681d3513b610470f",
+        "n_markets": 29,
+        "copyable_surplus": 0.16109923305210855,
+        "lb": -0.020442549374817626,
+        "abs_advantage_net_tax": 0.196223332779454,
+        "maker_frac": 0.22931034482758622,
+        "usd": 11431.559309979664
+      },
+      {
+        "wallet": "0x02a7f27cda39936b0c3d9c4dace0266d239475e2",
+        "n_markets": 72,
+        "copyable_surplus": -0.00117448129968001,
+        "lb": -0.020897294696552132,
+        "abs_advantage_net_tax": 0.004530590098371919,
+        "maker_frac": 0.5028053350970018,
+        "usd": 22938.333417929498
+      },
+      {
+        "wallet": "0x0e590e209468f98e16cef419362e442bfdf9a02c",
+        "n_markets": 60,
+        "copyable_surplus": 0.02446608721000142,
+        "lb": -0.020954963149869155,
+        "abs_advantage_net_tax": 0.044356987067779324,
+        "maker_frac": 0.28957417582417583,
+        "usd": 6070.370911991862
+      },
+      {
+        "wallet": "0xd487f513cfead22d76b6db4567c756b3cf25053e",
+        "n_markets": 154,
+        "copyable_surplus": -0.00028694723510877356,
+        "lb": -0.0209564134345582,
+        "abs_advantage_net_tax": 0.005766913665139231,
+        "maker_frac": 0.7287570631170464,
+        "usd": 680656.3841392318
+      },
+      {
+        "wallet": "0xb4c2646fe68cd50a043bc4563af5fbcbae03a16e",
+        "n_markets": 191,
+        "copyable_surplus": 0.0484773437887893,
+        "lb": -0.020999121298107958,
+        "abs_advantage_net_tax": 0.09990163906027508,
+        "maker_frac": 0.0,
+        "usd": 14337.91734403361
+      },
+      {
+        "wallet": "0x0b5a14b1c2f547cfd238b1123d228562f5721457",
+        "n_markets": 79,
+        "copyable_surplus": 0.05328543164465278,
+        "lb": -0.02108623224751458,
+        "abs_advantage_net_tax": 0.07069334570515319,
+        "maker_frac": 0.3655867036213472,
+        "usd": 58477.437692164145
+      },
+      {
+        "wallet": "0x31121402eafd4a157141db8f84b5da297ff63fcd",
+        "n_markets": 28,
+        "copyable_surplus": 0.00841599926042414,
+        "lb": -0.02133725979091434,
+        "abs_advantage_net_tax": 0.015335030221428582,
+        "maker_frac": 0.32142857142857145,
+        "usd": 1253.0962599976
+      },
+      {
+        "wallet": "0x86b9a88a75194d15bb36c092ea85202da5596d67",
+        "n_markets": 33,
+        "copyable_surplus": -0.006921356269050258,
+        "lb": -0.021638759694070867,
+        "abs_advantage_net_tax": -0.003457419218686867,
+        "maker_frac": 0.4461279461279461,
+        "usd": 9048.365160024625
+      },
+      {
+        "wallet": "0x816b8451382b8e9cb66972fa4dd4777091739ec7",
+        "n_markets": 28,
+        "copyable_surplus": -0.01610825853918895,
+        "lb": -0.023086541587146844,
+        "abs_advantage_net_tax": -0.014987391148809528,
+        "maker_frac": 0.0,
+        "usd": 3214.7273530094512
+      },
+      {
+        "wallet": "0x0ce5c8ad925ed488febbf17434678b0221453cd2",
+        "n_markets": 58,
+        "copyable_surplus": 0.00455189740393719,
+        "lb": -0.024548512615806234,
+        "abs_advantage_net_tax": 0.008137933243103473,
+        "maker_frac": 0.0,
+        "usd": 454.5199580005279
+      },
+      {
+        "wallet": "0x848da036c7bdbe4abd3fc975b5931add6aaa9867",
+        "n_markets": 176,
+        "copyable_surplus": 0.044007548981583954,
+        "lb": -0.025378386887657166,
+        "abs_advantage_net_tax": 0.08785743490956412,
+        "maker_frac": 0.5222214346990065,
+        "usd": 20745.179282995807
+      },
+      {
+        "wallet": "0x6401f2b177063ae608457ec82773758e8ee9f240",
+        "n_markets": 108,
+        "copyable_surplus": 0.0899774721548075,
+        "lb": -0.025447090791363744,
+        "abs_advantage_net_tax": 0.09768905603157715,
+        "maker_frac": 0.6228284832451499,
+        "usd": 73495.04420865737
+      },
+      {
+        "wallet": "0xfc8f82fbc31af516e0181398a30b560aad626fe7",
+        "n_markets": 33,
+        "copyable_surplus": 0.09898352753797308,
+        "lb": -0.025806477992713517,
+        "abs_advantage_net_tax": 0.13867171717171717,
+        "maker_frac": 0.17777777777777776,
+        "usd": 1210.7302
+      },
+      {
+        "wallet": "0x7373d0b5e3b1ca7ab3eeddd985b797c760e33964",
+        "n_markets": 24,
+        "copyable_surplus": 0.17534356097807072,
+        "lb": -0.02638262084965115,
+        "abs_advantage_net_tax": 0.21342586186263526,
+        "maker_frac": 0.748098544973545,
+        "usd": 5309.071531004038
+      },
+      {
+        "wallet": "0xcbbe5115867627641913cd4b5d3fbd77e8231f4a",
+        "n_markets": 66,
+        "copyable_surplus": 0.08273208971154992,
+        "lb": -0.02669477513638574,
+        "abs_advantage_net_tax": 0.13360234825705386,
+        "maker_frac": 0.10984848484848485,
+        "usd": 22438.446339070906
+      },
+      {
+        "wallet": "0x45e1535c178dcafb136aec8b7058f2129b695934",
+        "n_markets": 50,
+        "copyable_surplus": 0.03129933753934412,
+        "lb": -0.026935177375464067,
+        "abs_advantage_net_tax": 0.0670321715037142,
+        "maker_frac": 0.7744577677224735,
+        "usd": 41212.863374988876
+      },
+      {
+        "wallet": "0x6d1f2982b71f92879a4747899d7de6227b53890d",
+        "n_markets": 30,
+        "copyable_surplus": -0.0020249853906901386,
+        "lb": -0.027176741391192635,
+        "abs_advantage_net_tax": 0.003289147307777784,
+        "maker_frac": 0.0,
+        "usd": 912.5561530068895
+      },
+      {
+        "wallet": "0x2ca2ceab8ffad9289446372de3db22fa1d811798",
+        "n_markets": 32,
+        "copyable_surplus": 0.12061176704011932,
+        "lb": -0.027473110989638214,
+        "abs_advantage_net_tax": 0.198664904584375,
+        "maker_frac": 0.15625,
+        "usd": 1609.8691999887997
+      },
+      {
+        "wallet": "0xb595d09ce5bbc4d39e3b3d04e80c402d2c8d5922",
+        "n_markets": 145,
+        "copyable_surplus": -0.006244466840623439,
+        "lb": -0.027576073161330223,
+        "abs_advantage_net_tax": -0.001591126323039328,
+        "maker_frac": 0.4953697691197691,
+        "usd": 183276.13473069284
+      },
+      {
+        "wallet": "0x737f767c0836893da61ca62bf8a757a155f966e8",
+        "n_markets": 190,
+        "copyable_surplus": 0.0018716569243522117,
+        "lb": -0.02867678536347308,
+        "abs_advantage_net_tax": 0.01851455217412282,
+        "maker_frac": 0.005263157894736842,
+        "usd": 5999.613244002525
+      },
+      {
+        "wallet": "0xfa7630f752d65dc7115507ffc1319e485e5be588",
+        "n_markets": 104,
+        "copyable_surplus": -0.0006183169677702812,
+        "lb": -0.028959768368981363,
+        "abs_advantage_net_tax": 0.010028017719084263,
+        "maker_frac": 0.5433608058608058,
+        "usd": 44263.879553007035
+      },
+      {
+        "wallet": "0xb66c2855ecdf8d41d6028b749fe7970f291ba0f5",
+        "n_markets": 39,
+        "copyable_surplus": 0.17609900642073104,
+        "lb": -0.0293947864851552,
+        "abs_advantage_net_tax": 0.2164193951552564,
+        "maker_frac": 0.0,
+        "usd": 1538.428904000236
+      },
+      {
+        "wallet": "0xb6ce76828a51b382f7e88cbb9baa0f03f9c17a7d",
+        "n_markets": 73,
+        "copyable_surplus": 0.07533442174477778,
+        "lb": -0.030002083511023556,
+        "abs_advantage_net_tax": 0.09889240363890527,
+        "maker_frac": 0.5013312622140593,
+        "usd": 150274.4515580292
+      },
+      {
+        "wallet": "0x2f46f8ab03933074df295811df9e1ae441f885c0",
+        "n_markets": 55,
+        "copyable_surplus": 0.11794496731601563,
+        "lb": -0.0301955871590764,
+        "abs_advantage_net_tax": 0.16462203976393935,
+        "maker_frac": 0.0,
+        "usd": 11114.569489985626
+      },
+      {
+        "wallet": "0xf3ef6ac0510c9eabc42fbb146b5c3c64edc1ca6b",
+        "n_markets": 384,
+        "copyable_surplus": 0.011936041082781493,
+        "lb": -0.031956718449309494,
+        "abs_advantage_net_tax": 0.03560388187485545,
+        "maker_frac": 0.4997265432513229,
+        "usd": 687860.5258801312
+      },
+      {
+        "wallet": "0x3600461ca002093e01555f1fa8ab729d91d9f72b",
+        "n_markets": 20,
+        "copyable_surplus": 0.24764671570584648,
+        "lb": -0.032081378583790204,
+        "abs_advantage_net_tax": 0.26985444711,
+        "maker_frac": 0.0,
+        "usd": 679.9999750090881
+      },
+      {
+        "wallet": "0x0c99d9f172fc4c25fd2aa92f9fc272da5f020c88",
+        "n_markets": 303,
+        "copyable_surplus": 0.03610005598573763,
+        "lb": -0.03223581676429691,
+        "abs_advantage_net_tax": 0.027079842088683567,
+        "maker_frac": 0.5212308464975752,
+        "usd": 227877.65727035285
+      },
+      {
+        "wallet": "0x3ae09f5bdf413f6ea9b57528a1c40a4dc2748661",
+        "n_markets": 67,
+        "copyable_surplus": 0.12614435732851131,
+        "lb": -0.03415583176571066,
+        "abs_advantage_net_tax": 0.1256407068158138,
+        "maker_frac": 0.0,
+        "usd": 3914.2764460225308
+      },
+      {
+        "wallet": "0xf0f0840cdc0eafef011c0173544b1fde710d26ed",
+        "n_markets": 88,
+        "copyable_surplus": 0.045232812980778775,
+        "lb": -0.03520474015889828,
+        "abs_advantage_net_tax": 0.09262242349790388,
+        "maker_frac": 0.591513221626858,
+        "usd": 107141.54873606437
+      },
+      {
+        "wallet": "0x84ad9c5c547a82ec9a08547b94bd922446e5bfb7",
+        "n_markets": 302,
+        "copyable_surplus": -0.0005793428975907585,
+        "lb": -0.03526092608525796,
+        "abs_advantage_net_tax": 0.025855942796463343,
+        "maker_frac": 0.21029971108184953,
+        "usd": 527543.3419190813
+      },
+      {
+        "wallet": "0xd961dd5107dc8cfbc95d26f3c9c9bac9264235de",
+        "n_markets": 58,
+        "copyable_surplus": 0.07371834099805447,
+        "lb": -0.036212587206495284,
+        "abs_advantage_net_tax": 0.07878062484423252,
+        "maker_frac": 0.7970375492036506,
+        "usd": 75851.61734005902
+      },
+      {
+        "wallet": "0xb7ab821f037a4c8deb9b23b8001a4be985d116d0",
+        "n_markets": 269,
+        "copyable_surplus": 0.030333091351065287,
+        "lb": -0.036219881937156646,
+        "abs_advantage_net_tax": 0.06453924789054327,
+        "maker_frac": 0.0,
+        "usd": 57167.95608103325
+      },
+      {
+        "wallet": "0x8fe730b55cf3468c01a884cfcde79c2dfb4d6c1f",
+        "n_markets": 268,
+        "copyable_surplus": 0.03797588104501495,
+        "lb": -0.03706123939567896,
+        "abs_advantage_net_tax": 0.04649543836752235,
+        "maker_frac": 0.10315461383558398,
+        "usd": 10999.960608988373
+      },
+      {
+        "wallet": "0x86545ddbac4c811e607a3d38849106f5419d6bfe",
+        "n_markets": 121,
+        "copyable_surplus": -0.009810318080919554,
+        "lb": -0.03770750739309356,
+        "abs_advantage_net_tax": -0.005860348055570767,
+        "maker_frac": 0.49471441093341917,
+        "usd": 125324.36054405445
+      },
+      {
+        "wallet": "0x4b926561fde78ce6010ffb86fb486cb69d73c894",
+        "n_markets": 30,
+        "copyable_surplus": 0.012972127862529275,
+        "lb": -0.037993895211994214,
+        "abs_advantage_net_tax": 0.05648968889166665,
+        "maker_frac": 0.0,
+        "usd": 796.3135599970002
+      },
+      {
+        "wallet": "0xcf0aca0d7a395202aec661c3666be9cc098e320a",
+        "n_markets": 68,
+        "copyable_surplus": 0.033256262097362696,
+        "lb": -0.03818673850073043,
+        "abs_advantage_net_tax": 0.06535614699454492,
+        "maker_frac": 0.3107167266270997,
+        "usd": 136522.2121427705
+      },
+      {
+        "wallet": "0xdbdd45150249e229eb4ca8aa48a30dca21faa5de",
+        "n_markets": 609,
+        "copyable_surplus": 0.007317671475716826,
+        "lb": -0.038235241381854426,
+        "abs_advantage_net_tax": 0.018291228885072723,
+        "maker_frac": 0.0,
+        "usd": 200182.39467453642
+      },
+      {
+        "wallet": "0x0659099dd92d238482891e69556a66a35d78d74d",
+        "n_markets": 106,
+        "copyable_surplus": 0.08309666625735632,
+        "lb": -0.038283423513263026,
+        "abs_advantage_net_tax": 0.09895724866291418,
+        "maker_frac": 0.5752081513873967,
+        "usd": 58057.409898065715
+      },
+      {
+        "wallet": "0x47138dc1eef25f1ea91f3b2fda0e0f455c634d21",
+        "n_markets": 699,
+        "copyable_surplus": -0.01023779252266667,
+        "lb": -0.03853528814168472,
+        "abs_advantage_net_tax": -0.01269331565041104,
+        "maker_frac": 0.1624289596779246,
+        "usd": 285767.0919701871
+      },
+      {
+        "wallet": "0xfd144099a983b0cfdb88d0b89e0ca049fae22267",
+        "n_markets": 215,
+        "copyable_surplus": 0.06534758605484757,
+        "lb": -0.03951119360652315,
+        "abs_advantage_net_tax": 0.04327827119585045,
+        "maker_frac": 0.46126163979105156,
+        "usd": 45015.617307044995
+      },
+      {
+        "wallet": "0xcb016f2b417f98c88fc91fffe7e69d4a6b1c7dfb",
+        "n_markets": 21,
+        "copyable_surplus": -0.018848576442204047,
+        "lb": -0.03963598957224256,
+        "abs_advantage_net_tax": -0.01648890923890924,
+        "maker_frac": 0.0,
+        "usd": 1352.5974999999996
+      }
+    ]
+  },
+  {
+    "niche": "tennis",
+    "population": 21535,
+    "eligible": 1894,
+    "mm_excluded": 420,
+    "certified": 9,
+    "null_mean": 11.101,
+    "null_p95": 17,
+    "beats_null": false,
+    "persistence": {
+      "n_testable": 1084,
+      "underpowered": false,
+      "cut": 1783431169.0,
+      "top_n": 50,
+      "b_mean": 0.026707405786811304,
+      "b_lb": -0.003238002906489948,
+      "b_hi": 0.05606418755533103,
+      "b_n_obs": 1016,
+      "b_n_markets": 478,
+      "rest_mean": -0.01839700448903303,
+      "rho": 0.09786546695521718
+    },
+    "tax": 0.013,
+    "hidden_vs_tracked": {
+      "tracked": {
+        "n": 148,
+        "median": -0.0024818150098159845,
+        "pct_positive": 0.46621621621621623,
+        "p90": 0.06263125424063058
+      },
+      "hidden": {
+        "n": 1746,
+        "median": -0.01528242979274008,
+        "pct_positive": 0.37628865979381443,
+        "p90": 0.06226722780240751
+      }
+    },
+    "roster": [
+      {
+        "wallet": "0x94d49b5dc34966ae41942cc12a147fba9f5bd869",
+        "n_markets": 121,
+        "copyable_surplus": 0.3533299027298999,
+        "lb": 0.1983502128841132,
+        "abs_advantage_net_tax": 0.3350380258933228,
+        "maker_frac": 0.0,
+        "usd": 2769.571459997056
+      },
+      {
+        "wallet": "0xe8ca3f758c93f44f3ec210542ab78afb7c0bcccb",
+        "n_markets": 26,
+        "copyable_surplus": 0.3960174524859049,
+        "lb": 0.09767586016904023,
+        "abs_advantage_net_tax": 0.3787882508089743,
+        "maker_frac": 0.03571428571428571,
+        "usd": 143.33896700015188
+      },
+      {
+        "wallet": "0x82e79f4f417e009b8a64679472a184d7d701c61c",
+        "n_markets": 53,
+        "copyable_surplus": 0.05101970538811257,
+        "lb": 0.03170947156631627,
+        "abs_advantage_net_tax": 0.08821242567452829,
+        "maker_frac": 0.0,
+        "usd": 2373.5904440057107
+      },
+      {
+        "wallet": "0x73d64eb92573d89ae66363c3eee8f339caf2855b",
+        "n_markets": 46,
+        "copyable_surplus": 0.02938889549171876,
+        "lb": 0.01924080812569378,
+        "abs_advantage_net_tax": 0.05060144769492756,
+        "maker_frac": 0.7608695652173914,
+        "usd": 615.3356270000887
+      },
+      {
+        "wallet": "0x638dc9ee7760a35c304afaec7acb2bb7600c3d87",
+        "n_markets": 43,
+        "copyable_surplus": 0.027581370029278754,
+        "lb": 0.01540603108750234,
+        "abs_advantage_net_tax": 0.0548260042495349,
+        "maker_frac": 0.1941860465116279,
+        "usd": 40015.061825966215
+      },
+      {
+        "wallet": "0xe4cb3430713393f9ac9d6f2ae1246f633857f380",
+        "n_markets": 31,
+        "copyable_surplus": 0.025304323681450237,
+        "lb": 0.010806132744242927,
+        "abs_advantage_net_tax": 0.04300629401935486,
+        "maker_frac": 0.0,
+        "usd": 243.77595999939496
+      },
+      {
+        "wallet": "0xe5196cf227de8740a00e4eb4a52d96550da52f48",
+        "n_markets": 221,
+        "copyable_surplus": 0.10887404419373455,
+        "lb": 0.008834371540144062,
+        "abs_advantage_net_tax": 0.11478755385045247,
+        "maker_frac": 0.0,
+        "usd": 2080.439814997506
+      },
+      {
+        "wallet": "0xff068050970cb915bb54c516ddc3f7ec06f8c7d5",
+        "n_markets": 37,
+        "copyable_surplus": 0.12293311798909135,
+        "lb": 0.005224627852273164,
+        "abs_advantage_net_tax": 0.1523337656918919,
+        "maker_frac": 0.005405405405405406,
+        "usd": 322.86901999987396
+      },
+      {
+        "wallet": "0xfcc2d31fa4b3d3ddce127b1f5e68b7b1988a3a08",
+        "n_markets": 37,
+        "copyable_surplus": 0.06533951605464292,
+        "lb": 0.004099235969801024,
+        "abs_advantage_net_tax": 0.1139459617135135,
+        "maker_frac": 0.0,
+        "usd": 154.6898549989518
+      },
+      {
+        "wallet": "0x42c99f38d2b951b0dc8e8bd5371fa80c9dd19623",
+        "n_markets": 700,
+        "copyable_surplus": 0.03035325564555724,
+        "lb": -0.0003970950932959891,
+        "abs_advantage_net_tax": 0.04031641861429755,
+        "maker_frac": 0.09710753166906684,
+        "usd": 1150555.8299401577
+      },
+      {
+        "wallet": "0x401c61f6c22a4a96054618d06d79e1fa398c6f40",
+        "n_markets": 56,
+        "copyable_surplus": 0.04338691091506485,
+        "lb": -0.0009469553101074599,
+        "abs_advantage_net_tax": 0.05837352850576456,
+        "maker_frac": 0.1709883866133866,
+        "usd": 849.5136379991761
+      },
+      {
+        "wallet": "0xdc4f08727c65afc4731b75cf1ed265666b7b4652",
+        "n_markets": 20,
+        "copyable_surplus": 0.03749092552637384,
+        "lb": -0.002293152299675208,
+        "abs_advantage_net_tax": 0.06547346359853631,
+        "maker_frac": 0.30587606837606834,
+        "usd": 12008.664262902339
+      },
+      {
+        "wallet": "0x820a0e91fdf03907ff7d05d0145f9d326f16ca12",
+        "n_markets": 21,
+        "copyable_surplus": 0.3394744757137744,
+        "lb": -0.002833048249161807,
+        "abs_advantage_net_tax": 0.343192032918546,
+        "maker_frac": 0.4533429533429534,
+        "usd": 4032.140961977875
+      },
+      {
+        "wallet": "0x7410b31f9d5d8ff1a999b750980ed3ab90d6f96f",
+        "n_markets": 39,
+        "copyable_surplus": 0.0025191285428846763,
+        "lb": -0.003452794106732591,
+        "abs_advantage_net_tax": 0.010254138137606858,
+        "maker_frac": 0.08547008547008547,
+        "usd": 1484.8066099991074
+      },
+      {
+        "wallet": "0x3e3ddec6a6ee4fade888b84161917004929313f0",
+        "n_markets": 46,
+        "copyable_surplus": 0.004313336460376763,
+        "lb": -0.0053884313351030355,
+        "abs_advantage_net_tax": 0.015245988612836455,
+        "maker_frac": 0.5547101449275362,
+        "usd": 2739.5479200000004
+      },
+      {
+        "wallet": "0xef1dc47a959899048e2a63a9da3f9e9497b33080",
+        "n_markets": 25,
+        "copyable_surplus": 0.11995112860194776,
+        "lb": -0.006985993826283232,
+        "abs_advantage_net_tax": 0.16305210103999998,
+        "maker_frac": 0.0,
+        "usd": 1903.7651390064627
+      },
+      {
+        "wallet": "0xb595d09ce5bbc4d39e3b3d04e80c402d2c8d5922",
+        "n_markets": 193,
+        "copyable_surplus": -0.0018487513773038713,
+        "lb": -0.007006054411498315,
+        "abs_advantage_net_tax": 0.007562733191557595,
+        "maker_frac": 0.2977597594433564,
+        "usd": 403876.44239556394
+      },
+      {
+        "wallet": "0x1cb63fd92efcaaf359ffdf301c40674b2ed793f6",
+        "n_markets": 20,
+        "copyable_surplus": 0.014455141696574858,
+        "lb": -0.0071967001397918555,
+        "abs_advantage_net_tax": 0.031113617195833332,
+        "maker_frac": 0.0,
+        "usd": 7607.089454055883
+      },
+      {
+        "wallet": "0x33048c041cd11826f0b594500ff3b1b15c791c1c",
+        "n_markets": 22,
+        "copyable_surplus": 0.025538450757708386,
+        "lb": -0.00762335699146352,
+        "abs_advantage_net_tax": 0.038453542195454556,
+        "maker_frac": 0.09090909090909091,
+        "usd": 667.7527289999424
+      },
+      {
+        "wallet": "0x7a5d94f83ff0195387eaf9f4463433d03eda54db",
+        "n_markets": 272,
+        "copyable_surplus": 0.06647685517108415,
+        "lb": -0.007756527739375824,
+        "abs_advantage_net_tax": 0.0729214552928556,
+        "maker_frac": 0.7568931506922759,
+        "usd": 67426.25065083522
+      },
+      {
+        "wallet": "0xb763736e0af6cbc0ffd440051eeaa2920ef44a90",
+        "n_markets": 127,
+        "copyable_surplus": -0.0029944983317875236,
+        "lb": -0.007930845226348744,
+        "abs_advantage_net_tax": 0.005818711408903705,
+        "maker_frac": 0.3182919442761962,
+        "usd": 43658.131539020396
+      },
+      {
+        "wallet": "0xde9f7f4e77a1595623ceb58e469f776257ccd43c",
+        "n_markets": 769,
+        "copyable_surplus": 0.016923985466148758,
+        "lb": -0.008469478809364828,
+        "abs_advantage_net_tax": 0.027020179563096006,
+        "maker_frac": 0.055682482367344015,
+        "usd": 1302462.839440072
+      },
+      {
+        "wallet": "0x40e8f2122b8f78ef35758aa507121bd9b60e88a4",
+        "n_markets": 22,
+        "copyable_surplus": 0.13414709975497646,
+        "lb": -0.008697456680495097,
+        "abs_advantage_net_tax": 0.16868222232271105,
+        "maker_frac": 0.3306277056277056,
+        "usd": 39381.54322336229
+      },
+      {
+        "wallet": "0xb9f58b4e589bd9032c13756b3429ebb977ddce6c",
+        "n_markets": 344,
+        "copyable_surplus": -0.005933217903950096,
+        "lb": -0.0092393273443091,
+        "abs_advantage_net_tax": 0.0020063269478191466,
+        "maker_frac": 0.5827759530521158,
+        "usd": 287167.4451097756
+      },
+      {
+        "wallet": "0x68afd142b11218368629955712362bbcc0f5736d",
+        "n_markets": 33,
+        "copyable_surplus": -0.003177366927902485,
+        "lb": -0.009326088800946052,
+        "abs_advantage_net_tax": 0.005558273984848497,
+        "maker_frac": 0.3484848484848485,
+        "usd": 882.574899997801
+      },
+      {
+        "wallet": "0x6cacf104e34d250f8359445638099b9bceeb133f",
+        "n_markets": 27,
+        "copyable_surplus": -0.004332232207031482,
+        "lb": -0.00969887060879696,
+        "abs_advantage_net_tax": 0.003640581744135814,
+        "maker_frac": 0.3493827160493827,
+        "usd": 729.4455999989998
+      },
+      {
+        "wallet": "0x2e7c5460614683b37e91490f7606047cebed164d",
+        "n_markets": 30,
+        "copyable_surplus": 0.28683691659048044,
+        "lb": -0.009709933085848943,
+        "abs_advantage_net_tax": 0.2684666656522222,
+        "maker_frac": 0.02222222222222222,
+        "usd": 263.7914189999998
+      },
+      {
+        "wallet": "0xbc1f07ed9dc81115e4280e9604eca2cc5baf23af",
+        "n_markets": 35,
+        "copyable_surplus": 7.415861651971999e-05,
+        "lb": -0.009710271239218984,
+        "abs_advantage_net_tax": 0.011613544228571438,
+        "maker_frac": 0.2,
+        "usd": 1794.7745900023658
+      },
+      {
+        "wallet": "0x89b55290123e979921c60899866adf5688737037",
+        "n_markets": 47,
+        "copyable_surplus": -0.004492863468359477,
+        "lb": -0.010276592466530746,
+        "abs_advantage_net_tax": 0.003589200036170224,
+        "maker_frac": 0.3191489361702128,
+        "usd": 1599.4197600040195
+      },
+      {
+        "wallet": "0xc04cb9838e64771be9d2ae12cf11c41abd72cebf",
+        "n_markets": 493,
+        "copyable_surplus": 0.024692522318568017,
+        "lb": -0.010570994409178056,
+        "abs_advantage_net_tax": 0.07057876874171432,
+        "maker_frac": 0.10178506415828932,
+        "usd": 7046.501210000538
+      },
+      {
+        "wallet": "0x8e52216607ebb117b498b689bcdc6d778cd32320",
+        "n_markets": 227,
+        "copyable_surplus": -0.0031882269837990706,
+        "lb": -0.010879132045639114,
+        "abs_advantage_net_tax": 0.005415184095397971,
+        "maker_frac": 0.38552548772813094,
+        "usd": 111350.82541412539
+      },
+      {
+        "wallet": "0xf614654c3d486712f86e1f5d8777df736c2128ba",
+        "n_markets": 120,
+        "copyable_surplus": -0.004582222170111391,
+        "lb": -0.011205537935915343,
+        "abs_advantage_net_tax": 0.0038970323173518596,
+        "maker_frac": 0.5316104497354498,
+        "usd": 96232.71640988851
+      },
+      {
+        "wallet": "0x9663a1bc594a019693631f39ed50e03496185b70",
+        "n_markets": 56,
+        "copyable_surplus": 0.18524012430832854,
+        "lb": -0.011416930250114338,
+        "abs_advantage_net_tax": 0.17504120381418647,
+        "maker_frac": 0.017857142857142856,
+        "usd": 2193.2054670013144
+      },
+      {
+        "wallet": "0x305bb5a33b7f6741907a5e668313a57ea312dac0",
+        "n_markets": 56,
+        "copyable_surplus": -0.0012348084801419381,
+        "lb": -0.012496940149951482,
+        "abs_advantage_net_tax": 0.007157731396428581,
+        "maker_frac": 0.30357142857142855,
+        "usd": 3023.726449996042
+      },
+      {
+        "wallet": "0x6c29d1714ff597fceeb8abdc65935d2dc9ff347e",
+        "n_markets": 50,
+        "copyable_surplus": -0.007595569586594476,
+        "lb": -0.013047448922099688,
+        "abs_advantage_net_tax": -2.1995177847609055e-05,
+        "maker_frac": 0.7088571428571429,
+        "usd": 1652.0311100001209
+      },
+      {
+        "wallet": "0x32ed1015ee881fb4050e4d132b8e4850d85c4391",
+        "n_markets": 216,
+        "copyable_surplus": -0.01052292967250016,
+        "lb": -0.013339126199516703,
+        "abs_advantage_net_tax": -0.0025597299187573495,
+        "maker_frac": 0.0,
+        "usd": 29205.168338018546
+      },
+      {
+        "wallet": "0xc095b5100653f0c34337c718f201dae96d762d65",
+        "n_markets": 59,
+        "copyable_surplus": 0.0032857923190311635,
+        "lb": -0.013501042994428595,
+        "abs_advantage_net_tax": 0.013650849277966115,
+        "maker_frac": 0.2033898305084746,
+        "usd": 2478.397799998244
+      },
+      {
+        "wallet": "0xc2bec11a79567ea92f7c5dfa6587eadaede6af12",
+        "n_markets": 648,
+        "copyable_surplus": 0.03061529763496909,
+        "lb": -0.0141353363240933,
+        "abs_advantage_net_tax": 0.03457620178995087,
+        "maker_frac": 0.0,
+        "usd": 46555.54309694795
+      },
+      {
+        "wallet": "0xbca290b9ce5ade123e892c6aca12565d7bf36aba",
+        "n_markets": 50,
+        "copyable_surplus": -0.006215738970398846,
+        "lb": -0.014687221428432005,
+        "abs_advantage_net_tax": 0.0022784411164761985,
+        "maker_frac": 0.7730072150072149,
+        "usd": 79505.74825800258
+      },
+      {
+        "wallet": "0xb1aad9392ed144ad577e2e55fb83c783e52e16cf",
+        "n_markets": 29,
+        "copyable_surplus": 0.08857218837148827,
+        "lb": -0.015251741902787011,
+        "abs_advantage_net_tax": 0.13385551768965517,
+        "maker_frac": 0.0,
+        "usd": 2259.9999020058003
+      },
+      {
+        "wallet": "0x15ac9d4fb9c30fca4fec2fdecde3fdace721f3ba",
+        "n_markets": 112,
+        "copyable_surplus": 0.003880402647244701,
+        "lb": -0.016296277558331292,
+        "abs_advantage_net_tax": 0.012586404278720247,
+        "maker_frac": 0.29508928571428567,
+        "usd": 50042.228489965964
+      },
+      {
+        "wallet": "0x6d89997408c81b01baa9dc8ac90a0578ac769ef7",
+        "n_markets": 30,
+        "copyable_surplus": -0.013399592929132955,
+        "lb": -0.017092742524035774,
+        "abs_advantage_net_tax": -0.005444444444444437,
+        "maker_frac": 0.7035714285714286,
+        "usd": 14991.451080000003
+      },
+      {
+        "wallet": "0x6a20d4a7c173ff13d1c8fe2807525cd72237d606",
+        "n_markets": 128,
+        "copyable_surplus": 0.0738245871074655,
+        "lb": -0.01762882242016514,
+        "abs_advantage_net_tax": 0.12579040506523437,
+        "maker_frac": 0.2109375,
+        "usd": 4517.222648999328
+      },
+      {
+        "wallet": "0xd5ac04dc2e2be2b0e6f8802acd2e4dc5d4a80510",
+        "n_markets": 23,
+        "copyable_surplus": -0.014501632722076717,
+        "lb": -0.018477869296359514,
+        "abs_advantage_net_tax": -0.007183106974999995,
+        "maker_frac": 0.1548748353096179,
+        "usd": 10535.688114019253
+      },
+      {
+        "wallet": "0x50b4ab8658dd8c9901c69208d275d81cdeaac879",
+        "n_markets": 163,
+        "copyable_surplus": -0.018048330740846663,
+        "lb": -0.01868910133207221,
+        "abs_advantage_net_tax": -0.011047117446012271,
+        "maker_frac": 0.0,
+        "usd": 11385.148619010099
+      },
+      {
+        "wallet": "0x1e99cafd0e897fc50ddf138dacd19ab5285099ef",
+        "n_markets": 24,
+        "copyable_surplus": -0.017444248058723282,
+        "lb": -0.01873039100873602,
+        "abs_advantage_net_tax": -0.010443034763888887,
+        "maker_frac": 0.21388888888888888,
+        "usd": 362.78347200000104
+      },
+      {
+        "wallet": "0x6b23c73159b753c96d3c1ed94413f113300c04a3",
+        "n_markets": 557,
+        "copyable_surplus": 0.024316577927305478,
+        "lb": -0.018852172833051514,
+        "abs_advantage_net_tax": 0.04628048110347882,
+        "maker_frac": 0.0,
+        "usd": 34761.570745063465
+      },
+      {
+        "wallet": "0xdafb193d52d7ee8dd826d67d0a07019da5f6628a",
+        "n_markets": 22,
+        "copyable_surplus": -0.01622844560847075,
+        "lb": -0.01910440770820166,
+        "abs_advantage_net_tax": -0.009227232313636357,
+        "maker_frac": 0.0,
+        "usd": 139.36371899999543
+      },
+      {
+        "wallet": "0xeea3f08e8a36081233e4c4b4142fd61a7b56a6a2",
+        "n_markets": 754,
+        "copyable_surplus": -0.0009268722929729925,
+        "lb": -0.019178280835320673,
+        "abs_advantage_net_tax": 0.009113803396494476,
+        "maker_frac": 0.0038432316762879084,
+        "usd": 1191807.7045239257
+      },
+      {
+        "wallet": "0x1cff246298c8013ca2d1f84d0b43c9316e0e6cff",
+        "n_markets": 69,
+        "copyable_surplus": -0.018504771980548677,
+        "lb": -0.019271962884798478,
+        "abs_advantage_net_tax": -0.011503558685714283,
+        "maker_frac": 0.6635955831608006,
+        "usd": 29766.966190026003
+      },
+      {
+        "wallet": "0x6a88c5ecd262e2c42e78bad8e6db7ab3c4e4b859",
+        "n_markets": 72,
+        "copyable_surplus": -0.018476071122612167,
+        "lb": -0.01929355111553417,
+        "abs_advantage_net_tax": -0.011474857827777775,
+        "maker_frac": 0.6230930335097002,
+        "usd": 89506.16345004542
+      },
+      {
+        "wallet": "0x205b4e3ab6e69e2250ccfdcf4e4613287966d66a",
+        "n_markets": 42,
+        "copyable_surplus": 0.0037739748886165317,
+        "lb": -0.019380771467934682,
+        "abs_advantage_net_tax": 0.013456440780952397,
+        "maker_frac": 0.16666666666666666,
+        "usd": 560.9950000011999
+      },
+      {
+        "wallet": "0x0a8fc6b749be7d961d80937341370e30fd572f50",
+        "n_markets": 39,
+        "copyable_surplus": -0.017770444064065163,
+        "lb": -0.01938795188398259,
+        "abs_advantage_net_tax": -0.010769230769230765,
+        "maker_frac": 0.7948717948717948,
+        "usd": 758.52861
+      },
+      {
+        "wallet": "0xd0b2c43f6990a85d73c3c8b1ca069b3b8e070c95",
+        "n_markets": 27,
+        "copyable_surplus": -0.017186398480019575,
+        "lb": -0.019437330280733682,
+        "abs_advantage_net_tax": -0.010185185185185183,
+        "maker_frac": 0.7592592592592593,
+        "usd": 532.2871399999999
+      },
+      {
+        "wallet": "0x01d49b1b277f68b432a815c56decbfc59a67d272",
+        "n_markets": 42,
+        "copyable_surplus": -0.018072641866262965,
+        "lb": -0.01944250003478773,
+        "abs_advantage_net_tax": -0.011071428571428569,
+        "maker_frac": 0.7857142857142857,
+        "usd": 920.99507
+      },
+      {
+        "wallet": "0x9e14776d5dbf5e8a00e5eca2c2ddfb7b877e5ada",
+        "n_markets": 22,
+        "copyable_surplus": -0.016546667840288937,
+        "lb": -0.019462425611261693,
+        "abs_advantage_net_tax": -0.009545454545454541,
+        "maker_frac": 0.5227272727272727,
+        "usd": 1001.4753600000001
+      },
+      {
+        "wallet": "0x59ba2c04f3e91771688a35f4ab0e50f6caf1f6a2",
+        "n_markets": 49,
+        "copyable_surplus": -0.01859648892044781,
+        "lb": -0.019600440105035227,
+        "abs_advantage_net_tax": -0.011595275625613416,
+        "maker_frac": 0.7865039690655413,
+        "usd": 352964.25590997655
+      },
+      {
+        "wallet": "0x737ef9666087d3b4aa66b08822319327ea1ade01",
+        "n_markets": 31,
+        "copyable_surplus": -0.01863024555289891,
+        "lb": -0.01960172446315114,
+        "abs_advantage_net_tax": -0.011629032258064513,
+        "maker_frac": 0.5645161290322581,
+        "usd": 191.72300000000007
+      },
+      {
+        "wallet": "0x1d4bf5286a2b2764ee6c73c9449aa90bb80950c5",
+        "n_markets": 32,
+        "copyable_surplus": 0.005088646856140695,
+        "lb": -0.019708869166747182,
+        "abs_advantage_net_tax": 0.01491920938125001,
+        "maker_frac": 0.046875,
+        "usd": 1027.5948420084412
+      },
+      {
+        "wallet": "0xa16a1302ca05463f30faebeb5c045767fde233a1",
+        "n_markets": 32,
+        "copyable_surplus": -0.01818871329483439,
+        "lb": -0.019824531954880372,
+        "abs_advantage_net_tax": -0.011187499999999998,
+        "maker_frac": 0.765625,
+        "usd": 144262.24065000002
+      },
+      {
+        "wallet": "0x3cd1cc3fdd545e8727095de26fe75fb82a6bba46",
+        "n_markets": 22,
+        "copyable_surplus": -0.01854666784028894,
+        "lb": -0.0199115907114289,
+        "abs_advantage_net_tax": -0.011545454545454543,
+        "maker_frac": 0.5909090909090909,
+        "usd": 197.59012000000004
+      },
+      {
+        "wallet": "0xa2dd75ac3fdf9ab274a6e939129feb170353e1b2",
+        "n_markets": 35,
+        "copyable_surplus": -0.015029979173451271,
+        "lb": -0.020098299779760236,
+        "abs_advantage_net_tax": -0.008028765878616876,
+        "maker_frac": 0.6240038669595319,
+        "usd": 48584.44602003388
+      },
+      {
+        "wallet": "0x6485f47d0344c03eb4340f985159f6eb2dcba265",
+        "n_markets": 669,
+        "copyable_surplus": 0.02060244239815466,
+        "lb": -0.020113734609692624,
+        "abs_advantage_net_tax": 0.03200569694946608,
+        "maker_frac": 0.06729498437586363,
+        "usd": 657477.765406253
+      },
+      {
+        "wallet": "0x86b9a88a75194d15bb36c092ea85202da5596d67",
+        "n_markets": 244,
+        "copyable_surplus": -0.01757979776004859,
+        "lb": -0.020184721650917843,
+        "abs_advantage_net_tax": -0.01033639871035624,
+        "maker_frac": 0.2807298234552333,
+        "usd": 16169.03829299642
+      },
+      {
+        "wallet": "0x4b28db1fc041990ebde7f9b18c495db5e04ed5c2",
+        "n_markets": 26,
+        "copyable_surplus": -0.01698839278201388,
+        "lb": -0.020268788178531318,
+        "abs_advantage_net_tax": -0.009987179487179485,
+        "maker_frac": 0.16666666666666666,
+        "usd": 145.41910000000001
+      },
+      {
+        "wallet": "0x10665e21f143c9f24a38fe5d0a2262ad75d97ae0",
+        "n_markets": 20,
+        "copyable_surplus": -0.018377980025603625,
+        "lb": -0.020432627074024146,
+        "abs_advantage_net_tax": -0.01137676673076923,
+        "maker_frac": 0.713931623931624,
+        "usd": 14602.9469699961
+      },
+      {
+        "wallet": "0xb52bed5692f410333fe07d5fedd575cac0b89646",
+        "n_markets": 356,
+        "copyable_surplus": -0.009638796958574924,
+        "lb": -0.021033251434766247,
+        "abs_advantage_net_tax": -0.002388328080351109,
+        "maker_frac": 0.14794007490636704,
+        "usd": 2313.0063189990938
+      },
+      {
+        "wallet": "0x5912794596cd3cc2f36605710fc1fcd6e5886f45",
+        "n_markets": 56,
+        "copyable_surplus": -0.015206856295985722,
+        "lb": -0.021535770678312544,
+        "abs_advantage_net_tax": -0.007749520788147224,
+        "maker_frac": 0.7060472388829647,
+        "usd": 264366.70751509065
+      },
+      {
+        "wallet": "0xdbdd45150249e229eb4ca8aa48a30dca21faa5de",
+        "n_markets": 928,
+        "copyable_surplus": 0.016609130192470713,
+        "lb": -0.02204570418063012,
+        "abs_advantage_net_tax": 0.025966336954650632,
+        "maker_frac": 0.0,
+        "usd": 149593.9214115496
+      },
+      {
+        "wallet": "0x542c58cc0b1ddf69a694fcb1fda97a9911a3ed1c",
+        "n_markets": 104,
+        "copyable_surplus": 0.06806733155754259,
+        "lb": -0.02344101144614774,
+        "abs_advantage_net_tax": 0.09303139380096151,
+        "maker_frac": 0.04246794871794872,
+        "usd": 2088.622349998501
+      },
+      {
+        "wallet": "0x1d7e95e52b59a5339654a5eac337ce84bfab3fd4",
+        "n_markets": 294,
+        "copyable_surplus": -0.010057710367993418,
+        "lb": -0.02358174053826765,
+        "abs_advantage_net_tax": -0.0028732162438350243,
+        "maker_frac": 0.629215932404708,
+        "usd": 59042.21938000811
+      },
+      {
+        "wallet": "0x204f72f35326db932158cba6adff0b9a1da95e14",
+        "n_markets": 871,
+        "copyable_surplus": -0.0037759967455517217,
+        "lb": -0.02402184197463978,
+        "abs_advantage_net_tax": 0.0031204082966358802,
+        "maker_frac": 0.22975323610247037,
+        "usd": 5407409.917485098
+      },
+      {
+        "wallet": "0x98883c610e4400dd998f81cf41658d51ff06e6fe",
+        "n_markets": 515,
+        "copyable_surplus": 0.02936842468720221,
+        "lb": -0.024201700321143264,
+        "abs_advantage_net_tax": 0.03297875695394127,
+        "maker_frac": 0.0,
+        "usd": 37667.62660901006
+      },
+      {
+        "wallet": "0x15366fec3c72731622619329ec93a0474b5a3ca5",
+        "n_markets": 80,
+        "copyable_surplus": 0.07800744865606715,
+        "lb": -0.027664709576798924,
+        "abs_advantage_net_tax": 0.12126713649568269,
+        "maker_frac": 0.0,
+        "usd": 271.48967400110945
+      },
+      {
+        "wallet": "0x34436ce620eb38ab15be09705e837f1c2cf264e9",
+        "n_markets": 23,
+        "copyable_surplus": 0.1128270383194392,
+        "lb": -0.027972741034298074,
+        "abs_advantage_net_tax": 0.16453909456521737,
+        "maker_frac": 0.0,
+        "usd": 2213.9756480450615
+      },
+      {
+        "wallet": "0x64c572d3977251aaf5801f3558a5d4766a41d255",
+        "n_markets": 77,
+        "copyable_surplus": -0.020727243617150216,
+        "lb": -0.028517846906626232,
+        "abs_advantage_net_tax": -0.014529368516530335,
+        "maker_frac": 0.7966393982036455,
+        "usd": 1007864.6230594084
+      },
+      {
+        "wallet": "0x7e388d502d02c66645b9307176e617308b1d85c9",
+        "n_markets": 28,
+        "copyable_surplus": 0.018228117043335275,
+        "lb": -0.029102879402231344,
+        "abs_advantage_net_tax": 0.03911229405357143,
+        "maker_frac": 0.0,
+        "usd": 3399.999280010552
+      },
+      {
+        "wallet": "0x22da1a1fc2b14f5c76b0e179048734c015ef2866",
+        "n_markets": 280,
+        "copyable_surplus": 0.012049187634202693,
+        "lb": -0.02928375353100321,
+        "abs_advantage_net_tax": 0.030194862416428863,
+        "maker_frac": 0.14905944953739073,
+        "usd": 3187.528644000951
+      },
+      {
+        "wallet": "0xbd58d33e6e675c52bac4912de1c4c8d7bc18879a",
+        "n_markets": 105,
+        "copyable_surplus": 0.0027643290452073156,
+        "lb": -0.029312857411578217,
+        "abs_advantage_net_tax": 0.0100380952514286,
+        "maker_frac": 0.0,
+        "usd": 9368.147410001768
+      },
+      {
+        "wallet": "0x0ec7f0eac6c47934ab9b41e02bd8f15a5f4293d1",
+        "n_markets": 980,
+        "copyable_surplus": -0.000672606617471034,
+        "lb": -0.029773266963979653,
+        "abs_advantage_net_tax": 0.0077861068498333305,
+        "maker_frac": 0.17024376417233558,
+        "usd": 9804.084010000715
+      },
+      {
+        "wallet": "0x48e4aca9fbf455616ca75c6e6fd92e3cc155db33",
+        "n_markets": 20,
+        "copyable_surplus": 0.12854146109697553,
+        "lb": -0.030118757804085322,
+        "abs_advantage_net_tax": 0.17654247632249997,
+        "maker_frac": 0.0,
+        "usd": 1084.0899590072488
+      },
+      {
+        "wallet": "0x1ba2b1137313b248b03a9be40093b23d7e96d212",
+        "n_markets": 804,
+        "copyable_surplus": 0.0016238067750256858,
+        "lb": -0.03187066608721769,
+        "abs_advantage_net_tax": 0.006784686062068116,
+        "maker_frac": 0.13913720670445764,
+        "usd": 179498.75564697105
+      },
+      {
+        "wallet": "0xa8a5d49e6958d836c5ef4b57263466d59b0ee382",
+        "n_markets": 38,
+        "copyable_surplus": 0.08930106592580332,
+        "lb": -0.032211287189405566,
+        "abs_advantage_net_tax": 0.13541945700657892,
+        "maker_frac": 0.0,
+        "usd": 178.31986299910673
+      },
+      {
+        "wallet": "0xf18af4ede11048b8695d775f72ec5e7a236ee4e5",
+        "n_markets": 527,
+        "copyable_surplus": 0.005428006579613437,
+        "lb": -0.032532762389929006,
+        "abs_advantage_net_tax": 0.02204687313660405,
+        "maker_frac": 0.0,
+        "usd": 76378.11602600815
+      },
+      {
+        "wallet": "0x8a482e9ceb607197ffe971cfdd781c1a081308c5",
+        "n_markets": 345,
+        "copyable_surplus": 0.01771910147036058,
+        "lb": -0.03296477133396293,
+        "abs_advantage_net_tax": 0.03905872313105797,
+        "maker_frac": 0.0,
+        "usd": 1456.0473209998477
+      },
+      {
+        "wallet": "0x3c5295869f916f626bec1116a381886552a799e1",
+        "n_markets": 253,
+        "copyable_surplus": 0.027381518417506513,
+        "lb": -0.03394154114081656,
+        "abs_advantage_net_tax": 0.07325992461873415,
+        "maker_frac": 0.0,
+        "usd": 1878.7786989984756
+      },
+      {
+        "wallet": "0x31121402eafd4a157141db8f84b5da297ff63fcd",
+        "n_markets": 133,
+        "copyable_surplus": -0.007395271665573719,
+        "lb": -0.033957747974673894,
+        "abs_advantage_net_tax": 0.0027519140458646726,
+        "maker_frac": 0.32393483709273185,
+        "usd": 5519.573499996099
+      },
+      {
+        "wallet": "0x016909bcb23f59f1022689742014f22d8691043c",
+        "n_markets": 713,
+        "copyable_surplus": -0.006460704061819345,
+        "lb": -0.034014678182274154,
+        "abs_advantage_net_tax": 0.002503212898599805,
+        "maker_frac": 0.0,
+        "usd": 2449.997062000172
+      },
+      {
+        "wallet": "0x84ad9c5c547a82ec9a08547b94bd922446e5bfb7",
+        "n_markets": 716,
+        "copyable_surplus": -0.00809142546643832,
+        "lb": -0.034120399180930044,
+        "abs_advantage_net_tax": 0.015258201817836587,
+        "maker_frac": 0.19090500952826517,
+        "usd": 1201536.807561356
+      },
+      {
+        "wallet": "0x40d68c19ceb3ab5963c8d8da01d9d634ed769892",
+        "n_markets": 260,
+        "copyable_surplus": 0.014315458259428596,
+        "lb": -0.03422864691300162,
+        "abs_advantage_net_tax": 0.03279984430893246,
+        "maker_frac": 0.0,
+        "usd": 7194.564501017461
+      },
+      {
+        "wallet": "0x4126330ba61224a3b265921fcdea1adc50d6e68b",
+        "n_markets": 425,
+        "copyable_surplus": -0.0028006100671937317,
+        "lb": -0.03582391776951441,
+        "abs_advantage_net_tax": 0.02663674957125169,
+        "maker_frac": 0.012573386952575689,
+        "usd": 72203.57863000188
+      },
+      {
+        "wallet": "0x0df758f3a438f88d9b98da42ab76cd585a101ec1",
+        "n_markets": 505,
+        "copyable_surplus": 0.002563012047188611,
+        "lb": -0.03649508892216539,
+        "abs_advantage_net_tax": 0.012233913442585405,
+        "maker_frac": 0.0,
+        "usd": 18171.315297994468
+      },
+      {
+        "wallet": "0x8bf976b961ce1ea932a62e1f73af87c9e5228292",
+        "n_markets": 172,
+        "copyable_surplus": 0.06676662877402505,
+        "lb": -0.03750513268094466,
+        "abs_advantage_net_tax": 0.07747782985518273,
+        "maker_frac": 0.0,
+        "usd": 21082.10848891409
+      },
+      {
+        "wallet": "0xe91171f655be1568e4c63f29663c0028649e3d4e",
+        "n_markets": 370,
+        "copyable_surplus": 0.02457371438119193,
+        "lb": -0.037814029920070144,
+        "abs_advantage_net_tax": 0.03281810558815082,
+        "maker_frac": 0.04298792546637374,
+        "usd": 117767.03179316291
+      },
+      {
+        "wallet": "0x905f2503c914856f1880029bda8fb00b304aad6b",
+        "n_markets": 83,
+        "copyable_surplus": 0.0775154034865492,
+        "lb": -0.03782137282793405,
+        "abs_advantage_net_tax": 0.10263467927849972,
+        "maker_frac": 0.2746701090074584,
+        "usd": 1615.167671999322
+      },
+      {
+        "wallet": "0x033f0346c007323030eb420305ffede19a95618e",
+        "n_markets": 24,
+        "copyable_surplus": 0.2546651181146281,
+        "lb": -0.037894907905964836,
+        "abs_advantage_net_tax": 0.24426538231805553,
+        "maker_frac": 0.041666666666666664,
+        "usd": 472.2654199995919
+      },
+      {
+        "wallet": "0x55c8245908fc8f72af835a7199b9aea1de6fb64b",
+        "n_markets": 86,
+        "copyable_surplus": 0.0789018521437104,
+        "lb": -0.03797506577042482,
+        "abs_advantage_net_tax": 0.08868092931115505,
+        "maker_frac": 0.0,
+        "usd": 225.29843400025393
+      },
+      {
+        "wallet": "0x3cadb93ce001cb0ac411683a32437414550c92f0",
+        "n_markets": 438,
+        "copyable_surplus": 0.03605838215258861,
+        "lb": -0.03860120584079581,
+        "abs_advantage_net_tax": 0.016863899975342454,
+        "maker_frac": 0.0,
+        "usd": 16909.2995819857
+      },
+      {
+        "wallet": "0x10bc2154e36d78d2477798d713466968c14a0b14",
+        "n_markets": 197,
+        "copyable_surplus": -0.0015915455166411268,
+        "lb": -0.03940957946859915,
+        "abs_advantage_net_tax": 0.020583837371819763,
+        "maker_frac": 0.25148457013939246,
+        "usd": 57187.14329297182
+      },
+      {
+        "wallet": "0xd93e37dafe1aec2a6ef2ba5c20629c3d25947434",
+        "n_markets": 86,
+        "copyable_surplus": 0.11154279927915446,
+        "lb": -0.039642883585056535,
+        "abs_advantage_net_tax": 0.09758868441434108,
+        "maker_frac": 0.14806201550387596,
+        "usd": 1089.20799799475
+      }
+    ]
+  },
+  {
+    "niche": "weather",
+    "population": 21392,
+    "eligible": 3692,
+    "mm_excluded": 902,
+    "certified": 40,
+    "null_mean": 20.614,
+    "null_p95": 28,
+    "beats_null": true,
+    "persistence": {
+      "n_testable": 2943,
+      "underpowered": false,
+      "cut": 1783461034.0,
+      "top_n": 50,
+      "b_mean": 0.017867603864843856,
+      "b_lb": -0.011596350701768331,
+      "b_hi": 0.04717836705775657,
+      "b_n_obs": 930,
+      "b_n_markets": 612,
+      "rest_mean": -0.011472424847601689,
+      "rho": 0.06817057011498553
+    },
+    "tax": 0.013,
+    "hidden_vs_tracked": {
+      "tracked": {
+        "n": 60,
+        "median": -0.0050326086375567375,
+        "pct_positive": 0.4166666666666667,
+        "p90": 0.04999183042261224
+      },
+      "hidden": {
+        "n": 3632,
+        "median": -0.010265580473216471,
+        "pct_positive": 0.3158039647577093,
+        "p90": 0.04140374964937702
+      }
+    },
+    "roster": [
+      {
+        "wallet": "0x6011655c4afb76f36dd1b08a137a1ba73466b31e",
+        "n_markets": 269,
+        "copyable_surplus": 0.09118221625260954,
+        "lb": 0.05763769853857819,
+        "abs_advantage_net_tax": 0.09304338668872367,
+        "maker_frac": 0.0,
+        "usd": 102168.29109497357
+      },
+      {
+        "wallet": "0x5d0f8f296af15d73c33f6c6202fff74709fb085c",
+        "n_markets": 164,
+        "copyable_surplus": 0.1422620169624396,
+        "lb": 0.04638050707004064,
+        "abs_advantage_net_tax": 0.15054398144237804,
+        "maker_frac": 0.021341463414634148,
+        "usd": 2436.9238581296486
+      },
+      {
+        "wallet": "0xf203d180bc108d011c4496aebeb0df0a76188a41",
+        "n_markets": 26,
+        "copyable_surplus": 0.03971102511179425,
+        "lb": 0.026802443733170422,
+        "abs_advantage_net_tax": 0.041137135146153844,
+        "maker_frac": 0.0,
+        "usd": 1242.298212017141
+      },
+      {
+        "wallet": "0xba440e07d381affbb5386dabe386584342937d2c",
+        "n_markets": 39,
+        "copyable_surplus": 0.02480860029987759,
+        "lb": 0.021390729393357694,
+        "abs_advantage_net_tax": 0.023561675872982593,
+        "maker_frac": 0.0,
+        "usd": 18518.751399106113
+      },
+      {
+        "wallet": "0xa2f0c4a199e3b4b684028d12c84520c539948e23",
+        "n_markets": 20,
+        "copyable_surplus": 0.07464799297130678,
+        "lb": 0.019828715514787133,
+        "abs_advantage_net_tax": 0.07861965495075397,
+        "maker_frac": 0.6642460317460317,
+        "usd": 1494.2376769998034
+      },
+      {
+        "wallet": "0x1faddb00a36999db1f7ceff0a360d9a47a56e1ff",
+        "n_markets": 36,
+        "copyable_surplus": 0.025828475958618664,
+        "lb": 0.018651819846195874,
+        "abs_advantage_net_tax": 0.025444444444444474,
+        "maker_frac": 0.027777777777777776,
+        "usd": 173.08000000000007
+      },
+      {
+        "wallet": "0x2dbc285c78227ea99cfba6d7092638d916859e9b",
+        "n_markets": 67,
+        "copyable_surplus": 0.030656554191337282,
+        "lb": 0.017537442000541734,
+        "abs_advantage_net_tax": 0.030782055517472182,
+        "maker_frac": 0.6693674484719261,
+        "usd": 611.6497719998436
+      },
+      {
+        "wallet": "0x411b5b219e680e04a1359dc2fd248182a56b9e28",
+        "n_markets": 22,
+        "copyable_surplus": 0.04304758568228326,
+        "lb": 0.016802111527270045,
+        "abs_advantage_net_tax": 0.04430211046818181,
+        "maker_frac": 0.0,
+        "usd": 229.68925000094129
+      },
+      {
+        "wallet": "0x4977b9ee7c13225d882f48ca9636a864619e8a40",
+        "n_markets": 29,
+        "copyable_surplus": 0.03531601050630758,
+        "lb": 0.0159222458629508,
+        "abs_advantage_net_tax": 0.03651725277241381,
+        "maker_frac": 0.0,
+        "usd": 36.2993850001165
+      },
+      {
+        "wallet": "0xe0edfd031417d645a8f32079133b18155a141efe",
+        "n_markets": 45,
+        "copyable_surplus": 0.020017877805665413,
+        "lb": 0.015041854156094056,
+        "abs_advantage_net_tax": 0.01848193803333336,
+        "maker_frac": 0.044444444444444446,
+        "usd": 222.8400999997189
+      },
+      {
+        "wallet": "0x0f7cdcaf7d87f1c4e4f675a8499fdfacb1f31558",
+        "n_markets": 52,
+        "copyable_surplus": 0.01762998398963977,
+        "lb": 0.013523682997983236,
+        "abs_advantage_net_tax": 0.01609404421730772,
+        "maker_frac": 0.0,
+        "usd": 1003.6675100018374
+      },
+      {
+        "wallet": "0x5e8de8225cbcdc2a41a9ea4a44cb966d5d02d14a",
+        "n_markets": 30,
+        "copyable_surplus": 0.09692030250721843,
+        "lb": 0.013236293923966566,
+        "abs_advantage_net_tax": 0.10225622222222223,
+        "maker_frac": 0.06666666666666667,
+        "usd": 255.58810000000003
+      },
+      {
+        "wallet": "0x5a218c7ad04135830a45c41aaed7294df7809318",
+        "n_markets": 4118,
+        "copyable_surplus": 0.02191287451212601,
+        "lb": 0.011848284126782217,
+        "abs_advantage_net_tax": 0.02570493144470868,
+        "maker_frac": 0.3468998356609005,
+        "usd": 166226.5297649202
+      },
+      {
+        "wallet": "0xd417942e20dc0bec2501ca6f9ca2256b212f77ba",
+        "n_markets": 26,
+        "copyable_surplus": 0.016697667889403814,
+        "lb": 0.010600190238728224,
+        "abs_advantage_net_tax": 0.015776923076923105,
+        "maker_frac": 0.04615384615384615,
+        "usd": 359.75613999999996
+      },
+      {
+        "wallet": "0xad49f084133cfc6d40274ce2732c1ebd1bd62b04",
+        "n_markets": 28,
+        "copyable_surplus": 0.02606880705310041,
+        "lb": 0.00931009344820194,
+        "abs_advantage_net_tax": 0.026535721725000017,
+        "maker_frac": 0.0,
+        "usd": 47.79934500004139
+      },
+      {
+        "wallet": "0xb89bfe9b9813607adf83489e0dca6ab25c4d1a22",
+        "n_markets": 67,
+        "copyable_surplus": 0.056724358508229336,
+        "lb": 0.008942125142538178,
+        "abs_advantage_net_tax": 0.05772563552985076,
+        "maker_frac": 0.0,
+        "usd": 19238.43440791461
+      },
+      {
+        "wallet": "0xf19df33c45f0009eaff80e24d0017fc726324c8e",
+        "n_markets": 45,
+        "copyable_surplus": 0.012427123967146887,
+        "lb": 0.00859683958746903,
+        "abs_advantage_net_tax": 0.010891184194814836,
+        "maker_frac": 0.0,
+        "usd": 503.65004000067285
+      },
+      {
+        "wallet": "0xe040ffe586e21cb49449e8daf19b1cdff87a824f",
+        "n_markets": 2080,
+        "copyable_surplus": 0.027301741555424596,
+        "lb": 0.007994033799862351,
+        "abs_advantage_net_tax": 0.030502111654071858,
+        "maker_frac": 0.5171671166577789,
+        "usd": 130479.83597004952
+      },
+      {
+        "wallet": "0x29ce47e687566c8ce9b1b92c126f859f35a9b53b",
+        "n_markets": 42,
+        "copyable_surplus": 0.008868941712808259,
+        "lb": 0.007398795425743109,
+        "abs_advantage_net_tax": 0.007333001940476207,
+        "maker_frac": 0.0,
+        "usd": 413.69928799820184
+      },
+      {
+        "wallet": "0xe1b00eb4584c99d3801ca3c658253c4d5c10155b",
+        "n_markets": 27,
+        "copyable_surplus": 0.020999190207420516,
+        "lb": 0.007281027650048037,
+        "abs_advantage_net_tax": 0.020915006156069973,
+        "maker_frac": 0.302880658436214,
+        "usd": 3875.1665500042823
+      },
+      {
+        "wallet": "0xa2eded4da718244771d4f2b7810da45533de9d98",
+        "n_markets": 316,
+        "copyable_surplus": 0.07324742655079376,
+        "lb": 0.006558760278155648,
+        "abs_advantage_net_tax": 0.0812082102087402,
+        "maker_frac": 0.0,
+        "usd": 4529.451784008151
+      },
+      {
+        "wallet": "0x0fc8632b06dfdb0401e671a508bb81e67ced4af3",
+        "n_markets": 54,
+        "copyable_surplus": 0.008112282954792386,
+        "lb": 0.005819811852721669,
+        "abs_advantage_net_tax": 0.0065763431824603326,
+        "maker_frac": 0.736574074074074,
+        "usd": 4975.762771999879
+      },
+      {
+        "wallet": "0x237e3e85b8fc5e4167df0ffb091c5e4db64e42b2",
+        "n_markets": 23,
+        "copyable_surplus": 0.1576711654062073,
+        "lb": 0.0055808932533583655,
+        "abs_advantage_net_tax": 0.16513511883913043,
+        "maker_frac": 0.07246376811594202,
+        "usd": 140.42491699965782
+      },
+      {
+        "wallet": "0x4a10e1ca7bad3773b5d5d933a682ee75eeb96d5a",
+        "n_markets": 43,
+        "copyable_surplus": 0.08702142079283189,
+        "lb": 0.005029517788718796,
+        "abs_advantage_net_tax": 0.09281401968139534,
+        "maker_frac": 0.0,
+        "usd": 56.76983999980207
+      },
+      {
+        "wallet": "0x937bcac3a8a30c07d827ad0550c3fe3a6756bfab",
+        "n_markets": 92,
+        "copyable_surplus": 0.01199698664115538,
+        "lb": 0.003935834746524302,
+        "abs_advantage_net_tax": 0.011222709733713773,
+        "maker_frac": 0.3418478260869565,
+        "usd": 47078.19672992267
+      },
+      {
+        "wallet": "0x443c93e52462ad41b18d924c9fa9a7c1a5985fe1",
+        "n_markets": 48,
+        "copyable_surplus": 0.008538314938071938,
+        "lb": 0.003913515897586288,
+        "abs_advantage_net_tax": 0.007105224117361122,
+        "maker_frac": 0.08680555555555557,
+        "usd": 4150.815189998017
+      },
+      {
+        "wallet": "0x0751a3a8f6c20cb0ea5f76e795c132f2c4ab073a",
+        "n_markets": 104,
+        "copyable_surplus": 0.11580676586540536,
+        "lb": 0.003860388353691277,
+        "abs_advantage_net_tax": 0.12215253830976261,
+        "maker_frac": 0.08949356564488144,
+        "usd": 3824.793965002094
+      },
+      {
+        "wallet": "0x8d84fbc5428d6cef9642b5c0c6f4ab26d7a3cf8e",
+        "n_markets": 32,
+        "copyable_surplus": 0.008324783149518004,
+        "lb": 0.0035822671877241193,
+        "abs_advantage_net_tax": 0.006973971490104179,
+        "maker_frac": 0.0,
+        "usd": 240.72866499999432
+      },
+      {
+        "wallet": "0x05ac64dcf09298cb35ac643183e432b21f276d71",
+        "n_markets": 26,
+        "copyable_surplus": 0.013094147073464076,
+        "lb": 0.0033726894429675965,
+        "abs_advantage_net_tax": 0.012036059353279928,
+        "maker_frac": 0.2128205128205128,
+        "usd": 6247.823334988054
+      },
+      {
+        "wallet": "0x044f334595a7fd42c143e11c8ec47f23c8d1d1f1",
+        "n_markets": 906,
+        "copyable_surplus": 0.04999183042261224,
+        "lb": 0.0030132323999954164,
+        "abs_advantage_net_tax": 0.058041974209090824,
+        "maker_frac": 0.2727900714625093,
+        "usd": 95957.94163398199
+      },
+      {
+        "wallet": "0xad1e830b288fb95ae72cd186053f74a4481accac",
+        "n_markets": 30,
+        "copyable_surplus": 0.14356056683422258,
+        "lb": 0.0026874500119165867,
+        "abs_advantage_net_tax": 0.14621319046333334,
+        "maker_frac": 0.0,
+        "usd": 1646.7213310110528
+      },
+      {
+        "wallet": "0xb61b22af02ec5983be4af69a301f1dddda6a1781",
+        "n_markets": 22,
+        "copyable_surplus": 0.007308667045059342,
+        "lb": 0.002401477879767626,
+        "abs_advantage_net_tax": 0.0057727272727272905,
+        "maker_frac": 0.0,
+        "usd": 28.189588999999998
+      },
+      {
+        "wallet": "0xf1427405f3e840b009d41c4a445f032e2f0a6bb5",
+        "n_markets": 24,
+        "copyable_surplus": 0.009677513259274429,
+        "lb": 0.0019387777048488711,
+        "abs_advantage_net_tax": 0.008388410970833347,
+        "maker_frac": 0.0,
+        "usd": 759.9991229989222
+      },
+      {
+        "wallet": "0x469942b02c4f52e59979a2c3ab3292c54970695a",
+        "n_markets": 72,
+        "copyable_surplus": 0.13718577093545087,
+        "lb": 0.0017915311423764568,
+        "abs_advantage_net_tax": 0.14627848367638888,
+        "maker_frac": 0.0,
+        "usd": 2098.819863992205
+      },
+      {
+        "wallet": "0x4e65c9cfd7e345cb6284e9016c28193fd78e7a19",
+        "n_markets": 38,
+        "copyable_surplus": 0.008880591904698499,
+        "lb": 0.001473361240762373,
+        "abs_advantage_net_tax": 0.007578498169736841,
+        "maker_frac": 0.0,
+        "usd": 8200.628559953217
+      },
+      {
+        "wallet": "0xbf8ca6691acc061104c87fe1090fec4e049929dd",
+        "n_markets": 59,
+        "copyable_surplus": 0.006220722746697704,
+        "lb": 0.0007905993416111095,
+        "abs_advantage_net_tax": 0.00485881116723164,
+        "maker_frac": 0.0,
+        "usd": 16027.886274968092
+      },
+      {
+        "wallet": "0xa8c8bcf04b230f4df5d2b9ded39fed4c76b2b823",
+        "n_markets": 102,
+        "copyable_surplus": 0.013591079617815978,
+        "lb": 0.0003695374293536495,
+        "abs_advantage_net_tax": 0.01267036923284315,
+        "maker_frac": 0.49019607843137253,
+        "usd": 2772.968049997098
+      },
+      {
+        "wallet": "0x62d84fdf371f5e1b7183facaa51a17d21e432947",
+        "n_markets": 22,
+        "copyable_surplus": 0.005035944131422974,
+        "lb": 0.0003651531928531501,
+        "abs_advantage_net_tax": 0.0035000043590909216,
+        "maker_frac": 0.0,
+        "usd": 108.20989700001455
+      },
+      {
+        "wallet": "0x51ff33b3c2d9ea0307572d33ac8df8722eeecf90",
+        "n_markets": 125,
+        "copyable_surplus": 0.001862099387827884,
+        "lb": 0.00010068489382218291,
+        "abs_advantage_net_tax": 0.00032615961549583184,
+        "maker_frac": 0.2057160690785437,
+        "usd": 15797.462501997752
+      },
+      {
+        "wallet": "0x82dfc3b46c414a5de1c8d9b2598f8f0a3c680f66",
+        "n_markets": 42,
+        "copyable_surplus": 0.11323886490286843,
+        "lb": 1.2824101088673712e-05,
+        "abs_advantage_net_tax": 0.11462713060555554,
+        "maker_frac": 0.07539682539682539,
+        "usd": 13733.881365938138
+      },
+      {
+        "wallet": "0xfb88b944dc852dee47052d5403e3f83ccb463347",
+        "n_markets": 33,
+        "copyable_surplus": 0.006534443596574486,
+        "lb": -0.0005182971722629635,
+        "abs_advantage_net_tax": 0.0049985038242424335,
+        "maker_frac": 0.0,
+        "usd": 160.5820009989551
+      },
+      {
+        "wallet": "0x7130014ced1559f3fb7565524873878e94635387",
+        "n_markets": 30,
+        "copyable_surplus": 0.06967903341718928,
+        "lb": -0.0005337457063942508,
+        "abs_advantage_net_tax": 0.07153252131262965,
+        "maker_frac": 0.6716666666666666,
+        "usd": 1780.4465460009974
+      },
+      {
+        "wallet": "0xb5b1dedfe88ad21b652f7d31935d05f617f9a5ed",
+        "n_markets": 103,
+        "copyable_surplus": 0.11372628331912336,
+        "lb": -0.0006934592242194004,
+        "abs_advantage_net_tax": 0.11964816677038834,
+        "maker_frac": 0.0,
+        "usd": 308.72115799664226
+      },
+      {
+        "wallet": "0xf1106305a02175ec7bbdc01a04c63c361836f023",
+        "n_markets": 37,
+        "copyable_surplus": 0.006828673713368246,
+        "lb": -0.0007364330705560765,
+        "abs_advantage_net_tax": 0.005631635135135148,
+        "maker_frac": 0.7680180180180181,
+        "usd": 1352.3468299999997
+      },
+      {
+        "wallet": "0xb143750e2b9bd44b7a06717e42009fe2183c0f2a",
+        "n_markets": 50,
+        "copyable_surplus": 0.031215569206810078,
+        "lb": -0.0008187879959261936,
+        "abs_advantage_net_tax": 0.03166296881700001,
+        "maker_frac": 0.0,
+        "usd": 357.70273600049495
+      },
+      {
+        "wallet": "0x5def468d3e49012b91222870311c0c567a541283",
+        "n_markets": 45,
+        "copyable_surplus": 0.0036692731056654,
+        "lb": -0.0010071534326686867,
+        "abs_advantage_net_tax": 0.0021333333333333477,
+        "maker_frac": 0.5777777777777777,
+        "usd": 203.63416500000005
+      },
+      {
+        "wallet": "0x331d8ec8d8931b479007f4931a6b25b0b6628846",
+        "n_markets": 271,
+        "copyable_surplus": 0.07138898436984532,
+        "lb": -0.0010975309818368195,
+        "abs_advantage_net_tax": 0.0771885072168909,
+        "maker_frac": 0.22181183924726358,
+        "usd": 10263.397826889686
+      },
+      {
+        "wallet": "0xb016241ee364eacf6deba016196756ff1201a361",
+        "n_markets": 58,
+        "copyable_surplus": 0.0031227639723320566,
+        "lb": -0.0015130834722250344,
+        "abs_advantage_net_tax": 0.001586824200000004,
+        "maker_frac": 0.017241379310344827,
+        "usd": 488.33922500044247
+      },
+      {
+        "wallet": "0x31831226228bd9fb7a843463c77d9d8f69e8c74e",
+        "n_markets": 32,
+        "copyable_surplus": 0.007856425150076589,
+        "lb": -0.0017381795359968297,
+        "abs_advantage_net_tax": 0.006740903459598223,
+        "maker_frac": 0.4822916666666667,
+        "usd": 2569.402798011994
+      },
+      {
+        "wallet": "0x33d4d5c338e1856b10f44abbcaaf5c9c67fb2256",
+        "n_markets": 26,
+        "copyable_surplus": -0.0010831126026679386,
+        "lb": -0.0019790516804220597,
+        "abs_advantage_net_tax": -0.002619052374999991,
+        "maker_frac": 0.0,
+        "usd": 851.2018000012453
+      },
+      {
+        "wallet": "0x2d11b3bcf6d94eb1d8da67ddd5e75679347ca043",
+        "n_markets": 108,
+        "copyable_surplus": -0.001080192555970639,
+        "lb": -0.00207445031092169,
+        "abs_advantage_net_tax": -0.002588705941203695,
+        "maker_frac": 0.0023148148148148147,
+        "usd": 4653.268578977316
+      },
+      {
+        "wallet": "0x102c5dd089afffa73a0c5c7e66fe3d52df24ba93",
+        "n_markets": 36,
+        "copyable_surplus": 0.0061885899835309125,
+        "lb": -0.0021633229042106374,
+        "abs_advantage_net_tax": 0.005228604340277792,
+        "maker_frac": 0.0,
+        "usd": 166.59893000035467
+      },
+      {
+        "wallet": "0xb59e00ab2fe7a435762d9e4b022d2db505232a36",
+        "n_markets": 22,
+        "copyable_surplus": 0.01250093567959797,
+        "lb": -0.0021751928399465024,
+        "abs_advantage_net_tax": 0.011772827672727276,
+        "maker_frac": 0.0,
+        "usd": 57.25950499985071
+      },
+      {
+        "wallet": "0xe013cd0c85a0a075eeb52dac28e6137444be6c26",
+        "n_markets": 61,
+        "copyable_surplus": 0.016490420537890224,
+        "lb": -0.002190818350262677,
+        "abs_advantage_net_tax": 0.015821611504652628,
+        "maker_frac": 0.5663544106167058,
+        "usd": 6503.740347999569
+      },
+      {
+        "wallet": "0xd188725fd6fc6b4b951f85782822c6435999c773",
+        "n_markets": 168,
+        "copyable_surplus": -0.0018498431766801277,
+        "lb": -0.0023541214760389264,
+        "abs_advantage_net_tax": -0.0033857829490121804,
+        "maker_frac": 0.7806831065759636,
+        "usd": 20340.144221999675
+      },
+      {
+        "wallet": "0xfb68912178b7396cf1e9b42e5b3a6647d60caabd",
+        "n_markets": 168,
+        "copyable_surplus": -0.0007224899881845577,
+        "lb": -0.0024507230670907636,
+        "abs_advantage_net_tax": -0.002234661719973255,
+        "maker_frac": 0.006944444444444445,
+        "usd": 7497.047166019211
+      },
+      {
+        "wallet": "0x7035c2bcbdc0cb92a116f7679533b7d30c45ee25",
+        "n_markets": 38,
+        "copyable_surplus": 0.004564284385137764,
+        "lb": -0.0030028598283753077,
+        "abs_advantage_net_tax": 0.0031842419710526398,
+        "maker_frac": 0.0,
+        "usd": 37.99892899989353
+      },
+      {
+        "wallet": "0xb85388959a8e0ec66dcfd0b136856b8641f87760",
+        "n_markets": 35,
+        "copyable_surplus": 0.001798273106617779,
+        "lb": -0.0030571751764006862,
+        "abs_advantage_net_tax": 0.0002623333342857267,
+        "maker_frac": 0.0,
+        "usd": 2563.8307399996
+      },
+      {
+        "wallet": "0x5a0d76853d77b7a305cb72b5a51a5bcbc553f006",
+        "n_markets": 40,
+        "copyable_surplus": 0.024527158091302233,
+        "lb": -0.0034236631685344854,
+        "abs_advantage_net_tax": 0.024664249363375003,
+        "maker_frac": 0.0,
+        "usd": 497.9981499990328
+      },
+      {
+        "wallet": "0x5eb1261a3cfc76316da540e2e4d242da2c286be9",
+        "n_markets": 26,
+        "copyable_surplus": -0.0010282601661294809,
+        "lb": -0.0035876149569515816,
+        "abs_advantage_net_tax": -0.0025641999384615334,
+        "maker_frac": 0.23076923076923078,
+        "usd": 342.6142190016903
+      },
+      {
+        "wallet": "0x51f250fa49ec55fdc1a2ec9c2c832f9d6c138623",
+        "n_markets": 29,
+        "copyable_surplus": -0.002136474020771387,
+        "lb": -0.0036051440626250182,
+        "abs_advantage_net_tax": -0.0036724137931034395,
+        "maker_frac": 0.022988505747126436,
+        "usd": 553.8793999999999
+      },
+      {
+        "wallet": "0xca71dfa628e4f204806f243d462e6508452daa60",
+        "n_markets": 22,
+        "copyable_surplus": 0.010826338538477368,
+        "lb": -0.003695751845438199,
+        "abs_advantage_net_tax": 0.009954545454545471,
+        "maker_frac": 0.0,
+        "usd": 178.46376999999995
+      },
+      {
+        "wallet": "0x5df2dd452ffe7633196b0b50376394bc4d24536e",
+        "n_markets": 41,
+        "copyable_surplus": 0.0006088425576979007,
+        "lb": -0.004453365363364652,
+        "abs_advantage_net_tax": -0.0009270972146341518,
+        "maker_frac": 0.0,
+        "usd": 396.08763599881223
+      },
+      {
+        "wallet": "0xc1299d3853e91feff20b028bb4e688ee0a42feac",
+        "n_markets": 40,
+        "copyable_surplus": 0.0033855806566628925,
+        "lb": -0.004490530444457874,
+        "abs_advantage_net_tax": 0.002145845865000005,
+        "maker_frac": 0.0,
+        "usd": 9216.852436132474
+      },
+      {
+        "wallet": "0x592d542d25d999f8a606359594b58a4bcb3f4b16",
+        "n_markets": 26,
+        "copyable_surplus": 0.010404787044953014,
+        "lb": -0.004555458514188853,
+        "abs_advantage_net_tax": 0.009490727022564108,
+        "maker_frac": 0.5636752136752137,
+        "usd": 13794.865730055553
+      },
+      {
+        "wallet": "0xb88c0402184f582e6614576b01011f4d0e567d3f",
+        "n_markets": 44,
+        "copyable_surplus": -0.0017500326669647585,
+        "lb": -0.00465522850163075,
+        "abs_advantage_net_tax": -0.003252312782402588,
+        "maker_frac": 0.08079004329004329,
+        "usd": 2602.289479999558
+      },
+      {
+        "wallet": "0x5c6b40f748a2060284d8ba41cdb01fb4169ff32b",
+        "n_markets": 42,
+        "copyable_surplus": 0.0019081005811518938,
+        "lb": -0.004907682031216535,
+        "abs_advantage_net_tax": 0.0006751349034576961,
+        "maker_frac": 0.008297258297258298,
+        "usd": 69814.30708881942
+      },
+      {
+        "wallet": "0xecc8c4d44060eb23f505902f609bc95132be9f59",
+        "n_markets": 38,
+        "copyable_surplus": -0.00244652892503636,
+        "lb": -0.0049179827899969615,
+        "abs_advantage_net_tax": -0.0039824686973684124,
+        "maker_frac": 0.0,
+        "usd": 3222.386180001233
+      },
+      {
+        "wallet": "0x99c251ac71612b083d9c8a1e21c66fd25a02277a",
+        "n_markets": 25,
+        "copyable_surplus": -0.0018318343156679393,
+        "lb": -0.005042979150892624,
+        "abs_advantage_net_tax": -0.003367774087999992,
+        "maker_frac": 0.013333333333333332,
+        "usd": 224.33933000024396
+      },
+      {
+        "wallet": "0x52199ec4e1b0ce606fba61b6b0cea65d997438f5",
+        "n_markets": 30,
+        "copyable_surplus": -0.00013072689433460334,
+        "lb": -0.005061532131931547,
+        "abs_advantage_net_tax": -0.001666666666666656,
+        "maker_frac": 0.04444444444444444,
+        "usd": 1986.1261399999996
+      },
+      {
+        "wallet": "0xde16d10483c48e20d1d15731911495221688033b",
+        "n_markets": 35,
+        "copyable_surplus": 0.00425194861689921,
+        "lb": -0.005100441873142778,
+        "abs_advantage_net_tax": 0.003223788811428583,
+        "maker_frac": 0.0,
+        "usd": 7760.04871396194
+      },
+      {
+        "wallet": "0xeb2b011ffafb06d9d9ad14f63096db468197b624",
+        "n_markets": 38,
+        "copyable_surplus": -0.002864075407986766,
+        "lb": -0.005112633059743194,
+        "abs_advantage_net_tax": -0.004400015180318818,
+        "maker_frac": 0.0,
+        "usd": 593.2146829974138
+      },
+      {
+        "wallet": "0x06aee0ecab8f1b205185559b38fae5ffb5100a09",
+        "n_markets": 488,
+        "copyable_surplus": 0.0014940001532534736,
+        "lb": -0.005387603525003479,
+        "abs_advantage_net_tax": 7.582099569052325e-05,
+        "maker_frac": 0.01603239656518345,
+        "usd": 13248.431797998064
+      },
+      {
+        "wallet": "0x7a4126074ece8dffeb2178f68d4ff0e8bf5a2562",
+        "n_markets": 102,
+        "copyable_surplus": 0.02626922021908272,
+        "lb": -0.0054057627669397215,
+        "abs_advantage_net_tax": 0.026523363126470592,
+        "maker_frac": 0.21895424836601307,
+        "usd": 18738.242037996864
+      },
+      {
+        "wallet": "0x3e46b2d1b291a8fbe8d873bc51332646658146c4",
+        "n_markets": 175,
+        "copyable_surplus": -0.003781935527463859,
+        "lb": -0.00544148064353446,
+        "abs_advantage_net_tax": -0.005317875299795912,
+        "maker_frac": 0.792421768707483,
+        "usd": 39312.52748999932
+      },
+      {
+        "wallet": "0xf075286c26b8cfd036581b5dc949b2d2dd154bb7",
+        "n_markets": 250,
+        "copyable_surplus": -0.004044502814910754,
+        "lb": -0.005921899806559504,
+        "abs_advantage_net_tax": -0.0055456940771171255,
+        "maker_frac": 0.40449232270996976,
+        "usd": 83222.05998998976
+      },
+      {
+        "wallet": "0x67571867e330282ad8bc19ce62c1dca743cb2121",
+        "n_markets": 22,
+        "copyable_surplus": 0.08100838424230478,
+        "lb": -0.005973454076985324,
+        "abs_advantage_net_tax": 0.08390912056363636,
+        "maker_frac": 0.0,
+        "usd": 22.999675999944557
+      },
+      {
+        "wallet": "0x9c4e367a42d686f92cfceaf31ae59ed4e96d1f10",
+        "n_markets": 174,
+        "copyable_surplus": -0.0051477214161736945,
+        "lb": -0.006083977380222721,
+        "abs_advantage_net_tax": -0.006683661188505746,
+        "maker_frac": 0.0,
+        "usd": 31570.943636936543
+      },
+      {
+        "wallet": "0xad742df12ed44d3d751becd35f80b538e84615c1",
+        "n_markets": 181,
+        "copyable_surplus": -0.0045581519586071675,
+        "lb": -0.006094548817218215,
+        "abs_advantage_net_tax": -0.00609409173093922,
+        "maker_frac": 0.0,
+        "usd": 15083.320150988431
+      },
+      {
+        "wallet": "0xcbc1e69573652cb1107cadb2cf725f7e55ef99e6",
+        "n_markets": 218,
+        "copyable_surplus": -0.004971565737780238,
+        "lb": -0.006252200721152652,
+        "abs_advantage_net_tax": -0.00650750551011229,
+        "maker_frac": 0.4183446522896064,
+        "usd": 49640.6344850119
+      },
+      {
+        "wallet": "0xd2d7ada21d65ac753aaa66111a393043bf77f60c",
+        "n_markets": 80,
+        "copyable_surplus": -0.003243753310335234,
+        "lb": -0.006377705483081428,
+        "abs_advantage_net_tax": -0.004705641837499995,
+        "maker_frac": 0.0,
+        "usd": 703.4303090007951
+      },
+      {
+        "wallet": "0xb2d14157a1c85ba33d0195363d8d5f5c5d254965",
+        "n_markets": 20,
+        "copyable_surplus": -0.004509763817667931,
+        "lb": -0.006505615202405786,
+        "abs_advantage_net_tax": -0.006045703589999983,
+        "maker_frac": 0.0,
+        "usd": 484.6286649961453
+      },
+      {
+        "wallet": "0xc616e57b04257520a5a87305398570fd4844dca7",
+        "n_markets": 528,
+        "copyable_surplus": -0.005833518838409257,
+        "lb": -0.006603698206564132,
+        "abs_advantage_net_tax": -0.0073466314862840765,
+        "maker_frac": 0.33798771547533474,
+        "usd": 17307.07285400795
+      },
+      {
+        "wallet": "0xeb6be6ff9c4ecb373ae0e091eb2769db57336266",
+        "n_markets": 129,
+        "copyable_surplus": -0.005433747689215868,
+        "lb": -0.006748494655056045,
+        "abs_advantage_net_tax": -0.006969687461547921,
+        "maker_frac": 0.7758090316229851,
+        "usd": 2994.9426000000017
+      },
+      {
+        "wallet": "0x5a1f5b9a23cd885d7b0981b3e2ab825eec1937af",
+        "n_markets": 23,
+        "copyable_surplus": -0.0034347992624505484,
+        "lb": -0.0068696261258048945,
+        "abs_advantage_net_tax": -0.004970739034782601,
+        "maker_frac": 0.0,
+        "usd": 514.7088689985123
+      },
+      {
+        "wallet": "0xeae07beeaca4876920011d8c090ca007cc635bca",
+        "n_markets": 24,
+        "copyable_surplus": -0.0015347661429457166,
+        "lb": -0.006919993866988655,
+        "abs_advantage_net_tax": -0.003070705915277769,
+        "maker_frac": 0.013888888888888888,
+        "usd": 1804.835630000753
+      },
+      {
+        "wallet": "0x376a5fd4c4941280fbf511489558e9b7de31d270",
+        "n_markets": 194,
+        "copyable_surplus": 0.0024618468106033407,
+        "lb": -0.007047969012093677,
+        "abs_advantage_net_tax": 0.0014009049421821313,
+        "maker_frac": 0.0,
+        "usd": 82420.57082899565
+      },
+      {
+        "wallet": "0x7ffa829f597caf9cfd49d7a5e8a9f224a5e0b3c0",
+        "n_markets": 123,
+        "copyable_surplus": -0.004414249832545994,
+        "lb": -0.007268659066311975,
+        "abs_advantage_net_tax": -0.005950189604878047,
+        "maker_frac": 0.0,
+        "usd": 3513.957747008877
+      },
+      {
+        "wallet": "0xe7fccdd4ec09e5f6204cf91e542877b23d591c16",
+        "n_markets": 835,
+        "copyable_surplus": -0.007287271382587369,
+        "lb": -0.007355917228587895,
+        "abs_advantage_net_tax": -0.008823211154919422,
+        "maker_frac": 0.7187556921257934,
+        "usd": 67641.51457000038
+      },
+      {
+        "wallet": "0x2868073a4532e65bee1d6fc600aedc52fe9b9b6b",
+        "n_markets": 75,
+        "copyable_surplus": 0.11964357135708123,
+        "lb": -0.007357549677041414,
+        "abs_advantage_net_tax": 0.12683842412495164,
+        "maker_frac": 0.5095461114583922,
+        "usd": 10107.167477055784
+      },
+      {
+        "wallet": "0x5b88bff62bfd669fafdb03320638d2a0dda99d30",
+        "n_markets": 66,
+        "copyable_surplus": -0.006110524874637639,
+        "lb": -0.007384740161479792,
+        "abs_advantage_net_tax": -0.007646464646969693,
+        "maker_frac": 0.0,
+        "usd": 1936.3977200010004
+      },
+      {
+        "wallet": "0x8bca766c34fe62a52750e6a4b0c23c8f47f36611",
+        "n_markets": 21,
+        "copyable_surplus": -0.006003550189572708,
+        "lb": -0.007760701494466799,
+        "abs_advantage_net_tax": -0.007539489961904761,
+        "maker_frac": 0.0,
+        "usd": 1333.997626997254
+      },
+      {
+        "wallet": "0x13f1971fd4bfa4397217e049559092ad97f89d4b",
+        "n_markets": 22,
+        "copyable_surplus": -0.00522202369584977,
+        "lb": -0.007834368966169446,
+        "abs_advantage_net_tax": -0.006757963468181822,
+        "maker_frac": 0.0,
+        "usd": 529.6676229973234
+      },
+      {
+        "wallet": "0x3ac45d069a98c0ad9f45a0d0aeb5789cce7d2529",
+        "n_markets": 36,
+        "copyable_surplus": -0.004186290922112385,
+        "lb": -0.007899713853153984,
+        "abs_advantage_net_tax": -0.005722230694444438,
+        "maker_frac": 0.7222222222222222,
+        "usd": 3691.9464240038296
+      },
+      {
+        "wallet": "0x2eb9d2c4d6c231b5c89db6f000c8a1f7407fc1d9",
+        "n_markets": 29,
+        "copyable_surplus": 0.00426347037140907,
+        "lb": -0.00791718370807734,
+        "abs_advantage_net_tax": 0.003136089193103453,
+        "maker_frac": 0.0,
+        "usd": 5936.827169023867
+      },
+      {
+        "wallet": "0xf114b578bc08e5641d4cbfbb52e6e97b038d6ecc",
+        "n_markets": 175,
+        "copyable_surplus": 0.08913628666422847,
+        "lb": -0.00800179660677064,
+        "abs_advantage_net_tax": 0.09602693006771068,
+        "maker_frac": 0.11123809523809523,
+        "usd": 3826.5420810306027
+      },
+      {
+        "wallet": "0xbeed56f0656e10d1df2b5a5dc3f8ad94c133cc67",
+        "n_markets": 30,
+        "copyable_surplus": 0.006754171450547622,
+        "lb": -0.00800616481237863,
+        "abs_advantage_net_tax": 0.006008111626666677,
+        "maker_frac": 0.0,
+        "usd": 149.99952500005458
+      },
+      {
+        "wallet": "0x0558909a4fb519ac3a1bb9b0b758568535e72868",
+        "n_markets": 285,
+        "copyable_surplus": -0.007534934192262763,
+        "lb": -0.008061415233664014,
+        "abs_advantage_net_tax": -0.009070873964594817,
+        "maker_frac": 0.204578111946533,
+        "usd": 19479.760820006595
+      },
+      {
+        "wallet": "0xce9db47b3bb5b166a75406f5338b58a3596e83fe",
+        "n_markets": 151,
+        "copyable_surplus": -0.007044810363429534,
+        "lb": -0.00827146242981579,
+        "abs_advantage_net_tax": -0.008580750135761586,
+        "maker_frac": 0.0,
+        "usd": 2942.992717008771
+      },
+      {
+        "wallet": "0x3d02d37e9fd377788e6370c95208dd3177b1d900",
+        "n_markets": 370,
+        "copyable_surplus": -0.007829317959249566,
+        "lb": -0.008506257719554447,
+        "abs_advantage_net_tax": -0.009352921922190113,
+        "maker_frac": 0.7147414716931462,
+        "usd": 79267.18912600308
+      }
+    ]
+  }
+]
