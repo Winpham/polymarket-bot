@@ -1,0 +1,46 @@
+{
+  "split_day": "2026-07-10",
+  "tennis_recent": {
+    "matches": 19,
+    "roi": -0.0991592139239291,
+    "lb95": -0.3158999197117332
+  },
+  "tennis_earlier": {
+    "matches": 64,
+    "roi": 0.1343862054487296,
+    "lb95": 0.06730624388207422
+  },
+  "observed_diff": -0.23354541937265869,
+  "p_raw_permutation": 0.014299285035748212,
+  "p_bonferroni_over_categories": 0.10009499525023749,
+  "n_categories_scanned": 7,
+  "tennis_recent_ci95": [
+    -0.36175357555475485,
+    0.16343514770689663
+  ],
+  "ci_contains_earlier_estimate": true,
+  "lodo_recent_tennis_by_day": {
+    "2026-07-10": {
+      "matches_dropped": 3,
+      "roi_without": -0.15647737067553608
+    },
+    "2026-07-11": {
+      "matches_dropped": 2,
+      "roi_without": -0.14506651139268747
+    },
+    "2026-07-12": {
+      "matches_dropped": 4,
+      "roi_without": -0.08521424804464307
+    },
+    "2026-07-13": {
+      "matches_dropped": 10,
+      "roi_without": 0.06324418085097638
+    }
+  },
+  "lodo_any_day_flips_positive": true,
+  "non_tennis_recent": {
+    "matches": 20,
+    "roi": 0.03359360768294165,
+    "lb95": -0.05830773281863577
+  }
+}
