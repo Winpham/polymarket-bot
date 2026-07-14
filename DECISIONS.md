@@ -1083,3 +1083,107 @@ import from us_quote_capture). Arb baskets ~$1.001, so no risk-free edge on the 
 **Needs Tue:** API key (unlocks own fills + authed WS; nothing above needed it); a market-maker/builder
 program is a contractual decision that would upgrade data + pay maker rebates. **Next:** wire per-trader US
 tape into the skill machinery; run the depth sampler across a full trading day near settlement.
+
+## US-VENUE ECONOMICS — take-or-make, and the subsidy that pays you to stand in the line of fire (2026-07-14, `feat/us-economics`)
+
+**Context:** US is a genuinely different market — different fees, prices, depth, coverage. The brief's
+thesis: the fee/rebate/incentive structure is large enough to *be* the edge, or to erase it. Measured:
+**it is large enough to erase a marginal edge, and nowhere near large enough to be one.**
+Full write-up: `reports/US-VENUE-ECONOMICS.md`.
+
+**UV-5 — the fee map, verified on the venue and not just in the docs.** `Fee = Θ·C·p·(1−p)`, taker
+Θ=+0.06, maker Θ=−0.0125 (paid). Independently confirmed: **all 2,999 live markets return
+`feeCoefficient: 0.06`.** Consequences: fees are cheapest at the EXTREMES, so our champion favorite
+band (0.71–0.98) is *already* the cheapest place on the venue to take, and coin-flips are the most
+expensive (1.50¢) — compounding, on cost grounds alone, the finding that weather doesn't transfer.
+The maker rebate is **4.8× smaller than the taker fee at every price** — it was never going to pay
+for being picked off. **Brief corrections:** the Volume program pays *"maker or taker"* (not takers
+only) and only in **3¢–97¢** — so **p=0.98, the cheapest place to take, is OUTSIDE the volume
+subsidy**. MM-program contact is **institutional@polymarket.us**, not `@qcex.com`.
+
+**UV-6 — ADVERSE SELECTION, MEASURED: US hazard/reward = 0.91–0.99× vs intl's 13×. The intl killer
+does NOT transfer.** The measurement intl never had: `maker_username` on ~48% of prints means we
+watched **7,049 real maker fills** (173 markets, 3,930 takers) instead of simulating one.
+Markout vs the **MID**, never vs subsequent prints (a trade-price markout hands the maker the
+half-spread as fake profit — the **"+4.8% maker-copy" error class**). Sign verified first (maker BUY
+sits at the bid 95–96%; no YES/NO inversion). CIs **cluster-bootstrapped by market** (one sweep =
+dozens of correlated prints). **Artifact control PASSES:** same asof machinery at random times with a
+random side gives drift ≈ **0.00¢ at every horizon**, so the −1.6¢ on real fills is informed flow, not
+a broken join. Spread capture +1.392¢, drift −1.607¢ @60s (p=0.000), rebate +0.228¢ →
+**net maker = +0.014¢/share, CI [−0.54,+0.09]. Statistically ZERO.**
+
+**UV-7 — we attacked our own positive result and it DIED (this is the entry that matters).** The
+favorite band first read **+1.375¢, p=0.005 — significant.** Three tests killed it: **side
+composition** (maker BUY −0.02¢ p=0.96, SELL +2.15¢ — only ONE side, so it is a directional drift in
+a trending sample, not spread capture); **concentration** (top-3 markets = **118%** of total mass;
+two ITF tennis matches = 95%); **leave-one-market-out** (→ +0.417¢, **p=0.477, dead**). The longshot
+band dies identically. The wide asymmetric CI was the tell. **No band shows a maker edge that
+survives.** The ONE result that DOES survive is negative: **midrange/coin-flip makers lose −0.52¢
+(CI [−1.06,−0.23], p=0.005)** — exactly where the fee is highest and weather-shaped markets live.
+
+**UV-8 — identification bias, stated not buried.** The venue names the maker on only 48% of prints,
+and the halves differ: named makers get picked off **2.6× harder** (drift −1.52¢ vs −0.58¢; markout
+−0.06¢ vs +0.64¢) and rest **2.1× smaller** (48 vs 103 contracts) — the anonymous half is the
+signature of institutional/designated MMs the venue hides. **A KYC'd retail account resting modest
+size IS a named maker**, so we adopt the **named (worse) cohort as our reference class.** The
+flattering number is the one we do not get to use.
+
+**UV-9 — the liquidity subsidy is real, works exactly as designed, and is ALREADY COMPETED AWAY.**
+Priced against the venue's own public `/v1/incentives` params, not the brief's figures.
+(a) `rewardPool` is a **PROGRAM-level** figure split across the program's markets — ranking markets by
+raw pool is wrong by **~300×** (worldcup_moneyline $24,700/6 markets = **$4,117/market**;
+pga_round_1 $15,000/**1,172** markets = **$13**). The brief's "$75k/game, $50k/tournament" reconcile
+**to the cent** but are **event aggregates**. True venue-wide live spend: **$191,185 across 80
+programs**, not the $69M a naive per-market sum reports.
+(b) **THE TICK IS THE PUNCHLINE.** Score = `df^(ticks from best) × size`. Tick = **0.001** venue-wide
+(3,998/3,999) but **93.2% of real quotes sit on WHOLE CENTS** → an order **1¢ off the touch is 10
+ticks** → `0.3^10 = 0.000006` → **ZERO**. **The subsidy is only paid AT THE TOUCH — the exact place
+adverse selection lives. It does not buy a hiding spot; it pays you to stand in the line of fire.**
+The fill-independent subsidy is therefore NOT separable from the fill-dependent hazard.
+(c) **We cannot reach it anyway.** Touch queues: worldcup_moneyline median **61,974 bid / 537,241
+ask** contracts. Resting 1,000 = **0.9% of the queue → $0.13/hour.** (Verified the touch qty is the
+BEST LEVEL, not the whole book.)
+(d) **Natural experiment (suggestive, NOT causal — the venue chooses what to subsidize):** at matched
+traded notional, rewarded markets carry **9.3× deeper touch queues** in thin markets (3,067 vs 328)
+and **1¢ spreads instead of 4¢**. The subsidy does its job — which is the bad news: it is already
+**capitalized** into tighter spreads and deeper queues. We would be a late entrant joining a queue
+that exists BECAUSE of the pool, capturing 1¢ where *unsubsidized* markets still pay 2¢.
+(e) **One bound we cannot close from outside:** whether a `live` program's score accrues over its full
+288h window or only during live play is a **~115× swing**. Both bounds reported, neither picked.
+Closing it needs the authenticated earnings endpoint = **Tue's API key**. It does not rescue the
+thesis either way, because (b) stands regardless.
+
+**UV-10 — VERDICT: TAKE, don't make. Making stays DEAD on US — for a DIFFERENT reason than intl.**
+Not the 13× hazard (US is ~1×, genuinely better). It dies because the net markout is **statistically
+zero**, is **significantly negative in the coin-flip band**, and the subsidy that was the only reason
+to reopen the thesis **pays only at the touch and cannot be reached at our size**. Taking beats making
+at **every price in every arm** — and making also **forfeits the arm's gross edge entirely** (a resting
+order does not select its fills; it gets whatever the flow hands it). *That asymmetry, not the rebate
+arithmetic, is what settles take-vs-make.* **Do NOT apply to the Market Maker Program:** the run's own
+precondition ("only if the pool play is positive after measured adverse selection") is **NOT met**.
+
+**UV-11 — the fee is a GRADIENT across our own champion band, not a flat tax.** Edge/share = ROI×p
+**rises** with p (ROI is on stake, and stake/share IS p) while fee ∝ p(1−p) **collapses** toward 1.0.
+So the taker fee eats **62% of the favorite edge at p=0.71 and 4% at p=0.98** — after fees the deep
+end is worth **3.5× the shallow end**, and a single 0.71–0.98 cell leaves money on the table.
+**CAVEAT (do not read "maximised at 0.98" as validated):** this assumes the arm's ROI is **FLAT across
+the band**, which our records do NOT establish. **The fee gradient is certain; the location of the
+optimum is not.** Measuring ROI(p) *within* the band on intl is a prerequisite before acting.
+
+**UV-12 — no reliable cross-venue basis (no routing rule).** Market-level mean −2.43¢ (CI
+[−5.50,−0.30], p=0.007) *looks* signed, but the **median is exactly 0.00¢ and only 9/19 markets are
+negative — a coin flip.** The significant mean is a few outliers; the mean/median divergence is the
+tell. **n=19 is thin**; scanner now loops at 300s. Coverage: **570 intl signals → 40 mapped+priced on
+US (~7%)** — the other 93% are simply not US-actionable.
+
+**UV-13 — THE ASK (highest value, zero risk): Accelerated Tier Placement.** The venue will assign a
+taker-rebate tier against **verifiable trailing-30-day volume on ANOTHER prediction market** — i.e.
+our intl volume may buy **$250k→10% / $1M→25% / $10M→50%** off every taker fee **from day one**. Worth
+**+0.19¢/share at p=0.85** on the posture we are *already* taking: pure discount, no strategy change,
+no new risk. The exact figure to submit is our trailing-30-day intl notional (one query; the intl
+ledger is on another branch).
+
+**LIMIT THAT GATES ALL OF THE ABOVE — time-of-day.** The entire tape is **148 minutes of OVERNIGHT
+(03:00–05:30 ET)** flow — ITF tennis, World Cup, NPB; **MLB/NBA/politics were asleep.** US prime-time
+flow could be sharper or duller and **the maker verdict could move.** The tapes accrue irreversibly:
+**re-run `us_adverse_selection.py` after a full US trading day before any money moves.**
