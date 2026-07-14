@@ -1,0 +1,2 @@
+2026-07-14 09:40:41 TAPE STALE:
+/Applications/Xcode.app/Contents/Developer/usr/bin/python3: can't open file '/Users/tuepham/polymarket-bot/scripts/tape_freshness.py': [Errno 2] No such file or directory
