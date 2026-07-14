@@ -90,10 +90,9 @@ f AS (
   JOIN res r ON r.condition_id=h.condition_id AND r.outcome_index=h.outcome_index
   WHERE h.side='BUY'
 ),
-life AS (   -- each market's fill-life, to define "the last 20%" and entry earliness
-  SELECT condition_id, MIN(ts) t0, MAX(ts) t1
-  FROM (SELECT condition_id, EXTRACT(EPOCH FROM ts) ts FROM harvest_fills) x
-  GROUP BY 1
+life AS (   -- each market's fill-life, precomputed once into harvest_life:
+            -- recomputing it inline rescanned all ~45M fills on every query
+  SELECT condition_id, t0, t1 FROM harvest_life
 ),
 late AS (   -- the CLOSING LINE: mean price over the last 20% of the market's life,
             -- per (market, outcome). Self-exclusion is applied later, in Python.
@@ -137,8 +136,10 @@ GROUP BY f.wallet, f.niche, f.condition_id;
 """
 
 
-def load():
-    rows = psql(SQL)
+def load(niche=None):
+    sql = SQL if not niche else SQL.replace(
+        "WHERE h.side='BUY'", f"WHERE h.side='BUY' AND h.niche = '{niche}'")
+    rows = psql(sql)
     recs = defaultdict(list)
     for r in rows:
         try:
@@ -226,15 +227,20 @@ RANKERS = {
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--out", default="reports/niche")
+    ap.add_argument("--niche", default=None)
     ap.add_argument("--conc-arm", action="store_true",
                     help="restrict to niche SPECIALISTS (concentration >= 0.60) and re-test")
     a = ap.parse_args()
 
-    recs = load()
-    # concentration = share of the wallet's TOTAL harvested activity that lives in a niche
+    recs = load(a.niche)
+    # concentration = share of the wallet's TOTAL harvested activity that lives in a niche.
+    # The denominator MUST come from the whole tape, not from the loaded slice -- with
+    # per-niche loading, deriving it from `recs` would make concentration identically 1.0
+    # for every wallet and silently turn the ranker into a constant.
     tot = defaultdict(int)
-    for (w, nz), mk in recs.items():
-        tot[w] += len(mk)
+    for r in psql("""SELECT wallet, COUNT(DISTINCT condition_id) n
+                     FROM harvest_fills GROUP BY wallet;"""):
+        tot[r["wallet"]] = int(r["n"])
 
     niches = sorted({nz for (_, nz) in recs})
     results = []

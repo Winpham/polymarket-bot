@@ -120,9 +120,14 @@ def main():
                          "only reliably rankable at high N)")
     ap.add_argument("--bottom", type=int, default=50)
     ap.add_argument("--out", default="reports/niche")
+    ap.add_argument("--niche", default=None)
     a = ap.parse_args()
 
-    rows = psql(SQL)
+    # One niche at a time: the full tape is now ~45M fills, and materialising every niche
+    # at once in Python dicts exhausts memory.
+    sql = SQL if not a.niche else SQL.replace(
+        "WHERE h.side='BUY'", f"WHERE h.side='BUY' AND h.niche = '{a.niche}'")
+    rows = psql(sql)
     recs = defaultdict(list)
     for r in rows:
         try:
