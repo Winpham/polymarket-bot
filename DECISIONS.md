@@ -1045,3 +1045,41 @@ churn axis.
 **Bottom line:** the skilled traders are real; past PnL cannot find them (re-confirmed five more
 ways); the only forward-shaped lead is CLV, now measurable and accruing — decidable in months, not
 today. Honest null + one live instrument, exactly the mission's anticipated deliverable.
+
+---
+
+## US-VENUE OBSERVABILITY + TWO-BOOK SPINE (2026-07-14, `feat/us-venue`)
+
+**Context:** Tue now holds BOTH books — Polymarket US (KYC'd, direct) and the international CLOB (via
+family abroad). Goal: bring US observability to intl parity and add the arbitrage layer.
+
+**UV-1 — the "US identity is unobservable" prior is FALSIFIED (evidence, not inference).** The retail
+app streams a live trade tape WITH persistent per-trader usernames from the undocumented, UNAUTHENTICATED
+`wss://gateway-ws-markets.polymarket.us/v1/ws/subscriptions` (from the app bundle; the documented
+`api.polymarket.us` WS 401s). Venue-wide subscribe (empty marketSlugs) = every print, one connection.
+Measured live: taker username ~99–100%, maker ~46–52%, hundreds of distinct handles/min. The four REST
+404s that grounded the prior were real but only covered REST; the prints live on the WS + the regulatory
+CSVs. **Reliability:** WS = Rung 2 (undocumented, monitor + freshness-gate); regulatory CSVs = Rung 3
+(CFTC statutory publication, most durable). Identity: **YES on live WS, NO on REST/CSV** — only forward
+(no history endpoint), so we accrue it ourselves.
+
+**UV-2 — systems shipped (read-only Python sidecars, default-OFF, self-applying migrations 043–046).**
+Phase 1 `us_trade_tape`/`us_tape_ingest.py` (identity tape); Phase 2 `us_daily_market_report`/
+`us_regulatory_backfill.py` (257-day DMR → Postgres, 321,743 rows 100% settled; T&S → cold parquet,
+12× zstd); Phase 3 `us_book_tape`/`us_book_sampler.py` (time-of-day depth); Phase 4 `cross_venue_basis`/
+`us_arb_scan.py` (side-correct basis + risk-free-basket edge). `cargo check --workspace` GREEN (Rust
+untouched). Full write-up: `reports/US-VENUE-OBSERVABILITY.md`, `US-API-SURFACE.md`, `US-BOOK-DEPTH.md`.
+
+**UV-3 — book depth: favorites deep, weather thin, gate per-market not by band.** Liquid/traded favorites
+fill $50–$250 at ~0¢ slip ($2.5k at touch), reversing the prior "immature book" spot-check. But the median
+over ALL band markets is thin + time-varying (overnight favorite fill50 84% vs 100% at 23:20 ET), so
+execution must gate on live depth, never on band membership. Weather touch only $8–$29 → trade small/passive.
+
+**UV-4 — arbitrage: framework correct, 0 free lunch on efficient favorites (honest).** 40 mapped+priced
+signals, basis mean −1.5¢ sd 5.9¢, ZERO phantom baskets (|basis|>0.5 = 0 → side logic correct, reused by
+import from us_quote_capture). Arb baskets ~$1.001, so no risk-free edge on the tightest markets; real edge
+(if any) surfaces on less-efficient/less-mapped cells over continuous running. Stale intl legs fail closed.
+
+**Needs Tue:** API key (unlocks own fills + authed WS; nothing above needed it); a market-maker/builder
+program is a contractual decision that would upgrade data + pay maker rebates. **Next:** wire per-trader US
+tape into the skill machinery; run the depth sampler across a full trading day near settlement.
