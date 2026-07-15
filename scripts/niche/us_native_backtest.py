@@ -127,14 +127,27 @@ def featurize(path, i, niche):
             float(NICHE_IDX.get(niche, -1))]
 
 
-def settle(path):
-    """last price -> outcome, with an ambiguity guard. Returns 1.0 / 0.0 / None."""
+def settle(path, sym=None, matured=True):
+    """Settlement label.
+    STRICT mode (matured=False): last>=0.95 win / <=0.05 lose / else None. This DROPS winners that
+    stop trading at ~0.90 while keeping losers that crash to 0 -> a winner-drop bias that biases the
+    absolute level NEGATIVE.
+    MATURITY mode (matured=True, the default): if the market has resolved (its event date is in the
+    past, checked by the caller), round the last price at 0.5. Validated at 98.1% vs explicit DMR
+    settlement -- and UNBIASED, because a favourite that stops trading high resolved YES."""
     last = path[-1][1]
+    if matured:
+        return 1.0 if last >= 0.5 else 0.0
     if last >= 0.95:
         return 1.0
     if last <= 0.05:
         return 0.0
     return None
+
+
+def event_date(sym):
+    m = DATE_RE.search(sym)
+    return m.group(1) if m else None
 
 
 def boot_event(rows, nb=4000, seed=SEED):
@@ -163,9 +176,14 @@ def self_test():
     assert grade_niche("random-xyz") is None
     assert event_key("mlb-tex-cle-2026-07-01-nrfi") == "mlb-tex-cle-2026-07-01"
     assert NICHE_IDX["soccer"] == 0 and NICHE_IDX["tennis"] == 2 and NICHE_IDX["esports"] == 3
-    # settlement guard
-    assert settle([(0, .5), (9, .99)]) == 1.0 and settle([(0, .5), (9, .01)]) == 0.0
-    assert settle([(0, .5), (9, .60)]) is None
+    # strict settlement guard (drops ambiguous)
+    assert settle([(0, .5), (9, .99)], matured=False) == 1.0
+    assert settle([(0, .5), (9, .01)], matured=False) == 0.0
+    assert settle([(0, .5), (9, .60)], matured=False) is None
+    # maturity settlement rounds at 0.5 (recovers the dropped winners)
+    assert settle([(0, .5), (9, .90)], matured=True) == 1.0
+    assert settle([(0, .5), (9, .30)], matured=True) == 0.0
+    assert event_date("mlb-tex-cle-2026-07-01-nrfi") == "2026-07-01"
     # no-lookahead: rewriting the future must not change features
     path = [(0, .5), (100, .85), (200, .86), (300, .10)]
     a = featurize(path, 2, "soccer")
@@ -187,6 +205,9 @@ def main():
     ap.add_argument("--one-dp", action="store_true",
                     help="one decision point per symbol (first >=0.80 cross) — kills per-print "
                          "weighting, matches the intl R2 test and the calibration check")
+    ap.add_argument("--strict-settle", action="store_true",
+                    help="use the biased 0.95/0.05 strict settlement instead of maturity+0.5-round "
+                         "(for A/B comparison of the settlement bias)")
     a = ap.parse_args()
     if a.self_test:
         sys.exit(self_test())
@@ -218,16 +239,27 @@ def main():
 
     clf = pickle.load(open(MODEL, "rb"))
     rng = np.random.default_rng(SEED)
+    # maturity cutoff: an event whose date is <= (last loaded day - 1) has definitely resolved
+    last_day = os.path.basename(files[-1])[:10]
+    mat_cut = (np.datetime64(last_day) - np.timedelta64(1, "D")).astype(str)
 
     # decision points + frozen-model prediction
     rowsX, meta = [], []
-    n_sym = n_settled = 0
+    n_sym = n_settled = n_unmatured = 0
     for sym, path in paths.items():
         if len(path) < 5:
             continue
         path.sort()
         n_sym += 1
-        won = settle(path)
+        ed = event_date(sym)
+        if a.strict_settle:
+            won = settle(path, matured=False)
+        else:
+            # MATURITY settlement: only label markets whose event has definitely resolved
+            if ed is None or ed > mat_cut:
+                n_unmatured += 1
+                continue
+            won = settle(path, matured=True)
         if won is None:
             continue
         n_settled += 1
