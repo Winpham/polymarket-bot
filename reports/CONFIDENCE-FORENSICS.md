@@ -244,3 +244,42 @@ survives where the collapse model scored −4.15% on US.
 
 **Status: CANDIDATE with a real information signature (λ=0.73) — the best the project has produced — but
 tennis-concentrated, tournament-window, look-ahead-anchored. Next: derisk both, then forward-test live.**
+
+### DERISK RESULT — the edge is real information but NOT capturable with our data
+The two kill-risks were tested exhaustively (all buy-favourite [0.65,0.98], 1c haircut, event-clustered):
+
+**Look-ahead: the edge needs the ACTUAL resolution time to ±30 min, which nothing knowable provides.**
+- Anchor jitter: survives ±10min (+4.20c) and ±30min (+3.78c) but **collapses at ±60min (+0.44c, p=0.39).**
+- Every FULLY LIVE-KNOWABLE anchor is strongly NEGATIVE:
+  - elapsed since first print (first+1h..+6h): **−5.5 to −6.7c**, p≈1.
+  - fraction of observed market life (0.5..0.9): **−2.6 to −5.8c**, p≥0.91.
+  - price-feature triggers (persistence>45–90m, dd_from_max<0.02–0.05, low vol): **−3.3 to −6.0c**, p≥0.97.
+  - **scheduled `gameStartTime`+E** (gst+0.5..3h): −0.96 to −5.7c, none positive.
+  - **scheduled `endDate`−H**: −3.5 to −6.3c.
+- Why the schedule fails: **`endDate` is ~4h BEFORE actual resolution** (median last-print − endDate = **+239 min**);
+  `gameStartTime` is +123 min from the last print with IQR [89,170]. The venue's scheduled timestamps do
+  not locate the true final hour, and the price path does not encode time-to-resolution.
+
+**Conclusion.** The final-hour favourite-underpricing is a **genuine information inefficiency** (λ=0.73,
+the market converges to the pick) — the only one the whole project has found — but it lives entirely in
+the **game-clock dimension**, and NOTHING in our data (price tape, venue schedule) locates the true final
+hour to the ±30 min the edge requires. Only the ex-post actual resolution time captures it. **It is
+therefore NOT tradeable with market data alone.**
+
+### What it would take (the concrete, scoped pivot)
+Capturing this requires an **external live game-state feed** (score / clock) for tennis & soccer: enter a
+leading favourite only when the game is genuinely in its final minutes but the thin US book still lags.
+That is a real infrastructure ask, not a modelling tweak — and it is the FIRST lead with a real
+information signature (λ>0). Until such a feed exists, the US book is efficient at every horizon we can
+actually trade. (One untested residual: intl→US cross-venue lead-lag; but it would concentrate in the
+same final-hour dimension and needs the full `us_mapper` build — low expected value given the above.)
+
+## FINAL VERDICT (continuation run)
+1. **We were never confidently profitable.** Everything sizeable is variance (verdict C); the champion and
+   the collapse model both harvest the favourite-longshot premium (λ≈0.14 / λ=0), and the US book is
+   negative/efficient at all tradeable horizons.
+2. **One genuine λ>0 inefficiency exists** (final-hour favourite late-convergence, λ=0.73) but is **not
+   capturable** without a live game-state feed — the dimension it lives in is invisible to our data.
+3. **The honest path to a real edge is data acquisition, not more modelling of the price tape:** a live
+   score/clock feed, then a pre-registered forward paper test of late-game favourite entry. Absent that,
+   size nothing — the standing certification bar is unmet by every arm.
