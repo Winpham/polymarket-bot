@@ -60,3 +60,31 @@ significance (ATP/WTA) is free-coverable, and ITF (the paid-only part) is not si
    real ask; settle on DMR. Pre-register the gate (ROI LB>0 AND λ>0 over ≥N events, ≥2 non-Wimbledon
    weeks). This is the standing certification bar, forward.
 3. **Only if a broader universe is wanted later**, revisit a paid ITF feed — but not on today's evidence.
+
+## Zero-cost validation attempt (ESPN, `scripts/niche/espn_validate.py`)
+Fetched ESPN ATP/WTA for the window (1,288 post-state singles), matched to US markets by player name
+(357 matched), and tested the edge two ways on the matched set:
+
+| anchor | −1h/est favourite net | p | events |
+|---|---|---|---|
+| **maturity−1h (true resolution)** | **+7.29c** [+2.26,+11.70] | **0.002** | 122 |
+| ESPN-derived estimate (start + nsets×48min − 45m) | +1.37c [−4.61,+7.00] | 0.313 | 130 |
+
+**Reading (honest):** the edge is **confirmed strong** on the exact ATP/WTA matches ESPN covers (+7.3c at
+the true anchor). But the ESPN *scoreboard* gives only match start + final set tally, so historically the
+end must be **estimated** — and tennis duration variance (±60 min) is enough to wash the edge out (the
+±60min jitter test predicted exactly this). This is a **granularity limit of the historical scoreboard,
+NOT of the live feed**: live, ESPN's in-play state shows "serving for the match," which fires ~10–15 min
+before the end — squarely in the −0.5h zone where the edge is +6.3c. So:
+
+- The free ESPN feed **carries the right live signal** (per-set/per-game state, near-decided detection).
+- It **cannot be retro-validated** from final-tally history (no per-game timestamps on the free scoreboard).
+- **The decisive validation is therefore the LIVE forward paper test**, not a backtest. This is expected and
+  fine — it is exactly the pre-registered forward gate the standing certification bar calls for.
+
+## Bottom line
+The one real edge is **capturable in principle with a free feed** (ESPN live ATP/WTA "serving-for-match"
+state), at **zero data cost**. It cannot be proven from history (timing granularity), so the honest path
+is a **live forward paper harness** with a pre-registered gate (ROI LB>0 AND λ>0, ≥N events, ≥2
+non-Wimbledon weeks). Until that clears, size nothing — but for the first time there is a concrete,
+cost-zero, information-bearing edge to test forward.
