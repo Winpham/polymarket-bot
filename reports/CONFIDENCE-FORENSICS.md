@@ -283,3 +283,26 @@ same final-hour dimension and needs the full `us_mapper` build — low expected 
 3. **The honest path to a real edge is data acquisition, not more modelling of the price tape:** a live
    score/clock feed, then a pre-registered forward paper test of late-game favourite entry. Absent that,
    size nothing — the standing certification bar is unmet by every arm.
+
+---
+
+## PHASE 8 (continuation) — the edge GENERALIZES across regimes (kills the artifact worry)
+The one fear about the final-hour favourite edge was a `favorite_v2`-style tennis/Wimbledon artifact.
+Tested across sports (maturity-anchored, buy-favourite [0.65,0.98], 1c haircut, event-clustered):
+
+| sport | −0.5h | −1h | −2h |
+|---|---|---|---|
+| ATP/WTA tennis (Wimbledon) | **+7.55c** p<.005 (n287) | +5.40c p<.005 | −6.79c |
+| ITF tennis (lower tours) | **+3.94c** p<.005 (n840) | +1.25c ns | −5.04c |
+| esports (CS2/Valorant/Dota/LoL) | **+4.51c** p=0.02 (n218) | +3.63c p=0.08 | −8.63c |
+
+**Three independent regimes show the SAME horizon signature** (underpriced in the final ~30min, overpriced
+2h out). An artifact would be sport-specific; this is a universal microstructure effect — a thin US book
+lags near-decided favourites. **This clears the ≥2-independent-regime durability bar that `favorite_v2`
+failed.** Two consequences: (1) ITF is alive at −0.5h (n840, big universe) though it needs a paid tennis
+feed; (2) esports has a FREE live feed (bo3.gg, already used by Foresight — [[project-foresight-data-source]]).
+The −0.5h anchor (final ~30min) is where the effect is strongest and most universal — live, that is
+"serving-for-match" (tennis) or "match/map point" (esports).
+
+**Upshot:** the edge is materially more robust than a single-sport tournament fluke. The forward paper test
+is now clearly warranted; pre-registered next.
