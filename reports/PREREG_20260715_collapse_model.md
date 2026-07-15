@@ -21,7 +21,8 @@ on soccer/tennis/esports.
   life-fraction, no market-end** (all lookahead).
 - **Model:** `HistGradientBoostingClassifier(max_iter=300, learning_rate=0.06, max_leaf_nodes=15,
   min_samples_leaf=80, l2_regularization=1.0)`, trained on window-A+B labelled data, **frozen**. The
-  serialized model hash is committed alongside this file. It is **not retrained** during the forward window.
+  serialized model hash is committed alongside this file (`model/collapse_model_frozen.pkl`,
+  **sha256[:16] = ff23718d558ff0a1**, n_train=76,551). It is **not retrained** during the forward window.
 - **Entry gate:** act iff model **EV = p_win − p − fee(p, niche) > +0.01** (primary) — plus a
   registered secondary at **> +0.03**. `fee = θ·p·(1−p)`, θ = {sports 0.05}; at the US book θ=0.06.
 - **Entry price:** the **real forward taker print** at/after the trigger (no lookahead), **plus a 0.5¢
