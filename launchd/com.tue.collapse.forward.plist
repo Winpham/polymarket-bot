@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.tue.collapse.forward</string>
+
+    <!-- FORWARD PAPER TEST for the collapse-risk model (PREREG_20260715_collapse_model.md).
+         Reads the live us_mid_tape, runs the FROZEN model (sha256 ff23718d) on standard-market
+         >=0.80 sports favourites, records the first qualifying crossing to the append-only
+         collapse_paper_signals ledger, and settles matured markets. NO API key, NO wallet, NO
+         order path - it can never place a trade. It exists to convert wall-clock time into the
+         forward power that is the ONLY way to know if the model's selection edge survives, net,
+         on the US book (the retrospective US absolute is unmeasurable - settlement artifacts).
+         Every tick missed is a crossing caught late; run it on a timer so crossings are witnessed
+         live (warmup=FALSE) rather than mid-life.
+
+         ACTIVATE (user's call - persistence beyond the session):
+           cp launchd/com.tue.collapse.forward.plist ~/Library/LaunchAgents/
+           launchctl load ~/Library/LaunchAgents/com.tue.collapse.forward.plist -->
+    <key>ProgramArguments</key>
+    <array>
+        <string>/bin/bash</string>
+        <string>/Users/tuepham/polymarket-bot/scripts/niche/collapse_forward_once.sh</string>
+    </array>
+    <key>StartInterval</key>
+    <integer>600</integer>
+    <key>RunAtLoad</key>
+    <true/>
+    <key>WorkingDirectory</key>
+    <string>/Users/tuepham/polymarket-bot</string>
+    <key>StandardOutPath</key>
+    <string>/Users/tuepham/polymarket-bot/.collapse_forward.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/tuepham/polymarket-bot/.collapse_forward.log</string>
+</dict>
+</plist>
