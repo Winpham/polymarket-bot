@@ -35,28 +35,39 @@ measurement, not a rebuild.**
    loses money (exotic-prop pollution). A live signal MUST gate to standard, liquid game markets and
    exclude exact-score/corner/stat submarkets. The clean universe is small in a WC-dominated window.
 
-## The go-live checklist (nothing is optional before real money)
-**A. Prove it forward (the gate).** Run the pre-registered paper test
-(`PREREG_20260715_collapse_model.md`) on **real forward US prices with real forward settlement**,
-gating to the curated universe. Success bar (frozen): ROI LB > 0 over ≥60 events, point ≥ +2.0%,
-positive in ≥2 of {soccer,tennis,esports}. **This is the only thing that turns "unmeasured" into a
-number.** Est. wall-clock: weeks (calendar-bound).
+## The go-live checklist — status after the 2026-07-15 build run
+**A. Prove it forward (THE GATE) — BUILT + STARTED, now accruing.** `collapse_forward.py` +
+`migration 047` run the pre-registered test on **real live US prices** (frozen model, curated
+universe, entry at the real ask, forward settlement). First scan recorded 103 markets but flagged
+them **warm-up** (feed had <1 day of history → caught mid-life → excluded from the gate). CLEAN
+forward-caught signals accrue going forward. Success bar (frozen): ROI LB > 0 over ≥60 events, point
+≥ +2.0%, positive in ≥2 of {soccer,tennis,esports}. **The ONE action left for Tue: keep it running**
+(install the launchd timer — see below). Est. wall-clock to power: weeks (calendar-bound).
 
-**B. Build the execution spine (parallel to A, no money):**
-- [ ] US order client (Python/TS SDK; `keyId`+`secretKey` HMAC — Tue's KYC'd credentials, never in repo).
-- [ ] Live signal generator: frozen model + curated-universe gate + EV>threshold, off the live
-      `us_mid_tape`/`us_trade_tape` feed (already accruing).
-- [ ] Pre-trade risk gate: ⅛-Kelly sizing, per-event exposure cap, daily loss limit, price-band guard.
-- [ ] Kill switch + heartbeat; hard cap on order size ($50 start, $100 ceiling per capacity memo).
-- [ ] Fill reconciliation + a real-money ledger separate from the paper ledger.
-- [ ] Idempotent order submission (no double-fills on retry).
+**B. Execution spine — BUILT (paper-first, no money):**
+- [x] Pre-trade **risk gate** (`scripts/execution/risk_gate.py`): kill-switch, model-provenance,
+      niche allowlist, 0.80–0.98 band, min-EV, daily loss-limit breaker, ⅛-Kelly sizing, per-EVENT
+      cap, $50/$100/$250 hard-stop ladder. Pure + fully unit-tested.
+- [x] **Order client** (`scripts/execution/us_order_client.py`): paper client (idempotent) runs;
+      live client **refuses at three latches** + transport unimplemented — no accidental money path.
+- [x] Live signal generator = `collapse_forward.py --scan` (frozen model + curated gate off the feed).
+- [ ] Fill reconciliation + real-money ledger DB — **deferred to the post-gate authorised change**
+      (needs Tue's credentials; not built by design).
 
-**C. Shadow-trade the spine** against the paper ledger for the same window as A, so we confirm the
-live signal path reproduces the backtest's selections before a cent is at risk.
+**C. Shadow-trade the spine** against the paper ledger for the same window as A — pending A's accrual.
 
-**D. Go-live is a config flip, only if:** A passes its frozen bar AND C matches AND Tue authorises.
-Start at $50/signal, ⅛-Kelly, one sport, with the kill-switch armed. Scale only on realised
-forward P&L.
+**D. Go-live is a config flip, only if:** A passes its frozen bar AND C matches AND Tue authorises
+AND wires the live transport. Start at $50/signal, ⅛-Kelly, one sport, kill-switch armed. Scale only
+on realised forward P&L.
+
+## The ONE command to keep the forward test running (Tue's call — persistence)
+```
+cp launchd/com.tue.collapse.forward.plist ~/Library/LaunchAgents/
+launchctl load ~/Library/LaunchAgents/com.tue.collapse.forward.plist
+```
+Scans + settles every 10 min, durably (no long-lived process to be reaped). Read-only except the
+append-only ledger; no API key, no order path. Check progress any time:
+`python3 scripts/niche/collapse_forward.py --report`.
 
 ## The honest one-liner for Tue
 The research is done and it is strong — but it is strong **on the international book**. On the book you
