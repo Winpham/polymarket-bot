@@ -197,3 +197,50 @@ what the selection recovers. **We have never had a confident, information‑bear
 - `reports/niche/.collapse_wf_cache.pkl` — per‑decision‑point cache (adds decision ts + forward close).
 All `psql` via the pinned docker‑exec helper (`ON_ERROR_STOP`, parallel workers off — the DB serves the
 live bot). No order path touched.
+
+---
+
+## PHASE 7 (continuation run) — searching for a λ>0 signal: the final-hour late-convergence effect
+
+Verdict C says everything tried is variance. The honest task became: find a signal that is *information*
+(λ CI LB>0) and survives at the realizable US price — or prove none exists. First a mapper-free
+efficiency test of the US book itself (`scripts/niche/us_calibration.py`), settled on official DMR.
+
+### US venue is efficient at tradeable horizons — with ONE exception
+Sampling each market's price at a controlled time before resolution (official `maturity_time` anchor;
+last print is +1 min from it, so the anchor is the real game end, not administrative), curated aec
+game-winners, event-clustered, 1c haircut + US fee:
+
+| entry (before resolution) | buy-favourite [0.65,0.98] net | verdict |
+|---|---|---|
+| −0.5h | **+6.29c** [+3.86,+8.54] p=0.000 | edge |
+| −1h | **+3.92c** [+0.89,+6.83] p=0.004 | edge |
+| −2h | −6.91c [−11.0,−2.9] p=1.000 | favourites OVERpriced |
+| −3h | −5.71c [−10.1,−1.5] p=0.998 | overpriced |
+| −6h | −5.13c [−9.4,−0.8] p=0.991 | overpriced |
+
+**At −3h/−6h the US book is efficient-to-overpriced (both sides lose to costs). But in the final hour a
+thin US book UNDERprices the leading favourite** (priced ~0.81, wins ~0.87–0.92). This is a
+late-convergence / in-play-latency inefficiency, not a static premium (it inverts sign by horizon).
+
+### It passes the information test — the FIRST signal in the project to do so
+−1h buy-favourite, 1c haircut, event-clustered:
+- **NET +3.92c [+0.89, +6.83], p=0.004** (431 events).
+- **λ = 0.730, CI [0.514, 0.911]; CLV +0.042 [+0.016, +0.067], p(CLV≤0)=0.001.** The market moves toward
+  the pick before resolution — 73% of the surplus is confirmed pre-resolution. **Information, not variance.**
+- Temporally stable: early days +3.54c (p=0.059), late days +4.29c (p=0.027) — both halves positive.
+
+### Why the frozen collapse model missed it (and why it's genuinely new)
+The model's features use *elapsed-since-first-print*, never *time-to-resolution* — the one variable that
+matters here. A live bettor knows the game clock; the price-only model cannot. That is exactly why this
+survives where the collapse model scored −4.15% on US.
+
+### CANDIDATE, not certified — two named kill-risks (I have seen this movie)
+1. **Tennis concentration in a tournament window.** tennis +5.40c p=0.001 (281/431 events); esports +1.30c
+   (ns); soccer/ufc thin. The window is Wimbledon+WC-heavy. This is the SAME shape as `favorite_v2`
+   (tennis tournament artifact, ruled NOT bankable). Must prove it generalises off-tournament.
+2. **Look-ahead anchor.** Entry is defined at `maturity_time − 1h`; live you would not know the exact
+   resolution time. Needs a live-knowable trigger (scheduled/estimated game end) that reproduces it.
+
+**Status: CANDIDATE with a real information signature (λ=0.73) — the best the project has produced — but
+tennis-concentrated, tournament-window, look-ahead-anchored. Next: derisk both, then forward-test live.**
