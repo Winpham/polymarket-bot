@@ -6,6 +6,53 @@ API key, no merge.** Grounds: `reports/CONFIDENCE-FORENSICS.md` phases 7–9, `P
 
 ---
 
+## ⛔ ToS GATE — bo3.gg AUTOMATED ACCESS: RESTRICTIVE → HELD FOR TUE (2026-07-15, checked before any build)
+
+Tue's build order was gated: verify bo3.gg's automated-access posture first; build only if CLEAN.
+**Verdict: RESTRICTIVE / ambiguous → NOT built.** The evidence:
+
+1. **`bo3.gg/robots.txt` explicitly `Disallow: /api/` for `User-agent: *`** (also `Disallow: */matches/*/*/*`
+   and many query-param patterns). The live match-state API path — the exact thing a poller must hit —
+   is disallowed for automated agents by their own stated policy. An automated `/api/` poller would
+   violate it. This alone trips the run's hard rule ("respect ToS/rate limits; read-only").
+2. **No official documented public-API program found.** `bo3.gg/api`, `/developers`, `/api-docs` all
+   return HTTP 200 but that is the Nuxt SPA catch-all (every route 200s) — not a developer portal;
+   `docs.bo3.gg` does not resolve. There is no published API terms that would *permit* programmatic use
+   and override the robots directive.
+3. **`bo3.gg/terms` is client-rendered (SPA); its text could not be retrieved** to confirm or deny an
+   explicit automated-use clause → ambiguous, and ambiguity is a HOLD per the gate.
+
+**Fallback viability (assessed, per the gate):**
+- **HLTV — NOT viable.** Behind a Cloudflare bot-challenge ("Just a moment…"), no public API, ToS is
+  well known to forbid automated access. Dead end for an automated poller.
+- **Liquipedia — automation-PERMITTED but INSUFFICIENT for the trigger.** Clear policy (custom UA with
+  contact, ≤1 req/2s, cache aggressively; LiquipediaDB 60/hr with approval). But Liquipedia is a wiki:
+  it carries schedules/results, **not reliable live round-by-round in-match state** at the ≤2–5 min
+  cadence the "map point / round score" trigger requires. Usable for the *universe/schedule* join, not
+  for the live near-decided signal the edge depends on.
+- **Licensed esports data (PandaScore / Abios / GRID / Bayes) — viable but PAID → needs Tue.** These
+  legally provide live round-by-round state. This is the "paid feed = human decision" path; do NOT
+  procure without Tue.
+
+**Load-bearing context for Tue's decision:** Tue's *Foresight* project already uses "the free bo3.gg
+API for CS2 per-map stats" (`[[project-foresight-data-source]]`). So there is an existing usage pattern
+Tue owns — he may know it to be tolerated, hold an arrangement, or want Foresight's usage reconsidered
+too. **This is precisely why the decision is his**, not mine: the honest reading of the public signals
+is restrictive, but Tue has private context I don't.
+
+**What unblocks STEP 2 (build):** one of —
+(a) Tue confirms bo3.gg automated read-polling is permitted/tolerated for this use (his call, given his
+existing dependency), at a conservative throttle; or
+(b) Tue authorises a licensed feed (PandaScore/Abios/GRID) with creds — the clean legal path; or
+(c) we accept Liquipedia-only and **redesign the edge** to a schedule-derived proxy — but the derisk
+work already proved every non-live-clock proxy is negative, so this is expected to fail and is not
+recommended.
+
+**Everything below is the build spec, HELD pending (a)/(b). Nothing was built.** The spec stands so that
+the moment Tue clears the feed, the harness is a fork-and-swap, not a design project.
+
+---
+
 ## 0. HONEST PRIORS (read first)
 
 This is a **data-acquisition project that MIGHT yield an arm — not a known edge.** The base rate in
