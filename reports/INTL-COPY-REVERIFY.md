@@ -104,13 +104,19 @@ its λ = 0.000 covers that half. Prior roster/ranker machinery (already in-repo)
 Fresh λ-framed OOS confirmation (copying the 147 MM-screened directional roster wallets, forward
 closing-line CLV, market-clustered):
 
-> `intl_roster_lambda.py` — forward closing-line λ for copying the 147 MM-screened directional
-> roster wallets (maker_frac<0.1), market-clustered, all-window and window-B (OOS). Result pending
-> a slow aggregate (the copy-bot's recovery backlog is competing for the DB); it is **confirmatory**,
-> not load-bearing — the three published artifacts above already settle Test 4. **[to be appended]**
+> `intl_roster_lambda.py` computes the forward closing-line λ for copying the 147 MM-screened
+> directional roster wallets (maker_frac<0.1), market-clustered, all-window and window-B (OOS). The
+> run was **abandoned** in this window: the closing-line `ARRAY_AGG` over the roster's high-volume
+> markets collided with the copy-bot's ~7-minute recovery-backlog `INSERT` and never cleared. This is
+> **confirmatory only, not load-bearing** — the three published artifacts above already settle Test 4
+> with market-clustered CIs, and the collapse cache (which *is* the MM-screened directional cohort)
+> already has λ = 0.000. The script is committed and `--self-test` green; re-run it when the DB is
+> quiet (`python3 scripts/niche/intl_roster_lambda.py`).
 
-**Test 4 conclusion (from published artifacts):** copying a cleaner roster does **not** produce
-λ > 0. No roster's out-of-sample edge CI clears 0; CLV as a ranker fails; copy does not beat blind.
+**Test 4 conclusion (from published artifacts + the collapse-cache λ):** copying a cleaner roster
+does **not** produce λ > 0. The MM-screened directional cohort is exactly the collapse cache → λ=0.000;
+no roster's out-of-sample edge CI clears 0; CLV as a ranker fails (`works:false`); copy does not beat
+blind (p=0.219).
 
 ### Test 5 — Fresh-data confirmation  ⏸ N/A (pipeline not producing persisted forward data)
 The copy-trading-bot container polls trader activity (logs show it fetching through 2026-07-15)
