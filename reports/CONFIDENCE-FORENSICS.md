@@ -306,3 +306,55 @@ The −0.5h anchor (final ~30min) is where the effect is strongest and most univ
 
 **Upshot:** the edge is materially more robust than a single-sport tournament fluke. The forward paper test
 is now clearly warranted; pre-registered next.
+
+---
+
+## PHASE 9 (audit & review, 2026-07-15) — adversarial self-audit + independent code review
+
+An adversarial audit of the edge and the harness (independent read-only reviewer + my own re-checks).
+
+### Statistical corrections (my own re-audit)
+- **λ was OVERSTATED.** λ=0.73 was measured with the CLV "close" only 5 min before resolution
+  (near-degenerate). At a FAIR tradeable close it is far weaker: **λ=0.44 (LB 0.22) at −30min, λ=0.10
+  (LB 0.00) at −45min.** Honest reading: the edge is *modest, slow* information — the thin book grinds
+  the near-decided favourite up over the final ~30 min, not a fast re-rating. **The edge's PROFIT is
+  intact** (ROI survives a 3c haircut: +3.4c p=0.025), but "strong information (λ=0.73)" was wrong.
+- **Anchor is NOT circular** (maturity_time is genuinely after the last print: median +2min). ✓
+- **Not concentration-driven** (win 89.7% @0.825, top-5 events only 11% of P&L, survives their removal). ✓
+- **Exploratory-search caveat:** the retrospective edge came from a multi-cell search (horizons/bands/
+  anchors); nominal p-values overstate. Mitigated by cross-sport replication + the forward test — but it
+  is why the PREREG and live gate exist.
+
+### Harness bugs found AND FIXED (`finalhour_forward.py`)
+The forward harness was **inert and partly incorrect** as first written; all fixed + re-tested:
+1. 🔴 **Name-matching matched ESPN full names against truncated slug codes** (`colwon`) → fired 0
+   signals, forever, silently. FIXED: join `us_markets.parquet` full names (`outcomes`), like
+   `espn_validate.py`.
+2. 🔴 **No orientation check** → could book an inverted (losing-side) bet in the exact lag regime the
+   edge targets. FIXED: the YES side is read from `outcomes[i] where side_long[i]` (NOT slug order —
+   verified `aec-atp-adoval-migdam` YES = *Damas*, the 2nd code) and must equal the ESPN leader, else
+   skip. Guard tested both ways.
+3. 🔴 **Band gated `mid` but booked the fill at `ask`** → a wide market could enter far out of band and
+   the fee+spread erase the edge. FIXED: gate the `best_ask` actually paid.
+4. 🟡 **Leader tie-break missed deciding-set** (level sets → always named player A). FIXED:
+   `match_state` tie-breaks by the in-progress set's game lead; deciding-set test added.
+5. 🟡 **Null terminal market settled as a spurious WIN** (0.5→1.0). FIXED: never default a null to a win.
+6. 🟡 **Loader silently dropped all rows** (duckdb returns `outcomes`/`side_long` as JSON strings, not
+   lists) + dead `event_key` line + a no-op self-test that masked bug #1. All FIXED; self-test now
+   asserts full-name matching and the deciding-set leader.
+Confirmed NOT bugs: `ev.get("major")` (real GS flag), `settle()` DMR→side mapping (self-consistent),
+SQL-injection (q_lit-guarded).
+
+### Remaining limitations (honest, not yet fixed)
+- **`us_markets.parquet` is a static 2026-07-13 snapshot** → orientation is unavailable for matches
+  listed after it; a forward run needs a refreshed markets pull (operational, not a code bug).
+- **ESPN in-progress JSON** still needs one verification pass against a LIVE match (none was live at
+  audit time) before trusting real accrual.
+- **~50% coverage:** the harness only fires when the ESPN leader is the market's YES side; markets where
+  the leader is the NO side are skipped (safe, but halves the universe — a future refinement).
+
+### Net verdict of the audit
+The **edge finding survives** (profit robust to realistic cost, broad, cross-sport) but its *information*
+strength was oversold (λ≈0.1–0.44, not 0.73). The **harness was not trustworthy as written** (inert +
+inversion risk) and is now corrected and tested, though it still needs a live-schema check and a live
+markets refresh before it can accrue clean signals.

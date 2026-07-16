@@ -68,6 +68,33 @@ def name_toks(s):
     return {t for t in norm(s).split() if len(t) >= 4}
 
 
+def load_us_yes_players():
+    """slug -> (yes_player_name, {both player names}). ORIENTATION SOURCE: the YES contract's player is
+    outcomes[i] where side_long[i] is true — NOT the slug's first-listed name (verified: for
+    aec-atp-caralc-joafon the YES side is 'Joao Fonseca', not Alcaraz). Buying the wrong side is a
+    silent, catastrophic loss, so orientation is read here, never inferred from slug order."""
+    import duckdb
+    f = os.path.expanduser("~/polymarket-archive/us_markets.parquet")
+    con = duckdb.connect()
+    rows = con.execute("SELECT slug, outcomes, side_long FROM read_parquet('%s') "
+                       "WHERE slug LIKE 'aec-atp-%%' OR slug LIKE 'aec-wta-%%'" % f).fetchall()
+    m = {}
+    for slug, outcomes, side_long in rows:
+        # duckdb returns these list columns as JSON strings, e.g. '["A","B"]' / '[true, false]'
+        try:
+            outs = json.loads(outcomes) if isinstance(outcomes, str) else list(outcomes)
+            sides = json.loads(side_long) if isinstance(side_long, str) else list(side_long)
+        except (TypeError, ValueError):
+            continue
+        if not outs or not sides or len(outs) != len(sides):
+            continue
+        yi = next((i for i, b in enumerate(sides) if b), None)
+        if yi is None:
+            continue
+        m[slug] = (outs[yi], set(outs))
+    return m
+
+
 # ---------------------------------------------------------------- ESPN near-decided detection
 def _sets_won(linescores_a, linescores_b):
     """Count COMPLETED sets each side has won. A set is complete when max>=6 and (margin>=2 or max==7)
@@ -83,27 +110,29 @@ def _sets_won(linescores_a, linescores_b):
     return wa, wb
 
 
-def near_decided(ls_lead, ls_other, is_bo5):
-    """ls_* = per-set game counts for the leader / other. is_bo5 True for best-of-5 (Wimbledon men).
-    Returns (bool, reason). Near-decided = the leader needs only to finish:
-      bo5: up >=2 completed sets AND ahead/level in the current set;
-      bo3: up 1 completed set AND ahead by >=3 games in the current (in-progress) set (serving-for-set)."""
-    wl, wo = _sets_won(ls_lead, ls_other)
-    need = 3 if is_bo5 else 2
-    # current (last) set game lead, if a set is in progress (trailing entry not yet a completed set)
-    cur_lead = 0
-    if ls_lead and ls_other:
-        va, vb = ls_lead[-1], ls_other[-1]
-        m = max(va, vb)
-        completed = m >= 6 and (abs(va - vb) >= 2 or m == 7)
-        if not completed:
-            cur_lead = va - vb
-    if wl >= need - 1 and (wl - wo) >= (1 if is_bo5 else 1) and (wl >= need - 1):
-        if is_bo5 and wl >= 2 and (wl - wo) >= 1 and cur_lead >= 0:
-            return True, f"bo5 sets {wl}-{wo}, current +{cur_lead}"
-        if (not is_bo5) and wl >= 1 and cur_lead >= 3:
-            return True, f"bo3 set {wl}-{wo}, serving-for-match +{cur_lead}"
-    return False, f"sets {wl}-{wo}"
+def match_state(ls_a, ls_b, is_bo5):
+    """(ls_a, ls_b) = per-set game counts for player A / B. Returns (near_decided, leader_idx, reason).
+    LEADER = more completed sets; ties broken by the current in-progress set's game lead (so a level
+    match with B serving for it correctly names B, not A). NEAR-DECIDED (commanding / serving-for-match):
+      bo3: leader has >=1 completed set AND leads the current set by >=3 games (one game from the match);
+      bo5: leader is up >=2 completed sets with a net set lead AND at least level in the current set."""
+    wa, wb = _sets_won(ls_a, ls_b)
+    cur_a = ls_a[-1] if ls_a else 0
+    cur_b = ls_b[-1] if ls_b else 0
+    mm = max(cur_a, cur_b)
+    cur_completed = mm >= 6 and (abs(cur_a - cur_b) >= 2 or mm == 7)
+    cur_lead_a = 0 if cur_completed else (cur_a - cur_b)      # A's game lead in the in-progress set
+    if wa != wb:
+        lead = 0 if wa > wb else 1
+    else:
+        lead = 0 if cur_lead_a >= 0 else 1                    # sets level -> whoever leads the current set
+    wl, wo = (wa, wb) if lead == 0 else (wb, wa)
+    cl = cur_lead_a if lead == 0 else -cur_lead_a             # leader's game lead in the current set
+    if is_bo5:
+        nd = wl >= 2 and (wl - wo) >= 1 and cl >= 0
+    else:
+        nd = wl >= 1 and cl >= 3
+    return nd, lead, f"sets {wl}-{wo}, cur +{cl}"
 
 
 def espn_live_near_decided():
@@ -130,9 +159,7 @@ def espn_live_near_decided():
                     ls = [[float(z.get("value", 0)) for z in x.get("linescores", [])] for x in cs]
                     if not ls[0] or not ls[1]:
                         continue
-                    wa, wb = _sets_won(ls[0], ls[1])
-                    lead = 0 if wa >= wb else 1                    # who is ahead on sets
-                    nd, reason = near_decided(ls[lead], ls[1 - lead], is_bo5)
+                    nd, lead, reason = match_state(ls[0], ls[1], is_bo5)
                     if nd:
                         out.append({"sport": f"tennis_{tour}", "names": names,
                                     "leader_name": names[lead], "feed_state": reason,
@@ -146,60 +173,62 @@ def scan(dry=False):
     print(f"scan: {len(triggers)} near-decided live matches from ESPN")
     if not triggers:
         return
+    yes_map = load_us_yes_players()          # slug -> (yes_player, {both names})  [orientation source]
     have = {r["us_slug"] for r in sql("SELECT us_slug FROM finalhour_paper_signals;")}
-    # live US ATP/WTA markets currently OPEN with a fresh quote
     open_mkts = sql("""
         SELECT DISTINCT ON (us_slug) us_slug, mid, best_ask, best_bid, spread,
                EXTRACT(EPOCH FROM recv_at) t, state
         FROM us_mid_tape
         WHERE state='MARKET_STATE_OPEN' AND (us_slug LIKE 'aec-atp-%' OR us_slug LIKE 'aec-wta-%')
-              AND recv_at > now() - interval '10 minutes' AND mid IS NOT NULL
+              AND recv_at > now() - interval '10 minutes' AND mid IS NOT NULL AND best_ask IS NOT NULL
         ORDER BY us_slug, recv_at DESC;""")
-    # index live US markets by name tokens (from the slug is unreliable; use the question if present)
-    slug_toks = {}
-    for r in open_mkts:
-        slug_toks[r["us_slug"]] = name_toks(r["us_slug"].replace("-", " "))
-    inserted = 0
+    inserted = considered = 0
     for t in triggers:
-        lt = name_toks(t["leader_name"])
-        best = None
+        lead_tok = name_toks(t["leader_name"])
+        allt = name_toks(" ".join(t["names"]))
         for r in open_mkts:
-            if r["us_slug"] in have:
+            slug = r["us_slug"]
+            if slug in have or slug not in yes_map:
                 continue
-            # both players' surnames should appear in the market (avoid mis-map); leader must too
-            allt = name_toks(" ".join(t["names"]))
-            st = slug_toks[r["us_slug"]]
-            if len(allt & st) >= 2 or (len(lt & st) >= 1 and len(allt & st) >= 1):
-                best = r
-                break
-        if best is None:
-            continue
-        mid = float(best["mid"])
-        ask = float(best["best_ask"]) if best["best_ask"] else mid
-        # the FAVOURITE side must be the leader and in-band on the US book
-        if not (BAND_LO <= mid <= BAND_HI):
-            continue
-        # book-history age (warmup if <30min of quotes)
-        hist = sql(f"SELECT EXTRACT(EPOCH FROM (max(recv_at)-min(recv_at))) age "
-                   f"FROM us_mid_tape WHERE us_slug={q_lit(best['us_slug'])};")
-        age = float(hist[0]["age"]) if hist and hist[0]["age"] else 0.0
-        warmup = age < WARMUP_MIN_S
-        spread = float(best["spread"]) if best["spread"] else (ask - float(best["best_bid"] or mid))
-        evk = re.sub(r"-[^-]+$", "", best["us_slug"]) if re.search(r"\d{4}-\d{2}-\d{2}", best["us_slug"]) else best["us_slug"]
-        m = re.search(r"(\d{4}-\d{2}-\d{2})", best["us_slug"])
-        evk = best["us_slug"][:m.end()] if m else best["us_slug"]
-        line = (f"  TRIGGER {best['us_slug']}  mid={mid:.3f} ask={ask:.3f}  "
-                f"[{t['feed_src']}: {t['feed_state']}]  warmup={warmup}")
-        print(line)
-        if dry:
-            continue
-        sql(f"""INSERT INTO finalhour_paper_signals
-                (us_slug,sport,event_key,signal_ts,entry_ask,entry_mid,entry_spread,feed_state,feed_src,warmup)
-                VALUES ({q_lit(best['us_slug'])},{q_lit(t['sport'])},{q_lit(evk)},
-                        to_timestamp({float(best['t'])}),{ask},{mid},{spread},
-                        {q_lit(t['feed_state'])},{q_lit(t['feed_src'])},{str(warmup).upper()})
-                ON CONFLICT (us_slug) DO NOTHING;""", fetch=False)
-        inserted += 1
+            yes_player, players = yes_map[slug]
+            # (1) this market must be THIS matchup: both players' names present
+            if len(allt & name_toks(" ".join(players))) < 2:
+                continue
+            # (2) ORIENTATION: the YES side we would buy must be the ESPN leader, else it is an
+            #     inverted (losing-side) bet — skip. Never inferred from slug order.
+            if len(name_toks(yes_player) & lead_tok) < 1:
+                continue
+            considered += 1
+            ask = float(r["best_ask"])
+            # (3) gate the price ACTUALLY PAID (ask), not the mid — a wide market can have mid in-band
+            #     but ask out of band, where fee+spread erase the edge.
+            if not (BAND_LO <= ask <= BAND_HI):
+                continue
+            mid = float(r["mid"])
+            bid = float(r["best_bid"]) if r["best_bid"] else mid
+            spread = float(r["spread"]) if r["spread"] else (ask - bid)
+            hist = sql(f"SELECT EXTRACT(EPOCH FROM (max(recv_at)-min(recv_at))) age "
+                       f"FROM us_mid_tape WHERE us_slug={q_lit(slug)};")
+            age = float(hist[0]["age"]) if hist and hist[0]["age"] else 0.0
+            warmup = age < WARMUP_MIN_S
+            mm = re.search(r"(\d{4}-\d{2}-\d{2})", slug)
+            evk = slug[:mm.end()] if mm else slug
+            print(f"  TRIGGER {slug}  YES={yes_player}  ask={ask:.3f} mid={mid:.3f}  "
+                  f"[{t['feed_src']}: {t['feed_state']}]  warmup={warmup}")
+            if not dry:
+                sql(f"""INSERT INTO finalhour_paper_signals
+                        (us_slug,sport,event_key,signal_ts,entry_ask,entry_mid,entry_spread,
+                         feed_state,feed_src,warmup)
+                        VALUES ({q_lit(slug)},{q_lit(t['sport'])},{q_lit(evk)},
+                                to_timestamp({float(r['t'])}),{ask},{mid},{spread},
+                                {q_lit(t['feed_state'])},{q_lit(t['feed_src'])},{str(warmup).upper()})
+                        ON CONFLICT (us_slug) DO NOTHING;""", fetch=False)
+                have.add(slug)
+            inserted += 1
+            break
+    if triggers and considered == 0:
+        print("scan: WARNING — near-decided matches exist but 0 US markets matched by "
+              "name+orientation (check the us_markets.parquet join / player-name overlap).")
     print(f"scan: recorded {inserted} new signals" + (" (dry-run: none written)" if dry else ""))
 
 
@@ -227,8 +256,10 @@ def settle():
             st = sql(f"""SELECT state, last_trade_px, mid FROM us_mid_tape WHERE us_slug={q_lit(slug)}
                          ORDER BY recv_at DESC LIMIT 1;""")
             if st and st[0]["state"] in ("MARKET_STATE_EXPIRED", "MARKET_STATE_CLOSED"):
-                px = float(st[0]["last_trade_px"]) if st[0]["last_trade_px"] else float(st[0]["mid"] or 0.5)
-                outcome, src = (1.0 if px >= 0.5 else 0.0), "terminal_px"
+                ltp, md = st[0]["last_trade_px"], st[0]["mid"]
+                if ltp not in (None, "") or md not in (None, ""):   # never default a null market to a WIN
+                    px = float(ltp) if ltp not in (None, "") else float(md)
+                    outcome, src = (1.0 if px >= 0.5 else 0.0), "terminal_px"
         if outcome is None:
             continue
         # lambda close: last non-degenerate mid after entry
@@ -291,19 +322,22 @@ def self_test():
     assert _sets_won([6, 6], [3, 4]) == (2, 0)
     assert _sets_won([6, 4, 4], [3, 6, 2]) == (1, 1)     # 3rd set in progress, not counted
     assert _sets_won([7], [6]) == (1, 0)                 # tiebreak set
-    # bo5 near-decided: up 2 sets, current level -> fire
-    ok, why = near_decided([6, 6, 3], [3, 4, 3], is_bo5=True)
-    assert ok, why
-    # bo5 NOT near-decided at 1 set
-    assert not near_decided([6, 3], [4, 6], is_bo5=True)[0]
-    # bo3 near-decided: up a set, serving for match (+3 games) -> fire
-    assert near_decided([6, 5], [3, 2], is_bo5=False)[0]
-    # bo3 NOT near-decided at 1 set, tight current set
-    assert not near_decided([6, 3], [4, 3], is_bo5=False)[0]
-    # name tokens
+    # match_state returns (near_decided, leader_idx, reason)
+    nd, lead, _ = match_state([6, 6, 3], [3, 4, 3], is_bo5=True)   # A up 2 sets, 3rd level -> fire, A leads
+    assert nd and lead == 0
+    assert not match_state([6, 3], [4, 6], is_bo5=True)[0]         # bo5 at 1 set each -> no
+    nd, lead, _ = match_state([6, 5], [3, 2], is_bo5=False)        # A up a set, serving for match -> fire
+    assert nd and lead == 0
+    assert not match_state([6, 3], [4, 3], is_bo5=False)[0]        # up a set but current tight -> no
+    # DECIDING-SET leader tie-break: sets level 1-1, B serving for the match in the 3rd -> B is leader
+    nd, lead, _ = match_state([6, 3, 2], [3, 6, 5], is_bo5=False)
+    assert nd and lead == 1, (nd, lead)
+    # name matching must work on FULL names (the bug that made the harness inert): ESPN full name vs
+    # the us_markets outcome name — NOT the truncated slug code.
+    assert len(name_toks("Caty McNally") & name_toks("Xinyu Wang Caty McNally")) >= 1
+    assert len(name_toks("Caty McNally") & name_toks("catmcn xinwan 2026")) == 0  # slug codes never match
     assert "sabalenka" in name_toks("Aryna Sabalenka")
-    assert len(name_toks("Caty McNally") & name_toks("aec wta catmcn xinwan 2026")) >= 0  # smoke
-    print("self-test OK (fee, set-counting, near-decided bo3/bo5, name tokens)")
+    print("self-test OK (fee, set-counting, match_state leader+deciding-set, full-name matching)")
     return 0
 
 
