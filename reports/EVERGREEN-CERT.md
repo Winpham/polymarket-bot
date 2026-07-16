@@ -170,6 +170,15 @@ The honest NO is added to the confidence ledger alongside champion (λ indetermi
 > positive at a fair horizon), positive at the realizable ask only as a structural band premium a blind
 > bet harvests without a sharp, and uncertifiable on 2 resolution-day clusters. Do not size (k=0).**
 
+**PROD STAND-DOWN (instruction for Tue — NOT done here; this run is read-only, never touches prod/.env).**
+Tue accepted the NO (verdict C, k=0 — recorded in `DECISIONS.md` D31). To stop forward paper accrual on
+the weather arm: set **`CONSENSUS_WEATHER_ARM=false`** in `~/polymarket-bot/.env.consensus` (currently
+`=true`) and restart the consensus service (`docker compose -f docker-compose.consensus.yml up -d`, or
+restart the copy-trading-bot consensus container). It is a paper/shadow arm (`alerting=false`) → no
+live-alert or money path is affected; the flip only halts a capture we now know cannot certify. Keeping
+it ON as a free monitor is harmless but cannot flip the verdict, so OFF is the honest default. Flag flip
+is Tue's call.
+
 What *would* change the verdict (each labelled human vs calendar):
 - **λ turning positive on disjoint weeks** — CALENDAR-BOUND and structurally unlikely (same-day
   temperature revelation makes CLV hindsight); weeks of forward accrual would test it, but the mechanism

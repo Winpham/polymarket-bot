@@ -1045,3 +1045,62 @@ churn axis.
 **Bottom line:** the skilled traders are real; past PnL cannot find them (re-confirmed five more
 ways); the only forward-shaped lead is CLV, now measurable and accruing — decidable in months, not
 today. Honest null + one live instrument, exactly the mission's anticipated deliverable.
+
+---
+
+## D31 — Weather (`weather_fav`) → k=0, verdict C: variance / favourite-longshot band premium, not information (2026-07-15, entry evergreen-cert)
+
+**Context.** `weather_fav` (favourite band 0.71–0.90) was the last surviving candidate in the
+Polymarket investigation — the only arm that cleared the LODO-by-week gate everything else failed,
+but certified BEFORE the modern 4-bar bar existed and with its **λ (information fraction) never
+computed.** This run put it through the exact gauntlet that killed the collapse model
+(`reports/EVERGREEN-CERT.md`, branch `feat/evergreen-cert`). Read-only / paper; nothing armed.
+
+**λ computed for the first time (the decisive test).** The DB route was dead —
+`signal_price_trajectory` coverage for weather = **0%** — so the close price came from the public
+CLOB `prices-history` endpoint, which was VALIDATED first (hard rule): reconstructed mid vs the
+arm's now-captured `entry_ask_mid` → **MAE 1.5¢, bias +0.05¢, corr 0.984** (the prior atfire_recon
+22¢ failure was a validation-target bug — it compared against the structurally-absent `_blind`
+weather mid, not the arm's real captures). Result, band 0.71–0.90, mid-to-mid, day-clustered:
+**λ = 0.00, CI [−0.74, +0.36]** at the last tick; **−0.16 @ −24h; −0.96 @ −12h.** CLV point
+≈ +0.0002 clustered / −0.005 raw, **NEGATIVE at every fair pre-resolution horizon.** The market
+never moves toward the picks before resolution; the entire realized surplus (won−entry ≈ +6%) is
+residual variance. Same disease as collapse (λ=0) and champion (λ indeterminate).
+`reports/clv_lambda_weather.json`.
+
+**Why weather can NEVER clear bar #2 (structural, not power).** A weather market's price converges
+to 0/1 as the day's high temperature is *revealed* through the resolution day, so any late "the
+market moved our way" is the answer leaking in, not a forecast. At a fair lead (−12h/−24h, before
+the temp is known) the market has moved *away* from the picks. There is no window of anticipatory
+confirmation. More weeks will not fix this.
+
+**MIRAGE resolved AGAINST the sharps — the BAND does the work.** With the source validated, the
+head-to-head ran (neutral res−24h reference, official settlement, band 0.71–0.90): a **truly-blind
+favourite-band pool earns +5.27% on its own**; sharp-selected picks +8.39%, but the +3.1pp gap is
+**one-day variance** — on 07-13 the blind pool BEATS the sharp (+7.6% vs +4.6%); the sharp only
+"wins" on 07-14, and λ confirms none of it is CLV-bearing. The copy apparatus is decorative; the
+edge is structural favourite-longshot bias. `reports/weather_blind_pool.json`.
+
+**Cost re-net (helps weather, but only re-scales variance).** Corrected fee `0.03·p·(1−p)` ≈ 0.36¢
+at the band vs the phantom flat 3¢: band ROI at the real ask +0.9% → **+3.4%**. Positive on
+official settlement (weather is intl-only ⇒ label = Polymarket/NOAA CLOB resolution; no US DMR gap)
+— softer than collapse's −4.15% — but **λ gates: a cheaper fee cannot turn a variance premium into
+an edge**, and the +3.4% rests on **2 resolution-day clusters** (arm's clean `entry_ask` = 07-13 +
+07-14 only) so it is uncertifiable. `reports/weather_bar4_net.json`.
+
+**Scorecard: 0 of 4 bars.** #1 walk-forward PARTIAL (calendar-blocked: 2 consecutive resolution
+days, 0 disjoint weeks). #2 λ FAIL (the decisive one). #3 Brier-beat N/A (no model distinct from
+the market price; the "does selection beat the band" substitute reads NO). #4 realizable-ask
+PARTIAL (positive point, uncertifiable + λ-null ⇒ structural).
+
+**Decision.** `weather_fav` → **k=0, do not size, verdict C.** Added to the confidence ledger
+alongside champion and collapse. No go-live artifact produced (correctly gated on §2, which failed).
+
+**PROD ACTION FOR TUE (not done here — read-only run; this is an instruction only).** To stop
+forward paper accrual on the weather arm, set **`CONSENSUS_WEATHER_ARM=false`** in the deployed
+`~/polymarket-bot/.env.consensus` (currently `=true`) and restart the consensus service
+(`docker compose -f docker-compose.consensus.yml up -d`, or the equivalent restart of the
+copy-trading-bot consensus container). This is a paper/shadow arm (`alerting=false`), so no
+live-alert or money path is affected; flipping it only halts the (now-known-uncertifiable) capture.
+Optional: keep it ON as a free data monitor — but it cannot flip the verdict, so OFF is the honest
+default. **Merge/flag is Tue's call; nothing on `feat/evergreen-cert` touches prod or `.env`.**
