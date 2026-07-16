@@ -74,6 +74,28 @@ too short and an entry too late to see the selection's forward move.
 correct statement is "the selection has a positive, power-limited forward CLV that clearly exceeds the
 blind band's zero" — **information, but not yet at certification strength.**
 
+### Leave-one-day-out jackknife (the out-of-cohort robustness check)
+
+Is the positive CLV driven by one lucky day? No. Per-day sharp CLV (band 0.71–0.90, 12h) is **positive on
+8 of 9 days** (only 07-04 negative, −19.5¢ — the same day that dragged Bar 1); and **all 9
+leave-one-day-out folds stay positive** — min-fold (drop the strongest day, 07-03) = **+4.75¢**. Same for
+the wide band (all folds > 0). So the forward information is **robust within-cohort — not a single-day
+artifact.** The wide Bar-2 CI is inflated by the one −20¢ day's variance, not by concentration of the
+signal. (What LODO *cannot* test is disjoint WEEKS — all 9 days are one july span; see blocker #2.)
+
+### Which of the two reconciliation outcomes did we land in?
+
+Neither pole cleanly — a legible in-between:
+- **NOT the "definitive kill"** (λ≈0 with CI *upper* bound near 0): the CI upper bounds are large positive
+  (+0.7 … +1.5), CLV point is clearly positive at every horizon, LODO all-folds-positive, and the
+  selection decisively beats the blind band. The evergreen-cert kill is **over-called** on the real window.
+- **NOT a clean "overturn"** either (CI *lower* bound > 0 surviving the frozen gate): with 9
+  single-regime day-clusters the λ CI LB does not clear 0.
+
+→ The honest landing is **information-bearing but power-limited** — the point estimate and out-of-cohort
+robustness say "real"; the CI width and single-regime span say "not yet certified." Disposition: **accrue
+the disjoint weeks that would move the CI LB, do not kill.**
+
 ---
 
 ## WHY THIS IS NOT A CERTIFICATION (the honest blockers)
