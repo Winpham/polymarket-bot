@@ -1,0 +1,899 @@
+{
+  "as_of": "2026-07-15",
+  "run": "weather_fav 4-bar on harvest-tape edge window",
+  "fee_rate": 0.05,
+  "max_day": null,
+  "n_picks": 648,
+  "res_days": [
+    "2026-07-03",
+    "2026-07-04",
+    "2026-07-05",
+    "2026-07-06",
+    "2026-07-07",
+    "2026-07-08",
+    "2026-07-09",
+    "2026-07-13",
+    "2026-07-14"
+  ],
+  "n_days": 9,
+  "bands": {
+    "0.71-0.90": {
+      "bar1_walkforward": {
+        "band": [
+          0.71,
+          0.9
+        ],
+        "n": 236,
+        "n_days": 9,
+        "pooled_roi": 0.1505,
+        "pooled_ci": [
+          0.0684,
+          0.2043
+        ],
+        "pooled_p_le0": 0.002,
+        "folds": [
+          {
+            "fold": 1,
+            "test_days": [
+              "2026-07-05",
+              "2026-07-06"
+            ],
+            "roi": 0.156,
+            "lo": 0.1231,
+            "n_days": 2
+          },
+          {
+            "fold": 2,
+            "test_days": [
+              "2026-07-07",
+              "2026-07-08",
+              "2026-07-09"
+            ],
+            "roi": 0.198,
+            "lo": 0.1842,
+            "n_days": 3
+          },
+          {
+            "fold": 3,
+            "test_days": [
+              "2026-07-13",
+              "2026-07-14"
+            ],
+            "roi": 0.1828,
+            "lo": 0.1429,
+            "n_days": 2
+          }
+        ],
+        "per_day_roi": {
+          "2026-07-03": 0.2303,
+          "2026-07-04": -0.1477,
+          "2026-07-05": 0.1889,
+          "2026-07-06": 0.1231,
+          "2026-07-07": 0.1991,
+          "2026-07-08": 0.1842,
+          "2026-07-09": 0.2105,
+          "2026-07-13": 0.1429,
+          "2026-07-14": 0.2228
+        },
+        "calendar_blocked": false,
+        "bar1_pass": true
+      },
+      "bar2_lambda_atfire": {
+        "band": [
+          0.71,
+          0.9
+        ],
+        "entry_basis": "atfire",
+        "n_selected": 236,
+        "horizons": {
+          "last": {
+            "n": 220,
+            "coverage": 0.932,
+            "n_days": 9,
+            "mean_surplus": 0.1317,
+            "mean_clv": 0.0751,
+            "clv_ci": [
+              0.0129,
+              0.1259
+            ],
+            "clv_p_le0": 0.009,
+            "mean_resid": 0.0565,
+            "lambda_hat": 0.571,
+            "lambda_ci": [
+              0.18,
+              0.757
+            ]
+          },
+          "24h": {
+            "n": 212,
+            "coverage": 0.898,
+            "n_days": 9,
+            "mean_surplus": 0.1404,
+            "mean_clv": 0.0359,
+            "clv_ci": [
+              -0.0157,
+              0.0806
+            ],
+            "clv_p_le0": 0.082,
+            "mean_resid": 0.1045,
+            "lambda_hat": 0.256,
+            "lambda_ci": [
+              -0.089,
+              0.897
+            ]
+          },
+          "12h": {
+            "n": 219,
+            "coverage": 0.928,
+            "n_days": 9,
+            "mean_surplus": 0.1317,
+            "mean_clv": 0.0647,
+            "clv_ci": [
+              0.0153,
+              0.1047
+            ],
+            "clv_p_le0": 0.007,
+            "mean_resid": 0.067,
+            "lambda_hat": 0.491,
+            "lambda_ci": [
+              0.223,
+              0.655
+            ]
+          },
+          "6h": {
+            "n": 220,
+            "coverage": 0.932,
+            "n_days": 9,
+            "mean_surplus": 0.1317,
+            "mean_clv": 0.0765,
+            "clv_ci": [
+              0.0135,
+              0.127
+            ],
+            "clv_p_le0": 0.009,
+            "mean_resid": 0.0552,
+            "lambda_hat": 0.581,
+            "lambda_ci": [
+              0.192,
+              0.766
+            ]
+          },
+          "3h": {
+            "n": 220,
+            "coverage": 0.932,
+            "n_days": 9,
+            "mean_surplus": 0.1317,
+            "mean_clv": 0.0757,
+            "clv_ci": [
+              0.0131,
+              0.1265
+            ],
+            "clv_p_le0": 0.009,
+            "mean_resid": 0.056,
+            "lambda_hat": 0.575,
+            "lambda_ci": [
+              0.187,
+              0.763
+            ]
+          },
+          "1h": {
+            "n": 220,
+            "coverage": 0.932,
+            "n_days": 9,
+            "mean_surplus": 0.1317,
+            "mean_clv": 0.0751,
+            "clv_ci": [
+              0.0129,
+              0.1259
+            ],
+            "clv_p_le0": 0.009,
+            "mean_resid": 0.0565,
+            "lambda_hat": 0.571,
+            "lambda_ci": [
+              0.18,
+              0.757
+            ]
+          }
+        },
+        "headline": {
+          "horizon": "24h",
+          "n": 212,
+          "coverage": 0.898,
+          "n_days": 9,
+          "mean_surplus": 0.1404,
+          "mean_clv": 0.0359,
+          "clv_ci": [
+            -0.0157,
+            0.0806
+          ],
+          "clv_p_le0": 0.082,
+          "mean_resid": 0.1045,
+          "lambda_hat": 0.256,
+          "lambda_ci": [
+            -0.089,
+            0.897
+          ]
+        },
+        "bar2_pass": false
+      },
+      "bar2_lambda_tape": {
+        "band": [
+          0.71,
+          0.9
+        ],
+        "entry_basis": "tape",
+        "n_selected": 236,
+        "horizons": {
+          "last": {
+            "n": 219,
+            "coverage": 0.928,
+            "n_days": 9,
+            "mean_surplus": 0.1257,
+            "mean_clv": 0.0647,
+            "clv_ci": [
+              -0.015,
+              0.1259
+            ],
+            "clv_p_le0": 0.051,
+            "mean_resid": 0.061,
+            "lambda_hat": 0.515,
+            "lambda_ci": [
+              -0.285,
+              0.74
+            ]
+          },
+          "24h": {
+            "n": 212,
+            "coverage": 0.898,
+            "n_days": 9,
+            "mean_surplus": 0.1256,
+            "mean_clv": 0.0211,
+            "clv_ci": [
+              -0.0281,
+              0.0639
+            ],
+            "clv_p_le0": 0.181,
+            "mean_resid": 0.1045,
+            "lambda_hat": 0.168,
+            "lambda_ci": [
+              -0.222,
+              0.73
+            ]
+          },
+          "12h": {
+            "n": 218,
+            "coverage": 0.924,
+            "n_days": 9,
+            "mean_surplus": 0.1254,
+            "mean_clv": 0.06,
+            "clv_ci": [
+              -0.0122,
+              0.1116
+            ],
+            "clv_p_le0": 0.051,
+            "mean_resid": 0.0654,
+            "lambda_hat": 0.478,
+            "lambda_ci": [
+              -0.201,
+              0.656
+            ]
+          },
+          "6h": {
+            "n": 219,
+            "coverage": 0.928,
+            "n_days": 9,
+            "mean_surplus": 0.1257,
+            "mean_clv": 0.0661,
+            "clv_ci": [
+              -0.0146,
+              0.1276
+            ],
+            "clv_p_le0": 0.049,
+            "mean_resid": 0.0596,
+            "lambda_hat": 0.526,
+            "lambda_ci": [
+              -0.258,
+              0.751
+            ]
+          },
+          "3h": {
+            "n": 219,
+            "coverage": 0.928,
+            "n_days": 9,
+            "mean_surplus": 0.1257,
+            "mean_clv": 0.0652,
+            "clv_ci": [
+              -0.0146,
+              0.1269
+            ],
+            "clv_p_le0": 0.051,
+            "mean_resid": 0.0604,
+            "lambda_hat": 0.519,
+            "lambda_ci": [
+              -0.271,
+              0.747
+            ]
+          },
+          "1h": {
+            "n": 219,
+            "coverage": 0.928,
+            "n_days": 9,
+            "mean_surplus": 0.1257,
+            "mean_clv": 0.0647,
+            "clv_ci": [
+              -0.015,
+              0.1259
+            ],
+            "clv_p_le0": 0.051,
+            "mean_resid": 0.061,
+            "lambda_hat": 0.515,
+            "lambda_ci": [
+              -0.285,
+              0.74
+            ]
+          }
+        },
+        "headline": {
+          "horizon": "24h",
+          "n": 212,
+          "coverage": 0.898,
+          "n_days": 9,
+          "mean_surplus": 0.1256,
+          "mean_clv": 0.0211,
+          "clv_ci": [
+            -0.0281,
+            0.0639
+          ],
+          "clv_p_le0": 0.181,
+          "mean_resid": 0.1045,
+          "lambda_hat": 0.168,
+          "lambda_ci": [
+            -0.222,
+            0.73
+          ]
+        },
+        "bar2_pass": false
+      },
+      "bar3_brier": {
+        "band": [
+          0.71,
+          0.9
+        ],
+        "n": 236,
+        "brier_sharp": 0.05505,
+        "brier_blind": 0.05754,
+        "sharp_beats_blind": true,
+        "per_day": {
+          "2026-07-03": {
+            "sharp": 0.0356,
+            "blind": 0.0441,
+            "sharp_wins": true
+          },
+          "2026-07-04": {
+            "sharp": 0.3127,
+            "blind": 0.204,
+            "sharp_wins": false
+          },
+          "2026-07-05": {
+            "sharp": 0.0265,
+            "blind": 0.0311,
+            "sharp_wins": true
+          },
+          "2026-07-06": {
+            "sharp": 0.0667,
+            "blind": 0.0693,
+            "sharp_wins": true
+          },
+          "2026-07-07": {
+            "sharp": 0.0279,
+            "blind": 0.0314,
+            "sharp_wins": true
+          },
+          "2026-07-08": {
+            "sharp": 0.0201,
+            "blind": 0.0272,
+            "sharp_wins": true
+          },
+          "2026-07-09": {
+            "sharp": 0.0265,
+            "blind": 0.0324,
+            "sharp_wins": true
+          },
+          "2026-07-13": {
+            "sharp": 0.0544,
+            "blind": 0.0586,
+            "sharp_wins": true
+          },
+          "2026-07-14": {
+            "sharp": 0.0305,
+            "blind": 0.0384,
+            "sharp_wins": true
+          }
+        },
+        "days_sharp_wins": "8/9",
+        "bar3_pass": true
+      },
+      "bar4_ask": {
+        "band": [
+          0.71,
+          0.9
+        ],
+        "n_selected": 236,
+        "bases": {
+          "atfire": {
+            "n": 236,
+            "n_days": 9,
+            "win_rate": 0.958,
+            "mean_entry": 0.826,
+            "mean_fee_cents": 0.705,
+            "roi_gross": 0.1593,
+            "roi_net_fee05": 0.1505,
+            "roi_net_fee05_ci": [
+              0.0684,
+              0.2043
+            ],
+            "roi_net_fee05_p_le0": 0.002,
+            "roi_net_OLD_fee03": 0.154
+          },
+          "tape": {
+            "n": 219,
+            "n_days": 9,
+            "win_rate": 0.954,
+            "mean_entry": 0.8281,
+            "mean_fee_cents": 0.661,
+            "roi_gross": 0.1569,
+            "roi_net_fee05": 0.1486,
+            "roi_net_fee05_ci": [
+              0.0383,
+              0.2308
+            ],
+            "roi_net_fee05_p_le0": 0.006,
+            "roi_net_OLD_fee03": 0.1519
+          }
+        },
+        "note": "'tape' entry = first executed BUY print at/after convergence = a REAL ask (the realizable copier fill). 'atfire' = _blind mid (optimistic). Spread tax = atfire\u2192tape ROI gap. n_days<20 \u21d2 any pass is FRAGILE.",
+        "bar4_pass": false,
+        "bar4_pass_fragile": true
+      }
+    },
+    "0.71-0.98": {
+      "bar1_walkforward": {
+        "band": [
+          0.71,
+          0.98
+        ],
+        "n": 467,
+        "n_days": 9,
+        "pooled_roi": 0.0911,
+        "pooled_ci": [
+          0.0196,
+          0.1447
+        ],
+        "pooled_p_le0": 0.008,
+        "folds": [
+          {
+            "fold": 1,
+            "test_days": [
+              "2026-07-05",
+              "2026-07-06"
+            ],
+            "roi": 0.1018,
+            "lo": 0.0659,
+            "n_days": 2
+          },
+          {
+            "fold": 2,
+            "test_days": [
+              "2026-07-07",
+              "2026-07-08",
+              "2026-07-09"
+            ],
+            "roi": 0.1347,
+            "lo": 0.0867,
+            "n_days": 3
+          },
+          {
+            "fold": 3,
+            "test_days": [
+              "2026-07-13",
+              "2026-07-14"
+            ],
+            "roi": 0.0906,
+            "lo": 0.0844,
+            "n_days": 2
+          }
+        ],
+        "per_day_roi": {
+          "2026-07-03": 0.179,
+          "2026-07-04": -0.1477,
+          "2026-07-05": 0.1376,
+          "2026-07-06": 0.0659,
+          "2026-07-07": 0.0867,
+          "2026-07-08": 0.1068,
+          "2026-07-09": 0.2105,
+          "2026-07-13": 0.0844,
+          "2026-07-14": 0.0967
+        },
+        "calendar_blocked": false,
+        "bar1_pass": true
+      },
+      "bar2_lambda_atfire": {
+        "band": [
+          0.71,
+          0.98
+        ],
+        "entry_basis": "atfire",
+        "n_selected": 467,
+        "horizons": {
+          "last": {
+            "n": 435,
+            "coverage": 0.931,
+            "n_days": 9,
+            "mean_surplus": 0.0904,
+            "mean_clv": 0.0349,
+            "clv_ci": [
+              -0.013,
+              0.0795
+            ],
+            "clv_p_le0": 0.079,
+            "mean_resid": 0.0555,
+            "lambda_hat": 0.386,
+            "lambda_ci": [
+              -0.318,
+              0.663
+            ]
+          },
+          "24h": {
+            "n": 420,
+            "coverage": 0.899,
+            "n_days": 9,
+            "mean_surplus": 0.0927,
+            "mean_clv": 0.0321,
+            "clv_ci": [
+              -0.0057,
+              0.0727
+            ],
+            "clv_p_le0": 0.05,
+            "mean_resid": 0.0606,
+            "lambda_hat": 0.346,
+            "lambda_ci": [
+              -0.057,
+              1.459
+            ]
+          },
+          "12h": {
+            "n": 433,
+            "coverage": 0.927,
+            "n_days": 9,
+            "mean_surplus": 0.0904,
+            "mean_clv": 0.0318,
+            "clv_ci": [
+              -0.0126,
+              0.0739
+            ],
+            "clv_p_le0": 0.071,
+            "mean_resid": 0.0586,
+            "lambda_hat": 0.352,
+            "lambda_ci": [
+              -0.336,
+              0.59
+            ]
+          },
+          "6h": {
+            "n": 435,
+            "coverage": 0.931,
+            "n_days": 9,
+            "mean_surplus": 0.0904,
+            "mean_clv": 0.0356,
+            "clv_ci": [
+              -0.0126,
+              0.0803
+            ],
+            "clv_p_le0": 0.074,
+            "mean_resid": 0.0547,
+            "lambda_hat": 0.394,
+            "lambda_ci": [
+              -0.308,
+              0.671
+            ]
+          },
+          "3h": {
+            "n": 435,
+            "coverage": 0.931,
+            "n_days": 9,
+            "mean_surplus": 0.0904,
+            "mean_clv": 0.0352,
+            "clv_ci": [
+              -0.0129,
+              0.0801
+            ],
+            "clv_p_le0": 0.077,
+            "mean_resid": 0.0551,
+            "lambda_hat": 0.39,
+            "lambda_ci": [
+              -0.318,
+              0.668
+            ]
+          },
+          "1h": {
+            "n": 435,
+            "coverage": 0.931,
+            "n_days": 9,
+            "mean_surplus": 0.0904,
+            "mean_clv": 0.0349,
+            "clv_ci": [
+              -0.013,
+              0.0795
+            ],
+            "clv_p_le0": 0.079,
+            "mean_resid": 0.0555,
+            "lambda_hat": 0.386,
+            "lambda_ci": [
+              -0.318,
+              0.663
+            ]
+          }
+        },
+        "headline": {
+          "horizon": "24h",
+          "n": 420,
+          "coverage": 0.899,
+          "n_days": 9,
+          "mean_surplus": 0.0927,
+          "mean_clv": 0.0321,
+          "clv_ci": [
+            -0.0057,
+            0.0727
+          ],
+          "clv_p_le0": 0.05,
+          "mean_resid": 0.0606,
+          "lambda_hat": 0.346,
+          "lambda_ci": [
+            -0.057,
+            1.459
+          ]
+        },
+        "bar2_pass": false
+      },
+      "bar2_lambda_tape": {
+        "band": [
+          0.71,
+          0.98
+        ],
+        "entry_basis": "tape",
+        "n_selected": 467,
+        "horizons": {
+          "last": {
+            "n": 422,
+            "coverage": 0.904,
+            "n_days": 9,
+            "mean_surplus": 0.1064,
+            "mean_clv": 0.0453,
+            "clv_ci": [
+              -0.0263,
+              0.0944
+            ],
+            "clv_p_le0": 0.088,
+            "mean_resid": 0.0612,
+            "lambda_hat": 0.425,
+            "lambda_ci": [
+              -0.732,
+              0.706
+            ]
+          },
+          "24h": {
+            "n": 409,
+            "coverage": 0.876,
+            "n_days": 9,
+            "mean_surplus": 0.1063,
+            "mean_clv": 0.0442,
+            "clv_ci": [
+              0.0198,
+              0.0722
+            ],
+            "clv_p_le0": 0.0,
+            "mean_resid": 0.0621,
+            "lambda_hat": 0.416,
+            "lambda_ci": [
+              0.176,
+              1.502
+            ]
+          },
+          "12h": {
+            "n": 420,
+            "coverage": 0.899,
+            "n_days": 9,
+            "mean_surplus": 0.1064,
+            "mean_clv": 0.0497,
+            "clv_ci": [
+              -0.0247,
+              0.1091
+            ],
+            "clv_p_le0": 0.081,
+            "mean_resid": 0.0567,
+            "lambda_hat": 0.467,
+            "lambda_ci": [
+              -0.71,
+              0.679
+            ]
+          },
+          "6h": {
+            "n": 422,
+            "coverage": 0.904,
+            "n_days": 9,
+            "mean_surplus": 0.1064,
+            "mean_clv": 0.046,
+            "clv_ci": [
+              -0.0257,
+              0.0951
+            ],
+            "clv_p_le0": 0.086,
+            "mean_resid": 0.0604,
+            "lambda_hat": 0.432,
+            "lambda_ci": [
+              -0.724,
+              0.712
+            ]
+          },
+          "3h": {
+            "n": 422,
+            "coverage": 0.904,
+            "n_days": 9,
+            "mean_surplus": 0.1064,
+            "mean_clv": 0.0456,
+            "clv_ci": [
+              -0.0262,
+              0.0948
+            ],
+            "clv_p_le0": 0.086,
+            "mean_resid": 0.0608,
+            "lambda_hat": 0.428,
+            "lambda_ci": [
+              -0.724,
+              0.709
+            ]
+          },
+          "1h": {
+            "n": 422,
+            "coverage": 0.904,
+            "n_days": 9,
+            "mean_surplus": 0.1064,
+            "mean_clv": 0.0453,
+            "clv_ci": [
+              -0.0263,
+              0.0944
+            ],
+            "clv_p_le0": 0.088,
+            "mean_resid": 0.0612,
+            "lambda_hat": 0.425,
+            "lambda_ci": [
+              -0.732,
+              0.706
+            ]
+          }
+        },
+        "headline": {
+          "horizon": "24h",
+          "n": 409,
+          "coverage": 0.876,
+          "n_days": 9,
+          "mean_surplus": 0.1063,
+          "mean_clv": 0.0442,
+          "clv_ci": [
+            0.0198,
+            0.0722
+          ],
+          "clv_p_le0": 0.0,
+          "mean_resid": 0.0621,
+          "lambda_hat": 0.416,
+          "lambda_ci": [
+            0.176,
+            1.502
+          ]
+        },
+        "bar2_pass": true
+      },
+      "bar3_brier": {
+        "band": [
+          0.71,
+          0.98
+        ],
+        "n": 467,
+        "brier_sharp": 0.04545,
+        "brier_blind": 0.04764,
+        "sharp_beats_blind": true,
+        "per_day": {
+          "2026-07-03": {
+            "sharp": 0.0324,
+            "blind": 0.0318,
+            "sharp_wins": false
+          },
+          "2026-07-04": {
+            "sharp": 0.3127,
+            "blind": 0.204,
+            "sharp_wins": false
+          },
+          "2026-07-05": {
+            "sharp": 0.0195,
+            "blind": 0.0224,
+            "sharp_wins": true
+          },
+          "2026-07-06": {
+            "sharp": 0.0504,
+            "blind": 0.0506,
+            "sharp_wins": true
+          },
+          "2026-07-07": {
+            "sharp": 0.0365,
+            "blind": 0.0433,
+            "sharp_wins": true
+          },
+          "2026-07-08": {
+            "sharp": 0.0099,
+            "blind": 0.0137,
+            "sharp_wins": true
+          },
+          "2026-07-09": {
+            "sharp": 0.0265,
+            "blind": 0.0324,
+            "sharp_wins": true
+          },
+          "2026-07-13": {
+            "sharp": 0.0404,
+            "blind": 0.0423,
+            "sharp_wins": true
+          },
+          "2026-07-14": {
+            "sharp": 0.0421,
+            "blind": 0.0527,
+            "sharp_wins": true
+          }
+        },
+        "days_sharp_wins": "7/9",
+        "bar3_pass": true
+      },
+      "bar4_ask": {
+        "band": [
+          0.71,
+          0.98
+        ],
+        "n_selected": 467,
+        "bases": {
+          "atfire": {
+            "n": 467,
+            "n_days": 9,
+            "win_rate": 0.959,
+            "mean_entry": 0.8854,
+            "mean_fee_cents": 0.481,
+            "roi_gross": 0.0978,
+            "roi_net_fee05": 0.0911,
+            "roi_net_fee05_ci": [
+              0.0196,
+              0.1447
+            ],
+            "roi_net_fee05_p_le0": 0.008,
+            "roi_net_OLD_fee03": 0.0938
+          },
+          "tape": {
+            "n": 422,
+            "n_days": 9,
+            "win_rate": 0.964,
+            "mean_entry": 0.8507,
+            "mean_fee_cents": 0.584,
+            "roi_gross": 0.1302,
+            "roi_net_fee05": 0.1229,
+            "roi_net_fee05_ci": [
+              0.0139,
+              0.2072
+            ],
+            "roi_net_fee05_p_le0": 0.011,
+            "roi_net_OLD_fee03": 0.1258
+          }
+        },
+        "note": "'tape' entry = first executed BUY print at/after convergence = a REAL ask (the realizable copier fill). 'atfire' = _blind mid (optimistic). Spread tax = atfire\u2192tape ROI gap. n_days<20 \u21d2 any pass is FRAGILE.",
+        "bar4_pass": false,
+        "bar4_pass_fragile": true
+      }
+    }
+  }
+}
