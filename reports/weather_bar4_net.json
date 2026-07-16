@@ -1,0 +1,61 @@
+{
+  "note": "official settlement = Polymarket CLOB resolution (weather intl-only, no US DMR). Fee corrected to FEE_RATE*p*(1-p); old verdicts used a flat 3%. \u03bb (bar#2) gates.",
+  "fee_rate": 0.03,
+  "band_0.71_0.90": {
+    "band": [
+      0.71,
+      0.9
+    ],
+    "n": 108,
+    "n_days": 2,
+    "win_rate": 0.87,
+    "mean_ask": 0.8303,
+    "mean_fee_cents": 0.357,
+    "roi_at_ask_corrected_fee": 0.0339,
+    "roi_LB_corrected": 0.0268,
+    "roi_at_ask_OLD_3pct": 0.009,
+    "roi_at_mid_gross": 0.0595,
+    "day_means_corrected": {
+      "2026-07-13": 0.0409,
+      "2026-07-14": 0.0268
+    }
+  },
+  "band_0.71_0.98": {
+    "band": [
+      0.71,
+      0.98
+    ],
+    "n": 203,
+    "n_days": 2,
+    "win_rate": 0.926,
+    "mean_ask": 0.8955,
+    "mean_fee_cents": 0.229,
+    "roi_at_ask_corrected_fee": 0.0267,
+    "roi_LB_corrected": 0.0224,
+    "roi_at_ask_OLD_3pct": -0.0001,
+    "roi_at_mid_gross": 0.046,
+    "day_means_corrected": {
+      "2026-07-13": 0.0224,
+      "2026-07-14": 0.031
+    }
+  },
+  "band_0.90_0.98_deepchalk": {
+    "band": [
+      0.9,
+      0.98
+    ],
+    "n": 95,
+    "n_days": 2,
+    "win_rate": 0.989,
+    "mean_ask": 0.9697,
+    "mean_fee_cents": 0.084,
+    "roi_at_ask_corrected_fee": 0.0201,
+    "roi_LB_corrected": 0.0039,
+    "roi_at_ask_OLD_3pct": -0.009,
+    "roi_at_mid_gross": 0.032,
+    "day_means_corrected": {
+      "2026-07-13": 0.0039,
+      "2026-07-14": 0.0363
+    }
+  }
+}

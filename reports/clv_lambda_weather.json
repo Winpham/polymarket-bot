@@ -1,0 +1,208 @@
+{
+  "n_signals": 108,
+  "band": [
+    0.71,
+    0.9
+  ],
+  "validation": {
+    "n": 108,
+    "mae": 0.0152,
+    "bias": 0.0005,
+    "corr": 0.984,
+    "acceptance": "mae<=0.03 & |bias|<=0.01 & corr>=0.90",
+    "accepted": true,
+    "verdict": "ACCEPT \u2014 endpoint tracks captured entry_ask_mid"
+  },
+  "horizons": {
+    "last": {
+      "ask_mid_basis": {
+        "horizon_h": null,
+        "n": 108,
+        "n_days": 2,
+        "coverage": 1.0,
+        "mean_surplus": 0.0598,
+        "mean_clv": 0.0002,
+        "mean_resid": 0.0596,
+        "clv_ci": [
+          -0.0288,
+          0.0291
+        ],
+        "p_clv_le0": 0.254,
+        "lambda_hat": 0.003,
+        "lambda_ci": [
+          -0.738,
+          0.361
+        ]
+      },
+      "imp_basis": {
+        "horizon_h": null,
+        "n": 108,
+        "n_days": 2,
+        "coverage": 1.0,
+        "mean_surplus": 0.0714,
+        "mean_clv": 0.0118,
+        "mean_resid": 0.0596,
+        "clv_ci": [
+          -0.0039,
+          0.0275
+        ],
+        "p_clv_le0": 0.254,
+        "lambda_hat": 0.165,
+        "lambda_ci": [
+          -0.062,
+          0.348
+        ]
+      }
+    },
+    "24h": {
+      "ask_mid_basis": {
+        "horizon_h": 24,
+        "n": 107,
+        "n_days": 2,
+        "coverage": 0.991,
+        "mean_surplus": 0.0569,
+        "mean_clv": -0.0092,
+        "mean_resid": 0.066,
+        "clv_ci": [
+          -0.021,
+          0.0027
+        ],
+        "p_clv_le0": 0.754,
+        "lambda_hat": -0.161,
+        "lambda_ci": [
+          -0.538,
+          0.036
+        ]
+      },
+      "imp_basis": {
+        "horizon_h": 24,
+        "n": 107,
+        "n_days": 2,
+        "coverage": 0.991,
+        "mean_surplus": 0.0698,
+        "mean_clv": 0.0038,
+        "mean_resid": 0.066,
+        "clv_ci": [
+          0.0037,
+          0.0039
+        ],
+        "p_clv_le0": 0.0,
+        "lambda_hat": 0.054,
+        "lambda_ci": [
+          0.049,
+          0.06
+        ]
+      }
+    },
+    "12h": {
+      "ask_mid_basis": {
+        "horizon_h": 12,
+        "n": 84,
+        "n_days": 2,
+        "coverage": 0.778,
+        "mean_surplus": 0.0418,
+        "mean_clv": -0.0403,
+        "mean_resid": 0.0821,
+        "clv_ci": [
+          -0.0727,
+          -0.0079
+        ],
+        "p_clv_le0": 1.0,
+        "lambda_hat": -0.963,
+        "lambda_ci": [
+          -9.968,
+          -0.103
+        ]
+      },
+      "imp_basis": {
+        "horizon_h": 12,
+        "n": 84,
+        "n_days": 2,
+        "coverage": 0.778,
+        "mean_surplus": 0.0496,
+        "mean_clv": -0.0325,
+        "mean_resid": 0.0821,
+        "clv_ci": [
+          -0.0531,
+          -0.012
+        ],
+        "p_clv_le0": 1.0,
+        "lambda_hat": -0.656,
+        "lambda_ci": [
+          -1.973,
+          -0.166
+        ]
+      }
+    },
+    "6h": {
+      "ask_mid_basis": {
+        "horizon_h": 6,
+        "n": 0,
+        "coverage": 0.0
+      },
+      "imp_basis": {
+        "horizon_h": 6,
+        "n": 0,
+        "coverage": 0.0
+      }
+    },
+    "3h": {
+      "ask_mid_basis": {
+        "horizon_h": 3,
+        "n": 0,
+        "coverage": 0.0
+      },
+      "imp_basis": {
+        "horizon_h": 3,
+        "n": 0,
+        "coverage": 0.0
+      }
+    },
+    "2h": {
+      "ask_mid_basis": {
+        "horizon_h": 2,
+        "n": 0,
+        "coverage": 0.0
+      },
+      "imp_basis": {
+        "horizon_h": 2,
+        "n": 0,
+        "coverage": 0.0
+      }
+    },
+    "1h": {
+      "ask_mid_basis": {
+        "horizon_h": 1,
+        "n": 0,
+        "coverage": 0.0
+      },
+      "imp_basis": {
+        "horizon_h": 1,
+        "n": 0,
+        "coverage": 0.0
+      }
+    }
+  },
+  "headline_lambda": {
+    "horizon": "12h",
+    "horizon_h": 12,
+    "n": 84,
+    "n_days": 2,
+    "coverage": 0.778,
+    "mean_surplus": 0.0418,
+    "mean_clv": -0.0403,
+    "mean_resid": 0.0821,
+    "clv_ci": [
+      -0.0727,
+      -0.0079
+    ],
+    "p_clv_le0": 1.0,
+    "lambda_hat": -0.963,
+    "lambda_ci": [
+      -9.968,
+      -0.103
+    ]
+  },
+  "bar2_pass": false,
+  "verdict": "\u03bb=-0.963 CI[-9.968,-0.103] @ 78% cov, horizon=12h, CLV p(\u22640)=1.0 \u21d2 BAR#2 FAIL"
+}

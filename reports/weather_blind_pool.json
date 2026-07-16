@@ -1,0 +1,33 @@
+{
+  "neutral_reference": "res-24h",
+  "band": [
+    0.71,
+    0.9
+  ],
+  "blind_pool_reconstructed": 671,
+  "blind_in_band": 52,
+  "blind_favourite_band": {
+    "n": 52,
+    "n_days": 2,
+    "mean_neutral_mid": 0.8173,
+    "win_rate": 0.846,
+    "roi_at_neutral_mid": 0.0527,
+    "day_means": {
+      "2026-07-13": 0.0757,
+      "2026-07-14": 0.0296
+    }
+  },
+  "sharp_selected_weather_fav_band": {
+    "n": 70,
+    "n_days": 2,
+    "mean_neutral_mid": 0.8115,
+    "win_rate": 0.886,
+    "roi_at_neutral_mid": 0.0839,
+    "day_means": {
+      "2026-07-13": 0.0459,
+      "2026-07-14": 0.1219
+    }
+  },
+  "sharp_minus_blind": 0.0312,
+  "verdict": "blind +0.0527 vs sharp +0.0839 (\u0394=+0.0312). sharp exceeds blind \u2014 but check CLV (\u03bb) confirms it, else it is 2-day realized variance."
+}
