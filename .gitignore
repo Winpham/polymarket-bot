@@ -40,3 +40,4 @@ reports/escalate.log
 # Local Parquet archive (hot/cold split) — the durable copy lives in R2, not git.
 /polymarket-archive/
 archive/
+reports/.weather_fav_4bar_cache.pkl
