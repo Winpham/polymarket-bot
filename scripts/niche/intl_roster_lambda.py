@@ -104,30 +104,49 @@ def self_test():
 
 
 def build_pairs(wallets):
-    """Per roster BUY taker fill >=80c: entry, market closing line, outcome, ts, niche."""
-    # closing line per (condition_id, outcome_index): last non-degenerate print of the tape
-    close = {}
-    fills = []
-    CH = 40
+    """lambda clusters on MARKET and uses per-market means, so we aggregate the roster's fills to
+    per-(market,outcome) mean entry price directly in SQL (no per-fill transfer), then join the
+    forward closing line + settled outcome. entry_b = mean entry among window-B (OOS) fills only."""
     wl = list(wallets)
+    # per (cid, oi): mean entry among roster BUY taker >=80c fills, all-window and window-B
+    agg = {}
+    CH = 50
     for i in range(0, len(wl), CH):
         ch = wl[i:i + CH]
-        rows = psql(f"""
-            WITH f AS (
-              SELECT condition_id, outcome_index, EXTRACT(EPOCH FROM ts) t, price p, niche
-              FROM harvest_fills
-              WHERE side='BUY' AND is_maker=false AND price >= {BAND_LO}
-                AND wallet IN ({q_lit(ch)}))
-            SELECT * FROM f;""")
-        fills.extend(rows)
-        sys.stdout.write(f"\r  fills {len(fills):,}  (wallet {min(i+CH,len(wl))}/{len(wl)})")
+        for r in psql(f"""
+            SELECT condition_id, outcome_index,
+                   AVG(price) me_all,
+                   AVG(price) FILTER (WHERE ts > to_timestamp({SPLIT_EPOCH})) me_b,
+                   COUNT(*) n_all,
+                   COUNT(*) FILTER (WHERE ts > to_timestamp({SPLIT_EPOCH})) n_b
+            FROM harvest_fills
+            WHERE side='BUY' AND is_maker=false AND price >= {BAND_LO}
+              AND wallet IN ({q_lit(ch)})
+            GROUP BY 1,2;"""):
+            k = (r["condition_id"], r["outcome_index"])
+            me_all, na = float(r["me_all"]), int(r["n_all"])
+            me_b = float(r["me_b"]) if r["me_b"] not in (None, "") else None
+            nb = int(r["n_b"]) if r["n_b"] not in (None, "") else 0
+            if k in agg:                       # merge same (cid,oi) across wallet chunks
+                p = agg[k]
+                tot = p["n_all"] + na
+                p["me_all"] = (p["me_all"] * p["n_all"] + me_all * na) / tot
+                p["n_all"] = tot
+                if me_b is not None:
+                    tb = p["n_b"] + nb
+                    p["me_b"] = ((p["me_b"] or 0) * p["n_b"] + me_b * nb) / tb if tb else None
+                    p["n_b"] = tb
+            else:
+                agg[k] = {"me_all": me_all, "n_all": na, "me_b": me_b, "n_b": nb}
+        sys.stdout.write(f"\r  aggregated wallets {min(i+CH,len(wl))}/{len(wl)}  "
+                         f"({len(agg):,} market-outcomes)")
         sys.stdout.flush()
     print()
-    cids = sorted({r["condition_id"] for r in fills})
+    cids = sorted({k[0] for k in agg})
     print(f"  {len(cids):,} distinct markets touched by the roster")
     # closing line + outcome per (cid, oi)
-    CH2 = 200
-    won = {}
+    close, won = {}, {}
+    CH2 = 150
     for i in range(0, len(cids), CH2):
         ch = cids[i:i + CH2]
         for r in psql(f"""
@@ -147,17 +166,14 @@ def build_pairs(wallets):
         sys.stdout.flush()
     print()
     allp, oosp = [], []
-    for r in fills:
-        k = (r["condition_id"], r["outcome_index"])
+    for k, p in agg.items():
         if k not in won or k not in close:
             continue
-        entry = float(r["p"])
-        cl = close[k]
-        surplus = won[k] - entry
-        clv = cl - entry
-        allp.append((r["condition_id"], surplus, clv))
-        if float(r["t"]) > SPLIT_EPOCH:
-            oosp.append((r["condition_id"], surplus, clv))
+        cid = k[0]
+        cl, w = close[k], won[k]
+        allp.append((cid, w - p["me_all"], cl - p["me_all"]))
+        if p["me_b"] is not None and p["n_b"] > 0:
+            oosp.append((cid, w - p["me_b"], cl - p["me_b"]))
     return allp, oosp
 
 
