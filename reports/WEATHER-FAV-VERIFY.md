@@ -1,22 +1,24 @@
-# weather_fav — ADVERSARIAL VERIFICATION of the "accrue-forward / leaning-positive" finding
+# weather_fav — ADVERSARIAL VERIFICATION (v2, with recovered June out-of-sample)
 
-**Branch `feat/weather-verify` (worktree `wt/weather-verify`, off the `feat/weather-cert` commit
-`5802516`). Read-mostly. No order placed, no API key, `main`/`feat/weather-cert`/`wt/evergreen-cert`
-untouched. Scripts' `--selftest` green. Run 2026-07-15. Stance: SKEPTIC — default to artifact unless
-evidence is strong.**
+**Branch `feat/weather-verify` (worktree `wt/weather-verify`, off `feat/weather-cert` `5802516`).
+Read-mostly. No order placed, no API key. `main`/`feat/weather-cert`/`wt/evergreen-cert` untouched.
+Scripts `--selftest` green. Run 2026-07-15. Stance: SKEPTIC — default to artifact unless evidence is
+strong. This gates real money.**
 
 ---
 
 ## ONE-LINE VERDICT
 
-**SURVIVES-AS-INDETERMINATE on disposition (k=0, do-not-size, do-not-kill) — but the report's central
-*interpretive* claim is REFUTED.** The +15% is a real-within-July favourite-longshot **band** premium
-(fee-robust, day-drop-robust), so it is not a kill. But "the sharp SELECTION carries genuine forward
-information / the market confirms it / this corrects the evergreen-cert null" does **not** survive a
-proper paired test: at the fair 24h horizon on the primary band the sharp selection is *worse* than the
-blind band. The finding is the **band's** λ≈0 variance premium — exactly what `1c140f1` said — and it
-**cannot be certified now**: the decisive disjoint-time test is *structurally impossible* (zero
-pre-July convergence signal). **Must accrue; cannot test now.**
+**SURVIVES-AS-INDETERMINATE — cannot refute, cannot certify. k=0, do-not-size, MUST accrue forward; the
+sharp edge is structurally untestable on history.** The +15% July ROI is a **genuine, non-leaked
+in-sample edge** (entry lands ~46h *before* the weather outcome; official settlement) and it is **not**
+the raw favourite-longshot band premium (the raw band earns ~0% in July, −7% in June). But the sharp
+selection **cannot be tested out-of-regime** (zero convergence signal exists before July), the λ/CLV
+"market-confirms" crux is **not robustly demonstrated** (CI straddles 0 at the fair horizon), and the one
+OOS-testable adjacent — the favourite band — **loses money in June**. So there is no out-of-sample support
+for the edge and the surrounding regime is hostile. Disposition matches weather-cert (accrue, don't kill);
+its "market confirms the move / λ information" *framing* is oversold, but its core claim that the sharp
+selection beats a naive band is **vindicated in-sample**.
 
 ---
 
@@ -24,77 +26,54 @@ pre-July convergence signal). **Must accrue; cannot test now.**
 
 | # | attack | result | verdict |
 |---|--------|--------|---------|
-| 1 | **Disjoint-time (decisive)** | Selection signal cannot exist before July: June had **154** weather markets with ≥1 rank≤250 backer but **0 with ≥2 backers** → **0 convergence picks** pre-July (removing `GO_LIVE` entirely still yields 1412 picks, *all* ts0 in July). Resolution labels also dense only in July. Out-of-regime test impossible. | **INDETERMINATE (impossible)** — cannot refute, cannot confirm; forces accrue-only |
-| 2 | **Independent λ/CLV recompute** | Reproduced the harness exactly. Fair-horizon (24h) λ CI LB **negative** (atfire λ [−0.089, +0.897]; tape λ [−0.222, +0.73]); CLV CI straddles 0 (p(CLV≤0) 0.08–0.18); coverage 90%; day-clustering correct. The report's own numbers are honest and the crux **does not pass**. | **SURVIVES (as reported = fails crux)** |
-| 3 | **Leakage hunt** | No survivorship (testable 648 win-rate **95.5%** ≈ all-resolved 1183 **95.9%**); closes strictly after `ts0`; decision→resolution gap median **52.6h** (p05 27.9h) so 24h closes are genuinely forward (winners' 24h close 0.899 vs entry 0.826, only 32% degenerate); entry basis apples-to-apples. | **SURVIVES (no leak found)** |
-| 4 | **Adjudication / MIRAGE** | The "sharp beats blind band" overturn fails a **paired day-clustered difference** test: primary band 0.71–0.90 @24h DIFF **−2.5¢** (sharp *worse*), p(diff≤0)=**0.78**; @12h +3.3¢ but p=0.28; only wide band @24h is significant (+1.5¢, 5 days). The report compared two point estimates whose CIs both straddle 0 and overlap heavily, never testing the difference. Evergreen-cert's "band does the work, sharp ~decorative" is the better-supported reading. | **REFUTED (the interpretive overturn)** |
-| 5 | **Fragility** | Bar-1 ROI robust: drop-best(07-03)→+14.0% [+5.1,+19.9]; drop-worst(07-04)→+18.8% [+16.2,+21.0]; drop-both→+18.2%. Fee-insensitive: 0.05→+14.86% vs 0.03→+15.19% (fee ~0.7¢ on 83¢ favourites). BUT **48% of picks (113/236) fall on one day (07-06)**; all 9 days are consecutive July; effective N ≈ **9 day-clusters**. | **SURVIVES within-July / regime-fragility unquantifiable** |
+| 1 | **Disjoint-time (decisive)** | **Independently confirmed pre-July is structurally empty.** Raw-tape weather market universe by month: Dec 1 / Jan 1 / Mar 1 / Apr 1 / **May 20 / Jun 392 / Jul 6,325** (matches the cert agent's claim). Sharp convergence (≥3 rank≤250 one-sided backers, band): June had **0 markets with even ≥2 backers** → 0 picks; dropping `GO_LIVE` entirely still yields all 1,412 picks in July. The sharp edge cannot be falsified out-of-regime. | **INDETERMINATE — untestable-on-history** (NOT a refutation) |
+| 1b | **RECOVERED out-of-sample: the BAND** | Since the sharp signal is absent pre-July, I ran the *band* (the only OOS-testable component) on **20–22 disjoint June resolution days** (May 30–Jun 30), tape-inferred resolution **validated 605/605 = 100% vs official**. Favourite band 0.71–0.90: **ROI −6.8%** [−21.9, +6.5], win 78.9%. Band 0.71–0.98: **−8.6%** [−21.7, +1.9], win 84.5%. Same construction on July = ~0% (band 0.71–0.90 **−0.4%**, win 81.1%). **The band is no edge and is regime-fragile.** | **REFUTED (the band); sharp untestable** |
+| 2 | **Independent λ/CLV recompute** | Reproduced the harness exactly. Fair-horizon (24h) λ CI LB **negative** (atfire [−0.089,+0.90]; tape [−0.222,+0.73]); CLV CI straddles 0 (p 0.08–0.18). Higher "clean" CLV (+7.6¢ using last print before weather-day-end) uses a near-outcome horizon that partly reflects the *already-known intraday high* → not a clean forward confirmation. The market-confirmation (λ) claim is **not robustly demonstrated**. | **SURVIVES (crux unproven, as reported)** |
+| 3 | **Leakage hunt** | ROI is **not** lookahead: entry `ts0` median **46h before weather-day-end** (p25 38h); `resolved_at` ≈ weather-day-end (median +2.4h); only **3/212** closes fall after the outcome. No survivorship (testable 95.5% ≈ all-resolved 95.9%). Entry basis apples-to-apples. | **SURVIVES (ROI leak-free)** |
+| 4 | **Adjudication / MIRAGE (CORRECTED)** | The sharp selection **does** beat a naive favourite band: same ~82¢ entry, win-rate **95.8% (sharp) vs 81% (raw band)**, ROI **+15% vs ~0%** in July. My v1 wrongly used the consensus `_blind` pool (itself pre-selected) as comparator; against the *raw* band the sharp lift is real. BUT it is a **win-rate/selection** edge, not the CLV "market-confirms" edge the report headlines — paired CLV diff is not significant (primary band 24h −2.5¢, p=0.78). | **sharp-vs-raw-band SURVIVES; CLV-confirmation claim REFUTED** |
+| 5 | **Fragility** | Bar-1 ROI robust: drop-best→+14.0%, drop-worst(07-04)→+18.8%, drop-both→+18.2%; fee-insensitive (0.05 vs 0.03 = 0.3pp). BUT **48% of picks (113/236) on one day (07-06)**; 9 consecutive July days; effective N ≈ **9 day-clusters**. | **SURVIVES within-July / regime-fragility unquantifiable** |
 
 ---
 
-## THE DECISIVE FACT (attack 1, in full)
+## THE TWO DECISIVE FACTS
 
-The positive result is 9 consecutive days (2026-07-03…07-14), one regime. The brief's decisive test —
-run the frozen gate on *earlier* held-out weeks — is **structurally impossible**:
+**(A) The sharp selection is real in-sample and cannot be a close-timing artifact.** Entry converges the
+day *before* the weather day (median 46h before the outcome is knowable); official CLOB settlement; buying
+82¢ favourites that win 95.8%. A naive favourite band at the same price wins only 81% and earns ~0%, so
+the ≥3-backer convergence is doing genuine selection work (plausibly it is riding public weather
+forecasts, which are genuinely predictive). This **corrects my v1** and **vindicates** weather-cert's core
+claim over evergreen-cert's "band does the work" — against the *raw* band, the sharp is not decorative.
 
-```
-convergence picks (≥3 rank≤250 one-sided backers, band 0.71–0.98), by ts0 month, GO_LIVE removed:
-  2026-06 : 154 markets with ≥1 backer → 0 with ≥2 backers → 0 picks
-  2026-07 : 8427 with ≥1 → 5809 with ≥2 → 4084 with ≥3 → 1412 in band
-```
+**(B) But every path to validating it fails or is unavailable.**
+- The sharp signal **cannot be computed before July** (0 pre-July convergence; the wide-rank population did
+  not trade weather until July). The decisive disjoint-week test is structurally impossible.
+- The only OOS-testable adjacent — the favourite band — **loses −7% to −9% in June** and earns ~0% in July.
+  So the edge is not resting on a stable band premium, and the surrounding weather regime is hostile.
+- The λ/CLV "the market confirms the move before resolution" crux is **not robustly positive**: CI
+  straddles 0 at the fair horizon, and the larger CLV numbers borrow from horizons where the intraday high
+  is already public. The demonstrable edge is *selection/win-rate*, not *market confirmation*.
+- 9 consecutive days, 48% of mass on one day (07-06), effective N ≈ 9 → no regime-robustness.
 
-The rank≤250 backer population simply did not trade weather markets densely enough to form a ≥3-backer
-convergence until July (`trader_fills` weather volume: May 506 → June 7,338 → July 264,522 fills).
-Resolution labels (`outcome_won`) are likewise dense only in July (May 9 / June 108 / July 5,987 resolved
-conds). **There is no earlier data on which to falsify the July result.** Per the brief this is the
-explicit "selection cannot be computed before July" branch → the finding is INDETERMINATE and accrue-only,
-**not** refuted-by-regime — but it also **can never be certified from history**; only forward accrual can
-move it.
+## RECONCILING THE TWO CERTS (corrected)
 
-## WHY THE INTERPRETIVE OVERTURN IS OVERSOLD (attack 4, in full)
-
-The report's load-bearing claim (WEATHER-FAV-CERT.md:66–71) is that the sharp selection carries **+6.0¢**
-forward CLV vs the blind band's **+1.7¢**, therefore "the sharp is not decorative — it is the entire
-information channel," overturning `1c140f1`. But:
-
-- Both pools' CLV CIs **straddle 0 at every horizon** (sharp p(CLV≤0) ≈ 0.05–0.09; blind ≈ 0.28–0.53) —
-  neither is individually significant.
-- The report never tests the **difference**. When tested paired (same days, same tape entry/close):
-  - primary band 0.71–0.90 @ **24h (the harness's own fair headline horizon)**: sharp−blind = **−2.5¢**,
-    p(diff≤0) = **0.78** — the sharp selection is, if anything, *worse* than the band;
-  - @12h: +3.3¢ but p = 0.28 (not significant);
-  - only the *wide* band @24h clears (+1.5¢, p=0.013) — on 5 shared days.
-- The "+6¢" headline uses 12h, a shorter (more hindsight-contaminated) lead than the 24h the four bars
-  headline; at 24h the sharp CLV is only +2.1¢ (tape) / +3.6¢ (atfire), CI straddling 0.
-
-So the proper apples-to-apples test does **not** support "sharp beats band." The positive ROI is the
-favourite-longshot **band** premium — which `1c140f1` already characterised as variance/λ≈0 — and the
-sharp selection adds nothing statistically demonstrable on top. Both certs in fact agree on the *action*
-(k=0, don't size); the weather-cert's *narrative* correction ("information-bearing, accrue because the
-sharp works") is not earned by the data.
-
-## RECONCILING THE TWO CERTS
-
-Neither session made a computational error; the numbers reconcile. `1c140f1` measured λ≈0 on 2 stalled
-days at a late entry (underpowered). `feat/weather-cert` measured a positive-*point* λ on 9 July days at
-convergence entry (still CI-straddles-0). The disagreement is purely interpretive. Adjudicated: the
-**band** carries the (unfalsified, within-July, variance-dominated) premium; the **sharp selection** does
-not demonstrably beat it. That is closer to `1c140f1`'s reading than to weather-cert's. The one thing
-weather-cert is right about: `1c140f1`'s "confirmed *permanent* null" was over-stated on a 2-day window —
-the honest status is INDETERMINATE-by-power, not a proven null. Symmetrically, weather-cert's
-"leaning-positive / information" is over-stated.
+Both certs are right about the **disposition** (k=0, don't size) and both are partly oversold on
+*interpretation*. Weather-cert is **right** that the sharp selection carries a real in-sample edge beyond a
+naive band (evergreen-cert's "band does the work / sharp decorative" is wrong against the *raw* band). But
+weather-cert **oversells** the mechanism: the edge is win-rate selection, not the "+6¢ forward move the
+market confirms" (λ). Evergreen-cert is **right** that λ≈0 / market-confirmation is not demonstrated.
+Neither ran the June band OOS; it is negative, which neither narrative accounts for.
 
 ## CAN WE TEST NOW, OR MUST WE ACCRUE?
 
-**Must accrue — and even accrual cannot rescue the *sharp* thesis specifically.** The disjoint-time
-falsification is impossible (no pre-July convergence). Forward accrual of disjoint weeks is the only path
-to move the λ CI LB. But since the sharp selection is not demonstrably better than the blind favourite
-band, the practical question collapses to the blind-band question `1c140f1` already answered (λ≈0). **Do
-not build sharp-selection execution infra on this evidence; do not size (k=0).** If anything accrues, it
-should be logged as a *band*-level favourite-longshot observation, not as a validated sharp signal.
+**Must accrue — the sharp edge cannot be validated on history at all.** No pre-July convergence exists, and
+the one adjacent OOS test (band) is negative. Certification requires forward accrual of disjoint weeks with
+the λ CI LB clearing 0 under the frozen gate. Until then: **k=0, do not size, do not build sharp-selection
+execution infra on this evidence.** If accrual proceeds, log it as an explicit forward paper track of the
+sharp signal (not the band), and treat the −7% June band as a live regime-fragility warning.
 
 ---
 
-## Artifacts (all on `feat/weather-verify`, read-only)
+## Artifacts (all on `feat/weather-verify`, read-only; DB reads SELECT-only, no incumbent touched)
 - `reports/repro_4bar.json` — exact reproduction of the 4-bar harness (numbers match WEATHER-FAV-CERT.md).
-- This report. All DB reads SELECT-only; no incumbent touched; cost-zero.
+- `reports/.prejuly_wx_tape.pkl`, `.july_wx_tape.pkl` — raw weather tape for the June/July OOS band test.
+- This report. Cost-zero (no `ANTHROPIC_API_KEY`, no child `claude`).

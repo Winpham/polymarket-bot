@@ -1,0 +1,4 @@
+648 testable weather_fav picks / 9 res-days
+  tape 200/648 conds  tape 400/648 conds  tape 600/648 conds  tape 648/648 conds
+
+wrote reports/repro_4bar.json
