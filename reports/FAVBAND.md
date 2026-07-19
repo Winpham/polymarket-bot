@@ -89,15 +89,70 @@ COUNTED, never dropped silently.
 dregs). The capture must run **during active sports hours** before capacity can be stated. Nothing
 here yet contradicts or confirms tradeable size.
 
+## The forward test (built 2026-07-19, `scripts/favband_forward.py`)
+
+**This is the only thing that can answer "is it profitable."** Two reasons:
+
+1. **The retrospective window cannot be extended.** Nothing in the repo fetches the venue's
+   time-and-sales or daily market report, and there is no public URL — `polymarket.us/reports/...`
+   returns the Next.js catch-all. Those archive files were obtained externally. So H2 instability
+   (criterion 3) is **unresolvable retrospectively**; only forward accrual settles it.
+2. **The strategy needs a live quote.** It only trades a tight book, which a backtest can only
+   approximate — and the Roll approximation understated the true spread by ~2×.
+
+The harness records the **executed basis this project has never had**: the VWAP to fill $50 walking
+the real offer side, the quoted spread, dollars at the touch, slippage, and lead time — at the
+moment of decision. A market without a live two-sided book is a **SKIP with a reason**, never a
+synthetic fill.
+
+**Orientation is explicit and tested both ways.** If the favourite is side 1, our ask is
+`1 − side0_bid` (*not* `1 − side0_offer`, a price we could never get) and our size is the side-0 bid
+depth. The self-test asserts the wrong branch is not taken.
+
+**A bug the self-test caught before it shipped:** `0.90 − 0.89 == 0.010000000000000009` in binary
+float, so `spread > MAX_SPREAD` rejected an *exactly*-1¢ book. 1¢ books are ~70% of the tradeable
+set — the strategy would have silently traded nothing while reporting no edge. Fixed with an
+explicit epsilon.
+
+### Pre-registered forward gate — nothing is certified until ALL are met
+- ≥ 60 settled events
+- ROI lower bound > 0 **at the executed VWAP**, event-clustered
+- ≥ 2 distinct competitions, each individually positive
+- ≥ 2 disjoint weeks, each individually positive
+
+`./favband_forward.py --report` prints this with unticked boxes. **A positive mean is not a result.**
+
+## Operations (local, reversible — nothing is committed)
+
+Two launchd agents are loaded locally and accruing:
+
+| job | script | interval |
+|---|---|---|
+| `com.tue.favband.book` | `us_book_capture.py --once` | 600s |
+| `com.tue.favband.forward` | `favband_forward.py --once` | 300s |
+
+Logs: `~/Library/Logs/favband/{book,forward}.{log,err}`.
+
+**To stop:**
+```
+launchctl unload ~/Library/LaunchAgents/com.tue.favband.{book,forward}.plist
+```
+
+⚠️ **They run out of `wt/favband`, a feature worktree.** This is the pattern that killed the tape on
+2026-07-16 (a writer living only on a feature branch, so `main` had no writer at all). It is safe
+only while this worktree is never switched off `feat/favband`. **The durable fix is to merge these
+scripts to `main` and repoint the agents at `wt/capture`.** Until then, treat this as temporary.
+
 ## Next actions, in order
 
-1. **Capture real dollar depth.** Extend `us_quote_capture.py` to record the full book (or at least
-   size at the touch) and rename the misleading columns. Until this exists, sizing is unanswerable.
-2. **Forward-test the selective rule.** The strategy needs a live quote at decision time, which the
-   backtest could only approximate. Pre-register: ROI LB > 0 at the *executed* spread, ≥ 60 events,
-   ≥ 2 competitions, ≥ 2 disjoint weeks.
-3. **Re-measure H2 instability** on a longer window. The second-half LB of −0.24 may be a 10-day
-   power artifact or may be the arm decaying; 21 days cannot distinguish these.
+1. **Accrue during active sports hours.** Both agents are running but every sweep so far has hit
+   off-hours dregs (4–5 band markets, 6–13.5¢ median spread, 1 tradeable). Capacity and the forward
+   gate both need real sessions. This is calendar-bound: nothing to engineer, only to wait.
+2. **Merge to `main` and repoint the agents at `wt/capture`** — remove the feature-worktree hazard.
+3. **Re-run the gate at the executed VWAP** once ≥60 events have settled. H2 stability is answered
+   here or not at all.
+4. **Decide sizing** only after depth data exists. `STAKE_USD = 50` is currently an assumption the
+   harness *prices*, not a capacity claim.
 
 ## Standing warnings
 
