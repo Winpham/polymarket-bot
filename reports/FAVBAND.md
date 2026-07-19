@@ -63,15 +63,31 @@ Roll's estimator gave a 0.96¢ mean half-spread; the true quoted spread is **1.8
 median**. Roll understated by ~2×, exactly as its bias direction predicts. This is now measured,
 not assumed — and it converts the strategy from "buy the band" to "buy the band **when it is tight**."
 
-### 2. Capacity — UNMEASURED, and this gates any sizing
-`us_quotes.bid_depth_usd` / `ask_depth_usd` **are not dollars.** The venue's `/bbo` returns
-`bidDepth`/`askDepth` as bare integers (observed 0–18) while every price field is a typed
-`{value, currency}` object and `sharesTraded` runs to thousands. The `_usd` suffix is a misnomer;
-these look like order or level counts.
+### 2. Capacity — semantics RESOLVED, instrument BUILT, measurement pending market hours
+**`us_quotes.bid_depth_usd` / `ask_depth_usd` are LEVEL COUNTS, not dollars.** Verified 2026-07-19
+against the full order book on **19/19 live markets, 100% agreement**. Reading them as money
+understates real depth by ~500×: a favourite-band market showing `bidDepth 9` actually had
+**$3,180 resting at the touch**.
 
-**No dollar depth is captured anywhere in the project.** Tradeable size per signal is unknown, so
-the difference between "+1.5% on $10" and "+1.5% on $500" is currently indeterminate — and that
-difference is the whole question of whether this is a business.
+The real book is at `/v1/markets/{slug}/book` (px *and* qty per level). `scripts/us_book_capture.py`
+now records dollars at the touch, dollars in the book, and slippage to lift $50/$100/$500 into
+`us_book_depth`. Verified: 1,136 books written per sweep, ~0.14s capture lag.
+
+**Three venue facts that will bite anyone who assumes** (all now self-tested):
+1. The ask side is called **`offers`**, NOT `asks`. A consumer looking for `asks` sees an empty book
+   and reports "no liquidity" — indistinguishable from a dead feed. This cost a run.
+2. `bidDepth`/`askDepth` on `/bbo` are level counts.
+3. `qty` is in **shares**; notional = `px * qty`.
+
+**The venue also emits corrupt levels**, observed live:
+`{"px": {"value": "USD", "currency": ""}, "qty": "\b"}` — value/currency transposed and qty
+carrying raw bytes, an upstream protobuf field-mapping bug. A tolerant parser would coerce that into
+"liquidity". Levels are strictly validated (`0<px<1`, qty finite and positive) and rejects are
+COUNTED, never dropped silently.
+
+**Still pending:** every sweep so far has run off-hours (4 band markets, 13.5¢ median spread — the
+dregs). The capture must run **during active sports hours** before capacity can be stated. Nothing
+here yet contradicts or confirms tradeable size.
 
 ## Next actions, in order
 
