@@ -1,3 +1,20 @@
+> # ⛔ SUPERSEDED 2026-07-18 — DO NOT USE AS THE GOVERNING DOCUMENT
+>
+> Replaced by **`PREREG_20260718_final_hour_favourite_v2.md`**. Superseded before ANY signal accrued
+> (`finalhour_paper_signals` = 0 rows), so no outcome-dependent choice was possible.
+>
+> **Two statements below are now known to be wrong — do not quote them:**
+> 1. **λ=0.73 [0.514, 0.911] is RETRACTED.** The Phase-9 audit found it measured the CLV close only
+>    5 min pre-resolution (near-degenerate). Honest values: **λ=0.44 (LB 0.22) at −30min; λ=0.10
+>    (LB 0.00) at −45min.** Per `feedback-refutations-must-overwrite`, λ=0.73 must not survive
+>    anywhere as a live number.
+> 2. **The trigger below is unimplementable.** "Serving for the match" is not observable — ESPN
+>    exposes no server/possession or point-level field (verified across 735 matches, 2026-07-18).
+>    And "up 2 sets" is incoherent for best-of-3, which that state ends. See v2 §1.3 for the
+>    frozen, live-verified replacement.
+>
+> The gate thresholds, price band, universe and retract conditions are carried into v2 UNCHANGED.
+
 # PRE-REGISTRATION — final-hour favourite late-convergence, forward paper test
 
 **Frozen 2026-07-15, branch `feat/confidence-forensics`. Paper/analysis only. No live order, ever.**
