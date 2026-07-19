@@ -21,6 +21,7 @@ with fixtures; run `--scan --dry` against a live match once to confirm the live 
 trusting real accrual. The gate is frozen in the PREREG; do not tune it to the data.
 """
 import argparse
+import datetime
 import io
 import json
 import os
@@ -93,6 +94,50 @@ def load_us_yes_players():
             continue
         m[slug] = (outs[yi], set(outs))
     return m
+
+
+def slug_date(slug):
+    """The YYYY-MM-DD trailing an aec- slug, or None. Used to DATE-BOUND matching (see match_market)."""
+    mt = re.search(r"(\d{4})-(\d{2})-(\d{2})$", slug or "")
+    return mt.group(0) if mt else None
+
+
+def match_market(espn_names, yes_map, on_date=None, day_slack=1):
+    """(slug, yes_player) for the market that IS this matchup, or (None, None).
+
+    TWO guards, both learned from real mismatches observed 2026-07-19 on live data:
+
+      DATE-BOUND. `yes_map` spans every tennis market ever listed (~6.9k). Without a date bound,
+      loose name matching reaches back months: 'Darderi vs Rublev' matched
+      aec-atp-lucdar-marlan-2026-03-20 -- correct first player, WRONG opponent, four months stale.
+      Mapping a live signal onto a stale market is not a near miss; it buys a different match.
+
+      BOTH PLAYERS, DISTINCTLY. The prior rule (>=2 overlapping name tokens across the pair) can be
+      satisfied by one player plus a coincidental token. Each ESPN name must now match a DIFFERENT
+      outcome name, so a market only matches when it really is this matchup.
+
+    scan() previously relied on the 10-minute quote-freshness filter to exclude stale markets. That
+    is an implicit guard, not a real one -- a still-quoted old market would have slipped through.
+    """
+    a, b = (name_toks(n) for n in espn_names[:2])
+    if not a or not b:
+        return None, None
+    want = None
+    if on_date:
+        want = {(datetime.date.fromisoformat(on_date) + datetime.timedelta(days=d)).isoformat()
+                for d in range(-day_slack, day_slack + 1)}
+    for slug, (yes_player, players) in yes_map.items():
+        if want is not None:
+            sd = slug_date(slug)
+            if sd is None or sd not in want:
+                continue
+        toks = [name_toks(p) for p in players]
+        if len(toks) != 2:
+            continue
+        # each ESPN player must claim a DIFFERENT outcome
+        if (a & toks[0] and b & toks[1]) or (a & toks[1] and b & toks[0]):
+            return slug, yes_player
+    return None, None
 
 
 # ---------------------------------------------------------------- ESPN near-decided detection
@@ -183,17 +228,22 @@ def scan(dry=False):
               AND recv_at > now() - interval '10 minutes' AND mid IS NOT NULL AND best_ask IS NOT NULL
         ORDER BY us_slug, recv_at DESC;""")
     inserted = considered = 0
+    today = datetime.datetime.now(datetime.timezone.utc).date().isoformat()
     for t in triggers:
         lead_tok = name_toks(t["leader_name"])
-        allt = name_toks(" ".join(t["names"]))
+        # (1) DATE-BOUND, both-players-distinct match. Previously this was a loose ">=2 overlapping
+        #     tokens" test whose only protection against stale markets was the 10-minute quote
+        #     filter below -- an implicit guard. On live data (2026-07-19) the loose rule mapped
+        #     'Darderi vs Rublev' to a 2026-03-20 market with the WRONG opponent. Mapping a signal
+        #     to the wrong market does not lose an edge, it buys a different match.
+        matched_slug, _ = match_market(t["names"], yes_map, on_date=today)
+        if matched_slug is None:
+            continue
         for r in open_mkts:
             slug = r["us_slug"]
-            if slug in have or slug not in yes_map:
+            if slug != matched_slug or slug in have or slug not in yes_map:
                 continue
             yes_player, players = yes_map[slug]
-            # (1) this market must be THIS matchup: both players' names present
-            if len(allt & name_toks(" ".join(players))) < 2:
-                continue
             # (2) ORIENTATION: the YES side we would buy must be the ESPN leader, else it is an
             #     inverted (losing-side) bet — skip. Never inferred from slug order.
             if len(name_toks(yes_player) & lead_tok) < 1:
