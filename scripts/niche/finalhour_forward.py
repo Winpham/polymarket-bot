@@ -70,29 +70,51 @@ def name_toks(s):
 
 
 def load_us_yes_players():
-    """slug -> (yes_player_name, {both player names}). ORIENTATION SOURCE: the YES contract's player is
-    outcomes[i] where side_long[i] is true — NOT the slug's first-listed name (verified: for
-    aec-atp-caralc-joafon the YES side is 'Joao Fonseca', not Alcaraz). Buying the wrong side is a
-    silent, catastrophic loss, so orientation is read here, never inferred from slug order."""
+    """slug -> (long_player_name, {both player names}).
+
+    ORIENTATION SOURCE: `side_desc[i] where side_long[i]` — NOT `outcomes[i]`, and never slug order.
+
+    `outcomes` and `side_desc` are in OPPOSITE order on 23.9% of tennis markets (2,056 of 8,593),
+    so the two readings disagree that often. Resolved 2026-07-19 against independent ground truth
+    (ESPN historical winners x the venue settlement endpoint), on the 13 resolvable disagreements:
+
+        yes = outcomes[i]   ->  0/13 correct (0%)
+        yes = side_desc[i]  -> 13/13 correct (100%)
+
+    `side_long` is aligned with `side_desc`, not with `outcomes`. Pairing it with `outcomes` --
+    which this function did until now, and which the Phase-9 audit installed as its "orientation
+    fix" -- inverts the side on ~1 market in 4. Worked example: aec-wta-hanvan-lantar-2026-07-19,
+    outcomes ["Tararudee","Vandewinkel"] but side_desc ["Vandewinkel","Tararudee"]; the long side is
+    VANDEWINKEL, who lost (settlement 0, terminal price 0.01) while Tararudee led 4-1 in the decider.
+
+    Consequence of the inversion, both directions: genuine signals were BLOCKED (the leader was
+    misnamed as the short side) while inverted ones could fire. In practice the price gate caught
+    most of the latter -- the long side of an inverted pair prices ~0.10, out of band -- so the two
+    faults partly cancelled. That is luck, not a design.
+
+    NOTE the residual, which is a DATA limit and not a bug: us_mid_tape carries ONE book per slug,
+    the long side's. When the leader is the SHORT side there is no ask for the side we would buy, so
+    the signal is unfireable. That -- not a coding gap -- is the documented "~50% coverage" ceiling.
+    """
     import duckdb
     f = os.path.expanduser("~/polymarket-archive/us_markets.parquet")
     con = duckdb.connect()
-    rows = con.execute("SELECT slug, outcomes, side_long FROM read_parquet('%s') "
+    rows = con.execute("SELECT slug, side_desc, side_long FROM read_parquet('%s') "
                        "WHERE slug LIKE 'aec-atp-%%' OR slug LIKE 'aec-wta-%%'" % f).fetchall()
     m = {}
-    for slug, outcomes, side_long in rows:
+    for slug, side_desc, side_long in rows:
         # duckdb returns these list columns as JSON strings, e.g. '["A","B"]' / '[true, false]'
         try:
-            outs = json.loads(outcomes) if isinstance(outcomes, str) else list(outcomes)
+            descs = json.loads(side_desc) if isinstance(side_desc, str) else list(side_desc)
             sides = json.loads(side_long) if isinstance(side_long, str) else list(side_long)
         except (TypeError, ValueError):
             continue
-        if not outs or not sides or len(outs) != len(sides):
+        if not descs or not sides or len(descs) != len(sides):
             continue
         yi = next((i for i, b in enumerate(sides) if b), None)
         if yi is None:
             continue
-        m[slug] = (outs[yi], set(outs))
+        m[slug] = (descs[yi].strip(), {d.strip() for d in descs})
     return m
 
 
@@ -447,7 +469,40 @@ def self_test():
     assert len(name_toks("Caty McNally") & name_toks("Xinyu Wang Caty McNally")) >= 1
     assert len(name_toks("Caty McNally") & name_toks("catmcn xinwan 2026")) == 0  # slug codes never match
     assert "sabalenka" in name_toks("Aryna Sabalenka")
-    print("self-test OK (fee, set-counting, match_state leader+deciding-set, full-name matching)")
+
+    # ORIENTATION REGRESSION GUARD. The long side is side_desc[i] where side_long[i], never
+    # outcomes[i] -- the two arrays are reversed on 23.9% of tennis markets and the outcomes
+    # reading scored 0/13 against ESPN-winner x settlement ground truth (see load_us_yes_players).
+    # Reading the wrong array buys the LOSING side, so this must never silently revert.
+    import duckdb as _dd
+    _f = os.path.expanduser("~/polymarket-archive/us_markets.parquet")
+    if os.path.exists(_f):
+        _rows = _dd.connect().execute(
+            "SELECT slug, outcomes, side_desc, side_long FROM read_parquet('%s') "
+            "WHERE sportsMarketType='tennis_match_winner' LIMIT 4000" % _f).fetchall()
+        _rev = 0
+        for _s, _o, _sd, _sl in _rows:
+            try:
+                _outs, _descs, _sides = json.loads(_o), json.loads(_sd), json.loads(_sl)
+            except (TypeError, ValueError):
+                continue
+            if len(_outs) != 2 or len(_descs) != 2 or len(_sides) != 2:
+                continue
+            if [x.strip() for x in _outs] == [x.strip() for x in _descs]:
+                continue                      # aligned here: uninformative
+            _rev += 1
+            _i = next((k for k, b in enumerate(_sides) if b), None)
+            if _i is None:
+                continue
+            _m = load_us_yes_players().get(_s)
+            if _m:
+                assert _m[0] == _descs[_i].strip(), (
+                    f"ORIENTATION REGRESSION on {_s}: got {_m[0]!r}, expected side_desc "
+                    f"{_descs[_i]!r} (outcomes reading would give {_outs[_i]!r})")
+                break
+        assert _rev > 0, "no reversed-order market found to test orientation against"
+    print("self-test OK (fee, set-counting, match_state leader+deciding-set, full-name matching, "
+          "orientation=side_desc)")
     return 0
 
 
