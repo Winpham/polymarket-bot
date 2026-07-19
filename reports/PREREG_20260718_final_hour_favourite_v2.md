@@ -1,3 +1,13 @@
+> # ⛔ SUPERSEDED 2026-07-19 — replaced by `PREREG_20260719_final_hour_favourite_v3.md`
+>
+> Superseded before any signal accrued (`finalhour_paper_signals` = 0 rows). Do not use as the
+> governing document. Changes in v3: `≥2 sports` DROPPED (owner decision; it was unsatisfiable and
+> was the wrong bar — the artifact risk lives *within* tennis and R3 retains it); **N raised 60→250**
+> because at N=60 power to detect the retrospective +6.29¢ was only **0.38** and the minimum
+> detectable effect was +10.82¢, i.e. the gate could not detect its own hypothesised effect;
+> settlement corrected to continuous payouts (5.3% of expired tennis markets settle NON-binary);
+> six anti-self-deception controls made binding; a futility stop added.
+
 # PRE-REGISTRATION v2 — final-hour favourite late-convergence, forward paper test
 
 **Frozen 2026-07-18. Supersedes `PREREG_20260715_final_hour_favourite.md`. Paper/analysis only.
