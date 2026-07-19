@@ -126,9 +126,31 @@ def net_of_cost(sub: pd.DataFrame, extra: float = 0.0):
 
 
 # --------------------------------------------------------------------------- loading
+def snapshot_provenance() -> dict:
+    """`us_markets.parquet` is a LIVE FILE refreshed by the `com.tue.consensus.usquotes` launchd
+    chain — it grew 224,614 -> 247,847 rows mid-session on 2026-07-19. Any result read off it is
+    NOT reproducible unless the snapshot is pinned. Every run stamps what it actually read."""
+    import hashlib
+    st = os.stat(MK)
+    h = hashlib.sha256()
+    with open(MK, "rb") as f:
+        for chunk in iter(lambda: f.read(1 << 20), b""):
+            h.update(chunk)
+    return {"path": MK, "mtime": dt_iso(st.st_mtime), "bytes": st.st_size,
+            "sha256_16": h.hexdigest()[:16]}
+
+
+def dt_iso(epoch: float) -> str:
+    import datetime
+    return datetime.datetime.fromtimestamp(epoch, datetime.timezone.utc).isoformat(timespec="seconds")
+
+
 def load_markets() -> pd.DataFrame:
     if not os.path.exists(MK):
         sys.exit(f"FATAL: {MK} missing — cannot define the universe.")
+    prov = snapshot_provenance()
+    print(f"  SNAPSHOT {prov['sha256_16']}  mtime {prov['mtime']}  "
+          f"{prov['bytes']:,}B  (this file MUTATES — see snapshot_provenance)")
     df = pd.read_parquet(MK)
     df = df[df.closed.astype(str) == "True"].copy()
     op = df.outcomePrices.astype(str)

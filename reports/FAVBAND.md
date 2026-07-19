@@ -143,6 +143,46 @@ launchctl unload ~/Library/LaunchAgents/com.tue.favband.{book,forward}.plist
 only while this worktree is never switched off `feat/favband`. **The durable fix is to merge these
 scripts to `main` and repoint the agents at `wt/capture`.** Until then, treat this as temporary.
 
+## Refinement round 2 (2026-07-19) — four things learned without waiting
+
+### 1. The intl archive CANNOT validate this. Contaminated, not underpowered.
+`trader_fills` spans 903 day-partitions, so it looked like a 3.5-year out-of-sample test of the
+mechanism. It is not. **The resolution backfill covers only 8.3% of 2025–26 fills, and coverage
+varies 4.4% → 10.8% across price bands** — a 2.5× swing on the exact axis being measured. The
+resolved subset is not a random sample, so any calibration computed on it inherits the selection.
+Measured gap there was +0.09pp [−2.70, +2.89] on 474 events — a CI wide enough to *contain* the US
+estimate, so it neither confirms nor refutes. **Conclusion: this asset is not a validator. Do not
+use it as one.**
+
+### 2. The tight-spread rule IS executable — vulnerability cleared
+The whole economics depend on trading only the 1¢ book, and the backtest could only approximate
+that with a market-level Roll average. If spreads flickered, the rule would be fiction. They don't:
+a market quoted ≤1¢ is **still ≤1¢ with 95–99.7% probability over 5–40 minutes**, mean widening
+0.00–0.11¢. 69.9% of band quotes are tight. **You can see the tight book and still be trading it
+when you act.**
+
+### 3. H2 weakness is NOT composition — but it is also not decay
+The market mix shifted hard between halves (fwc 71.7% → 49.6%, mlb 8.4% → 16.4%). That was the
+obvious explanation, and it is **wrong**: reweighting H2 to H1's league mix moves the result by
+**−0.04pp** of a −0.58pp gap. The weakening is within-league (fwc −0.61pp, mlb −2.42pp, itfwo
+−0.78pp).
+
+But the magnitudes are small and the CIs overlap almost entirely: **H1 +1.61% [+0.02, +3.07],
+H2 +1.03% [−0.45, +2.46]**. Both halves are positive. The gate criterion fails on H2's lower bound,
+but the H1→H2 *difference* is well inside noise. **This is a power problem (10 days per half), not
+evidence of an arm dying.** It cannot be resolved with more slicing — only with more events.
+
+### 4. It is NOT a World Cup artifact
+Excluding `fwc` entirely: **+1.22% [−0.35, +2.72] on 1,016 events.** The tournament is not carrying
+the result — which is what killed `favorite_v2` and the earlier soccer arm.
+
+### ⚠️ Reproducibility defect found and fixed
+`us_markets.parquet` is a **live file** refreshed by the `com.tue.consensus.usquotes` launchd chain.
+It grew **224,614 → 247,847 rows mid-session**. Every measurement above was read off a moving
+target. `favband.py` now stamps the snapshot (sha256, mtime, size) on every run. On the refreshed
+snapshot the arm reads **+1.33% [+0.24, +2.39]** vs +1.52% before — **the estimate drifted toward
+zero as power grew**, which is the direction that warrants caution, not comfort.
+
 ## Next actions, in order
 
 1. **Accrue during active sports hours.** Both agents are running but every sweep so far has hit
