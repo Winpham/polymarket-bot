@@ -1,3 +1,20 @@
+> # ⛔ RETRACTED 2026-07-20 — see `RETRACTION-20260720-final-hour-favourite.md`
+>
+> **The hypothesis this document tests is dead. Do not run it.** Zero signals ever accrued.
+>
+> The +6.29¢ retrospective was an **artifact of maturity-anchoring**. A zero-edge martingale —
+> true edge zero by construction — returns **+12.00¢ [LB +11.96¢]** at −30 through the same
+> estimator, while endpoint-free anchors on the *same paths* return −0.07¢. The original effect is
+> SMALLER than what pure endpoint conditioning manufactures from nothing. Endpoint-free anchors on
+> real data agree: −1.34¢ and −3.04¢.
+>
+> Independently sufficient: the arm never reaches the tape — 0 fires in 999 polls, **0 of 13**
+> near-decided opportunities in band, minimum ask 0.940, and the book re-rates +10–13¢ *before* the
+> trigger fires. Retract condition **R7 (fire starvation)** is adopted in the retraction.
+>
+> Per `feedback-refutations-must-overwrite`: **λ=0.44 and +6.29¢ must not be quoted as live from
+> this document or any other.**
+
 # PRE-REGISTRATION v3 — final-hour favourite late-convergence, forward paper test
 
 **Frozen 2026-07-19. Supersedes v2 (2026-07-18) and v1 (2026-07-15). Paper/analysis only.
