@@ -228,6 +228,44 @@ def cluster_boot(roi: np.ndarray, groups: np.ndarray, n: int = 8000, seed: int =
     return float(np.percentile(out, 2.5)), float(np.percentile(out, 97.5))
 
 
+def wilson(k: int, n: int, z: float = 1.96):
+    """Wilson interval on a proportion. Unlike the bootstrap it stays honest at k==n."""
+    if n == 0:
+        return float("nan"), float("nan")
+    p = k / n
+    den = 1 + z * z / n
+    ctr = (p + z * z / (2 * n)) / den
+    half = z * np.sqrt(p * (1 - p) / n + z * z / (4 * n * n)) / den
+    return float(ctr - half), float(min(1.0, ctr + half))
+
+
+def zero_loss_check(sub, label: str) -> bool:
+    """THE ARTIFACT GUARD. A bootstrap cannot resample a loss it has never seen. On a subset with
+    zero losing events the CI collapses to the dispersion of WINNING PAYOUTS — it stops measuring
+    uncertainty about the edge and starts measuring price dispersion, which is tiny. That is how a
+    slice of 13 games produced "+14.32% [+12.72%, +16.03%]" and looked like the best result in the
+    project's history. It is the same defect as the retracted "0% chance of a losing year".
+
+    Returns True when the subset is UNINTERPRETABLE and prints the honest interval instead."""
+    n_ev = sub.event.nunique()
+    losses = int((~sub.won.astype(bool)).sum())
+    if losses > 0 or n_ev == 0:
+        return False
+    px = float(sub.entry_vwap.mean())
+    fee = FEE_RATE * px * (1 - px)
+    lo_w, hi_w = wilson(n_ev, n_ev)
+    roi_lo = lo_w * (1 - px - fee) / px - (1 - lo_w)
+    breakeven_loss_rate = 1 - px
+    rule_of_three = min(1.0, 3.0 / n_ev)   # the approximation degenerates below n=3; a rate > 100%
+                                           # is not a bound, it is nonsense in the output
+    print(f"    ⚠ {label}: ZERO losses in {n_ev} events — the bootstrap CI is an ARTIFACT.")
+    print(f"      Rule of three: true loss rate could be {rule_of_three:.1%}; breakeven needs "
+          f"< {breakeven_loss_rate:.1%}.")
+    print(f"      Honest ROI lower bound (Wilson on events): {roi_lo * 100:+.1f}%  "
+          f"{'— CANNOT exclude a losing strategy' if roi_lo < 0 else ''}")
+    return True
+
+
 def event_key(slug: str) -> str:
     """Strip the trailing per-market suffix so sibling props of one game cluster together."""
     parts = str(slug).split("-")
@@ -265,12 +303,15 @@ def report():
     print(f"  win rate {s.won.mean():.3f}   mean entry {s.entry_vwap.mean():.4f}   "
           f"events {s.event.nunique()}   days {s.day.nunique()}")
 
+    zero_loss_check(s, "overall")
+
     print("\n  BY MARKET FAMILY — the population question:")
     for fam, g in s.groupby(s.market_family.fillna("UNKNOWN")):
         flo, fhi = cluster_boot(g.roi.values, g.event.values) if g.event.nunique() > 1 else (
             float("nan"), float("nan"))
         print(f"    {fam:<12} n={len(g):<4} events={g.event.nunique():<4} "
               f"roi={g.roi.mean() * 100:+7.2f}%  [{flo * 100:+.2f}%, {fhi * 100:+.2f}%]")
+        zero_loss_check(g, fam)
 
     print("\n  BY MARKET TYPE:")
     for mt, g in s.groupby(s.market_type.fillna("unknown")):
@@ -358,6 +399,21 @@ def self_test() -> int:
     ulo, uhi = cluster_boot(roi, np.arange(len(roi)), n=1500)
     assert (chi - clo) > (uhi - ulo) * 1.5, \
         f"clustered CI must be much wider on correlated siblings: {chi - clo:.3f} vs {uhi - ulo:.3f}"
+
+    # ---- Wilson stays honest where the bootstrap lies: k == n must NOT give a point interval
+    lo_w, hi_w = wilson(13, 13)
+    assert lo_w < 0.80, f"13/13 wins must leave real downside, got lower bound {lo_w:.3f}"
+    assert hi_w <= 1.0, "a proportion cannot exceed 1"
+    assert wilson(50, 100)[0] < 0.5 < wilson(50, 100)[1], "symmetric case brackets the estimate"
+
+    # ---- the zero-loss guard must FIRE on an all-winners subset and stay quiet otherwise
+    import pandas as pd
+    allwin = pd.DataFrame({"won": [True] * 6, "entry_vwap": [0.88] * 6,
+                           "event": [f"g{i}" for i in range(6)]})
+    assert zero_loss_check(allwin, "fixture-allwin") is True, "must fire when there are no losses"
+    mixed = allwin.copy()
+    mixed.loc[0, "won"] = False
+    assert zero_loss_check(mixed, "fixture-mixed") is False, "must stay quiet once a loss exists"
 
     # ---- event_key must group siblings of one game together
     a = event_key("aec-mlb-nyy-bos-2026-07-19-player-hits-judge")
