@@ -340,6 +340,20 @@ def report():
           f"game\n  share a pitcher, a park and an umpire. The clustered CI above already "
           f"reflects that.")
 
+    # ---- when will this actually know anything?
+    ev_roi = s.groupby("event").roi.mean()
+    if len(ev_roi) >= 3:
+        sd = float(ev_roi.std(ddof=1))
+        rate = n_events / max(s.day.nunique(), 1)
+        print(f"\n  TIME TO AN ANSWER  (per-event sd {sd * 100:.1f}pp, "
+              f"{rate:.1f} events/day observed)")
+        for edge in (0.015, 0.03, 0.045):
+            need = (1.96 * sd / edge) ** 2
+            print(f"    a true edge of {edge * 100:>4.1f}% needs ~{need:>6,.0f} events "
+                  f"= ~{need / max(rate, 1e-9):>4,.0f} days before the CI clears zero")
+        print("    Plan against the SMALL edge. If the truth is the retrospective +1.5%, this is a")
+        print("    months-long measurement — and stopping early on a good week is how it goes wrong.")
+
     print("\n  ⚠ POPULATION WARNING")
     fam_mix = s.market_family.fillna("UNKNOWN").value_counts(normalize=True)
     prop_share = float(fam_mix.get("PLAYER_PROP", 0.0))
