@@ -43,6 +43,7 @@ import argparse
 import datetime as dt
 import json
 import os
+import re
 import sys
 import time
 import urllib.request
@@ -50,8 +51,17 @@ from concurrent.futures import ThreadPoolExecutor
 
 GW = "https://gateway.polymarket.us"
 PG_DSN = os.environ.get("ARCHIVE_PG_DSN", "postgresql://bot:bot@127.0.0.1:5432/polymarket")
+MARKETS_PARQUET = os.path.expanduser(
+    os.environ.get("US_MARKETS_PARQUET", "~/polymarket-archive/us_markets.parquet"))
 UA = {"User-Agent": "research/1.0"}
 WORKERS = int(os.environ.get("FAVBAND_WORKERS", "6"))
+PAGE = 400
+# see `upcoming`. Measured 2026-07-21: 6 pages -> 8 in-window markets, 40 -> 426, 120 -> 609 with
+# the deepest hit at page -97, i.e. 120 is the first depth that actually converges.
+# COST: a 120-page sweep plus the per-market book probes takes ~6 min wall clock and is I/O-bound
+# on the venue (32 workers is no faster than 12), which EXCEEDS the 300s agent interval. Run it on
+# >=900s until discovery is restructured — see the note in `upcoming`.
+SCAN_PAGES = int(os.environ.get("FAVBAND_SCAN_PAGES", "120"))
 
 # ---- the pre-registered rule. Changing any of these invalidates accrued signals.
 BAND_LO, BAND_HI = 0.80, 0.98
@@ -63,7 +73,27 @@ LEAD_MAX_MIN = 30           # fresh: within 30 min of game start
 LEAD_MIN_MIN = 0            # strictly pre-game
 STAKE_USD = 50.0            # the size we price; capacity is measured, not assumed
 FEE_RATE = 0.05
-RULE_VERSION = "favband-v1-2026-07-19"
+RULE_VERSION = "favband-v2-2026-07-21"
+# v1 (2026-07-19) accrued 78 signals and is RETAINED but not poolable with v2: it scanned only 6
+# pages of the market list (~14% of the eligible universe, measured 2026-07-21) and never settled
+# anything. v2 fixes discovery, settlement and event-level accounting. Selection differs, so the
+# populations are not interchangeable.
+
+# Capacity ladder. Recorded per signal, NEVER used to gate firing — so this changes what we KNOW
+# about a signal, not which signals exist. Both rule versions stay comparable on the $50 basis.
+SIZE_LADDER = (50.0, 100.0, 250.0, 500.0, 1000.0)
+
+# A slug is one MARKET; a game is one EVENT. `astatc-mlb-pit-cle-2026-07-19-hr-orozco-gte1` and the
+# 10 other props on that game share a settlement shock, so they are ONE independent observation.
+# The retrospective clustered on this key (favband.py::event_key); the forward gate must too, or
+# it counts ~4x the evidence it actually has (measured on v1: 78 signals = ~20 games).
+EVENT_RE = re.compile(r"^[a-z]+-(.*?-\d{4}-\d{2}-\d{2})")
+
+
+def event_key(slug: str) -> str:
+    """Collapse a market slug to its GAME. Mirrors favband.py::event_key exactly."""
+    m = EVENT_RE.match(slug)
+    return m.group(1) if m else slug
 
 DDL = """
 CREATE TABLE IF NOT EXISTS favband_paper_signals (
@@ -93,6 +123,11 @@ CREATE TABLE IF NOT EXISTS favband_paper_signals (
     settled_at     TIMESTAMPTZ,
     UNIQUE (rule_version, us_slug)
 );
+-- capacity ladder: what each size would ACTUALLY cost at this decision moment. Recording only.
+ALTER TABLE favband_paper_signals ADD COLUMN IF NOT EXISTS event_key   TEXT;
+ALTER TABLE favband_paper_signals ADD COLUMN IF NOT EXISTS cap_ladder  JSONB;
+ALTER TABLE favband_paper_signals ADD COLUMN IF NOT EXISTS settle_src  TEXT;
+CREATE INDEX IF NOT EXISTS favband_signals_event ON favband_paper_signals (rule_version, event_key);
 CREATE TABLE IF NOT EXISTS favband_paper_skips (
     id           BIGSERIAL PRIMARY KEY,
     rule_version TEXT NOT NULL,
@@ -194,25 +229,83 @@ def evaluate(side0_bids, side0_offers, stake=STAKE_USD):
         "book_usd": sum(p * q for p, q in levels),
         "stake_usd": stake, "filled_usd": filled,
         "fee_per_share": FEE_RATE * vwap * (1 - vwap),
+        "cap_ladder": json.dumps(capacity_ladder(levels, touch)),
     }, None
 
 
+def capacity_ladder(levels, touch):
+    """What each size on SIZE_LADDER would cost, walking this same real book.
+
+    The certified retrospective charges the touch half-spread and the venue fee, and NOTHING for
+    walking past the touch — dollar depth did not exist in the archive, so the cost of size was
+    structurally invisible. This is that missing term, at every size we might want to trade.
+
+    An unfillable size records filled < size with `exhausted: true`; it is never extrapolated.
+    """
+    out = {}
+    for size in SIZE_LADDER:
+        vwap, filled, exhausted = walk(levels, size)
+        out[str(int(size))] = None if vwap is None else {
+            "vwap": round(vwap, 6),
+            "slip_pct": round((vwap - touch) / touch * 100.0, 4),
+            "filled": round(filled, 2),
+            "exhausted": bool(exhausted),
+        }
+    return out
+
+
 # ------------------------------------------------------------------ scanning
-def upcoming(window_min: int = 240):
-    """Markets whose game starts inside the next `window_min` minutes."""
-    hi = 224600
-    while True:
-        d = get(f"/v1/markets?offset={hi}&limit=400")
-        if len(d.get("markets", [])) < 400:
+def find_end() -> int:
+    """Offset of the last page. The list endpoint exposes no count and silently ignores
+    order/sort/startDateMin, so the end must be probed. Exponential probe + binary search:
+    ~20 requests instead of the ~99 a linear walk from a hardcoded 224600 now costs (and that
+    constant drifts further out of date every day the venue lists markets)."""
+    lo, hi = 0, PAGE
+    while len(get(f"/v1/markets?offset={hi}&limit={PAGE}").get("markets", [])) == PAGE:
+        lo, hi = hi, hi * 2
+        if hi > 4_000_000:
             break
-        hi += 400
-        if hi > 400000:
-            break
+    while lo + PAGE < hi:                                  # binary search the short page
+        mid = ((lo + hi) // 2 // PAGE) * PAGE
+        if len(get(f"/v1/markets?offset={mid}&limit={PAGE}").get("markets", [])) == PAGE:
+            lo = mid
+        else:
+            hi = mid
+    return lo
+
+
+def upcoming(window_min: int = 240, pages: int = SCAN_PAGES):
+    """Markets whose game starts inside the next `window_min` minutes.
+
+    COVERAGE IS THE BINDING CONSTRAINT, and it was silently broken. The list is append-ordered by
+    creation, NOT by start time, so markets for an imminent game are scattered arbitrarily deep:
+    measured 2026-07-21, the last 6 pages held 3 of 22+ in-window markets (<=14%), and the deepest
+    page probed still held 4. v1 scanned exactly those 6 pages, so it never saw ~86% of its own
+    universe — which is why accrual collapsed from 77 signals on day 1 to 1 on day 2.
+
+    Coverage is now reported, and a hit on the LAST page scanned raises the alarm rather than
+    quietly returning a short list — a truncated universe must never look like a quiet day.
+
+    KNOWN LIMITATION (not fixed here). This re-walks the entire tail of an append-only list on
+    every single scan to rediscover a set that barely changes, which is why a converged sweep
+    costs ~6 min. The right shape is a persisted slug -> gameStartTime index, refreshed deeply
+    every ~30 min, with the 60s loop probing books only for markets inside the lead window. That
+    decouples discovery cost from decision latency. Doing it here would have meant shipping a new
+    storage layer inside a bug fix.
+
+    ALSO UNRESOLVED: `get()` swallows every exception and returns {}. Under throttling a page is
+    indistinguishable from a genuinely empty one, so both this sweep and `find_end`'s binary
+    search would silently under-discover. That is the fail-CLOSED pattern this project has been
+    bitten by twice; it deserves its own fix.
+    """
+    end = find_end()
     now = dt.datetime.now(dt.timezone.utc)
-    out = []
-    for i in range(6):
-        off = max(hi - i * 400, 0)
-        for m in get(f"/v1/markets?offset={off}&limit=400").get("markets", []):
+    offsets = [max(end - i * PAGE, 0) for i in range(pages)]
+    offsets = sorted(set(offsets), reverse=True)
+
+    def page(off):
+        found = []
+        for m in get(f"/v1/markets?offset={off}&limit={PAGE}").get("markets", []):
             gs = m.get("gameStartTime") or m.get("endDate")
             if not gs or not m.get("slug"):
                 continue
@@ -222,9 +315,20 @@ def upcoming(window_min: int = 240):
                 continue
             lead = (t - now).total_seconds() / 60
             if LEAD_MIN_MIN <= lead <= window_min:
-                out.append((m["slug"], t, lead))
-        if off == 0:
-            break
+                found.append((m["slug"], t, lead))
+        return off, found
+
+    out, deepest = [], -1
+    with ThreadPoolExecutor(max_workers=WORKERS) as ex:
+        for i, (off, found) in enumerate(ex.map(page, offsets)):
+            if found:
+                deepest = max(deepest, i)
+            out.extend(found)
+    print(f"  discovery: end~{end}, scanned {len(offsets)} pages "
+          f"({len(offsets) * PAGE:,} markets), deepest in-window hit at page -{deepest}")
+    if deepest >= len(offsets) - 2 and offsets[-1] > 0:
+        print(f"  !! COVERAGE WARNING: in-window markets found at the edge of the scan window. "
+              f"Raise FAVBAND_SCAN_PAGES above {pages} — the universe is being truncated.")
     return out
 
 
@@ -245,7 +349,8 @@ def scan(dry: bool):
     with ThreadPoolExecutor(max_workers=WORKERS) as ex:
         for slug, gstart, lead, sig, reason in ex.map(probe, cands):
             if sig and lead <= LEAD_MAX_MIN:
-                sig.update({"us_slug": slug, "game_start": gstart, "lead_min": lead})
+                sig.update({"us_slug": slug, "game_start": gstart, "lead_min": lead,
+                            "event_key": event_key(slug)})
                 signals.append(sig)
                 continue
             why = "too_early" if sig else reason
@@ -281,7 +386,7 @@ def write(signals, skip_rows):
     from psycopg2.extras import execute_batch
     cols = ["rule_version", "us_slug", "game_start", "lead_min", "fav_side", "side0_bid",
             "side0_offer", "entry_vwap", "touch_px", "spread", "slip_pct", "touch_usd",
-            "book_usd", "stake_usd", "filled_usd", "fee_per_share"]
+            "book_usd", "stake_usd", "filled_usd", "fee_per_share", "event_key", "cap_ladder"]
     sql = (f"INSERT INTO favband_paper_signals ({','.join(cols)}) "
            f"VALUES ({','.join(['%s']*len(cols))}) ON CONFLICT DO NOTHING")
     with psycopg2.connect(PG_DSN) as con:
@@ -297,32 +402,19 @@ def write(signals, skip_rows):
                               [(RULE_VERSION, s, r, d) for s, r, d in skip_rows])
 
 
-def report():
-    import psycopg2
-    with psycopg2.connect(PG_DSN) as con:
-        with con.cursor() as cur:
-            cur.execute(DDL)
-            cur.execute("SELECT count(*), count(*) FILTER (WHERE settled), "
-                        "count(*) FILTER (WHERE settled AND won) "
-                        "FROM favband_paper_signals WHERE rule_version=%s", (RULE_VERSION,))
-            n, ns, nw = cur.fetchone()
-            cur.execute("SELECT avg(entry_vwap), avg(spread), avg(slip_pct), avg(touch_usd) "
-                        "FROM favband_paper_signals WHERE rule_version=%s", (RULE_VERSION,))
-            av = cur.fetchone()
-    print("=" * 78)
-    print(f"FAVBAND FORWARD — rule {RULE_VERSION}")
-    print("=" * 78)
-    print(f"  signals fired : {n or 0}")
-    print(f"  settled       : {ns or 0}   won: {nw or 0}")
-    if av and av[0]:
-        print(f"  mean entry vwap {av[0]:.4f}  spread {av[1]*100:.2f}c  "
-              f"slip {av[2]:.3f}%  touch ${av[3]:,.0f}")
-    print("\n  PRE-REGISTERED GATE (none of this is certified until ALL are met):")
-    print(f"    [{'x' if (ns or 0) >= 60 else ' '}] >= 60 settled events   ({ns or 0}/60)")
-    print("    [ ] ROI lower bound > 0 at the EXECUTED vwap, event-clustered")
-    print("    [ ] >= 2 distinct competitions, each individually positive")
-    print("    [ ] >= 2 disjoint weeks, each individually positive")
-    print("\n  Until every box is ticked: k=0. A positive mean is not a result.")
+def settle_and_report(*, report_only: bool = False):
+    """Delegate to favband_settle.py — the settlement + scoring leg.
+
+    Settlement deliberately lives in its own instrument rather than here. It has a different
+    trust model: this file only ever READS the venue and writes what it observed, while the
+    settler WRITES outcomes and must refuse to do so when the join looks inverted. Keeping the
+    scoring guards in one audited place beats a second, subtly-different copy.
+    """
+    import subprocess
+    cmd = [sys.executable, os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                                        "favband_settle.py")]
+    cmd.append("--report" if report_only else "--settle")
+    return subprocess.call(cmd)
 
 
 def self_test() -> int:
@@ -377,8 +469,30 @@ def self_test() -> int:
     rt = complement(complement(lv))
     assert all(abs(a[0]-b[0]) < 1e-12 and a[1] == b[1] for a, b in zip(rt, lv))
 
+    # ---- event_key collapses every prop on a game to ONE independent observation
+    assert event_key("astatc-mlb-pit-cle-2026-07-19-hr-orozco-gte1") == "mlb-pit-cle-2026-07-19"
+    assert (event_key("astatc-mlb-pit-cle-2026-07-19-hr-orozco-gte1")
+            == event_key("astatc-mlb-pit-cle-2026-07-19-hits-stekwa-gte3")), \
+        "two props on the SAME game must share one event key or the gate counts 2x the evidence"
+    assert event_key("mlb-lad-nyy-2026-07-19") != event_key("mlb-lad-nyy-2026-07-20")
+    assert event_key("not-a-slug") == "not-a-slug"          # degrades to itself, never crashes
+
+    # ---- the capacity ladder must price size honestly, and admit when it cannot fill
+    lad = capacity_ladder([L(0.90, 100), L(0.95, 1e6)], 0.90)   # $90 at 0.90, then a wall at 0.95
+    assert lad["50"]["slip_pct"] == 0.0 and not lad["50"]["exhausted"], "$50 fits inside the touch"
+    assert lad["500"]["slip_pct"] > 0, "$500 must walk past the touch and cost more"
+    assert lad["50"]["vwap"] < lad["500"]["vwap"] <= 0.95, "cost must be monotone in size"
+    thin = capacity_ladder([L(0.90, 10)], 0.90)                  # only $9 in the whole book
+    assert thin["50"]["exhausted"] and thin["50"]["filled"] < 50, \
+        "an unfillable size must be marked exhausted, NEVER extrapolated into a fantasy fill"
+
+    # ---- scoring lives in favband_settle.py; this file must not grow a second copy of it
+    assert "cluster_roi" not in globals(), \
+        "scoring was moved to favband_settle.py — two implementations WILL diverge"
+
     print("favband_forward self-test OK (orientation BOTH sides + inversion guard, band, "
-          "spread, depth-skip, slippage, fee schedule, complement involution)")
+          "spread, depth-skip, slippage, fee schedule, complement involution, event_key "
+          "collapsing, capacity ladder incl. exhaustion)")
     return 0
 
 
@@ -388,15 +502,21 @@ def main():
     ap.add_argument("--self-test", action="store_true")
     ap.add_argument("--once", action="store_true")
     ap.add_argument("--dry-run", action="store_true")
-    ap.add_argument("--report", action="store_true")
+    ap.add_argument("--settle", action="store_true", help="delegates to favband_settle.py")
+    ap.add_argument("--report", action="store_true", help="delegates to favband_settle.py")
     a = ap.parse_args()
     if a.self_test:
         sys.exit(self_test())
     if a.report:
-        report()
-        return
+        sys.exit(settle_and_report(report_only=True))
+    if a.settle:
+        sys.exit(settle_and_report())
     if a.once:
         scan(a.dry_run)
+        if not a.dry_run:
+            # settle every cycle: an unsettled signal certifies nothing, and v1 accrued for two
+            # days without one because settlement was never on the loop.
+            settle_and_report()
         return
     ap.print_help()
 
