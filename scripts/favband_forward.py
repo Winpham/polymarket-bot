@@ -241,16 +241,21 @@ def scan(dry: bool):
         sig, reason = evaluate(clean(d.get("bids")), clean(d.get("offers")))
         return slug, gstart, lead, sig, reason
 
-    signals, skips = [], {}
+    signals, skips, skip_rows = [], {}, []
     with ThreadPoolExecutor(max_workers=WORKERS) as ex:
         for slug, gstart, lead, sig, reason in ex.map(probe, cands):
             if sig and lead <= LEAD_MAX_MIN:
                 sig.update({"us_slug": slug, "game_start": gstart, "lead_min": lead})
                 signals.append(sig)
-            elif sig:
-                skips["too_early"] = skips.get("too_early", 0) + 1
-            else:
-                skips[reason] = skips.get(reason, 0) + 1
+                continue
+            why = "too_early" if sig else reason
+            skips[why] = skips.get(why, 0) + 1
+            # Persist the NEAR MISSES only. `outside_band` is the universe filter — ~78% of all
+            # skips and uninteresting per-slug — so it is counted, not stored. Everything else is
+            # a market we were willing to trade and DECLINED, which is the funnel that decides
+            # whether a dead feed is masquerading as "no edge".
+            if why != "outside_band":
+                skip_rows.append((slug, why, f"lead={lead:.1f}m"))
 
     print(f"QUALIFYING SIGNALS: {len(signals)}")
     print(f"  skips: {skips}")
@@ -259,15 +264,19 @@ def scan(dry: bool):
               f"vwap {s['entry_vwap']:.4f} spread {s['spread']*100:.1f}c "
               f"slip {s['slip_pct']:.2f}% touch ${s['touch_usd']:,.0f} "
               f"lead {s['lead_min']:.0f}m")
-    if not dry and signals:
-        write(signals, skips)
-        print(f"  wrote {len(signals)} signals")
-    elif dry:
+    if dry:
         print("  [dry-run] nothing written")
+    else:
+        # ALWAYS write, even with zero signals. A sweep that qualifies nothing is the single most
+        # important row in the ledger: it is the difference between "the market offered nothing"
+        # and "our feed was dead". 300 of the first 331 sweeps qualified nothing and recorded
+        # NOTHING — the funnel for those sweeps existed only in a log file.
+        write(signals, skip_rows)
+        print(f"  wrote {len(signals)} signals, {len(skip_rows)} near-miss skips")
     return len(signals), skips
 
 
-def write(signals, skips):
+def write(signals, skip_rows):
     import psycopg2
     from psycopg2.extras import execute_batch
     cols = ["rule_version", "us_slug", "game_start", "lead_min", "fav_side", "side0_bid",
@@ -278,8 +287,14 @@ def write(signals, skips):
     with psycopg2.connect(PG_DSN) as con:
         with con.cursor() as cur:
             cur.execute(DDL)
-            execute_batch(cur, sql, [[RULE_VERSION] + [s.get(c) for c in cols[1:]]
-                                     for s in signals])
+            if signals:
+                execute_batch(cur, sql, [[RULE_VERSION] + [s.get(c) for c in cols[1:]]
+                                         for s in signals])
+            if skip_rows:
+                execute_batch(cur,
+                              "INSERT INTO favband_paper_skips (rule_version, us_slug, reason, "
+                              "detail) VALUES (%s,%s,%s,%s)",
+                              [(RULE_VERSION, s, r, d) for s, r, d in skip_rows])
 
 
 def report():
