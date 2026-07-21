@@ -45,8 +45,15 @@ import numpy as np
 ARCHIVE = os.path.expanduser("~/polymarket-archive")
 MK = f"{ARCHIVE}/us_markets.parquet"
 PG_DSN = os.environ.get("ARCHIVE_PG_DSN", "postgresql://bot:bot@127.0.0.1:5432/polymarket")
-RULE_VERSION = "favband-v1-2026-07-19"
 FEE_RATE = 0.05
+
+# DELIBERATELY VERSION-AGNOSTIC. An earlier draft pinned RULE_VERSION="favband-v1-2026-07-19";
+# a concurrent branch then bumped the harness to "favband-v2-2026-07-21", which would have left
+# this settler scanning for a version that no longer fires — silently settling nothing, forever.
+# That is the exact defect this file was written to repair, reintroduced through a constant.
+# Settling is a fact about an outcome and has no opinion about which rule fired; the REPORT
+# stratifies by version so rule changes stay visible instead of being averaged together.
+RULE_FILTER = os.environ.get("FAVBAND_RULE_VERSION")   # optional; default = every version
 
 # A settled ledger whose win rate is this far BELOW the mean entry price is not a losing strategy,
 # it is an INVERTED one. At a mean entry of ~0.88 an inverted book wins ~12% of the time.
@@ -154,9 +161,12 @@ def settle(dry: bool = False) -> int:
             cur.execute("ALTER TABLE favband_paper_signals "
                         "ADD COLUMN IF NOT EXISTS market_type TEXT, "
                         "ADD COLUMN IF NOT EXISTS market_family TEXT")
+            where, params = "COALESCE(settled,false)=false", []
+            if RULE_FILTER:
+                where += " AND rule_version=%s"
+                params.append(RULE_FILTER)
             cur.execute("SELECT id, us_slug, fav_side, entry_vwap, fee_per_share "
-                        "FROM favband_paper_signals "
-                        "WHERE rule_version=%s AND COALESCE(settled,false)=false", (RULE_VERSION,))
+                        f"FROM favband_paper_signals WHERE {where}", params)
             pending = cur.fetchall()
     print(f"  pending signals: {len(pending)}")
     if not pending:
@@ -276,16 +286,27 @@ def report():
     import pandas as pd
     import psycopg2
 
+    sql = ("SELECT rule_version, us_slug, fired_at, game_start, lead_min, entry_vwap, spread, "
+           "touch_usd, slip_pct, fee_per_share, settled, won, market_type, market_family "
+           "FROM favband_paper_signals")
     with psycopg2.connect(PG_DSN) as con:
-        d = pd.read_sql("SELECT us_slug, fired_at, game_start, lead_min, entry_vwap, spread, "
-                        "touch_usd, slip_pct, fee_per_share, settled, won, market_type, "
-                        "market_family FROM favband_paper_signals WHERE rule_version=%s",
-                        con, params=(RULE_VERSION,))
+        if RULE_FILTER:
+            d = pd.read_sql(sql + " WHERE rule_version=%s", con, params=(RULE_FILTER,))
+        else:
+            d = pd.read_sql(sql, con)
     n = len(d)
     s = d[d.settled.fillna(False)].copy()
+    versions = sorted(d.rule_version.dropna().unique())
     print("=" * 78)
-    print(f"FAVBAND FORWARD — SETTLED LEDGER  (rule {RULE_VERSION})")
+    print(f"FAVBAND FORWARD — SETTLED LEDGER  (rules: {', '.join(versions) or 'none'})")
     print("=" * 78)
+    if len(versions) > 1:
+        # Pooling across rule versions would average two different strategies into one number.
+        print("  ⚠ MULTIPLE RULE VERSIONS present — these are DIFFERENT strategies. Per-version:")
+        for v, g in d.groupby("rule_version"):
+            gs = g[g.settled.fillna(False)]
+            print(f"      {v:<28} fired {len(g):<5} settled {len(gs)}")
+        print("    The pooled figures below are a summary, NOT a certifiable result.")
     print(f"  signals fired : {n}")
     print(f"  settled       : {len(s)}   won: {int(s.won.sum()) if len(s) else 0}")
     if not len(s):

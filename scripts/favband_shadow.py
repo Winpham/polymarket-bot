@@ -52,7 +52,10 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 # Reuse the venue's hard-won quirks rather than re-deriving them.
 from favband_forward import GW, PG_DSN, UA, WORKERS, clean, complement, get  # noqa: E402
 
-RULE_VERSION = "favband-v1-2026-07-19"
+# Version-agnostic for the same reason as the settler: a concurrent branch bumped the harness to
+# "favband-v2-2026-07-21", and a shadow pinned to v1 would follow nothing while logging cheerfully.
+# What we shadow is a live signal, whichever rule produced it.
+RULE_FILTER = os.environ.get("FAVBAND_RULE_VERSION")
 
 # A signal needs at least this many quotes, and one inside the final stretch, before its λ means
 # anything. Below it the "close" is just whichever quote we happened to catch.
@@ -103,9 +106,12 @@ def poll_once(dry: bool = False) -> int:
     with psycopg2.connect(PG_DSN) as con:
         with con.cursor() as cur:
             cur.execute(DDL)
+            where, params = "game_start > now()", []
+            if RULE_FILTER:
+                where += " AND rule_version=%s"
+                params.append(RULE_FILTER)
             cur.execute("SELECT id, us_slug, fav_side, game_start FROM favband_paper_signals "
-                        "WHERE rule_version=%s AND game_start > now() "
-                        "ORDER BY game_start", (RULE_VERSION,))
+                        f"WHERE {where} ORDER BY game_start", params)
             live = cur.fetchall()
 
     print(f"live signals awaiting tip-off: {len(live)}")
