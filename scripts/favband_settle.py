@@ -136,10 +136,14 @@ def settle(dry: bool = False) -> int:
     prov = snapshot_provenance()
     print(f"  SNAPSHOT {prov['sha256_16']}  mtime {prov['mtime']}  {prov['bytes']:,}B  "
           f"age {prov['age_h']:.1f}h  (this file MUTATES)")
-    if prov["age_h"] > 48:
-        print(f"  WARN: market record is {prov['age_h']:.0f}h stale — recent games may not be "
-              f"resolved yet. Settling only what IS terminal.")
+    # The refresh is a DAILY 03:20 job, so anything past ~26h means a run was missed. The first
+    # draft warned at 48h and, on 2026-07-22, sat silent at 47.3h while 20 signals went unsettleable.
+    # A guard that is 0.7h from firing during a real outage is not a guard.
+    if prov["age_h"] > 26:
+        print(f"  ⚠ market record is {prov['age_h']:.1f}h stale — the daily 03:20 refresh has "
+              f"missed at least one run.")
 
+    snap_mtime = datetime.datetime.fromisoformat(prov["mtime"])
     df = pd.read_parquet(MK, columns=["slug", "outcomePrices", "closed", "sportsMarketType"])
     df = df.drop_duplicates("slug")
 
@@ -165,7 +169,7 @@ def settle(dry: bool = False) -> int:
             if RULE_FILTER:
                 where += " AND rule_version=%s"
                 params.append(RULE_FILTER)
-            cur.execute("SELECT id, us_slug, fav_side, entry_vwap, fee_per_share "
+            cur.execute("SELECT id, us_slug, fav_side, entry_vwap, fee_per_share, game_start "
                         f"FROM favband_paper_signals WHERE {where}", params)
             pending = cur.fetchall()
     print(f"  pending signals: {len(pending)}")
@@ -174,11 +178,17 @@ def settle(dry: bool = False) -> int:
         return 0
 
     rec = df.set_index("slug")[["outcomePrices", "sportsMarketType"]].to_dict("index")
-    updates, unmatched, not_terminal, bad_side = [], 0, 0, 0
-    for sid, slug, fav_side, vwap, fee in pending:
+    updates, unmatched, not_terminal, bad_side, stale_blocked = [], 0, 0, 0, 0
+    for sid, slug, fav_side, vwap, fee, gstart in pending:
         row = rec.get(slug)
         if row is None:
-            unmatched += 1
+            # A snapshot taken BEFORE the game was played cannot possibly contain its result.
+            # Collapsing this into "not in market record" reads like a venue data problem when it
+            # is really OUR pipeline being frozen — which is how a dead refresh hides for days.
+            if gstart is not None and gstart > snap_mtime:
+                stale_blocked += 1
+            else:
+                unmatched += 1
             continue
         prices = parse_outcome_prices(row["outcomePrices"])
         if not is_terminal(prices):
@@ -195,6 +205,15 @@ def settle(dry: bool = False) -> int:
     print(f"    not in market record : {unmatched}")
     print(f"    not yet terminal     : {not_terminal}   (left PENDING, never guessed)")
     print(f"    fav_side out of range: {bad_side}")
+    if stale_blocked:
+        print(f"\n  🚨 STALE SETTLEMENT SOURCE — {stale_blocked} signals CANNOT be settled because")
+        print(f"     the market record was written {prov['age_h']:.1f}h ago, BEFORE their games "
+              f"were played.")
+        print("     This is not missing data, it is a FROZEN PIPELINE. Nothing downstream can")
+        print("     certify anything until the snapshot advances. Refresh it:")
+        print("       bash ~/polymarket-bot/wt/capture/scripts/us_markets_refresh.sh")
+        print("     (com.tue.us.marketsrefresh runs 03:20 daily with NO retry — a DNS blip or a")
+        print("      sleeping machine silently costs a full day of settlement.)")
     if not updates:
         print("  nothing terminal yet.")
         return 0
