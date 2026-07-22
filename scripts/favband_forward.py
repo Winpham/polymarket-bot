@@ -490,10 +490,82 @@ def self_test() -> int:
     assert "cluster_roi" not in globals(), \
         "scoring was moved to favband_settle.py — two implementations WILL diverge"
 
+    # ---- the single-instance lock: a 6-min sweep on a 5-min timer must not stack
+    import tempfile
+    lp = os.path.join(tempfile.mkdtemp(), "t.lock")
+    with SingleInstance(lp) as first:
+        assert first is not None, "the first holder must acquire"
+        with SingleInstance(lp) as second:
+            assert second is None, "a second concurrent scan MUST be refused, not run"
+    assert not os.path.exists(lp), "the lock must be released on clean exit"
+    # a lock held by a pid that no longer exists is stale, NOT a permanent wedge
+    with open(lp, "w") as f:
+        f.write("999999999")
+    with SingleInstance(lp) as reclaimed:
+        assert reclaimed is not None, "a stale lock from a dead pid must be reclaimed"
+
     print("favband_forward self-test OK (orientation BOTH sides + inversion guard, band, "
           "spread, depth-skip, slippage, fee schedule, complement involution, event_key "
           "collapsing, capacity ladder incl. exhaustion)")
     return 0
+
+
+class SingleInstance:
+    """Refuse to start if a previous scan is still running.
+
+    A converged 120-page sweep takes ~6 min, which is LONGER than the 300s agent interval it
+    inherited. Without this, every cycle stacks another concurrent scan on the venue and the
+    machine, and they all write the same rows — the failure gets worse the healthier the sweep is.
+    Making the scan safe at ANY interval is a property of the program, not of the plist: the
+    correct interval is now a tuning choice rather than a correctness requirement.
+
+    Uses O_EXCL + the pid so a crash cannot wedge the loop forever: a lock whose pid is gone is
+    stale and gets reclaimed, which matters because this project has been bitten by exactly the
+    opposite failure (a wedged daemon holding a lock nobody could clear).
+    """
+
+    def __init__(self, path="/tmp/favband_forward.lock"):
+        self.path, self.fd = path, None
+
+    def __enter__(self):
+        for _ in range(2):
+            try:
+                self.fd = os.open(self.path, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o644)
+                os.write(self.fd, str(os.getpid()).encode())
+                return self
+            except FileExistsError:
+                try:
+                    pid = int(open(self.path).read().strip() or 0)
+                except (ValueError, OSError):
+                    pid = 0
+                alive = False
+                if pid > 0:
+                    try:
+                        os.kill(pid, 0)          # signal 0 == liveness probe, does not kill
+                        alive = True
+                    except ProcessLookupError:
+                        alive = False
+                    except PermissionError:
+                        alive = True             # exists but not ours
+                if alive:
+                    print(f"  another scan is still running (pid {pid}) — skipping this cycle. "
+                          f"A converged sweep takes ~6min; the interval may be too short.")
+                    return None
+                print(f"  reclaiming a stale lock from dead pid {pid}")
+                try:
+                    os.unlink(self.path)
+                except FileNotFoundError:
+                    pass
+        return None
+
+    def __exit__(self, *exc):
+        if self.fd is not None:
+            os.close(self.fd)
+            try:
+                os.unlink(self.path)
+            except FileNotFoundError:
+                pass
+        return False
 
 
 def main():
@@ -512,11 +584,14 @@ def main():
     if a.settle:
         sys.exit(settle_and_report())
     if a.once:
-        scan(a.dry_run)
-        if not a.dry_run:
-            # settle every cycle: an unsettled signal certifies nothing, and v1 accrued for two
-            # days without one because settlement was never on the loop.
-            settle_and_report()
+        with SingleInstance() as lock:
+            if lock is None:
+                return
+            scan(a.dry_run)
+            if not a.dry_run:
+                # settle every cycle: an unsettled signal certifies nothing, and v1 accrued for
+                # two days without one because settlement was never on the loop.
+                settle_and_report()
         return
     ap.print_help()
 
